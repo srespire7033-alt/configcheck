@@ -105,6 +105,7 @@ export interface CategoryScores {
   cpq_settings: number;
   subscriptions: number;
   quote_lines: number;
+  contracted_prices: number;
 }
 
 export interface AffectedRecord {
@@ -149,6 +150,7 @@ export interface CPQData {
   quoteLines: SFQuoteLine[];
   quotes: SFQuote[];
   pricebookEntries: SFPricebookEntry[];
+  contractedPrices: SFContractedPrice[];
   cpqSettings: SFCPQSettings | null;
 }
 
@@ -280,6 +282,11 @@ export interface SFQuoteLine {
   SBQQ__ProrateMultiplier__c: number | null;
   SBQQ__SubscriptionPricing__c: string | null;
   SBQQ__ChargeType__c: string | null;
+  // Twin fields for TF check
+  SBQQ__Discount__c: number | null;
+  SBQQ__AdditionalDiscount__c: number | null;
+  SBQQ__UpliftAmount__c: number | null;
+  SBQQ__Uplift__c: number | null;
 }
 
 export interface SFPricebookEntry {
@@ -289,6 +296,19 @@ export interface SFPricebookEntry {
   Pricebook2Id: string;
   UnitPrice: number;
   IsActive: boolean;
+}
+
+export interface SFContractedPrice {
+  Id: string;
+  Name: string;
+  SBQQ__Account__c: string | null;
+  SBQQ__Account__r?: { Name: string };
+  SBQQ__Product__c: string | null;
+  SBQQ__Product__r?: { Name: string; IsActive: boolean };
+  SBQQ__Price__c: number | null;
+  SBQQ__EffectiveDate__c: string | null;
+  SBQQ__ExpirationDate__c: string | null;
+  SBQQ__OriginalQuoteLine__c: string | null;
 }
 
 export interface SFCPQSettings {

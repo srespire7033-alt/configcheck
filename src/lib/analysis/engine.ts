@@ -3,13 +3,14 @@ import { allChecks } from './checks';
 
 // Category weights for overall score
 const CATEGORY_WEIGHTS: Record<string, number> = {
-  price_rules: 0.25,
-  discount_schedules: 0.15,
+  price_rules: 0.20,
+  discount_schedules: 0.12,
   products: 0.15,
-  product_rules: 0.15,
+  product_rules: 0.13,
   cpq_settings: 0.10,
   subscriptions: 0.10,
   quote_lines: 0.10,
+  contracted_prices: 0.10,
 };
 
 /**
@@ -55,6 +56,7 @@ function calculateCategoryScores(issues: Issue[]): CategoryScores {
     cpq_settings: 100,
     subscriptions: 100,
     quote_lines: 100,
+    contracted_prices: 100,
   };
 
   for (const issue of issues) {

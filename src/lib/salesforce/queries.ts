@@ -9,6 +9,7 @@ import type {
   SFQuote,
   SFQuoteLine,
   SFPricebookEntry,
+  SFContractedPrice,
   SFCPQSettings,
   CPQData,
 } from '@/types';
@@ -28,6 +29,7 @@ export async function fetchAllCPQData(conn: Connection): Promise<CPQData> {
     quotes,
     quoteLines,
     pricebookEntries,
+    contractedPrices,
     cpqSettings,
   ] = await Promise.all([
     fetchPriceRules(conn),
@@ -39,6 +41,7 @@ export async function fetchAllCPQData(conn: Connection): Promise<CPQData> {
     fetchQuotes(conn),
     fetchQuoteLines(conn),
     fetchPricebookEntries(conn),
+    fetchContractedPrices(conn),
     fetchCPQSettings(conn),
   ]);
 
@@ -52,6 +55,7 @@ export async function fetchAllCPQData(conn: Connection): Promise<CPQData> {
     quotes,
     quoteLines,
     pricebookEntries,
+    contractedPrices,
     cpqSettings,
   };
 }
@@ -200,7 +204,9 @@ async function fetchQuoteLines(conn: Connection): Promise<SFQuoteLine[]> {
         SBQQ__Quantity__c, SBQQ__NetPrice__c,
         SBQQ__NetTotal__c, SBQQ__ListPrice__c,
         SBQQ__ProrateMultiplier__c,
-        SBQQ__SubscriptionPricing__c, SBQQ__ChargeType__c
+        SBQQ__SubscriptionPricing__c, SBQQ__ChargeType__c,
+        SBQQ__Discount__c, SBQQ__AdditionalDiscount__c,
+        SBQQ__UpliftAmount__c, SBQQ__Uplift__c
       FROM SBQQ__QuoteLine__c
       WHERE SBQQ__Quote__r.CreatedDate = LAST_N_DAYS:90
       ORDER BY CreatedDate DESC
@@ -229,12 +235,35 @@ async function fetchPricebookEntries(conn: Connection): Promise<SFPricebookEntry
   }
 }
 
+async function fetchContractedPrices(conn: Connection): Promise<SFContractedPrice[]> {
+  try {
+    const result = await conn.query(`
+      SELECT
+        Id, Name,
+        SBQQ__Account__c, SBQQ__Account__r.Name,
+        SBQQ__Product__c, SBQQ__Product__r.Name, SBQQ__Product__r.IsActive,
+        SBQQ__Price__c,
+        SBQQ__EffectiveDate__c, SBQQ__ExpirationDate__c,
+        SBQQ__OriginalQuoteLine__c
+      FROM SBQQ__ContractedPrice__c
+      ORDER BY CreatedDate DESC
+      LIMIT 2000
+    `);
+    return result.records as unknown as SFContractedPrice[];
+  } catch (error) {
+    console.error('Error fetching contracted prices:', error);
+    return [];
+  }
+}
+
 async function fetchCPQSettings(conn: Connection): Promise<SFCPQSettings | null> {
   try {
     // Query the CPQ custom setting
     const result = await conn.query(`
       SELECT
-        SBQQ__TriggerDisabled__c
+        SBQQ__TriggerDisabled__c,
+        SBQQ__RenewalModel__c,
+        SBQQ__SubscriptionTermUnit__c
       FROM SBQQ__GeneralSettings__c
       LIMIT 1
     `);
@@ -258,6 +287,8 @@ async function fetchCPQSettings(conn: Connection): Promise<SFCPQSettings | null>
 
     return {
       SBQQ__TriggerDisabled__c: settings.SBQQ__TriggerDisabled__c as boolean,
+      SBQQ__RenewalModel__c: settings.SBQQ__RenewalModel__c as string | undefined,
+      SBQQ__SubscriptionTermUnit__c: settings.SBQQ__SubscriptionTermUnit__c as string | undefined,
       hasQuoteCalculatorPlugin: hasQCP,
     } as SFCPQSettings;
   } catch (error) {
