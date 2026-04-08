@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, RefreshCw, Lightbulb } from 'lucide-react';
+import { ArrowLeft, RefreshCw, Lightbulb, Download } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { CategoryBreakdown } from '@/components/scan/category-breakdown';
@@ -113,6 +113,15 @@ export default function OrgDetailPage() {
           </div>
         </div>
         <div className="flex gap-3">
+          {scan && (
+            <a
+              href={`/api/reports?scanId=${scan.id}`}
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-2"
+            >
+              <Download className="h-4 w-4" />
+              PDF Report
+            </a>
+          )}
           <button
             onClick={() => router.push(`/orgs/${orgId}/history`)}
             className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
