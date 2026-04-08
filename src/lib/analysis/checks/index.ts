@@ -5,6 +5,7 @@ import { productChecks } from './products';
 import { productRuleChecks } from './product-rules';
 import { cpqSettingsChecks } from './cpq-settings';
 import { quoteLineChecks } from './quote-lines';
+import { subscriptionChecks } from './subscriptions';
 
 /**
  * All registered health checks
@@ -17,4 +18,5 @@ export const allChecks: HealthCheck[] = [
   ...productRuleChecks,
   ...cpqSettingsChecks,
   ...quoteLineChecks,
+  ...subscriptionChecks,
 ];

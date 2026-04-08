@@ -55,4 +55,60 @@ export const cpqSettingsChecks: HealthCheck[] = [
       return issues;
     },
   },
+
+  // SET-003: Renewal Model Not Configured
+  {
+    id: 'SET-003',
+    name: 'Renewal Model Not Configured',
+    category: 'cpq_settings',
+    severity: 'warning',
+    description: 'CPQ renewal model setting is empty, which may cause renewal quote failures',
+    run: async (data: CPQData): Promise<Issue[]> => {
+      const issues: Issue[] = [];
+      const settings = data.cpqSettings;
+
+      if (settings && !settings.SBQQ__RenewalModel__c) {
+        issues.push({
+          check_id: 'SET-003',
+          category: 'cpq_settings',
+          severity: 'warning',
+          title: 'CPQ Renewal Model is not configured',
+          description: 'SBQQ__RenewalModel__c is not set in CPQ General Settings. This controls how renewal quotes are generated from contracts (Same Products vs. Contract Based).',
+          impact: 'Renewal quotes may fail or generate with incorrect product/pricing behavior. Without a defined model, CPQ uses a default that may not match your business process.',
+          recommendation: 'Set the Renewal Model in Setup → Custom Settings → SBQQ__GeneralSettings__c. Use "Same Products" for standard renewals or "Contract Based" for contract-driven renewals.',
+          affected_records: [],
+        });
+      }
+
+      return issues;
+    },
+  },
+
+  // SET-004: Subscription Term Unit Missing
+  {
+    id: 'SET-004',
+    name: 'Subscription Term Unit Not Set',
+    category: 'cpq_settings',
+    severity: 'info',
+    description: 'Subscription term unit not configured - defaults may cause term mismatch',
+    run: async (data: CPQData): Promise<Issue[]> => {
+      const issues: Issue[] = [];
+      const settings = data.cpqSettings;
+
+      if (settings && !settings.SBQQ__SubscriptionTermUnit__c) {
+        issues.push({
+          check_id: 'SET-004',
+          category: 'cpq_settings',
+          severity: 'info',
+          title: 'Subscription Term Unit is not explicitly set',
+          description: 'SBQQ__SubscriptionTermUnit__c is not configured. CPQ defaults to "Month" but this should be explicitly set to match your billing model.',
+          impact: 'If your business uses annual terms but CPQ defaults to monthly, pricing calculations and prorate multipliers will be incorrect.',
+          recommendation: 'Set the Subscription Term Unit in Setup → Custom Settings → SBQQ__GeneralSettings__c to either "Month" or "Day" based on your billing model.',
+          affected_records: [],
+        });
+      }
+
+      return issues;
+    },
+  },
 ];
