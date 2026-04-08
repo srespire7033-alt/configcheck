@@ -1,4 +1,4 @@
-import jsforce from 'jsforce';
+import { Connection } from 'jsforce';
 import type {
   SFPriceRule,
   SFDiscountSchedule,
@@ -17,7 +17,7 @@ import type {
  * Fetch all CPQ configuration data from a Salesforce org
  * Runs queries in parallel for speed
  */
-export async function fetchAllCPQData(conn: jsforce.Connection): Promise<CPQData> {
+export async function fetchAllCPQData(conn: Connection): Promise<CPQData> {
   const [
     priceRules,
     discountSchedules,
@@ -60,7 +60,7 @@ export async function fetchAllCPQData(conn: jsforce.Connection): Promise<CPQData
 // INDIVIDUAL QUERIES
 // ============================================
 
-async function fetchPriceRules(conn: jsforce.Connection): Promise<SFPriceRule[]> {
+async function fetchPriceRules(conn: Connection): Promise<SFPriceRule[]> {
   try {
     const result = await conn.query(`
       SELECT
@@ -80,7 +80,7 @@ async function fetchPriceRules(conn: jsforce.Connection): Promise<SFPriceRule[]>
   }
 }
 
-async function fetchDiscountSchedules(conn: jsforce.Connection): Promise<SFDiscountSchedule[]> {
+async function fetchDiscountSchedules(conn: Connection): Promise<SFDiscountSchedule[]> {
   try {
     const result = await conn.query(`
       SELECT
@@ -97,7 +97,7 @@ async function fetchDiscountSchedules(conn: jsforce.Connection): Promise<SFDisco
   }
 }
 
-async function fetchProducts(conn: jsforce.Connection): Promise<SFProduct[]> {
+async function fetchProducts(conn: Connection): Promise<SFProduct[]> {
   try {
     const result = await conn.query(`
       SELECT
@@ -116,7 +116,7 @@ async function fetchProducts(conn: jsforce.Connection): Promise<SFProduct[]> {
   }
 }
 
-async function fetchProductOptions(conn: jsforce.Connection): Promise<SFProductOption[]> {
+async function fetchProductOptions(conn: Connection): Promise<SFProductOption[]> {
   try {
     const result = await conn.query(`
       SELECT
@@ -133,7 +133,7 @@ async function fetchProductOptions(conn: jsforce.Connection): Promise<SFProductO
   }
 }
 
-async function fetchProductRules(conn: jsforce.Connection): Promise<SFProductRule[]> {
+async function fetchProductRules(conn: Connection): Promise<SFProductRule[]> {
   try {
     const result = await conn.query(`
       SELECT
@@ -153,7 +153,7 @@ async function fetchProductRules(conn: jsforce.Connection): Promise<SFProductRul
   }
 }
 
-async function fetchSubscriptions(conn: jsforce.Connection): Promise<SFSubscription[]> {
+async function fetchSubscriptions(conn: Connection): Promise<SFSubscription[]> {
   try {
     const result = await conn.query(`
       SELECT
@@ -173,7 +173,7 @@ async function fetchSubscriptions(conn: jsforce.Connection): Promise<SFSubscript
   }
 }
 
-async function fetchQuotes(conn: jsforce.Connection): Promise<SFQuote[]> {
+async function fetchQuotes(conn: Connection): Promise<SFQuote[]> {
   try {
     const result = await conn.query(`
       SELECT
@@ -191,7 +191,7 @@ async function fetchQuotes(conn: jsforce.Connection): Promise<SFQuote[]> {
   }
 }
 
-async function fetchQuoteLines(conn: jsforce.Connection): Promise<SFQuoteLine[]> {
+async function fetchQuoteLines(conn: Connection): Promise<SFQuoteLine[]> {
   try {
     const result = await conn.query(`
       SELECT
@@ -213,7 +213,7 @@ async function fetchQuoteLines(conn: jsforce.Connection): Promise<SFQuoteLine[]>
   }
 }
 
-async function fetchPricebookEntries(conn: jsforce.Connection): Promise<SFPricebookEntry[]> {
+async function fetchPricebookEntries(conn: Connection): Promise<SFPricebookEntry[]> {
   try {
     const result = await conn.query(`
       SELECT
@@ -229,7 +229,7 @@ async function fetchPricebookEntries(conn: jsforce.Connection): Promise<SFPriceb
   }
 }
 
-async function fetchCPQSettings(conn: jsforce.Connection): Promise<SFCPQSettings | null> {
+async function fetchCPQSettings(conn: Connection): Promise<SFCPQSettings | null> {
   try {
     // Query the CPQ custom setting
     const result = await conn.query(`

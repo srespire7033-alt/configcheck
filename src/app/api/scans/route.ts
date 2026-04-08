@@ -3,6 +3,7 @@ import { createServiceClient } from '@/lib/db/client';
 import { createConnection } from '@/lib/salesforce/client';
 import { fetchAllCPQData } from '@/lib/salesforce/queries';
 import { runAnalysis } from '@/lib/analysis/engine';
+import { generateExecutiveSummary } from '@/lib/ai/claude';
 
 /**
  * POST /api/scans
@@ -128,6 +129,23 @@ async function runScanInBackground(
 
     // Run analysis
     const result = await runAnalysis(cpqData);
+
+    // Generate AI summary
+    try {
+      result.summary = await generateExecutiveSummary(
+        result.issues,
+        result.category_scores,
+        result.overall_score,
+        {
+          totalPriceRules: cpqData.priceRules.length,
+          totalProducts: cpqData.products.length,
+          totalQuoteLines: cpqData.quoteLines.length,
+        }
+      );
+    } catch (aiError) {
+      console.error('AI summary generation failed:', aiError);
+      result.summary = `Health score: ${result.overall_score}/100. Found ${result.issues.length} issue(s).`;
+    }
 
     // Save issues to database
     const issuesToInsert = result.issues.map((issue) => ({
