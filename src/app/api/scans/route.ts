@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/db/client';
+import { getAuthUser } from '@/lib/auth/get-user';
 import { createConnection } from '@/lib/salesforce/client';
 import { fetchAllCPQData } from '@/lib/salesforce/queries';
 import { runAnalysis } from '@/lib/analysis/engine';
@@ -11,6 +12,11 @@ import { generateExecutiveSummary } from '@/lib/ai/claude';
  */
 export async function POST(request: NextRequest) {
   try {
+    const user = await getAuthUser(request);
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { organizationId } = await request.json();
 
     if (!organizationId) {
@@ -19,11 +25,12 @@ export async function POST(request: NextRequest) {
 
     const supabase = createServiceClient();
 
-    // Get org details
+    // Get org details (verify ownership)
     const { data: org, error: orgError } = await supabase
       .from('organizations')
       .select('*')
       .eq('id', organizationId)
+      .eq('user_id', user.id)
       .single();
 
     if (orgError || !org) {

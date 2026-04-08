@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { handleOAuthCallback, getCPQPackageVersion, createConnection } from '@/lib/salesforce/client';
 import { createServiceClient } from '@/lib/db/client';
+import { getAuthUser } from '@/lib/auth/get-user';
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
@@ -31,7 +32,15 @@ export async function GET(request: NextRequest) {
     const orgResult = await conn.query('SELECT Name FROM Organization LIMIT 1');
     const orgName = (orgResult.records[0] as { Name: string }).Name;
 
-    // Store in database
+    // Get authenticated user from session cookies
+    const user = await getAuthUser(request);
+    if (!user) {
+      return NextResponse.redirect(
+        new URL('/login?error=Please sign in first', process.env.NEXT_PUBLIC_APP_URL!)
+      );
+    }
+
+    // Store in database using service client (bypasses RLS)
     const supabase = createServiceClient();
 
     // Check if org already connected
@@ -55,10 +64,8 @@ export async function GET(request: NextRequest) {
         })
         .eq('id', existingOrg.id);
     } else {
-      // TODO: Get user_id from session - for now using a placeholder
-      // This will be properly wired up when we add Supabase Auth
       await supabase.from('organizations').insert({
-        user_id: '00000000-0000-0000-0000-000000000000', // placeholder
+        user_id: user.id,
         name: orgName,
         salesforce_org_id: orgId,
         instance_url: instanceUrl,

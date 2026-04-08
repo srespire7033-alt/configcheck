@@ -1,10 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/db/client';
+import { getAuthUser } from '@/lib/auth/get-user';
+
+export const dynamic = 'force-dynamic';
 
 /**
  * GET /api/orgs or /api/orgs?orgId=xxx
  */
 export async function GET(request: NextRequest) {
+  const user = await getAuthUser(request);
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   const orgId = request.nextUrl.searchParams.get('orgId');
   const supabase = createServiceClient();
 
@@ -13,6 +21,7 @@ export async function GET(request: NextRequest) {
       .from('organizations')
       .select('*')
       .eq('id', orgId)
+      .eq('user_id', user.id)
       .single();
 
     if (error || !data) {
@@ -21,11 +30,11 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(data);
   }
 
-  // List all orgs for the user
-  // TODO: filter by user_id from session once auth is wired up
+  // List all orgs for the authenticated user
   const { data, error } = await supabase
     .from('organizations')
     .select('id, name, is_sandbox, connection_status, last_scan_score, last_scan_at, cpq_package_version')
+    .eq('user_id', user.id)
     .order('created_at', { ascending: false });
 
   if (error) {

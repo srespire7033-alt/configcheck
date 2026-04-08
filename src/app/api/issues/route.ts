@@ -1,10 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/db/client';
+import { getAuthUser } from '@/lib/auth/get-user';
+
+export const dynamic = 'force-dynamic';
 
 /**
  * GET /api/issues?scanId=xxx or /api/issues?issueId=xxx
  */
 export async function GET(request: NextRequest) {
+  const user = await getAuthUser(request);
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   const scanId = request.nextUrl.searchParams.get('scanId');
   const issueId = request.nextUrl.searchParams.get('issueId');
   const severity = request.nextUrl.searchParams.get('severity');
@@ -63,6 +71,11 @@ export async function GET(request: NextRequest) {
  */
 export async function PUT(request: NextRequest) {
   try {
+    const user = await getAuthUser(request);
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { issueId, status, notes } = await request.json();
 
     if (!issueId) {

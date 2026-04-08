@@ -1,14 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { renderToBuffer } from '@react-pdf/renderer';
 import { createServiceClient } from '@/lib/db/client';
+import { getAuthUser } from '@/lib/auth/get-user';
 import { CPQHealthReport } from '@/lib/report/pdf-generator';
 import React from 'react';
+
+export const dynamic = 'force-dynamic';
 
 /**
  * GET /api/reports?scanId=xxx
  * Generate and download PDF report
  */
 export async function GET(request: NextRequest) {
+  const user = await getAuthUser(request);
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   const scanId = request.nextUrl.searchParams.get('scanId');
 
   if (!scanId) {

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/db/client';
+import { getAuthUser } from '@/lib/auth/get-user';
 import { generateFixSuggestion } from '@/lib/ai/claude';
 
 /**
@@ -8,6 +9,11 @@ import { generateFixSuggestion } from '@/lib/ai/claude';
  */
 export async function POST(request: NextRequest) {
   try {
+    const user = await getAuthUser(request);
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { issueId } = await request.json();
 
     if (!issueId) {
