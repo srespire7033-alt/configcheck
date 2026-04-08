@@ -1,17 +1,21 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { Plus } from 'lucide-react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Plus, CheckCircle, AlertCircle } from 'lucide-react';
 import { OrgCard } from '@/components/dashboard/org-card';
 import { Card, CardContent } from '@/components/ui/card';
 import type { OrgCardData } from '@/types';
 
 export default function DashboardPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [orgs, setOrgs] = useState<OrgCardData[]>([]);
   const [loading, setLoading] = useState(true);
   const [scanningOrg, setScanningOrg] = useState<string | null>(null);
+
+  const successMsg = searchParams.get('success');
+  const errorMsg = searchParams.get('error');
 
   useEffect(() => {
     fetchOrgs();
@@ -80,6 +84,20 @@ export default function DashboardPage() {
 
   return (
     <div>
+      {/* Success/Error Messages */}
+      {successMsg && (
+        <div className="mb-6 flex items-center gap-2 p-4 bg-green-50 border border-green-200 rounded-lg">
+          <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0" />
+          <p className="text-sm text-green-800">{successMsg}</p>
+        </div>
+      )}
+      {errorMsg && (
+        <div className="mb-6 flex items-center gap-2 p-4 bg-red-50 border border-red-200 rounded-lg">
+          <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0" />
+          <p className="text-sm text-red-800">{errorMsg}</p>
+        </div>
+      )}
+
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-gray-900">Your Organizations</h1>
         <p className="text-gray-600 mt-1">

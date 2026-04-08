@@ -21,8 +21,11 @@ export async function GET(request: NextRequest) {
   }
 
   try {
+    // Get PKCE code verifier from cookie
+    const codeVerifier = request.cookies.get('sf_code_verifier')?.value;
+
     // Exchange code for tokens
-    const { accessToken, refreshToken, instanceUrl, orgId } = await handleOAuthCallback(code);
+    const { accessToken, refreshToken, instanceUrl, orgId } = await handleOAuthCallback(code, codeVerifier);
 
     // Detect CPQ version
     const conn = createConnection(instanceUrl, accessToken, refreshToken);

@@ -16,6 +16,7 @@ export async function GET(request: NextRequest) {
   const orgId = request.nextUrl.searchParams.get('orgId');
   const supabase = createServiceClient();
 
+
   if (orgId) {
     const { data, error } = await supabase
       .from('organizations')

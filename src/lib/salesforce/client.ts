@@ -8,8 +8,17 @@ const SF_CLIENT_SECRET = process.env.SALESFORCE_CLIENT_SECRET!;
 const SF_REDIRECT_URI = process.env.SALESFORCE_REDIRECT_URI!;
 const SF_LOGIN_URL = process.env.SALESFORCE_LOGIN_URL || 'https://login.salesforce.com';
 
-// Store code verifier in memory (works for single-instance dev/deploy)
+// Store code verifier in memory
 let storedCodeVerifier: string | null = null;
+
+/**
+ * Get and clear stored code verifier
+ */
+export function getStoredCodeVerifier(): string | null {
+  const v = storedCodeVerifier;
+  storedCodeVerifier = null;
+  return v;
+}
 
 function getOAuth2() {
   return new OAuth2({
@@ -39,35 +48,37 @@ function generatePKCE(): { codeVerifier: string; codeChallenge: string } {
 
 /**
  * Generate the OAuth authorization URL with PKCE
+ * Returns both the URL and the code verifier (to store in cookie)
  */
-export function getAuthorizationUrl(state?: string): string {
+export function getAuthorizationUrl(state?: string): { url: string; codeVerifier: string } {
   const { codeVerifier, codeChallenge } = generatePKCE();
-  storedCodeVerifier = codeVerifier;
 
   const params = new URLSearchParams({
     response_type: 'code',
     client_id: SF_CLIENT_ID,
     redirect_uri: SF_REDIRECT_URI,
-    scope: 'api refresh_token offline_access id',
+    scope: 'api refresh_token full',
     state: state || '',
     code_challenge: codeChallenge,
     code_challenge_method: 'S256',
   });
 
-  return `${SF_LOGIN_URL}/services/oauth2/authorize?${params.toString()}`;
+  return {
+    url: `${SF_LOGIN_URL}/services/oauth2/authorize?${params.toString()}`,
+    codeVerifier,
+  };
 }
 
 /**
  * Exchange the authorization code for access + refresh tokens (with PKCE)
  */
-export async function handleOAuthCallback(code: string): Promise<{
+export async function handleOAuthCallback(code: string, codeVerifier?: string): Promise<{
   accessToken: string;
   refreshToken: string;
   instanceUrl: string;
   orgId: string;
   userId: string;
 }> {
-  // Exchange code for tokens using PKCE
   const tokenParams = new URLSearchParams({
     grant_type: 'authorization_code',
     code,
@@ -76,10 +87,9 @@ export async function handleOAuthCallback(code: string): Promise<{
     redirect_uri: SF_REDIRECT_URI,
   });
 
-  // Add code verifier if we have one (PKCE)
-  if (storedCodeVerifier) {
-    tokenParams.set('code_verifier', storedCodeVerifier);
-    storedCodeVerifier = null; // Clear after use
+  // Add PKCE code verifier if available
+  if (codeVerifier) {
+    tokenParams.set('code_verifier', codeVerifier);
   }
 
   const tokenResponse = await fetch(`${SF_LOGIN_URL}/services/oauth2/token`, {
