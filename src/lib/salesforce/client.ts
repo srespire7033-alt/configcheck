@@ -1,11 +1,15 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { Connection, OAuth2 } from 'jsforce';
+import crypto from 'crypto';
 
 // Salesforce OAuth configuration
 const SF_CLIENT_ID = process.env.SALESFORCE_CLIENT_ID!;
 const SF_CLIENT_SECRET = process.env.SALESFORCE_CLIENT_SECRET!;
 const SF_REDIRECT_URI = process.env.SALESFORCE_REDIRECT_URI!;
 const SF_LOGIN_URL = process.env.SALESFORCE_LOGIN_URL || 'https://login.salesforce.com';
+
+// Store code verifier in memory (works for single-instance dev/deploy)
+let storedCodeVerifier: string | null = null;
 
 function getOAuth2() {
   return new OAuth2({
@@ -17,18 +21,44 @@ function getOAuth2() {
 }
 
 /**
- * Generate the OAuth authorization URL to redirect users to Salesforce login
+ * Generate PKCE code verifier and challenge
  */
-export function getAuthorizationUrl(state?: string): string {
-  const oauth2 = getOAuth2();
-  return oauth2.getAuthorizationUrl({
-    scope: 'api refresh_token offline_access id',
-    state: state || '',
-  });
+function generatePKCE(): { codeVerifier: string; codeChallenge: string } {
+  const codeVerifier = crypto.randomBytes(32)
+    .toString('base64url')
+    .replace(/[^a-zA-Z0-9._~-]/g, '')
+    .substring(0, 128);
+
+  const codeChallenge = crypto
+    .createHash('sha256')
+    .update(codeVerifier)
+    .digest('base64url');
+
+  return { codeVerifier, codeChallenge };
 }
 
 /**
- * Exchange the authorization code for access + refresh tokens
+ * Generate the OAuth authorization URL with PKCE
+ */
+export function getAuthorizationUrl(state?: string): string {
+  const { codeVerifier, codeChallenge } = generatePKCE();
+  storedCodeVerifier = codeVerifier;
+
+  const params = new URLSearchParams({
+    response_type: 'code',
+    client_id: SF_CLIENT_ID,
+    redirect_uri: SF_REDIRECT_URI,
+    scope: 'api refresh_token offline_access id',
+    state: state || '',
+    code_challenge: codeChallenge,
+    code_challenge_method: 'S256',
+  });
+
+  return `${SF_LOGIN_URL}/services/oauth2/authorize?${params.toString()}`;
+}
+
+/**
+ * Exchange the authorization code for access + refresh tokens (with PKCE)
  */
 export async function handleOAuthCallback(code: string): Promise<{
   accessToken: string;
@@ -37,17 +67,46 @@ export async function handleOAuthCallback(code: string): Promise<{
   orgId: string;
   userId: string;
 }> {
-  const conn = new Connection({ oauth2: getOAuth2() });
-  await conn.authorize(code);
+  // Exchange code for tokens using PKCE
+  const tokenParams = new URLSearchParams({
+    grant_type: 'authorization_code',
+    code,
+    client_id: SF_CLIENT_ID,
+    client_secret: SF_CLIENT_SECRET,
+    redirect_uri: SF_REDIRECT_URI,
+  });
 
-  const identity = await conn.identity();
+  // Add code verifier if we have one (PKCE)
+  if (storedCodeVerifier) {
+    tokenParams.set('code_verifier', storedCodeVerifier);
+    storedCodeVerifier = null; // Clear after use
+  }
+
+  const tokenResponse = await fetch(`${SF_LOGIN_URL}/services/oauth2/token`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: tokenParams.toString(),
+  });
+
+  if (!tokenResponse.ok) {
+    const errBody = await tokenResponse.text();
+    throw new Error(`Salesforce token exchange failed: ${errBody}`);
+  }
+
+  const tokenData = await tokenResponse.json();
+
+  // Get identity info
+  const identityResponse = await fetch(tokenData.id, {
+    headers: { Authorization: `Bearer ${tokenData.access_token}` },
+  });
+  const identity = await identityResponse.json();
 
   return {
-    accessToken: conn.accessToken!,
-    refreshToken: conn.refreshToken!,
-    instanceUrl: conn.instanceUrl,
-    orgId: (identity as any).organization_id,
-    userId: (identity as any).user_id,
+    accessToken: tokenData.access_token,
+    refreshToken: tokenData.refresh_token,
+    instanceUrl: tokenData.instance_url,
+    orgId: identity.organization_id,
+    userId: identity.user_id,
   };
 }
 

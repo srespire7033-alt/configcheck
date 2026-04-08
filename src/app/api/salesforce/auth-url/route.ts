@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { getAuthorizationUrl } from '@/lib/salesforce/client';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   try {
     const url = getAuthorizationUrl();

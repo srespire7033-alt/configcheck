@@ -1,15 +1,18 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { Save, LogOut } from 'lucide-react';
+import { Save, LogOut, Upload, X } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { createClient } from '@/lib/db/client';
 
 export default function SettingsPage() {
   const router = useRouter();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [companyName, setCompanyName] = useState('');
   const [brandingColor, setBrandingColor] = useState('#1B5E96');
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
   const [email, setEmail] = useState('');
   const [plan, setPlan] = useState('free');
   const [loading, setLoading] = useState(true);
@@ -24,6 +27,7 @@ export default function SettingsPage() {
           const data = await res.json();
           setCompanyName(data.company_name || '');
           setBrandingColor(data.report_branding_color || '#1B5E96');
+          setLogoUrl(data.company_logo_url || null);
           setEmail(data.email || '');
           setPlan(data.plan || 'free');
         }
@@ -40,6 +44,56 @@ export default function SettingsPage() {
     const supabase = createClient();
     await supabase.auth.signOut();
     router.push('/login');
+  }
+
+  async function handleLogoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate on client side too
+    const allowedTypes = ['image/png', 'image/svg+xml', 'image/jpeg', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      alert('Only PNG, SVG, JPEG, and WebP files are allowed');
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      alert('File must be under 2MB');
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('logo', file);
+
+      const res = await fetch('/api/auth/logo', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setLogoUrl(data.url);
+      } else {
+        const err = await res.json();
+        alert(err.error || 'Upload failed');
+      }
+    } catch (error) {
+      console.error('Upload failed:', error);
+      alert('Upload failed');
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  async function handleRemoveLogo() {
+    setLogoUrl(null);
+    // Also clear from DB
+    await fetch('/api/auth/me', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ company_logo_url: null }),
+    });
   }
 
   async function handleSave() {
@@ -105,10 +159,55 @@ export default function SettingsPage() {
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Company Logo</label>
-            <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-              <p className="text-sm text-gray-500">Drag & drop your logo or click to upload</p>
-              <p className="text-xs text-gray-400 mt-1">PNG or SVG, max 2MB</p>
-            </div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/png,image/svg+xml,image/jpeg,image/webp"
+              onChange={handleLogoUpload}
+              className="hidden"
+            />
+            {logoUrl ? (
+              <div className="flex items-center gap-4">
+                <div className="relative w-20 h-20 border border-gray-200 rounded-lg overflow-hidden bg-white flex items-center justify-center">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={logoUrl} alt="Company logo" className="max-w-full max-h-full object-contain p-1" />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    className="text-sm text-blue-600 hover:text-blue-800"
+                  >
+                    Change logo
+                  </button>
+                  <button
+                    onClick={handleRemoveLogo}
+                    className="flex items-center gap-1 text-sm text-red-500 hover:text-red-700"
+                  >
+                    <X className="h-3 w-3" /> Remove
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploading}
+                className="w-full border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-blue-400 hover:bg-blue-50 transition-colors cursor-pointer disabled:opacity-50"
+              >
+                {uploading ? (
+                  <div className="flex items-center justify-center gap-2">
+                    <div className="animate-spin h-5 w-5 border-2 border-blue-600 border-t-transparent rounded-full" />
+                    <span className="text-sm text-gray-500">Uploading...</span>
+                  </div>
+                ) : (
+                  <>
+                    <Upload className="h-6 w-6 mx-auto text-gray-400 mb-1" />
+                    <p className="text-sm text-gray-500">Click to upload your logo</p>
+                    <p className="text-xs text-gray-400 mt-1">PNG, SVG, JPEG or WebP, max 2MB</p>
+                  </>
+                )}
+              </button>
+            )}
           </div>
           <button
             onClick={handleSave}
