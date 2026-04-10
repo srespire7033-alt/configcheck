@@ -1,9 +1,11 @@
 import Anthropic from '@anthropic-ai/sdk';
 import type { Issue, CategoryScores } from '@/types';
 
-const client = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY!,
-});
+function getClient() {
+  return new Anthropic({
+    apiKey: process.env.ANTHROPIC_API_KEY || '',
+  });
+}
 
 const SYSTEM_PROMPT = `You are a Salesforce CPQ expert analyzing health check results for a consulting firm's client org.
 
@@ -57,8 +59,8 @@ Write an executive summary that:
 Do NOT use markdown headers. Use plain paragraphs. Keep it concise and actionable.`;
 
   try {
-    const response = await client.messages.create({
-      model: 'claude-sonnet-4-20250514',
+    const response = await getClient().messages.create({
+      model: 'claude-sonnet-4-6',
       max_tokens: 1024,
       system: SYSTEM_PROMPT,
       messages: [{ role: 'user', content: prompt }],
@@ -95,8 +97,8 @@ Provide a detailed, step-by-step fix guide that includes:
 If relevant, include SOQL queries they can run to validate before and after. Be specific - use actual record names from the affected records list.`;
 
   try {
-    const response = await client.messages.create({
-      model: 'claude-sonnet-4-20250514',
+    const response = await getClient().messages.create({
+      model: 'claude-sonnet-4-6',
       max_tokens: 1024,
       system: 'You are a Salesforce CPQ expert providing step-by-step fix instructions. Be specific, practical, and include exact Salesforce navigation paths.',
       messages: [{ role: 'user', content: prompt }],

@@ -1,12 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthUser } from '@/lib/auth/get-user';
-import Anthropic from '@anthropic-ai/sdk';
 
 export const dynamic = 'force-dynamic';
-
-const client = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY!,
-});
 
 /**
  * POST /api/ai/explain
@@ -23,6 +18,12 @@ export async function POST(request: NextRequest) {
 
     if (!title || !description) {
       return NextResponse.json({ error: 'title and description are required' }, { status: 400 });
+    }
+
+    const apiKey = process.env.ANTHROPIC_API_KEY;
+    if (!apiKey) {
+      console.error('ANTHROPIC_API_KEY is not set');
+      return NextResponse.json({ error: 'API key not configured' }, { status: 500 });
     }
 
     const prompt = `You are explaining a Salesforce CPQ configuration issue to someone who is NOT a CPQ expert — they might be a VP of Sales, CFO, or RevOps manager.
@@ -45,14 +46,29 @@ Explain this in 3 short sections:
 
 Keep it concise. Write like you're explaining to a smart person who doesn't know Salesforce internals.`;
 
-    const response = await client.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 512,
-      system: 'You explain technical Salesforce CPQ issues in plain, non-technical English for business stakeholders. Be concise, specific, and jargon-free.',
-      messages: [{ role: 'user', content: prompt }],
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 512,
+        system: 'You explain technical Salesforce CPQ issues in plain, non-technical English for business stakeholders. Be concise, specific, and jargon-free.',
+        messages: [{ role: 'user', content: prompt }],
+      }),
     });
 
-    const textBlock = response.content.find((block) => block.type === 'text');
+    const data = await res.json();
+
+    if (!res.ok) {
+      console.error('Anthropic API error:', data);
+      return NextResponse.json({ explanation: 'Unable to generate explanation.' });
+    }
+
+    const textBlock = data.content?.find((block: { type: string }) => block.type === 'text');
     return NextResponse.json({ explanation: textBlock?.text || 'Unable to generate explanation.' });
   } catch (error) {
     console.error('AI explain error:', error);

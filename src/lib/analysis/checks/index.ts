@@ -20,27 +20,27 @@ import { impactAnalysisChecks } from './impact-analysis';
 import { usageAnalyticsChecks } from './usage-analytics';
 
 /**
- * All registered health checks — 61 total
+ * All registered health checks — 68 total
  * Add new check modules here
  */
 export const allChecks: HealthCheck[] = [
-  ...priceRuleChecks,               // PR-001 to PR-005
-  ...discountScheduleChecks,        // DS-001 to DS-004
-  ...productChecks,                 // PB-001 to PB-004
-  ...productRuleChecks,             // PRD-001 to PRD-004
-  ...cpqSettingsChecks,             // SET-001 to SET-004
-  ...quoteLineChecks,               // QL-001 to QL-003
-  ...subscriptionChecks,            // SR-001, SR-002
-  ...twinFieldChecks,               // TF-001
-  ...contractedPriceChecks,         // CP-001
-  ...summaryVariableChecks,         // SV-001 to SV-005
-  ...approvalRuleChecks,            // AR-001 to AR-004
-  ...customScriptChecks,            // QCP-001 to QCP-004
-  ...quoteTemplateChecks,           // QT-001 to QT-004
-  ...configurationAttributeChecks,  // CA-001 to CA-004
-  ...guidedSellingChecks,           // GS-001 to GS-003
-  ...advancedPricingChecks,         // AP-001 to AP-004
-  ...performanceChecks,             // PERF-001 to PERF-005
-  ...impactAnalysisChecks,          // IA-001 to IA-004
-  ...usageAnalyticsChecks,          // UA-001 to UA-003
+  ...priceRuleChecks,               // PR-001 to PR-005 (5)
+  ...discountScheduleChecks,        // DS-001 to DS-004 (4)
+  ...productChecks,                 // PB-001 to PB-004 (4)
+  ...productRuleChecks,             // PRD-001 to PRD-004 (4)
+  ...cpqSettingsChecks,             // SET-001 to SET-004 (4)
+  ...quoteLineChecks,               // QL-001 to QL-003 (3)
+  ...subscriptionChecks,            // SR-001, SR-002 (2)
+  ...twinFieldChecks,               // TF-001 (1)
+  ...contractedPriceChecks,         // CP-001 (1)
+  ...summaryVariableChecks,         // SV-001 to SV-005 (5)
+  ...approvalRuleChecks,            // AR-001 to AR-004 (4)
+  ...customScriptChecks,            // QCP-001 to QCP-004 (4)
+  ...quoteTemplateChecks,           // QT-001 to QT-004 (4)
+  ...configurationAttributeChecks,  // CA-001 to CA-004 (4)
+  ...guidedSellingChecks,           // GS-001 to GS-003 (3)
+  ...advancedPricingChecks,         // AP-001 to AP-004 (4)
+  ...performanceChecks,             // PERF-001 to PERF-005 (5)
+  ...impactAnalysisChecks,          // IA-001 to IA-004 (4)
+  ...usageAnalyticsChecks,          // UA-001 to UA-003 (3)
 ];
