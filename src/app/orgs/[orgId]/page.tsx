@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, RefreshCw, Sparkles, Download, FileBarChart, CalendarClock, ShieldCheck, FileSpreadsheet, FileText } from 'lucide-react';
+import { ArrowLeft, RefreshCw, Sparkles, Download, FileBarChart, CalendarClock, ShieldCheck, FileSpreadsheet, ChevronDown } from 'lucide-react';
 import { HealthScore } from '@/components/scan/health-score';
 import { CategoryBreakdown } from '@/components/scan/category-breakdown';
 import { IssueCard } from '@/components/issues/issue-card';
@@ -24,6 +24,7 @@ export default function OrgDetailPage() {
   const [scanning, setScanning] = useState(false);
   const [schedules, setSchedules] = useState<DBScanSchedule[]>([]);
   const [showScheduleModal, setShowScheduleModal] = useState(false);
+  const [showExportMenu, setShowExportMenu] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -314,29 +315,35 @@ export default function OrgDetailPage() {
             );
           })()}
 
-          {/* ===== EXPORT BUTTONS ===== */}
-          <div className="flex items-center gap-3 mb-8">
-            <a
-              href={`/api/exports?scanId=${scan.id}&format=xlsx&type=issues`}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-green-50 text-green-700 rounded-lg text-sm font-medium hover:bg-green-100 transition"
+          {/* ===== EXPORT BUTTON ===== */}
+          <div className="relative inline-block mb-8 flex justify-end">
+            <button
+              onClick={() => setShowExportMenu(!showExportMenu)}
+              onBlur={() => setTimeout(() => setShowExportMenu(false), 150)}
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-green-600 text-white rounded-xl text-sm font-medium hover:bg-green-700 transition shadow-sm"
             >
               <FileSpreadsheet className="w-4 h-4" />
-              Export Issues (Excel)
-            </a>
-            <a
-              href={`/api/exports?scanId=${scan.id}&format=csv&type=issues`}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 transition"
-            >
-              <FileText className="w-4 h-4" />
-              Export CSV
-            </a>
-            <a
-              href={`/api/exports?scanId=${scan.id}&format=xlsx&type=documentation`}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-purple-50 text-purple-700 rounded-lg text-sm font-medium hover:bg-purple-100 transition"
-            >
-              <FileSpreadsheet className="w-4 h-4" />
-              CPQ Documentation
-            </a>
+              Export Issues
+              <ChevronDown className={`w-4 h-4 transition-transform ${showExportMenu ? 'rotate-180' : ''}`} />
+            </button>
+            {showExportMenu && (
+              <div className="absolute top-full right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-gray-200 py-1 z-20">
+                <a
+                  href={`/api/exports?scanId=${scan.id}&format=xlsx&type=issues`}
+                  className="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition"
+                >
+                  <FileSpreadsheet className="w-4 h-4 text-green-600" />
+                  Download Excel
+                </a>
+                <a
+                  href={`/api/exports?scanId=${scan.id}&format=csv&type=issues`}
+                  className="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition"
+                >
+                  <FileSpreadsheet className="w-4 h-4 text-blue-600" />
+                  Download CSV
+                </a>
+              </div>
+            )}
           </div>
 
           {/* ===== CRITICAL ISSUES ===== */}
