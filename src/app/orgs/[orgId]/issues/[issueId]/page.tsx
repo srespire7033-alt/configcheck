@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Sparkles, ExternalLink } from 'lucide-react';
+import { ArrowLeft, Sparkles, ExternalLink, Zap, Loader2, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import type { DBIssue, DBOrganization } from '@/types';
@@ -17,6 +17,9 @@ export default function IssueDetailPage() {
   const [org, setOrg] = useState<DBOrganization | null>(null);
   const [loading, setLoading] = useState(true);
   const [generatingFix, setGeneratingFix] = useState(false);
+  const [applyingFix, setApplyingFix] = useState(false);
+  const [fixResult, setFixResult] = useState<{ success: boolean; details: string } | null>(null);
+  const [showConfirm, setShowConfirm] = useState<string | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -53,6 +56,73 @@ export default function IssueDetailPage() {
       console.error('Failed to generate fix:', error);
     } finally {
       setGeneratingFix(false);
+    }
+  }
+
+  // Determine which one-click fixes are available based on check_id
+  function getAvailableFixes(): { fixType: string; label: string; description: string }[] {
+    if (!issue) return [];
+    const fixes: { fixType: string; label: string; description: string }[] = [];
+    const checkId = issue.check_id;
+
+    // Price rule issues — offer deactivation and resequencing
+    if (['PR-001', 'PR-002', 'PR-003', 'PR-004', 'PR-005', 'IA-001', 'IA-002'].includes(checkId)) {
+      if (issue.affected_records?.length > 0) {
+        fixes.push({ fixType: 'deactivate_rule', label: 'Deactivate Rule(s)', description: `Deactivate ${issue.affected_records.length} affected rule(s) in Salesforce` });
+      }
+      fixes.push({ fixType: 'resequence_price_rules', label: 'Resequence Price Rules', description: 'Assign clean evaluation order (10, 20, 30...) to all active price rules' });
+    }
+
+    // Product rule issues
+    if (['PRD-001', 'PRD-002', 'PRD-003', 'PRD-004'].includes(checkId)) {
+      if (issue.affected_records?.length > 0) {
+        fixes.push({ fixType: 'deactivate_rule', label: 'Deactivate Rule(s)', description: `Deactivate ${issue.affected_records.length} affected rule(s) in Salesforce` });
+      }
+      fixes.push({ fixType: 'resequence_product_rules', label: 'Resequence Product Rules', description: 'Assign clean evaluation order (10, 20, 30...) to all active product rules' });
+    }
+
+    // Discount tier issues
+    if (['DS-001', 'DS-002', 'DS-003', 'DS-004'].includes(checkId)) {
+      fixes.push({ fixType: 'fix_tier_gaps', label: 'Fix Tier Gaps', description: 'Automatically close gaps between discount tier bounds' });
+    }
+
+    // Stale rules (usage analytics)
+    if (checkId === 'UA-003') {
+      fixes.push({ fixType: 'deactivate_inactive_rules', label: 'Remove Inactive Rules', description: 'Delete all inactive price and product rules from Salesforce' });
+    }
+
+    // Performance issues with high rule counts
+    if (['PERF-001', 'PERF-002'].includes(checkId) && issue.affected_records?.length > 0) {
+      fixes.push({ fixType: 'deactivate_rule', label: 'Deactivate Rule(s)', description: `Deactivate ${issue.affected_records.length} affected rule(s) in Salesforce` });
+    }
+
+    return fixes;
+  }
+
+  async function handleApplyFix(fixType: string) {
+    setShowConfirm(null);
+    setApplyingFix(true);
+    setFixResult(null);
+    try {
+      const recordIds = issue?.affected_records?.map((r) => r.id) || [];
+      const res = await fetch('/api/salesforce/fix', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orgId, issueId, fixType, recordIds }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setFixResult({ success: data.success, details: data.details });
+        if (data.success) {
+          setIssue((prev) => prev ? { ...prev, status: 'resolved' } : null);
+        }
+      } else {
+        setFixResult({ success: false, details: data.error || 'Fix failed' });
+      }
+    } catch {
+      setFixResult({ success: false, details: 'Network error. Please try again.' });
+    } finally {
+      setApplyingFix(false);
     }
   }
 
@@ -163,6 +233,90 @@ export default function IssueDetailPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* One-Click Fix */}
+      {getAvailableFixes().length > 0 && (
+        <Card className="mb-4 border-amber-200">
+          <CardHeader className="bg-amber-50">
+            <div className="flex items-center gap-2">
+              <Zap className="h-4 w-4 text-amber-600" />
+              <h3 className="text-sm font-semibold text-amber-900">One-Click Fix</h3>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {fixResult && (
+              <div className={`mb-4 p-3 rounded-lg flex items-start gap-2 ${fixResult.success ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
+                {fixResult.success ? (
+                  <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
+                ) : (
+                  <AlertTriangle className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" />
+                )}
+                <p className={`text-sm ${fixResult.success ? 'text-green-700' : 'text-red-700'}`}>
+                  {fixResult.details}
+                </p>
+              </div>
+            )}
+
+            <div className="space-y-3">
+              {getAvailableFixes().map((fix) => (
+                <div key={fix.fixType} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">{fix.label}</p>
+                    <p className="text-xs text-gray-500">{fix.description}</p>
+                  </div>
+                  <button
+                    onClick={() => setShowConfirm(fix.fixType)}
+                    disabled={applyingFix || issue.status === 'resolved'}
+                    className="px-4 py-2 bg-amber-500 text-white rounded-lg text-sm font-medium hover:bg-amber-600 transition disabled:opacity-50 flex items-center gap-1.5"
+                  >
+                    {applyingFix ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Zap className="w-3.5 h-3.5" />}
+                    Apply
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            <p className="text-xs text-gray-400 mt-3">
+              These actions modify your Salesforce org directly. Changes take effect immediately.
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Confirmation Modal */}
+      {showConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full mx-4 shadow-xl">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center">
+                <AlertTriangle className="w-5 h-5 text-amber-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">Confirm Fix</h3>
+                <p className="text-sm text-gray-500">This will modify your Salesforce org</p>
+              </div>
+            </div>
+            <p className="text-sm text-gray-700 mb-6">
+              {getAvailableFixes().find((f) => f.fixType === showConfirm)?.description}. This action cannot be undone automatically. Are you sure?
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setShowConfirm(null)}
+                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleApplyFix(showConfirm)}
+                className="px-4 py-2 bg-amber-500 text-white rounded-lg text-sm font-medium hover:bg-amber-600 transition flex items-center gap-1.5"
+              >
+                <Zap className="w-3.5 h-3.5" />
+                Yes, Apply Fix
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Affected Records */}
       {issue.affected_records && issue.affected_records.length > 0 && (

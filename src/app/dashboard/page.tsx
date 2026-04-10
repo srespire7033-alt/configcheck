@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Plus, CheckCircle, AlertCircle, Cloud } from 'lucide-react';
+import { Plus, CheckCircle, AlertCircle, Cloud, GitCompare } from 'lucide-react';
 import { OrgCard } from '@/components/dashboard/org-card';
 import type { OrgCardData } from '@/types';
 
@@ -101,11 +101,22 @@ function DashboardContent() {
         </div>
       )}
 
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">Your Organizations</h1>
-        <p className="text-gray-500 mt-1">
-          Connect Salesforce orgs to scan their CPQ configuration
-        </p>
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Your Organizations</h1>
+          <p className="text-gray-500 mt-1">
+            Connect Salesforce orgs to scan their CPQ configuration
+          </p>
+        </div>
+        {orgs.length >= 2 && (
+          <button
+            onClick={() => router.push('/compare-orgs')}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-600 rounded-lg text-sm font-medium hover:bg-indigo-100 transition"
+          >
+            <GitCompare className="w-4 h-4" />
+            Sandbox vs Production
+          </button>
+        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
