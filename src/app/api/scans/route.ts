@@ -174,7 +174,7 @@ async function runScanInBackground(
       await supabase.from('issues').insert(issuesToInsert);
     }
 
-    // Update scan with results
+    // Update scan with results (store revenue + complexity in metadata)
     await supabase
       .from('scans')
       .update({
@@ -187,6 +187,10 @@ async function runScanInBackground(
         warning_count: result.issues.filter((i) => i.severity === 'warning').length,
         info_count: result.issues.filter((i) => i.severity === 'info').length,
         duration_ms: result.duration_ms,
+        metadata: {
+          revenue_summary: result.revenue_summary || null,
+          complexity: result.complexity || null,
+        },
         completed_at: new Date().toISOString(),
       })
       .eq('id', scanId);

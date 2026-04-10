@@ -2,13 +2,15 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, RefreshCw, Sparkles, Download, FileBarChart, CalendarClock, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, RefreshCw, Sparkles, Download, FileBarChart, CalendarClock, ShieldCheck, FileSpreadsheet, FileText } from 'lucide-react';
 import { HealthScore } from '@/components/scan/health-score';
 import { CategoryBreakdown } from '@/components/scan/category-breakdown';
 import { IssueCard } from '@/components/issues/issue-card';
+import { RevenueRiskCard } from '@/components/scan/revenue-risk-card';
+import { ComplexityCard } from '@/components/scan/complexity-card';
 import { ScheduleModal } from '@/components/schedule/schedule-modal';
 import { ScheduleList } from '@/components/schedule/schedule-list';
-import type { DBScan, DBIssue, DBOrganization, DBScanSchedule } from '@/types';
+import type { DBScan, DBIssue, DBOrganization, DBScanSchedule, RevenueRiskSummary, ComplexityBreakdown } from '@/types';
 
 export default function OrgDetailPage() {
   const params = useParams();
@@ -295,6 +297,46 @@ export default function OrgDetailPage() {
                 layout="horizontal"
               />
             )}
+          </div>
+
+          {/* ===== REVENUE RISK + COMPLEXITY ===== */}
+          {(() => {
+            const meta = scan.metadata as Record<string, unknown> | null;
+            if (!meta) return null;
+            const rev = meta.revenue_summary as RevenueRiskSummary | undefined;
+            const comp = meta.complexity as ComplexityBreakdown | undefined;
+            if (!rev && !comp) return null;
+            return (
+              <div className="grid grid-cols-2 gap-6 mb-8">
+                {rev && <RevenueRiskCard summary={rev} />}
+                {comp && <ComplexityCard complexity={comp} />}
+              </div>
+            );
+          })()}
+
+          {/* ===== EXPORT BUTTONS ===== */}
+          <div className="flex items-center gap-3 mb-8">
+            <a
+              href={`/api/exports?scanId=${scan.id}&format=xlsx&type=issues`}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-green-50 text-green-700 rounded-lg text-sm font-medium hover:bg-green-100 transition"
+            >
+              <FileSpreadsheet className="w-4 h-4" />
+              Export Issues (Excel)
+            </a>
+            <a
+              href={`/api/exports?scanId=${scan.id}&format=csv&type=issues`}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 transition"
+            >
+              <FileText className="w-4 h-4" />
+              Export CSV
+            </a>
+            <a
+              href={`/api/exports?scanId=${scan.id}&format=xlsx&type=documentation`}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-purple-50 text-purple-700 rounded-lg text-sm font-medium hover:bg-purple-100 transition"
+            >
+              <FileSpreadsheet className="w-4 h-4" />
+              CPQ Documentation
+            </a>
           </div>
 
           {/* ===== CRITICAL ISSUES ===== */}

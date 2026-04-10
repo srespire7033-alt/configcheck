@@ -178,12 +178,33 @@ export interface CPQData {
   cpqSettings: SFCPQSettings | null;
 }
 
+export interface RevenueRiskSummary {
+  totalQuoteValue: number;
+  totalQuotesAnalyzed: number;
+  atRiskValue: number;
+  atRiskQuotes: number;
+  currency: string;
+}
+
+export interface ComplexityBreakdown {
+  totalScore: number;
+  rating: 'Low' | 'Moderate' | 'High' | 'Very High';
+  factors: {
+    label: string;
+    count: number;
+    weight: number;
+    contribution: number;
+  }[];
+}
+
 export interface ScanResult {
   overall_score: number;
   category_scores: CategoryScores;
   issues: Issue[];
   summary: string;
   duration_ms: number;
+  revenue_summary?: RevenueRiskSummary;
+  complexity?: ComplexityBreakdown;
 }
 
 // ============================================

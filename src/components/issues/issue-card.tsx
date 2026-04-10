@@ -33,6 +33,13 @@ const severityConfig = {
   },
 };
 
+function formatRevenue(value: number): string {
+  if (value >= 10000000) return `₹${(value / 10000000).toFixed(1)}Cr`;
+  if (value >= 100000) return `₹${(value / 100000).toFixed(1)}L`;
+  if (value >= 1000) return `₹${(value / 1000).toFixed(1)}K`;
+  return `₹${Math.round(value)}`;
+}
+
 export function IssueCard({ issue, onClick }: IssueCardProps) {
   const config = severityConfig[issue.severity] || severityConfig.info;
   const Icon = config.icon;
@@ -82,11 +89,18 @@ export function IssueCard({ issue, onClick }: IssueCardProps) {
             </span>
           </div>
           <p className="text-gray-600 mb-3 text-sm">{issue.description}</p>
-          {issue.affected_records && issue.affected_records.length > 0 && (
+          {(issue.affected_records?.length > 0 || (issue.revenue_impact && issue.revenue_impact > 0)) && (
             <div className="flex items-center gap-6 text-sm">
-              <span className="text-gray-500">
-                📊 <strong className="text-gray-700">Impact:</strong> {issue.affected_records.length} record{issue.affected_records.length > 1 ? 's' : ''} affected
-              </span>
+              {issue.affected_records && issue.affected_records.length > 0 && (
+                <span className="text-gray-500">
+                  <strong className="text-gray-700">Impact:</strong> {issue.affected_records.length} record{issue.affected_records.length > 1 ? 's' : ''} affected
+                </span>
+              )}
+              {issue.revenue_impact && issue.revenue_impact > 0 && (
+                <span className="text-red-600 font-medium">
+                  Est. {formatRevenue(issue.revenue_impact)} at risk
+                </span>
+              )}
             </div>
           )}
 

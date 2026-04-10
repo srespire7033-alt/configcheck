@@ -1,5 +1,6 @@
 import type { CPQData, Issue, CategoryScores, ScanResult, HealthCheck } from '@/types';
 import { allChecks } from './checks';
+import { calculateRevenueRisk } from './revenue-scoring';
 
 // Category weights for overall score
 const CATEGORY_WEIGHTS: Record<string, number> = {
@@ -43,12 +44,20 @@ export async function runAnalysis(data: CPQData): Promise<ScanResult> {
   const categoryScores = calculateCategoryScores(allIssues);
   const overallScore = calculateOverallScore(categoryScores);
 
+  // Revenue risk scoring
+  const { enrichedIssues, revenueSummary } = calculateRevenueRisk(allIssues, data);
+
+  // Complexity scoring
+  const complexity = calculateComplexity(data);
+
   return {
     overall_score: overallScore,
     category_scores: categoryScores,
-    issues: allIssues,
+    issues: enrichedIssues,
     summary: '', // Will be filled by Claude AI later
     duration_ms: Date.now() - startTime,
+    revenue_summary: revenueSummary,
+    complexity,
   };
 }
 
@@ -118,6 +127,44 @@ function calculateOverallScore(categoryScores: CategoryScores): number {
   }
 
   return totalWeight > 0 ? Math.round(weightedSum / totalWeight) : 0;
+}
+
+/**
+ * Calculate CPQ complexity score from configuration element counts.
+ * Benchmarked against "healthy" org thresholds.
+ */
+function calculateComplexity(data: CPQData) {
+  const factors = [
+    { label: 'Active Price Rules', count: data.priceRules.filter((r) => r.SBQQ__Active__c).length, weight: 3, threshold: 20 },
+    { label: 'Active Product Rules', count: data.productRules.filter((r) => r.SBQQ__Active__c).length, weight: 2.5, threshold: 15 },
+    { label: 'Discount Schedules', count: data.discountSchedules.length, weight: 1.5, threshold: 10 },
+    { label: 'Active Products', count: data.products.filter((p) => p.IsActive).length, weight: 1, threshold: 200 },
+    { label: 'Product Options (Bundles)', count: data.productOptions.length, weight: 1.5, threshold: 100 },
+    { label: 'Summary Variables', count: data.summaryVariables.filter((v) => v.SBQQ__Active__c).length, weight: 2, threshold: 15 },
+    { label: 'Approval Rules', count: data.approvalRules.filter((r) => r.SBQQ__Active__c).length, weight: 2, threshold: 10 },
+    { label: 'Custom Scripts (QCP)', count: data.customScripts.length, weight: 4, threshold: 3 },
+    { label: 'Quote Templates', count: data.quoteTemplates.length, weight: 1, threshold: 5 },
+    { label: 'Config Attributes', count: data.configurationAttributes.length, weight: 1.5, threshold: 30 },
+    { label: 'Guided Selling Processes', count: data.guidedSellingProcesses.length, weight: 1, threshold: 5 },
+    { label: 'Contracted Prices', count: data.contractedPrices.length, weight: 0.5, threshold: 50 },
+  ];
+
+  const scoredFactors = factors.map((f) => ({
+    label: f.label,
+    count: f.count,
+    weight: f.weight,
+    contribution: Math.round(Math.min(f.count / f.threshold, 2) * f.weight * 10),
+  }));
+
+  const totalScore = scoredFactors.reduce((sum, f) => sum + f.contribution, 0);
+
+  let rating: 'Low' | 'Moderate' | 'High' | 'Very High';
+  if (totalScore <= 30) rating = 'Low';
+  else if (totalScore <= 60) rating = 'Moderate';
+  else if (totalScore <= 100) rating = 'High';
+  else rating = 'Very High';
+
+  return { totalScore, rating, factors: scoredFactors };
 }
 
 /**

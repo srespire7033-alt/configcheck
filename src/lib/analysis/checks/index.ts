@@ -17,9 +17,10 @@ import { guidedSellingChecks } from './guided-selling';
 import { advancedPricingChecks } from './advanced-pricing';
 import { performanceChecks } from './performance';
 import { impactAnalysisChecks } from './impact-analysis';
+import { usageAnalyticsChecks } from './usage-analytics';
 
 /**
- * All registered health checks — 58 total
+ * All registered health checks — 61 total
  * Add new check modules here
  */
 export const allChecks: HealthCheck[] = [
@@ -41,4 +42,5 @@ export const allChecks: HealthCheck[] = [
   ...advancedPricingChecks,         // AP-001 to AP-004
   ...performanceChecks,             // PERF-001 to PERF-005
   ...impactAnalysisChecks,          // IA-001 to IA-004
+  ...usageAnalyticsChecks,          // UA-001 to UA-003
 ];
