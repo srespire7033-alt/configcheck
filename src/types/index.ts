@@ -302,7 +302,7 @@ export interface SFProductRuleAction {
 export interface SFSummaryVariable {
   Id: string;
   Name: string;
-  SBQQ__Active__c: boolean;
+  SBQQ__Active__c?: boolean;
   SBQQ__AggregateField__c: string | null;
   SBQQ__AggregateFunction__c: string | null;
   SBQQ__TargetObject__c: string | null;
@@ -343,7 +343,7 @@ export interface SFCustomScript {
   Id: string;
   Name: string;
   SBQQ__Code__c: string | null;
-  SBQQ__Type__c: string | null;
+  SBQQ__Type__c?: string | null;
   SBQQ__GroupFields__c: string | null;
   SBQQ__QuoteFields__c: string | null;
   SBQQ__QuoteLineFields__c: string | null;
@@ -354,7 +354,7 @@ export interface SFQuoteTemplate {
   Id: string;
   Name: string;
   SBQQ__Default__c: boolean;
-  SBQQ__Status__c: string | null;
+  SBQQ__Status__c?: string | null;
   SBQQ__TemplateSections__r?: { records: SFTemplateSection[] };
 }
 

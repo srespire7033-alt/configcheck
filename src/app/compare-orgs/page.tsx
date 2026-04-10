@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { ArrowLeft, ArrowRight, GitCompare, Loader2, Server, Cloud, ChevronDown, ChevronUp } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { LoadingScreen } from '@/components/ui/loading-screen';
 import type { DBOrganization } from '@/types';
 
 interface DiffItem {
@@ -93,11 +94,7 @@ export default function CompareOrgsPage() {
   }
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
-      </div>
-    );
+    return <LoadingScreen />;
   }
 
   if (orgs.length < 2) {

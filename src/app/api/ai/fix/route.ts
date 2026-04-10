@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/db/client';
 import { getAuthUser } from '@/lib/auth/get-user';
-import { generateFixSuggestion } from '@/lib/ai/claude';
+import { generateFixSuggestion } from '@/lib/ai/gemini';
 
 /**
  * POST /api/ai/fix
@@ -32,16 +32,31 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Issue not found' }, { status: 404 });
     }
 
-    const suggestion = await generateFixSuggestion({
-      check_id: issue.check_id,
-      category: issue.category,
-      severity: issue.severity,
-      title: issue.title,
-      description: issue.description,
-      impact: issue.impact,
-      recommendation: issue.recommendation,
-      affected_records: issue.affected_records,
-    });
+    let suggestion: string;
+    try {
+      suggestion = await generateFixSuggestion({
+        check_id: issue.check_id,
+        category: issue.category,
+        severity: issue.severity,
+        title: issue.title,
+        description: issue.description,
+        impact: issue.impact,
+        recommendation: issue.recommendation,
+        affected_records: issue.affected_records,
+      });
+    } catch (aiError) {
+      const status = (aiError as { status?: number }).status;
+      if (status === 503) {
+        return NextResponse.json(
+          { error: 'AI service is temporarily overloaded. Please try again in a few seconds.' },
+          { status: 503 }
+        );
+      }
+      return NextResponse.json(
+        { error: 'Failed to generate AI fix suggestion. Please try again.' },
+        { status: 500 }
+      );
+    }
 
     // Save suggestion to issue record
     await supabase

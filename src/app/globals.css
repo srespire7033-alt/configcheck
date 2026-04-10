@@ -5,19 +5,31 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  --theme-transition: 500ms cubic-bezier(0.2, 0, 0, 1);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+.dark {
+  --background: #0b1120;
+  --foreground: #e2e8f0;
 }
 
 body {
   color: var(--foreground);
   background: var(--background);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+/* Smooth theme transition — applied via class so it only runs on toggle, not on page load */
+html.theme-transition,
+html.theme-transition *,
+html.theme-transition *::before,
+html.theme-transition *::after {
+  transition: color var(--theme-transition),
+              background-color var(--theme-transition),
+              border-color var(--theme-transition),
+              box-shadow var(--theme-transition),
+              fill var(--theme-transition),
+              stroke var(--theme-transition) !important;
 }
 
 @layer utilities {

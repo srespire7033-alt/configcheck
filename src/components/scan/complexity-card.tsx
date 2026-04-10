@@ -23,15 +23,15 @@ export function ComplexityCard({ complexity }: Props) {
   const gaugePercent = Math.min((complexity.totalScore / 150) * 100, 100);
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+    <div className="bg-white dark:bg-[#111827] rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
       <div className="flex items-center justify-between mb-5">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-purple-50 rounded-xl flex items-center justify-center">
+          <div className="w-10 h-10 bg-purple-50 dark:bg-purple-900/30 rounded-xl flex items-center justify-center">
             <Layers className="w-5 h-5 text-purple-600" />
           </div>
           <div>
-            <h3 className="text-sm font-semibold text-gray-900">CPQ Complexity Score</h3>
-            <p className="text-xs text-gray-500">Benchmarked against healthy org thresholds</p>
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-white">CPQ Complexity Score</h3>
+            <p className="text-xs text-gray-500 dark:text-gray-400">Benchmarked against healthy org thresholds</p>
           </div>
         </div>
         <div className={`px-3 py-1 rounded-full text-xs font-bold ${config.bg} ${config.color}`}>

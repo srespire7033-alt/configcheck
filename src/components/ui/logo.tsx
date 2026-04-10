@@ -28,7 +28,7 @@ export function Logo({ size = 'md', variant = 'default', showText = true }: Logo
       {showText && (
         <span
           className={`${s.text} font-bold ${
-            variant === 'white' ? 'text-white' : 'text-gray-900'
+            variant === 'white' ? 'text-white' : 'text-gray-900 dark:text-white'
           }`}
         >
           ConfigCheck

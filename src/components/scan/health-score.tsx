@@ -24,9 +24,9 @@ export function HealthScore({ score, size = 'lg' }: HealthScoreProps) {
         background: `conic-gradient(${getColor()} 0deg ${3.6 * score}deg, #e5e7eb ${3.6 * score}deg 360deg)`,
       }}
     >
-      <div className={`${innerSize} bg-white rounded-full flex flex-col items-center justify-center`}>
-        <span className={`${scoreText} font-bold text-gray-900`}>{score}</span>
-        <span className={`${subText} text-gray-500`}>out of 100</span>
+      <div className={`${innerSize} bg-white dark:bg-[#111827] rounded-full flex flex-col items-center justify-center`}>
+        <span className={`${scoreText} font-bold text-gray-900 dark:text-white`}>{score}</span>
+        <span className={`${subText} text-gray-500 dark:text-gray-400`}>out of 100</span>
       </div>
     </div>
   );

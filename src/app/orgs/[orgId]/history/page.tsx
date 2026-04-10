@@ -6,6 +6,7 @@ import { ArrowLeft, GitCompare } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { getScoreColor, formatTimeAgo } from '@/lib/utils';
+import { LoadingScreen } from '@/components/ui/loading-screen';
 import type { DBScan } from '@/types';
 
 export default function ScanHistoryPage() {
@@ -30,21 +31,17 @@ export default function ScanHistoryPage() {
   }, [orgId]);
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
-      </div>
-    );
+    return <LoadingScreen />;
   }
 
   return (
     <div>
       <div className="flex items-center justify-between mb-8">
         <div className="flex items-center gap-4">
-          <button onClick={() => router.push(`/orgs/${orgId}`)} className="text-gray-400 hover:text-gray-600">
+          <button onClick={() => router.push(`/orgs/${orgId}`)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
             <ArrowLeft className="h-5 w-5" />
           </button>
-          <h1 className="text-2xl font-bold text-gray-900">Scan History</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Scan History</h1>
         </div>
         {scans.filter((s) => s.status === 'completed').length >= 2 && (
           <button
@@ -102,13 +99,13 @@ export default function ScanHistoryPage() {
               {scans.map((scan, idx) => (
                 <tr
                   key={scan.id}
-                  className="hover:bg-gray-50 cursor-pointer"
+                  className="hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer"
                   onClick={() => router.push(`/orgs/${orgId}`)}
                 >
-                  <td className="px-6 py-4 text-sm font-medium text-gray-900">
+                  <td className="px-6 py-4 text-sm font-medium text-gray-900 dark:text-white">
                     Scan #{scans.length - idx}
                   </td>
-                  <td className="px-6 py-4 text-sm text-gray-500">
+                  <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
                     {scan.completed_at ? formatTimeAgo(scan.completed_at) : '-'}
                   </td>
                   <td className="px-6 py-4">
@@ -123,7 +120,7 @@ export default function ScanHistoryPage() {
                       {scan.info_count > 0 && <Badge variant="info">{scan.info_count}</Badge>}
                     </div>
                   </td>
-                  <td className="px-6 py-4 text-sm text-gray-500">
+                  <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
                     {scan.duration_ms ? `${(scan.duration_ms / 1000).toFixed(1)}s` : '-'}
                   </td>
                   <td className="px-6 py-4">

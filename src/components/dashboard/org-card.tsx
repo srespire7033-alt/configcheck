@@ -13,16 +13,16 @@ interface OrgCardProps {
 
 export function OrgCard({ org, onView, onScan, scanning = false }: OrgCardProps) {
   return (
-    <div className="group bg-white rounded-2xl border border-gray-200 hover:border-blue-200 hover:shadow-lg hover:shadow-blue-50 transition-all duration-300 overflow-hidden">
+    <div className="group bg-white dark:bg-[#111827] rounded-2xl border border-gray-200 dark:border-gray-700 hover:border-blue-200 dark:hover:border-blue-800 hover:shadow-lg hover:shadow-blue-50 dark:hover:shadow-blue-900/20 transition-all duration-300 overflow-hidden">
       {/* Header */}
       <div className="p-5 pb-4">
         <div className="flex items-start justify-between mb-3">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-50 rounded-xl">
-              <Cloud className="h-5 w-5 text-blue-600" />
+            <div className="p-2 bg-blue-50 dark:bg-blue-900/30 rounded-xl">
+              <Cloud className="h-5 w-5 text-blue-600 dark:text-blue-400" />
             </div>
             <div>
-              <h3 className="font-semibold text-gray-900">{org.name}</h3>
+              <h3 className="font-semibold text-gray-900 dark:text-white">{org.name}</h3>
               <span className={`inline-flex items-center gap-1.5 text-xs font-medium mt-0.5 ${
                 org.is_sandbox ? 'text-amber-600' : 'text-emerald-600'
               }`}>
@@ -47,7 +47,7 @@ export function OrgCard({ org, onView, onScan, scanning = false }: OrgCardProps)
 
         {/* Stats */}
         {org.last_scan_at ? (
-          <div className="flex items-center gap-4 text-xs text-gray-500 mb-4">
+          <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400 mb-4">
             <span>Last scan: {formatTimeAgo(org.last_scan_at)}</span>
             {org.critical_count > 0 && (
               <span className="flex items-center gap-1 text-red-600 font-medium">
@@ -57,7 +57,7 @@ export function OrgCard({ org, onView, onScan, scanning = false }: OrgCardProps)
             )}
           </div>
         ) : (
-          <p className="text-xs text-gray-400 mb-4">No scans yet</p>
+          <p className="text-xs text-gray-400 dark:text-gray-500 mb-4">No scans yet</p>
         )}
       </div>
 
@@ -74,7 +74,7 @@ export function OrgCard({ org, onView, onScan, scanning = false }: OrgCardProps)
         {org.last_scan_score !== null && (
           <button
             onClick={onView}
-            className="flex items-center justify-center gap-1 px-3 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors"
+            className="flex items-center justify-center gap-1 px-3 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 dark:text-gray-300 dark:bg-gray-800 dark:hover:bg-gray-700 rounded-xl transition-colors"
           >
             View
             <ArrowRight className="h-3.5 w-3.5" />

@@ -82,13 +82,13 @@ export function ScheduleModal({ orgId, onClose, onCreated }: ScheduleModalProps)
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
 
       {/* Modal */}
-      <div className="relative bg-white rounded-2xl shadow-xl border border-gray-100 w-full max-w-lg mx-4 overflow-hidden">
+      <div className="relative bg-white dark:bg-[#111827] rounded-2xl shadow-xl border border-gray-100 dark:border-gray-700/60 w-full max-w-lg mx-4 overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-          <h2 className="text-lg font-semibold text-gray-900">Schedule a Scan</h2>
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-700/60">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Schedule a Scan</h2>
           <button
             onClick={onClose}
-            className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition"
+            className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition"
           >
             <X className="w-5 h-5" />
           </button>
@@ -97,7 +97,7 @@ export function ScheduleModal({ orgId, onClose, onCreated }: ScheduleModalProps)
         <div className="px-6 py-5 space-y-6">
           {/* Schedule Type Tabs */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Frequency</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Frequency</label>
             <div className="grid grid-cols-4 gap-2">
               {SCHEDULE_TYPES.map(({ value, label, icon: Icon }) => (
                 <button
@@ -106,7 +106,7 @@ export function ScheduleModal({ orgId, onClose, onCreated }: ScheduleModalProps)
                   className={`flex flex-col items-center gap-1.5 px-3 py-3 rounded-xl text-sm font-medium transition ${
                     scheduleType === value
                       ? 'bg-blue-600 text-white shadow-sm'
-                      : 'bg-gray-50 text-gray-600 hover:bg-gray-100 border border-gray-200'
+                      : 'bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700'
                   }`}
                 >
                   <Icon className="w-4 h-4" />
@@ -118,19 +118,19 @@ export function ScheduleModal({ orgId, onClose, onCreated }: ScheduleModalProps)
 
           {/* Time Picker */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Time</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Time</label>
             <input
               type="time"
               value={time}
               onChange={(e) => setTime(e.target.value)}
-              className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-xl text-gray-700 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+              className="w-full px-3 py-2.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-700 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
             />
           </div>
 
           {/* Day of Week (weekly only) */}
           {scheduleType === 'weekly' && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Day of Week</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Day of Week</label>
               <div className="flex gap-2">
                 {DAY_NAMES.map((name, idx) => (
                   <button
@@ -139,7 +139,7 @@ export function ScheduleModal({ orgId, onClose, onCreated }: ScheduleModalProps)
                     className={`flex-1 py-2 rounded-xl text-sm font-medium transition ${
                       dayOfWeek === idx
                         ? 'bg-blue-600 text-white'
-                        : 'bg-gray-50 text-gray-600 hover:bg-gray-100 border border-gray-200'
+                        : 'bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700'
                     }`}
                   >
                     {name}
@@ -152,11 +152,11 @@ export function ScheduleModal({ orgId, onClose, onCreated }: ScheduleModalProps)
           {/* Day of Month (monthly only) */}
           {scheduleType === 'monthly' && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Day of Month</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Day of Month</label>
               <select
                 value={dayOfMonth}
                 onChange={(e) => setDayOfMonth(Number(e.target.value))}
-                className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-xl text-gray-700 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                className="w-full px-3 py-2.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-700 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
               >
                 {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => (
                   <option key={d} value={d}>
@@ -170,24 +170,24 @@ export function ScheduleModal({ orgId, onClose, onCreated }: ScheduleModalProps)
           {/* Date Picker (once only) */}
           {scheduleType === 'once' && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Date</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Date</label>
               <input
                 type="date"
                 value={scheduledDate}
                 onChange={(e) => setScheduledDate(e.target.value)}
                 min={new Date().toISOString().split('T')[0]}
-                className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-xl text-gray-700 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                className="w-full px-3 py-2.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-700 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
               />
             </div>
           )}
 
           {/* Timezone */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Timezone</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Timezone</label>
             <select
               value={timezone}
               onChange={(e) => setTimezone(e.target.value)}
-              className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-xl text-gray-700 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+              className="w-full px-3 py-2.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-700 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
             >
               {TIMEZONES.map((tz) => (
                 <option key={tz.value} value={tz.value}>
@@ -199,17 +199,17 @@ export function ScheduleModal({ orgId, onClose, onCreated }: ScheduleModalProps)
 
           {/* Error */}
           {error && (
-            <div className="bg-red-50 border border-red-100 rounded-xl px-4 py-3 text-sm text-red-700">
+            <div className="bg-red-50 dark:bg-red-900/30 border border-red-100 dark:border-red-800 rounded-xl px-4 py-3 text-sm text-red-700 dark:text-red-400">
               {error}
             </div>
           )}
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-100 bg-gray-50/50">
+        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-100 dark:border-gray-700/60 bg-gray-50/50 dark:bg-gray-800/30">
           <button
             onClick={onClose}
-            className="px-5 py-2.5 bg-white border border-gray-200 text-gray-700 rounded-xl font-medium text-sm hover:bg-gray-50 transition"
+            className="px-5 py-2.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-medium text-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition"
           >
             Cancel
           </button>

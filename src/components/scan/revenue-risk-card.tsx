@@ -20,21 +20,21 @@ export function RevenueRiskCard({ summary }: Props) {
     : 0;
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+    <div className="bg-white dark:bg-[#111827] rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
       <div className="flex items-center gap-3 mb-5">
-        <div className="w-10 h-10 bg-red-50 rounded-xl flex items-center justify-center">
+        <div className="w-10 h-10 bg-red-50 dark:bg-red-900/30 rounded-xl flex items-center justify-center">
           <IndianRupee className="w-5 h-5 text-red-600" />
         </div>
         <div>
-          <h3 className="text-sm font-semibold text-gray-900">Revenue at Risk</h3>
-          <p className="text-xs text-gray-500">Based on last 90 days quote volume</p>
+          <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Revenue at Risk</h3>
+          <p className="text-xs text-gray-500 dark:text-gray-400">Based on last 90 days quote volume</p>
         </div>
       </div>
 
       <div className="grid grid-cols-2 gap-4 mb-4">
         <div>
           <p className="text-xs text-gray-500 mb-1">Total Quote Volume</p>
-          <p className="text-xl font-bold text-gray-900">{formatIndianCurrency(summary.totalQuoteValue)}</p>
+          <p className="text-xl font-bold text-gray-900 dark:text-white">{formatIndianCurrency(summary.totalQuoteValue)}</p>
           <p className="text-xs text-gray-400">{summary.totalQuotesAnalyzed} quotes analyzed</p>
         </div>
         <div>

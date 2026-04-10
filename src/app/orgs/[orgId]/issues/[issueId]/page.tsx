@@ -42,18 +42,26 @@ export default function IssueDetailPage() {
     }
   }
 
+  const [fixError, setFixError] = useState<string | null>(null);
+
   async function handleGenerateFix() {
     setGeneratingFix(true);
+    setFixError(null);
     try {
       const res = await fetch('/api/ai/fix', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ issueId }),
       });
-      const { suggestion } = await res.json();
-      setIssue((prev) => prev ? { ...prev, ai_fix_suggestion: suggestion } : null);
+      const data = await res.json();
+      if (!res.ok) {
+        setFixError(data.error || 'Failed to generate fix suggestion.');
+        return;
+      }
+      setIssue((prev) => prev ? { ...prev, ai_fix_suggestion: data.suggestion } : null);
     } catch (error) {
       console.error('Failed to generate fix:', error);
+      setFixError('Network error. Please try again.');
     } finally {
       setGeneratingFix(false);
     }
@@ -151,7 +159,7 @@ export default function IssueDetailPage() {
     <div className="max-w-4xl mx-auto">
       {/* Header */}
       <div className="flex items-center gap-4 mb-6">
-        <button onClick={() => router.back()} className="text-gray-400 hover:text-gray-600">
+        <button onClick={() => router.back()} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
           <ArrowLeft className="h-5 w-5" />
         </button>
         <div className="flex-1">
@@ -159,13 +167,13 @@ export default function IssueDetailPage() {
             <Badge variant={issue.severity}>{issue.severity}</Badge>
             <span className="text-xs font-mono text-gray-400">{issue.check_id}</span>
           </div>
-          <h1 className="text-xl font-bold text-gray-900">{issue.title}</h1>
+          <h1 className="text-xl font-bold text-gray-900 dark:text-white">{issue.title}</h1>
         </div>
         {/* Status dropdown */}
         <select
           value={issue.status}
           onChange={(e) => handleStatusChange(e.target.value)}
-          className="px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white"
+          className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 dark:text-white"
         >
           <option value="open">Open</option>
           <option value="acknowledged">Acknowledged</option>
@@ -177,30 +185,30 @@ export default function IssueDetailPage() {
       {/* What's Wrong */}
       <Card className="mb-4">
         <CardHeader>
-          <h3 className="text-sm font-semibold text-gray-900">What&apos;s Wrong</h3>
+          <h3 className="text-sm font-semibold text-gray-900 dark:text-white">What&apos;s Wrong</h3>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-gray-700">{issue.description}</p>
+          <p className="text-sm text-gray-700 dark:text-gray-300">{issue.description}</p>
         </CardContent>
       </Card>
 
       {/* Why It Matters */}
       <Card className="mb-4">
         <CardHeader>
-          <h3 className="text-sm font-semibold text-gray-900">Why It Matters</h3>
+          <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Why It Matters</h3>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-gray-700">{issue.impact}</p>
+          <p className="text-sm text-gray-700 dark:text-gray-300">{issue.impact}</p>
         </CardContent>
       </Card>
 
       {/* What To Change */}
       <Card className="mb-4">
         <CardHeader>
-          <h3 className="text-sm font-semibold text-gray-900">What To Change</h3>
+          <h3 className="text-sm font-semibold text-gray-900 dark:text-white">What To Change</h3>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-gray-700">{issue.recommendation}</p>
+          <p className="text-sm text-gray-700 dark:text-gray-300">{issue.recommendation}</p>
         </CardContent>
       </Card>
 
@@ -225,7 +233,12 @@ export default function IssueDetailPage() {
         </CardHeader>
         <CardContent>
           {issue.ai_fix_suggestion ? (
-            <p className="text-sm text-gray-700 whitespace-pre-line">{issue.ai_fix_suggestion}</p>
+            <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-line">{issue.ai_fix_suggestion}</p>
+          ) : fixError ? (
+            <div className="flex items-center gap-2 text-sm text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 rounded-lg p-3">
+              <AlertTriangle className="h-4 w-4 flex-shrink-0" />
+              <span>{fixError}</span>
+            </div>
           ) : (
             <p className="text-sm text-gray-400 italic">
               Click &quot;Generate Fix&quot; to get a detailed, step-by-step fix from AI.
@@ -322,7 +335,7 @@ export default function IssueDetailPage() {
       {issue.affected_records && issue.affected_records.length > 0 && (
         <Card>
           <CardHeader>
-            <h3 className="text-sm font-semibold text-gray-900">Affected Records</h3>
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Affected Records</h3>
           </CardHeader>
           <CardContent>
             <ul className="space-y-2">

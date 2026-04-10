@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Connection } from 'jsforce';
 import type {
   SFPriceRule,
@@ -19,6 +20,48 @@ import type {
   SFCPQSettings,
   CPQData,
 } from '@/types';
+
+/**
+ * Resilient SOQL query that auto-retries by stripping invalid fields.
+ * Handles INVALID_FIELD errors by parsing the bad field name, removing it
+ * from the SELECT clause, and retrying — up to maxRetries times.
+ * Also handles INVALID_TYPE by returning empty result immediately.
+ */
+async function safeQuery(conn: Connection, soql: string, maxRetries = 5): Promise<any> {
+  let query = soql;
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await conn.query(query);
+    } catch (err: any) {
+      const errorCode = err?.errorCode || err?.data?.errorCode || '';
+      const errorMsg = err?.message || err?.data?.message || '';
+
+      // Object doesn't exist at all — return empty
+      if (errorCode === 'INVALID_TYPE') {
+        return { records: [] };
+      }
+
+      // Field doesn't exist — strip it and retry
+      if (errorCode === 'INVALID_FIELD' && attempt < maxRetries) {
+        const fieldMatch = errorMsg.match(/No such column '([^']+)'/);
+        if (fieldMatch) {
+          const badField = fieldMatch[1];
+          // Remove the bad field from SELECT (handle trailing comma, leading comma, standalone)
+          query = query
+            .replace(new RegExp(`,\\s*${badField.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`), '')
+            .replace(new RegExp(`\\b${badField.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*,`), '')
+            .replace(new RegExp(`\\b${badField.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`), '');
+          console.log(`Retrying query without field: ${badField}`);
+          continue;
+        }
+      }
+
+      // Unrecoverable error
+      throw err;
+    }
+  }
+  return { records: [] };
+}
 
 /**
  * Fetch all CPQ configuration data from a Salesforce org
@@ -90,7 +133,7 @@ export async function fetchAllCPQData(conn: Connection): Promise<CPQData> {
 
 async function fetchPriceRules(conn: Connection): Promise<SFPriceRule[]> {
   try {
-    const result = await conn.query(`
+    const result = await safeQuery(conn, `
       SELECT
         Id, Name, SBQQ__Active__c, SBQQ__EvaluationOrder__c,
         SBQQ__TargetObject__c, SBQQ__LookupObject__c,
@@ -110,7 +153,7 @@ async function fetchPriceRules(conn: Connection): Promise<SFPriceRule[]> {
 
 async function fetchDiscountSchedules(conn: Connection): Promise<SFDiscountSchedule[]> {
   try {
-    const result = await conn.query(`
+    const result = await safeQuery(conn, `
       SELECT
         Id, Name, SBQQ__Type__c, SBQQ__DiscountUnit__c,
         (SELECT Id, Name, SBQQ__LowerBound__c, SBQQ__UpperBound__c, SBQQ__Discount__c
@@ -127,7 +170,7 @@ async function fetchDiscountSchedules(conn: Connection): Promise<SFDiscountSched
 
 async function fetchProducts(conn: Connection): Promise<SFProduct[]> {
   try {
-    const result = await conn.query(`
+    const result = await safeQuery(conn, `
       SELECT
         Id, Name, ProductCode, IsActive,
         SBQQ__SubscriptionType__c, SBQQ__SubscriptionPricing__c,
@@ -146,7 +189,7 @@ async function fetchProducts(conn: Connection): Promise<SFProduct[]> {
 
 async function fetchProductOptions(conn: Connection): Promise<SFProductOption[]> {
   try {
-    const result = await conn.query(`
+    const result = await safeQuery(conn, `
       SELECT
         Id, Name,
         SBQQ__ConfiguredSKU__c, SBQQ__OptionalSKU__c,
@@ -163,7 +206,7 @@ async function fetchProductOptions(conn: Connection): Promise<SFProductOption[]>
 
 async function fetchProductRules(conn: Connection): Promise<SFProductRule[]> {
   try {
-    const result = await conn.query(`
+    const result = await safeQuery(conn, `
       SELECT
         Id, Name, SBQQ__Active__c, SBQQ__Type__c,
         SBQQ__EvaluationOrder__c, SBQQ__ConditionsMet__c,
@@ -183,7 +226,7 @@ async function fetchProductRules(conn: Connection): Promise<SFProductRule[]> {
 
 async function fetchApprovalRules(conn: Connection): Promise<SFApprovalRule[]> {
   try {
-    const result = await conn.query(`
+    const result = await safeQuery(conn, `
       SELECT
         Id, Name, SBQQ__Active__c,
         SBQQ__ApprovalStep__c, SBQQ__Approver__c,
@@ -204,7 +247,7 @@ async function fetchApprovalRules(conn: Connection): Promise<SFApprovalRule[]> {
 
 async function fetchCustomScripts(conn: Connection): Promise<SFCustomScript[]> {
   try {
-    const result = await conn.query(`
+    const result = await safeQuery(conn, `
       SELECT
         Id, Name, SBQQ__Code__c, SBQQ__Type__c,
         SBQQ__GroupFields__c, SBQQ__QuoteFields__c,
@@ -221,7 +264,7 @@ async function fetchCustomScripts(conn: Connection): Promise<SFCustomScript[]> {
 
 async function fetchQuoteTemplates(conn: Connection): Promise<SFQuoteTemplate[]> {
   try {
-    const result = await conn.query(`
+    const result = await safeQuery(conn, `
       SELECT
         Id, Name, SBQQ__Default__c, SBQQ__Status__c,
         (SELECT Id, Name, SBQQ__Content__c
@@ -238,7 +281,7 @@ async function fetchQuoteTemplates(conn: Connection): Promise<SFQuoteTemplate[]>
 
 async function fetchConfigurationAttributes(conn: Connection): Promise<SFConfigurationAttribute[]> {
   try {
-    const result = await conn.query(`
+    const result = await safeQuery(conn, `
       SELECT
         Id, Name,
         SBQQ__Product__c, SBQQ__Product__r.Name,
@@ -258,7 +301,7 @@ async function fetchConfigurationAttributes(conn: Connection): Promise<SFConfigu
 
 async function fetchGuidedSellingProcesses(conn: Connection): Promise<SFGuidedSellingProcess[]> {
   try {
-    const result = await conn.query(`
+    const result = await safeQuery(conn, `
       SELECT
         Id, Name, SBQQ__Active__c,
         SBQQ__LabelPosition__c, SBQQ__Description__c
@@ -274,7 +317,7 @@ async function fetchGuidedSellingProcesses(conn: Connection): Promise<SFGuidedSe
     }
 
     try {
-      const inputResult = await conn.query(`
+      const inputResult = await safeQuery(conn, `
         SELECT SBQQ__GuidedSellingProcess__c, COUNT(Id) cnt
         FROM SBQQ__GuidedSellingInput__c
         GROUP BY SBQQ__GuidedSellingProcess__c
@@ -286,7 +329,7 @@ async function fetchGuidedSellingProcesses(conn: Connection): Promise<SFGuidedSe
     } catch { /* inputs object may not exist */ }
 
     try {
-      const outputResult = await conn.query(`
+      const outputResult = await safeQuery(conn, `
         SELECT SBQQ__GuidedSellingProcess__c, COUNT(Id) cnt
         FROM SBQQ__GuidedSellingOutput__c
         GROUP BY SBQQ__GuidedSellingProcess__c
@@ -306,7 +349,7 @@ async function fetchGuidedSellingProcesses(conn: Connection): Promise<SFGuidedSe
 
 async function fetchSummaryVariables(conn: Connection): Promise<SFSummaryVariable[]> {
   try {
-    const result = await conn.query(`
+    const result = await safeQuery(conn, `
       SELECT
         Id, Name, SBQQ__Active__c,
         SBQQ__AggregateField__c, SBQQ__AggregateFunction__c,
@@ -331,7 +374,7 @@ async function fetchSummaryVariables(conn: Connection): Promise<SFSummaryVariabl
 
     // Check price rule conditions for summary variable references
     try {
-      const priceCondResult = await conn.query(`
+      const priceCondResult = await safeQuery(conn, `
         SELECT SBQQ__Variable__c, COUNT(Id) cnt
         FROM SBQQ__PriceCondition__c
         WHERE SBQQ__Variable__c != null
@@ -347,7 +390,7 @@ async function fetchSummaryVariables(conn: Connection): Promise<SFSummaryVariabl
 
     // Check product rule error conditions for summary variable references
     try {
-      const prodCondResult = await conn.query(`
+      const prodCondResult = await safeQuery(conn, `
         SELECT SBQQ__Variable__c, COUNT(Id) cnt
         FROM SBQQ__ErrorCondition__c
         WHERE SBQQ__Variable__c != null
@@ -370,7 +413,7 @@ async function fetchSummaryVariables(conn: Connection): Promise<SFSummaryVariabl
 
 async function fetchSubscriptions(conn: Connection): Promise<SFSubscription[]> {
   try {
-    const result = await conn.query(`
+    const result = await safeQuery(conn, `
       SELECT
         Id, Name,
         SBQQ__Contract__c,
@@ -390,7 +433,7 @@ async function fetchSubscriptions(conn: Connection): Promise<SFSubscription[]> {
 
 async function fetchQuotes(conn: Connection): Promise<SFQuote[]> {
   try {
-    const result = await conn.query(`
+    const result = await safeQuery(conn, `
       SELECT
         Id, Name,
         SBQQ__Type__c, SBQQ__Status__c, SBQQ__Primary__c
@@ -408,7 +451,7 @@ async function fetchQuotes(conn: Connection): Promise<SFQuote[]> {
 
 async function fetchQuoteLines(conn: Connection): Promise<SFQuoteLine[]> {
   try {
-    const result = await conn.query(`
+    const result = await safeQuery(conn, `
       SELECT
         Id, SBQQ__Quote__c,
         SBQQ__Product__r.Name,
@@ -432,7 +475,7 @@ async function fetchQuoteLines(conn: Connection): Promise<SFQuoteLine[]> {
 
 async function fetchPricebookEntries(conn: Connection): Promise<SFPricebookEntry[]> {
   try {
-    const result = await conn.query(`
+    const result = await safeQuery(conn, `
       SELECT
         Id, Product2Id, Product2.Name,
         Pricebook2Id, UnitPrice, IsActive
@@ -448,7 +491,7 @@ async function fetchPricebookEntries(conn: Connection): Promise<SFPricebookEntry
 
 async function fetchContractedPrices(conn: Connection): Promise<SFContractedPrice[]> {
   try {
-    const result = await conn.query(`
+    const result = await safeQuery(conn, `
       SELECT
         Id, Name,
         SBQQ__Account__c, SBQQ__Account__r.Name,
@@ -470,7 +513,7 @@ async function fetchContractedPrices(conn: Connection): Promise<SFContractedPric
 async function fetchCPQSettings(conn: Connection): Promise<SFCPQSettings | null> {
   try {
     // Query the CPQ custom setting
-    const result = await conn.query(`
+    const result = await safeQuery(conn, `
       SELECT
         SBQQ__TriggerDisabled__c,
         SBQQ__RenewalModel__c,
@@ -486,7 +529,7 @@ async function fetchCPQSettings(conn: Connection): Promise<SFCPQSettings | null>
     // Also check for Quote Calculator Plugin
     let hasQCP = false;
     try {
-      const qcpResult = await conn.query(`
+      const qcpResult = await safeQuery(conn, `
         SELECT Id FROM SBQQ__CustomScript__c
         WHERE SBQQ__Type__c = 'Quote Calculator Plugin'
         LIMIT 1

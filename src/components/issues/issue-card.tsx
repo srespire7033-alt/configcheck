@@ -54,7 +54,7 @@ export function IssueCard({ issue, onClick, onStatusChange }: IssueCardProps) {
   const isResolved = issue.status === 'resolved' || issue.status === 'ignored';
 
   return (
-    <div className={`p-4 sm:p-6 hover:bg-gray-50 transition ${isResolved ? 'opacity-60' : ''}`}>
+    <div className={`p-4 sm:p-6 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition ${isResolved ? 'opacity-60' : ''}`}>
       <div className="flex flex-col sm:flex-row items-start gap-4">
         {/* Icon */}
         <div className={`w-10 h-10 ${config.bgColor} rounded-xl flex items-center justify-center flex-shrink-0`}>
@@ -64,7 +64,7 @@ export function IssueCard({ issue, onClick, onStatusChange }: IssueCardProps) {
         {/* Content */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-3 mb-1 flex-wrap">
-            <h4 className={`font-semibold ${isResolved ? 'text-gray-500 line-through' : 'text-gray-900'}`}>{issue.title}</h4>
+            <h4 className={`font-semibold ${isResolved ? 'text-gray-500 dark:text-gray-500 line-through' : 'text-gray-900 dark:text-white'}`}>{issue.title}</h4>
             <span className={`px-2 py-0.5 ${config.badgeBg} ${config.badgeText} text-xs font-medium rounded-full`}>
               {issue.check_id}
             </span>
@@ -75,12 +75,12 @@ export function IssueCard({ issue, onClick, onStatusChange }: IssueCardProps) {
               </span>
             )}
           </div>
-          <p className="text-gray-600 mb-3 text-sm">{issue.description}</p>
+          <p className="text-gray-600 dark:text-gray-400 mb-3 text-sm">{issue.description}</p>
           {(issue.affected_records?.length > 0 || (issue.revenue_impact && issue.revenue_impact > 0)) && (
             <div className="flex items-center gap-6 text-sm">
               {issue.affected_records && issue.affected_records.length > 0 && (
-                <span className="text-gray-500">
-                  <strong className="text-gray-700">Impact:</strong> {issue.affected_records.length} record{issue.affected_records.length > 1 ? 's' : ''} affected
+                <span className="text-gray-500 dark:text-gray-400">
+                  <strong className="text-gray-700 dark:text-gray-300">Impact:</strong> {issue.affected_records.length} record{issue.affected_records.length > 1 ? 's' : ''} affected
                 </span>
               )}
               {issue.revenue_impact && issue.revenue_impact > 0 && (
@@ -104,13 +104,7 @@ export function IssueCard({ issue, onClick, onStatusChange }: IssueCardProps) {
           )}
           <button
             onClick={(e) => { e.stopPropagation(); onClick(); }}
-            className="px-4 py-2 bg-blue-50 text-blue-600 rounded-lg text-sm font-medium hover:bg-blue-100 transition"
-          >
-            View Fix
-          </button>
-          <button
-            onClick={(e) => { e.stopPropagation(); onClick(); }}
-            className="px-4 py-2 bg-gray-100 text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-200 transition"
+            className="px-4 py-2 bg-blue-50 text-blue-600 rounded-lg text-sm font-medium hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400 dark:hover:bg-blue-900/50 transition"
           >
             Details
           </button>

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Save, LogOut, Upload, X } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { createClient } from '@/lib/db/client';
+import { LoadingScreen } from '@/components/ui/loading-screen';
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -117,36 +118,32 @@ export default function SettingsPage() {
   }
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin h-8 w-8 border-4 border-blue-600 border-t-transparent rounded-full" />
-      </div>
-    );
+    return <LoadingScreen />;
   }
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-900 mb-8">Settings</h1>
+      <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-8">Settings</h1>
 
       {/* Company & Branding */}
       <Card className="mb-6">
         <CardHeader>
-          <h3 className="text-sm font-semibold text-gray-900">Company & Branding</h3>
+          <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Company & Branding</h3>
           <p className="text-xs text-gray-500">Used for white-label PDF reports</p>
         </CardHeader>
         <CardContent className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Company Name</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Company Name</label>
             <input
               type="text"
               value={companyName}
               onChange={(e) => setCompanyName(e.target.value)}
               placeholder="Your consulting firm name"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-800 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Brand Color</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Brand Color</label>
             <div className="flex items-center gap-3">
               <input
                 type="color"
@@ -158,7 +155,7 @@ export default function SettingsPage() {
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Company Logo</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Company Logo</label>
             <input
               ref={fileInputRef}
               type="file"
@@ -223,15 +220,15 @@ export default function SettingsPage() {
       {/* Plan Info */}
       <Card className="mb-6">
         <CardHeader>
-          <h3 className="text-sm font-semibold text-gray-900">Your Plan</h3>
+          <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Your Plan</h3>
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-900">
+              <p className="text-sm font-medium text-gray-900 dark:text-white">
                 {plan === 'free' ? 'Free Plan' : plan === 'pro' ? 'Pro Plan' : 'Team Plan'}
               </p>
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-gray-500 dark:text-gray-400">
                 {plan === 'free' ? '3 orgs, 10 scans/month' : plan === 'pro' ? '10 orgs, unlimited scans' : 'Unlimited orgs & scans'}
               </p>
             </div>
@@ -245,13 +242,13 @@ export default function SettingsPage() {
       {/* Account */}
       <Card>
         <CardHeader>
-          <h3 className="text-sm font-semibold text-gray-900">Account</h3>
+          <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Account</h3>
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-900">{email}</p>
-              <p className="text-xs text-gray-500">Signed in</p>
+              <p className="text-sm font-medium text-gray-900 dark:text-white">{email}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Signed in</p>
             </div>
             <button
               onClick={handleSignOut}

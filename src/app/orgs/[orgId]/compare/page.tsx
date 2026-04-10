@@ -2,10 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, ArrowRight, TrendingUp, TrendingDown, Minus, AlertCircle, AlertTriangle, Info, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, ArrowRight, TrendingUp, TrendingDown, Minus, AlertCircle, AlertTriangle, Info, CheckCircle2, Sparkles } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { getScoreColor, getScoreBarColor, getCategoryLabel } from '@/lib/utils';
+import { LoadingScreen } from '@/components/ui/loading-screen';
 import type { DBScan, DBIssue } from '@/types';
 
 interface ComparisonResult {
@@ -35,6 +36,8 @@ export default function ComparePage() {
   const [comparison, setComparison] = useState<ComparisonResult | null>(null);
   const [loading, setLoading] = useState(true);
   const [comparing, setComparing] = useState(false);
+  const [aiInsight, setAiInsight] = useState<string>('');
+  const [aiInsightLoading, setAiInsightLoading] = useState(false);
 
   useEffect(() => {
     async function fetchScans() {
@@ -62,15 +65,45 @@ export default function ComparePage() {
   async function handleCompare() {
     if (!scanAId || !scanBId || scanAId === scanBId) return;
     setComparing(true);
+    setAiInsight('');
     try {
       const res = await fetch(`/api/scans/compare?scanA=${scanAId}&scanB=${scanBId}`);
       if (res.ok) {
-        setComparison(await res.json());
+        const data: ComparisonResult = await res.json();
+        setComparison(data);
+        // Auto-generate AI insight
+        fetchAiInsight(data);
       }
     } catch (error) {
       console.error('Comparison failed:', error);
     } finally {
       setComparing(false);
+    }
+  }
+
+  async function fetchAiInsight(data: ComparisonResult) {
+    setAiInsightLoading(true);
+    try {
+      const res = await fetch('/api/ai/insights', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'scan-diff',
+          prevScore: data.scanA.score,
+          newScore: data.scanB.score,
+          newIssues: data.newIssues.map((i) => `[${i.check_id}] ${i.title}`),
+          resolvedIssues: data.resolvedIssues.map((i) => `[${i.check_id}] ${i.title}`),
+          unchangedCount: data.summary.unchangedCount,
+        }),
+      });
+      if (res.ok) {
+        const { insight } = await res.json();
+        setAiInsight(insight || '');
+      }
+    } catch (error) {
+      console.error('AI insight failed:', error);
+    } finally {
+      setAiInsightLoading(false);
     }
   }
 
@@ -90,11 +123,7 @@ export default function ComparePage() {
   }
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
-      </div>
-    );
+    return <LoadingScreen />;
   }
 
   if (scans.length < 2) {
@@ -123,8 +152,8 @@ export default function ComparePage() {
           <ArrowLeft className="h-5 w-5" />
         </button>
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Drift Detection</h1>
-          <p className="text-sm text-gray-500 mt-0.5">Compare two scans to see what changed</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Drift Detection</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Compare two scans to see what changed</p>
         </div>
       </div>
 
@@ -133,11 +162,11 @@ export default function ComparePage() {
         <CardContent className="py-5">
           <div className="flex items-center gap-4">
             <div className="flex-1">
-              <label className="block text-xs font-medium text-gray-500 mb-1.5 uppercase">Baseline (Before)</label>
+              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5 uppercase">Baseline (Before)</label>
               <select
                 value={scanAId}
                 onChange={(e) => setScanAId(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 dark:text-white"
               >
                 <option value="">Select scan...</option>
                 {scans.map((scan, idx) => (
@@ -149,11 +178,11 @@ export default function ComparePage() {
             </div>
             <ArrowRight className="w-5 h-5 text-gray-400 mt-5 flex-shrink-0" />
             <div className="flex-1">
-              <label className="block text-xs font-medium text-gray-500 mb-1.5 uppercase">Latest (After)</label>
+              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5 uppercase">Latest (After)</label>
               <select
                 value={scanBId}
                 onChange={(e) => setScanBId(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 dark:text-white"
               >
                 <option value="">Select scan...</option>
                 {scans.map((scan, idx) => (
@@ -183,11 +212,11 @@ export default function ComparePage() {
               <div className="flex items-center justify-between">
                 {/* Before */}
                 <div className="text-center flex-1">
-                  <p className="text-xs font-medium text-gray-500 uppercase mb-2">Before</p>
+                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase mb-2">Before</p>
                   <p className={`text-4xl font-bold ${getScoreColor(comparison.scanA.score)}`}>
                     {comparison.scanA.score}
                   </p>
-                  <p className="text-xs text-gray-400 mt-1">{comparison.scanA.totalIssues} issues</p>
+                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{comparison.scanA.totalIssues} issues</p>
                 </div>
 
                 {/* Delta */}
@@ -215,15 +244,37 @@ export default function ComparePage() {
 
                 {/* After */}
                 <div className="text-center flex-1">
-                  <p className="text-xs font-medium text-gray-500 uppercase mb-2">After</p>
+                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase mb-2">After</p>
                   <p className={`text-4xl font-bold ${getScoreColor(comparison.scanB.score)}`}>
                     {comparison.scanB.score}
                   </p>
-                  <p className="text-xs text-gray-400 mt-1">{comparison.scanB.totalIssues} issues</p>
+                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{comparison.scanB.totalIssues} issues</p>
                 </div>
               </div>
             </CardContent>
           </Card>
+
+          {/* AI Drift Insight */}
+          {(aiInsightLoading || aiInsight) && (
+            <div className="bg-gradient-to-r from-blue-50 to-teal-50 dark:from-blue-900/20 dark:to-teal-900/20 rounded-2xl border border-blue-100 dark:border-blue-800 p-5">
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 bg-white dark:bg-gray-800 rounded-xl flex items-center justify-center shadow-sm flex-shrink-0">
+                  <Sparkles className={`w-5 h-5 text-blue-600 dark:text-blue-400 ${aiInsightLoading ? 'animate-pulse' : ''}`} />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-1">AI Drift Analysis</h3>
+                  {aiInsightLoading ? (
+                    <div className="space-y-2">
+                      <div className="h-3 bg-blue-100 dark:bg-blue-900/40 rounded w-full animate-pulse" />
+                      <div className="h-3 bg-blue-100 dark:bg-blue-900/40 rounded w-3/4 animate-pulse" />
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">{aiInsight}</p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Summary Stats */}
           <div className="grid grid-cols-3 gap-4">
@@ -250,7 +301,7 @@ export default function ComparePage() {
           {/* Category Changes */}
           <Card>
             <CardHeader>
-              <h3 className="text-sm font-semibold text-gray-900">Category Score Changes</h3>
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Category Score Changes</h3>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
@@ -258,9 +309,9 @@ export default function ComparePage() {
                   .sort(([, a], [, b]) => a.delta - b.delta)
                   .map(([cat, change]) => (
                     <div key={cat} className="flex items-center gap-3">
-                      <span className="text-sm text-gray-700 w-40 truncate">{getCategoryLabel(cat)}</span>
+                      <span className="text-sm text-gray-700 dark:text-gray-300 w-40 truncate">{getCategoryLabel(cat)}</span>
                       <div className="flex-1 flex items-center gap-2">
-                        <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
+                        <div className="flex-1 h-2 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
                           <div
                             className={`h-full rounded-full ${getScoreBarColor(change.after)}`}
                             style={{ width: `${change.after}%` }}
@@ -287,13 +338,13 @@ export default function ComparePage() {
               <CardHeader>
                 <div className="flex items-center gap-2">
                   <AlertCircle className="w-4 h-4 text-red-500" />
-                  <h3 className="text-sm font-semibold text-gray-900">
+                  <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
                     New Issues ({comparison.newIssues.length})
                   </h3>
                 </div>
               </CardHeader>
               <CardContent className="p-0">
-                <div className="divide-y divide-gray-100">
+                <div className="divide-y divide-gray-100 dark:divide-gray-800">
                   {comparison.newIssues.map((issue) => (
                     <DriftIssueRow key={issue.id} issue={issue} type="new" />
                   ))}
@@ -308,13 +359,13 @@ export default function ComparePage() {
               <CardHeader>
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4 text-green-500" />
-                  <h3 className="text-sm font-semibold text-gray-900">
+                  <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
                     Resolved Issues ({comparison.resolvedIssues.length})
                   </h3>
                 </div>
               </CardHeader>
               <CardContent className="p-0">
-                <div className="divide-y divide-gray-100">
+                <div className="divide-y divide-gray-100 dark:divide-gray-800">
                   {comparison.resolvedIssues.map((issue) => (
                     <DriftIssueRow key={issue.id} issue={issue} type="resolved" />
                   ))}
@@ -329,13 +380,13 @@ export default function ComparePage() {
               <CardHeader>
                 <div className="flex items-center gap-2">
                   <Minus className="w-4 h-4 text-gray-400" />
-                  <h3 className="text-sm font-semibold text-gray-900">
+                  <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
                     Unchanged Issues ({comparison.unchangedIssues.length})
                   </h3>
                 </div>
               </CardHeader>
               <CardContent className="p-0">
-                <div className="divide-y divide-gray-100">
+                <div className="divide-y divide-gray-100 dark:divide-gray-800">
                   {comparison.unchangedIssues.map((issue) => (
                     <DriftIssueRow key={issue.id} issue={issue} type="unchanged" />
                   ))}
@@ -368,12 +419,12 @@ function DriftIssueRow({ issue, type }: { issue: DBIssue; type: 'new' | 'resolve
         {severityIcon[issue.severity]}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <span className="text-sm font-medium text-gray-900">{issue.title}</span>
+            <span className="text-sm font-medium text-gray-900 dark:text-white">{issue.title}</span>
             <Badge variant={issue.severity === 'critical' ? 'critical' : issue.severity === 'warning' ? 'warning' : 'info'}>
               {issue.check_id}
             </Badge>
           </div>
-          <p className="text-xs text-gray-500 mt-0.5 truncate">{issue.description}</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate">{issue.description}</p>
         </div>
         <span className="text-xs text-gray-400">{getCategoryLabel(issue.category)}</span>
       </div>

@@ -102,7 +102,7 @@ export default function LoginPage() {
       </div>
 
       {/* Right Panel - Form */}
-      <div className="flex-1 flex items-center justify-center bg-gray-50 px-6">
+      <div className="flex-1 flex items-center justify-center bg-gray-50 dark:bg-gray-950 px-6">
         <div className="w-full max-w-md">
           {/* Mobile Logo */}
           <div className="flex justify-center mb-8 lg:hidden">
@@ -110,11 +110,11 @@ export default function LoginPage() {
           </div>
 
           {/* Card */}
-          <div className="bg-white rounded-2xl shadow-lg shadow-gray-200/50 border border-gray-100 p-8">
-            <h2 className="text-2xl font-bold text-gray-900 mb-1">
+          <div className="bg-white dark:bg-[#111827] rounded-2xl shadow-lg shadow-gray-200/50 dark:shadow-black/30 border border-gray-100 dark:border-gray-800 p-8">
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-1">
               {isSignUp ? 'Create your account' : 'Welcome back'}
             </h2>
-            <p className="text-sm text-gray-500 mb-8">
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-8">
               {isSignUp
                 ? 'Start auditing Salesforce CPQ configurations'
                 : 'Sign in to your ConfigCheck account'}
@@ -123,13 +123,13 @@ export default function LoginPage() {
             <form onSubmit={handleSubmit} className="space-y-5">
               {isSignUp && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Full Name</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Full Name</label>
                   <input
                     type="text"
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
                     required
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl text-sm bg-white dark:bg-gray-800 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                     placeholder="Your name"
                   />
                 </div>

@@ -4,7 +4,7 @@ import { getAuthUser } from '@/lib/auth/get-user';
 import { createRefreshableConnection } from '@/lib/salesforce/client';
 import { fetchAllCPQData } from '@/lib/salesforce/queries';
 import { runAnalysis } from '@/lib/analysis/engine';
-import { generateExecutiveSummary } from '@/lib/ai/claude';
+import { generateExecutiveSummary } from '@/lib/ai/gemini';
 import { sendScanNotification } from '@/lib/email/notifications';
 
 /**
