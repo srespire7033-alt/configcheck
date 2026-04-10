@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, RefreshCw, Sparkles, Download, FileBarChart, CalendarClock, ShieldCheck, FileSpreadsheet, ChevronDown } from 'lucide-react';
+import { ArrowLeft, RefreshCw, Sparkles, Download, FileBarChart, CalendarClock, ShieldCheck, FileSpreadsheet, ChevronDown, AlertTriangle } from 'lucide-react';
 import { HealthScore } from '@/components/scan/health-score';
 import { CategoryBreakdown } from '@/components/scan/category-breakdown';
 import { IssueCard } from '@/components/issues/issue-card';
@@ -21,6 +21,7 @@ export default function OrgDetailPage() {
   const [scan, setScan] = useState<DBScan | null>(null);
   const [issues, setIssues] = useState<DBIssue[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [scanning, setScanning] = useState(false);
   const [schedules, setSchedules] = useState<DBScanSchedule[]>([]);
   const [showScheduleModal, setShowScheduleModal] = useState(false);
@@ -33,10 +34,23 @@ export default function OrgDetailPage() {
 
   async function fetchData() {
     try {
+      setError(null);
+
       const orgRes = await fetch(`/api/orgs?orgId=${orgId}`);
-      if (orgRes.ok) {
-        const orgData = await orgRes.json();
-        setOrg(orgData);
+      if (!orgRes.ok) {
+        if (orgRes.status === 401) {
+          setError('Your session has expired. Please log in again.');
+          return;
+        }
+        setError('Organization not found. It may have been disconnected.');
+        return;
+      }
+      const orgData = await orgRes.json();
+      setOrg(orgData);
+
+      // Check if Salesforce connection is expired
+      if (orgData.connection_status === 'expired') {
+        setError('Your Salesforce connection has expired. Please reconnect your org from the Dashboard.');
       }
 
       const scansRes = await fetch(`/api/scans?orgId=${orgId}`);
@@ -59,8 +73,9 @@ export default function OrgDetailPage() {
         const schedulesData = await schedulesRes.json();
         setSchedules(schedulesData);
       }
-    } catch (error) {
-      console.error('Failed to fetch data:', error);
+    } catch (err) {
+      console.error('Failed to fetch data:', err);
+      setError('Something went wrong loading this page. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -156,8 +171,34 @@ export default function OrgDetailPage() {
     );
   }
 
+  if (error && !org) {
+    return (
+      <div className="text-center py-20">
+        <div className="inline-flex p-4 bg-red-50 rounded-2xl mb-4">
+          <AlertTriangle className="h-10 w-10 text-red-400" />
+        </div>
+        <h3 className="text-lg font-semibold text-gray-900 mb-2">Unable to load organization</h3>
+        <p className="text-sm text-gray-500 max-w-sm mx-auto mb-6">{error}</p>
+        <button
+          onClick={() => router.push('/dashboard')}
+          className="px-6 py-3 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 transition"
+        >
+          Back to Dashboard
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div>
+      {/* Error Banner */}
+      {error && (
+        <div className="mb-6 flex items-center gap-3 p-4 bg-amber-50 border border-amber-200 rounded-xl">
+          <AlertTriangle className="h-5 w-5 text-amber-600 flex-shrink-0" />
+          <p className="text-sm font-medium text-amber-800">{error}</p>
+        </div>
+      )}
+
       {/* Back Navigation */}
       <button
         onClick={() => router.push('/dashboard')}

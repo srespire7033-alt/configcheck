@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/db/client';
 import { getAuthUser } from '@/lib/auth/get-user';
-import { createConnection } from '@/lib/salesforce/client';
+import { createRefreshableConnection } from '@/lib/salesforce/client';
 import { fetchAllCPQData } from '@/lib/salesforce/queries';
 import { runAnalysis } from '@/lib/analysis/engine';
 import { generateExecutiveSummary } from '@/lib/ai/claude';
+import { sendScanNotification } from '@/lib/email/notifications';
 
 /**
  * POST /api/scans
@@ -124,12 +125,15 @@ async function runScanInBackground(
       .update({ status: 'running' })
       .eq('id', scanId);
 
-    // Connect to Salesforce
-    const conn = createConnection(
-      org.instance_url as string,
-      org.access_token as string,
-      org.refresh_token as string
-    );
+    // Connect to Salesforce (with auto token refresh)
+    let conn;
+    try {
+      const refreshed = await createRefreshableConnection(org.id as string);
+      conn = refreshed.conn;
+    } catch (connErr: unknown) {
+      const connMsg = connErr instanceof Error ? connErr.message : 'Connection failed';
+      throw new Error(`Salesforce connection failed: ${connMsg}`);
+    }
 
     // Fetch all CPQ data
     const cpqData = await fetchAllCPQData(conn);
@@ -207,6 +211,17 @@ async function runScanInBackground(
       })
       .eq('id', org.id as string);
 
+    // Send email notification
+    sendScanNotification(org.user_id as string, {
+      scanId: org.id as string,
+      orgName: org.name as string,
+      overallScore: result.overall_score,
+      totalIssues: result.issues.length,
+      criticalCount: result.issues.filter((i) => i.severity === 'critical').length,
+      warningCount: result.issues.filter((i) => i.severity === 'warning').length,
+      status: 'completed',
+    }).catch((err) => console.error('Notification error:', err));
+
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Scan failed';
     console.error('Scan error:', message);
@@ -219,5 +234,17 @@ async function runScanInBackground(
         completed_at: new Date().toISOString(),
       })
       .eq('id', scanId);
+
+    // Send failure notification
+    sendScanNotification(org.user_id as string, {
+      scanId: org.id as string,
+      orgName: org.name as string,
+      overallScore: 0,
+      totalIssues: 0,
+      criticalCount: 0,
+      warningCount: 0,
+      status: 'failed',
+      errorMessage: message,
+    }).catch((err) => console.error('Notification error:', err));
   }
 }

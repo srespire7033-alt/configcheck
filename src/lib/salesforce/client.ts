@@ -121,12 +121,14 @@ export async function handleOAuthCallback(code: string, codeVerifier?: string): 
 }
 
 /**
- * Create a JSForce connection from stored tokens
+ * Create a JSForce connection from stored tokens.
+ * Pass orgId to enable auto-persist of refreshed tokens to the database.
  */
 export function createConnection(
   instanceUrl: string,
   accessToken: string,
-  refreshToken: string
+  refreshToken: string,
+  orgId?: string
 ): Connection {
   const conn = new Connection({
     oauth2: getOAuth2(),
@@ -136,10 +138,120 @@ export function createConnection(
   });
 
   conn.on('refresh', (newAccessToken: string) => {
-    console.log('Salesforce token refreshed:', newAccessToken.substring(0, 10) + '...');
+    console.log('Salesforce token refreshed');
+    if (orgId) {
+      persistRefreshedToken(orgId, newAccessToken).catch((err) =>
+        console.error('Failed to persist refreshed token:', err)
+      );
+    }
   });
 
   return conn;
+}
+
+/**
+ * Create a connection with automatic token refresh and retry on 401.
+ * Use this for all scan/query operations.
+ */
+export async function createRefreshableConnection(
+  orgId: string
+): Promise<{ conn: Connection; org: Record<string, unknown> }> {
+  const { createServiceClient } = await import('@/lib/db/client');
+  const supabase = createServiceClient();
+
+  const { data: org, error } = await supabase
+    .from('organizations')
+    .select('*')
+    .eq('id', orgId)
+    .single();
+
+  if (error || !org) {
+    throw new Error('Organization not found');
+  }
+
+  const conn = createConnection(
+    org.instance_url,
+    org.access_token,
+    org.refresh_token,
+    orgId
+  );
+
+  // Test the connection; if expired, attempt manual refresh
+  try {
+    await conn.query('SELECT Id FROM Organization LIMIT 1');
+  } catch (err: any) {
+    const msg = err?.message || '';
+    if (msg.includes('INVALID_SESSION_ID') || msg.includes('Session expired') || msg.includes('401')) {
+      console.log('Token expired for org', orgId, '— attempting refresh');
+      const newTokens = await refreshAccessToken(org.instance_url, org.refresh_token);
+      if (newTokens) {
+        await persistRefreshedToken(orgId, newTokens.accessToken);
+        return {
+          conn: createConnection(org.instance_url, newTokens.accessToken, org.refresh_token, orgId),
+          org: { ...org, access_token: newTokens.accessToken },
+        };
+      }
+      // Mark org as expired
+      await supabase
+        .from('organizations')
+        .update({ connection_status: 'expired' })
+        .eq('id', orgId);
+      throw new Error('Salesforce session expired. Please reconnect your org.');
+    }
+    throw err;
+  }
+
+  return { conn, org };
+}
+
+/**
+ * Manually refresh the Salesforce access token using the refresh token
+ */
+async function refreshAccessToken(
+  instanceUrl: string,
+  refreshToken: string
+): Promise<{ accessToken: string } | null> {
+  try {
+    const params = new URLSearchParams({
+      grant_type: 'refresh_token',
+      client_id: SF_CLIENT_ID,
+      client_secret: SF_CLIENT_SECRET,
+      refresh_token: refreshToken,
+    });
+
+    const res = await fetch(`${SF_LOGIN_URL}/services/oauth2/token`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: params.toString(),
+    });
+
+    if (!res.ok) {
+      console.error('Token refresh failed:', await res.text());
+      return null;
+    }
+
+    const data = await res.json();
+    return { accessToken: data.access_token };
+  } catch (err) {
+    console.error('Token refresh error:', err);
+    return null;
+  }
+}
+
+/**
+ * Save a refreshed access token to the database
+ */
+async function persistRefreshedToken(orgId: string, newAccessToken: string) {
+  const { createServiceClient } = await import('@/lib/db/client');
+  const supabase = createServiceClient();
+  await supabase
+    .from('organizations')
+    .update({
+      access_token: newAccessToken,
+      connection_status: 'connected',
+      last_connected_at: new Date().toISOString(),
+    })
+    .eq('id', orgId);
 }
 
 /**
