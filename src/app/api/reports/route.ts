@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
     const [issuesRes, orgRes, userRes] = await Promise.all([
       supabase.from('issues').select('*').eq('scan_id', scanId).order('severity'),
       supabase.from('organizations').select('name').eq('id', scan.organization_id).single(),
-      supabase.from('users').select('company_name, report_branding_color').eq('id', scan.user_id).single(),
+      supabase.from('users').select('company_name, report_branding_color, company_logo_url').eq('id', scan.user_id).single(),
     ]);
 
     const reportElement = React.createElement(CPQHealthReport, {
@@ -49,6 +49,7 @@ export async function GET(request: NextRequest) {
       orgName: orgRes.data?.name || 'Unknown Org',
       companyName: userRes.data?.company_name || '',
       brandColor: userRes.data?.report_branding_color || '#1B5E96',
+      logoUrl: userRes.data?.company_logo_url || null,
     });
 
     // Cast needed: CPQHealthReport returns Document but TS can't infer DocumentProps

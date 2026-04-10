@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, RefreshCw, Sparkles, Download, FileBarChart, CalendarClock, ShieldCheck, FileSpreadsheet, ChevronDown, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, RefreshCw, Sparkles, Download, FileBarChart, CalendarClock, ShieldCheck, FileSpreadsheet, ChevronDown, AlertTriangle, TrendingUp, History } from 'lucide-react';
 import { HealthScore } from '@/components/scan/health-score';
 import { CategoryBreakdown } from '@/components/scan/category-breakdown';
 import { IssueCard } from '@/components/issues/issue-card';
@@ -10,6 +10,7 @@ import { RevenueRiskCard } from '@/components/scan/revenue-risk-card';
 import { ComplexityCard } from '@/components/scan/complexity-card';
 import { ScheduleModal } from '@/components/schedule/schedule-modal';
 import { ScheduleList } from '@/components/schedule/schedule-list';
+import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
 import type { DBScan, DBIssue, DBOrganization, DBScanSchedule, RevenueRiskSummary, ComplexityBreakdown } from '@/types';
 
 export default function OrgDetailPage() {
@@ -23,6 +24,7 @@ export default function OrgDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [scanning, setScanning] = useState(false);
+  const [allScans, setAllScans] = useState<DBScan[]>([]);
   const [schedules, setSchedules] = useState<DBScanSchedule[]>([]);
   const [showScheduleModal, setShowScheduleModal] = useState(false);
   const [showExportMenu, setShowExportMenu] = useState(false);
@@ -56,6 +58,7 @@ export default function OrgDetailPage() {
       const scansRes = await fetch(`/api/scans?orgId=${orgId}`);
       if (scansRes.ok) {
         const scans = await scansRes.json();
+        setAllScans(scans.filter((s: DBScan) => s.status === 'completed'));
         if (scans.length > 0) {
           const latestScan = scans[0];
           setScan(latestScan);
@@ -152,17 +155,31 @@ export default function OrgDetailPage() {
     return `${days} day${days > 1 ? 's' : ''} ago`;
   };
 
+  async function handleIssueStatusChange(issueId: string, status: string) {
+    try {
+      await fetch('/api/issues', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ issueId, status }),
+      });
+      setIssues(prev => prev.map(i => i.id === issueId ? { ...i, status: status as DBIssue['status'] } : i));
+    } catch (err) {
+      console.error('Failed to update issue status:', err);
+    }
+  }
+
   // Group issues by severity
   const criticalIssues = issues.filter(i => i.severity === 'critical');
   const warningIssues = issues.filter(i => i.severity === 'warning');
   const infoIssues = issues.filter(i => i.severity === 'info');
+  const resolvedCount = issues.filter(i => i.status === 'resolved').length;
 
   if (loading) {
     return (
       <div className="space-y-6 animate-pulse">
         <div className="h-10 w-48 bg-gray-200 rounded-xl" />
         <div className="h-64 bg-white rounded-2xl border border-gray-100 shadow-sm" />
-        <div className="grid grid-cols-5 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
           {[...Array(5)].map((_, i) => (
             <div key={i} className="h-28 bg-white rounded-xl border border-gray-100 shadow-sm" />
           ))}
@@ -211,10 +228,10 @@ export default function OrgDetailPage() {
       {/* Gradient Org Header */}
       {org && (
         <div
-          className="rounded-2xl text-white px-6 py-4 mb-6"
+          className="rounded-2xl text-white px-4 sm:px-6 py-4 mb-6"
           style={{ background: 'linear-gradient(135deg, #0b8aff 0%, #00b4b4 100%)' }}
         >
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <div className="flex items-center gap-3">
               <div
                 className="w-10 h-10 rounded-xl flex items-center justify-center"
@@ -255,17 +272,17 @@ export default function OrgDetailPage() {
       ) : (
         <>
           {/* ===== HEALTH SCORE CARD — matches ideation exactly ===== */}
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 mb-8">
-            <div className="flex items-center gap-12">
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-6 lg:p-8 mb-8">
+            <div className="flex flex-col lg:flex-row items-center gap-6 lg:gap-12">
               {/* Score Ring */}
               <div className="flex-shrink-0">
                 <HealthScore score={scan.overall_score || 0} size="lg" />
               </div>
 
               {/* Score Breakdown */}
-              <div className="flex-1">
-                <h2 className="text-2xl font-semibold text-gray-900 mb-4">Your CPQ Health Score</h2>
-                <p className="text-gray-600 mb-6">
+              <div className="flex-1 w-full">
+                <h2 className="text-xl sm:text-2xl font-semibold text-gray-900 mb-4 text-center lg:text-left">Your CPQ Health Score</h2>
+                <p className="text-gray-600 mb-6 text-center lg:text-left text-sm">
                   Last scan: {getTimeSince(scan.created_at)} &bull; {issues.length} issues found
                   {org && ` • ${org.name}`}
                   {org?.is_sandbox === false && ' (Production)'}
@@ -300,10 +317,26 @@ export default function OrgDetailPage() {
                     <p className="text-sm text-gray-600">Best Practices</p>
                   </div>
                 </div>
+
+                {/* Resolution Progress */}
+                {issues.length > 0 && (
+                  <div className="mt-4">
+                    <div className="flex items-center justify-between text-sm mb-1.5">
+                      <span className="text-gray-500">Resolution Progress</span>
+                      <span className="font-medium text-gray-700">{resolvedCount}/{issues.length} fixed</span>
+                    </div>
+                    <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-green-500 rounded-full transition-all duration-500"
+                        style={{ width: `${(resolvedCount / issues.length) * 100}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Actions */}
-              <div className="flex flex-col gap-3 flex-shrink-0">
+              <div className="flex flex-row lg:flex-col gap-3 flex-shrink-0 w-full lg:w-auto">
                 <a
                   href={`/api/reports?scanId=${scan.id}`}
                   className="px-6 py-3 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 transition flex items-center gap-2"
@@ -341,6 +374,77 @@ export default function OrgDetailPage() {
             )}
           </div>
 
+          {/* ===== SCORE TREND CHART ===== */}
+          {allScans.length >= 2 && (() => {
+            const trendData = allScans
+              .slice()
+              .reverse()
+              .map((s, idx) => ({
+                name: new Date(s.completed_at || s.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+                score: s.overall_score || 0,
+                issues: s.total_issues || 0,
+                scan: `Scan #${idx + 1}`,
+              }));
+            const first = trendData[0]?.score || 0;
+            const last = trendData[trendData.length - 1]?.score || 0;
+            const diff = last - first;
+            return (
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-8">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center">
+                      <TrendingUp className="w-5 h-5 text-blue-600" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900">Score Trend</h3>
+                      <p className="text-sm text-gray-500">
+                        {diff > 0 ? (
+                          <span className="text-green-600 font-medium">+{diff} points improvement</span>
+                        ) : diff < 0 ? (
+                          <span className="text-red-600 font-medium">{diff} points decline</span>
+                        ) : (
+                          <span>No change</span>
+                        )}
+                        {' '}over {allScans.length} scans
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => router.push(`/orgs/${orgId}/history`)}
+                    className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-600 bg-gray-50 hover:bg-gray-100 rounded-xl transition"
+                  >
+                    <History className="w-4 h-4" />
+                    View History
+                  </button>
+                </div>
+                <div className="h-48">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={trendData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
+                      <defs>
+                        <linearGradient id="scoreGradient" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.2} />
+                          <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
+                      <XAxis dataKey="name" tick={{ fontSize: 12, fill: '#9ca3af' }} axisLine={false} tickLine={false} />
+                      <YAxis domain={[0, 100]} tick={{ fontSize: 12, fill: '#9ca3af' }} axisLine={false} tickLine={false} />
+                      <Tooltip
+                        contentStyle={{ borderRadius: '12px', border: '1px solid #e5e7eb', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                        formatter={(value: any, name: any) => [
+                          name === 'score' ? `${value}/100` : value,
+                          name === 'score' ? 'Health Score' : 'Issues',
+                        ]}
+                      />
+                      <Area type="monotone" dataKey="score" stroke="#3b82f6" strokeWidth={2.5} fill="url(#scoreGradient)" dot={{ r: 4, fill: '#3b82f6', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 6 }} />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            );
+          })()}
+
           {/* ===== REVENUE RISK + COMPLEXITY ===== */}
           {(() => {
             const meta = scan.metadata as Record<string, unknown> | null;
@@ -349,7 +453,7 @@ export default function OrgDetailPage() {
             const comp = meta.complexity as ComplexityBreakdown | undefined;
             if (!rev && !comp) return null;
             return (
-              <div className="grid grid-cols-2 gap-6 mb-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                 {rev && <RevenueRiskCard summary={rev} />}
                 {comp && <ComplexityCard complexity={comp} />}
               </div>
@@ -402,6 +506,7 @@ export default function OrgDetailPage() {
                     key={issue.id}
                     issue={issue}
                     onClick={() => router.push(`/orgs/${orgId}/issues/${issue.id}`)}
+                    onStatusChange={handleIssueStatusChange}
                   />
                 ))}
               </div>
@@ -423,6 +528,7 @@ export default function OrgDetailPage() {
                     key={issue.id}
                     issue={issue}
                     onClick={() => router.push(`/orgs/${orgId}/issues/${issue.id}`)}
+                    onStatusChange={handleIssueStatusChange}
                   />
                 ))}
               </div>
@@ -444,6 +550,7 @@ export default function OrgDetailPage() {
                     key={issue.id}
                     issue={issue}
                     onClick={() => router.push(`/orgs/${orgId}/issues/${issue.id}`)}
+                    onStatusChange={handleIssueStatusChange}
                   />
                 ))}
               </div>

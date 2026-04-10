@@ -86,8 +86,8 @@ export default function ScanHistoryPage() {
 
       {/* Scan Table */}
       <Card>
-        <CardContent className="p-0">
-          <table className="w-full">
+        <CardContent className="p-0 overflow-x-auto">
+          <table className="w-full min-w-[640px]">
             <thead>
               <tr className="border-b border-gray-200 text-left text-xs font-medium text-gray-500 uppercase">
                 <th className="px-6 py-3">Scan</th>

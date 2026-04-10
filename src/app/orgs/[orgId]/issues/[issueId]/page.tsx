@@ -148,7 +148,7 @@ export default function IssueDetailPage() {
   }
 
   return (
-    <div className="max-w-4xl">
+    <div className="max-w-4xl mx-auto">
       {/* Header */}
       <div className="flex items-center gap-4 mb-6">
         <button onClick={() => router.back()} className="text-gray-400 hover:text-gray-600">

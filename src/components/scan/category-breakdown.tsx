@@ -55,7 +55,7 @@ export function CategoryBreakdown({ scores, issues = [], layout = 'vertical' }: 
 
   if (layout === 'horizontal') {
     return (
-      <div className="grid grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
         {entries.map(([category, score]) => {
           const { critical, warning } = getCategoryCounts(category);
           return (
