@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, GitCompare } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { getScoreColor, formatTimeAgo } from '@/lib/utils';
@@ -39,11 +39,22 @@ export default function ScanHistoryPage() {
 
   return (
     <div>
-      <div className="flex items-center gap-4 mb-8">
-        <button onClick={() => router.push(`/orgs/${orgId}`)} className="text-gray-400 hover:text-gray-600">
-          <ArrowLeft className="h-5 w-5" />
-        </button>
-        <h1 className="text-2xl font-bold text-gray-900">Scan History</h1>
+      <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center gap-4">
+          <button onClick={() => router.push(`/orgs/${orgId}`)} className="text-gray-400 hover:text-gray-600">
+            <ArrowLeft className="h-5 w-5" />
+          </button>
+          <h1 className="text-2xl font-bold text-gray-900">Scan History</h1>
+        </div>
+        {scans.filter((s) => s.status === 'completed').length >= 2 && (
+          <button
+            onClick={() => router.push(`/orgs/${orgId}/compare`)}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-600 rounded-lg text-sm font-medium hover:bg-indigo-100 transition"
+          >
+            <GitCompare className="w-4 h-4" />
+            Compare Scans
+          </button>
+        )}
       </div>
 
       {/* Score Trend */}

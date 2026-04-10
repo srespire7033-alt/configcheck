@@ -3,21 +3,23 @@ import { allChecks } from './checks';
 
 // Category weights for overall score
 const CATEGORY_WEIGHTS: Record<string, number> = {
-  price_rules: 0.12,
-  discount_schedules: 0.07,
-  products: 0.10,
-  product_rules: 0.09,
-  summary_variables: 0.06,
-  approval_rules: 0.08,
-  quote_calculator_plugin: 0.08,
-  quote_templates: 0.05,
-  configuration_attributes: 0.07,
-  guided_selling: 0.05,
-  advanced_pricing: 0.08,
+  price_rules: 0.10,
+  discount_schedules: 0.06,
+  products: 0.08,
+  product_rules: 0.07,
+  summary_variables: 0.05,
+  approval_rules: 0.06,
+  quote_calculator_plugin: 0.06,
+  quote_templates: 0.04,
+  configuration_attributes: 0.05,
+  guided_selling: 0.04,
+  advanced_pricing: 0.06,
   cpq_settings: 0.05,
   subscriptions: 0.05,
-  quote_lines: 0.07,
-  contracted_prices: 0.05,
+  quote_lines: 0.06,
+  contracted_prices: 0.04,
+  performance: 0.09,
+  impact_analysis: 0.09,
 };
 
 /**
@@ -71,6 +73,8 @@ function calculateCategoryScores(issues: Issue[]): CategoryScores {
     subscriptions: 100,
     quote_lines: 100,
     contracted_prices: 100,
+    performance: 100,
+    impact_analysis: 100,
   };
 
   for (const issue of issues) {

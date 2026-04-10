@@ -15,9 +15,11 @@ import { quoteTemplateChecks } from './quote-templates';
 import { configurationAttributeChecks } from './configuration-attributes';
 import { guidedSellingChecks } from './guided-selling';
 import { advancedPricingChecks } from './advanced-pricing';
+import { performanceChecks } from './performance';
+import { impactAnalysisChecks } from './impact-analysis';
 
 /**
- * All registered health checks — 49 total
+ * All registered health checks — 58 total
  * Add new check modules here
  */
 export const allChecks: HealthCheck[] = [
@@ -37,4 +39,6 @@ export const allChecks: HealthCheck[] = [
   ...configurationAttributeChecks,  // CA-001 to CA-004
   ...guidedSellingChecks,           // GS-001 to GS-003
   ...advancedPricingChecks,         // AP-001 to AP-004
+  ...performanceChecks,             // PERF-001 to PERF-005
+  ...impactAnalysisChecks,          // IA-001 to IA-004
 ];

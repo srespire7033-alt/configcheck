@@ -98,7 +98,8 @@ create table public.issues (
     'price_rules', 'discount_schedules', 'products', 'product_rules',
     'cpq_settings', 'subscriptions', 'twin_fields', 'contracted_prices', 'quote_lines',
     'summary_variables', 'approval_rules', 'quote_calculator_plugin',
-    'quote_templates', 'configuration_attributes', 'guided_selling', 'advanced_pricing'
+    'quote_templates', 'configuration_attributes', 'guided_selling', 'advanced_pricing',
+    'performance', 'impact_analysis'
   )),
   severity text not null check (severity in ('critical', 'warning', 'info')),
   title text not null,

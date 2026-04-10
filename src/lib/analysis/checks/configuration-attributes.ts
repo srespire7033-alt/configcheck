@@ -94,7 +94,7 @@ export const configurationAttributeChecks: HealthCheck[] = [
         groups[key].push(attr);
       }
 
-      for (const [key, attrs] of Object.entries(groups)) {
+      for (const [, attrs] of Object.entries(groups)) {
         if (attrs.length < 2) continue;
         const productName = attrs[0].SBQQ__Product__r?.Name || 'Unknown';
         issues.push({

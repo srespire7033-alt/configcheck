@@ -70,6 +70,8 @@ export function getCategoryLabel(category: string): string {
     configuration_attributes: 'Config Attributes',
     guided_selling: 'Guided Selling',
     advanced_pricing: 'Advanced Pricing',
+    performance: 'Performance',
+    impact_analysis: 'Impact Analysis',
   };
   return labels[category] || category;
 }

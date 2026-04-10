@@ -1,7 +1,7 @@
 'use client';
 
 import { getCategoryLabel } from '@/lib/utils';
-import { DollarSign, Percent, Package, GitBranch, Settings, RefreshCw, FileText, Handshake, Variable, ShieldCheck, Code, FileSpreadsheet, SlidersHorizontal, Compass, Layers } from 'lucide-react';
+import { DollarSign, Percent, Package, GitBranch, Settings, RefreshCw, FileText, Handshake, Variable, ShieldCheck, Code, FileSpreadsheet, SlidersHorizontal, Compass, Layers, Gauge, Network } from 'lucide-react';
 import type { CategoryScores } from '@/types';
 
 const categoryIcons: Record<string, React.ElementType> = {
@@ -20,6 +20,8 @@ const categoryIcons: Record<string, React.ElementType> = {
   configuration_attributes: SlidersHorizontal,
   guided_selling: Compass,
   advanced_pricing: Layers,
+  performance: Gauge,
+  impact_analysis: Network,
 };
 
 interface CategoryBreakdownProps {
