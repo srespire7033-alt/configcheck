@@ -63,6 +63,13 @@ export function getCategoryLabel(category: string): string {
     twin_fields: 'Twin Fields',
     contracted_prices: 'Contracted Prices',
     quote_lines: 'Quote Lines',
+    summary_variables: 'Summary Variables',
+    approval_rules: 'Approval Rules',
+    quote_calculator_plugin: 'QCP (Custom Scripts)',
+    quote_templates: 'Quote Templates',
+    configuration_attributes: 'Config Attributes',
+    guided_selling: 'Guided Selling',
+    advanced_pricing: 'Advanced Pricing',
   };
   return labels[category] || category;
 }

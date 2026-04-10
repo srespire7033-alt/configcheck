@@ -121,7 +121,7 @@ export const productRuleChecks: HealthCheck[] = [
       for (const rule of data.productRules) {
         if (!rule.SBQQ__Active__c) continue;
 
-        const conditions = rule.SBQQ__Conditions__r?.records || [];
+        const conditions = rule.SBQQ__ErrorConditions__r?.records || [];
         const actions = rule.SBQQ__Actions__r?.records || [];
 
         if (conditions.length === 0 && actions.length === 0) {
@@ -156,13 +156,13 @@ export const productRuleChecks: HealthCheck[] = [
         if (!rule.SBQQ__Active__c) continue;
         if (rule.SBQQ__Type__c !== 'Validation' && rule.SBQQ__Type__c !== 'Alert') continue;
 
-        if (!rule.SBQQ__ErrorConditionsMet__c) {
+        if (!rule.SBQQ__ConditionsMet__c) {
           issues.push({
             check_id: 'PRD-004',
             category: 'product_rules',
             severity: 'warning',
-            title: `${rule.SBQQ__Type__c} rule "${rule.Name}" missing error condition logic`,
-            description: `"${rule.Name}" is a ${rule.SBQQ__Type__c} rule but SBQQ__ErrorConditionsMet__c is not set ("All" or "Any"). Without this, the rule cannot properly evaluate when to trigger.`,
+            title: `${rule.SBQQ__Type__c} rule "${rule.Name}" missing condition logic`,
+            description: `"${rule.Name}" is a ${rule.SBQQ__Type__c} rule but Conditions Met is not set ("All" or "Any"). Without this, the rule cannot properly evaluate when to trigger.`,
             impact: 'The rule may never fire or always fire, regardless of the actual configuration state.',
             recommendation: `Set the Error Condition Met field to "All" or "Any" on "${rule.Name}" and ensure conditions are properly configured.`,
             affected_records: [{ id: rule.Id, name: rule.Name, type: 'SBQQ__ProductRule__c' }],

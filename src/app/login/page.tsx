@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Shield, ArrowRight, CheckCircle, Zap, BarChart3, FileText } from 'lucide-react';
+import { ArrowRight, CheckCircle, Zap, BarChart3, FileText } from 'lucide-react';
+import { Logo } from '@/components/ui/logo';
 import { createClient } from '@/lib/db/client';
 
 export default function LoginPage() {
@@ -58,11 +59,8 @@ export default function LoginPage() {
           <div className="absolute bottom-20 right-10 w-96 h-96 bg-blue-300 rounded-full blur-3xl" />
         </div>
         <div className="relative z-10 flex flex-col justify-center px-16 text-white">
-          <div className="flex items-center gap-3 mb-8">
-            <div className="p-2 bg-white/20 rounded-xl backdrop-blur-sm">
-              <Shield className="h-8 w-8" />
-            </div>
-            <span className="text-2xl font-bold">ConfigCheck</span>
+          <div className="mb-8">
+            <Logo size="lg" variant="white" />
           </div>
           <h1 className="text-4xl font-bold mb-4 leading-tight">
             AI-Powered CPQ<br />Health Audits
@@ -107,11 +105,8 @@ export default function LoginPage() {
       <div className="flex-1 flex items-center justify-center bg-gray-50 px-6">
         <div className="w-full max-w-md">
           {/* Mobile Logo */}
-          <div className="flex items-center justify-center gap-2 mb-8 lg:hidden">
-            <div className="p-2 bg-blue-600 rounded-xl">
-              <Shield className="h-6 w-6 text-white" />
-            </div>
-            <span className="text-2xl font-bold text-gray-900">ConfigCheck</span>
+          <div className="flex justify-center mb-8 lg:hidden">
+            <Logo size="lg" />
           </div>
 
           {/* Card */}

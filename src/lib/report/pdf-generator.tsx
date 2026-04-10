@@ -38,14 +38,21 @@ const styles = StyleSheet.create({
   summaryText: { fontSize: 9, lineHeight: 1.5, color: '#1e3a5f' },
   // Issues
   sectionTitle: { fontSize: 14, fontWeight: 700, marginBottom: 12, marginTop: 8 },
-  issueRow: { marginBottom: 10, borderLeftWidth: 3, paddingLeft: 10, paddingBottom: 6 },
-  issueCritical: { borderLeftColor: '#dc2626' },
-  issueWarning: { borderLeftColor: '#ca8a04' },
-  issueInfo: { borderLeftColor: '#2563eb' },
-  issueTitle: { fontSize: 10, fontWeight: 600, marginBottom: 2 },
-  issueCheckId: { fontSize: 8, color: '#9ca3af', marginBottom: 2 },
-  issueDesc: { fontSize: 9, color: '#4b5563', marginBottom: 2 },
-  issueRec: { fontSize: 9, color: '#065f46', fontWeight: 600 },
+  issueCard: { marginBottom: 14, borderRadius: 6, borderWidth: 1, borderColor: '#e5e7eb', overflow: 'hidden' },
+  issueCardHeader: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 8, gap: 8 },
+  issueCardHeaderCritical: { backgroundColor: '#fef2f2' },
+  issueCardHeaderWarning: { backgroundColor: '#fefce8' },
+  issueCardHeaderInfo: { backgroundColor: '#eff6ff' },
+  issueBadge: { fontSize: 7, fontWeight: 600, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, color: '#ffffff' },
+  issueBadgeCritical: { backgroundColor: '#dc2626' },
+  issueBadgeWarning: { backgroundColor: '#ca8a04' },
+  issueBadgeInfo: { backgroundColor: '#2563eb' },
+  issueTitle: { fontSize: 10, fontWeight: 700, flex: 1 },
+  issueCardBody: { paddingHorizontal: 12, paddingTop: 8, paddingBottom: 10 },
+  issueDesc: { fontSize: 9, color: '#4b5563', lineHeight: 1.5, marginBottom: 8 },
+  issueRecBox: { backgroundColor: '#f0fdf4', borderRadius: 4, paddingHorizontal: 8, paddingVertical: 6, borderWidth: 1, borderColor: '#bbf7d0' },
+  issueRecLabel: { fontSize: 7, fontWeight: 700, color: '#15803d', marginBottom: 2, textTransform: 'uppercase', letterSpacing: 0.5 },
+  issueRecText: { fontSize: 8.5, color: '#166534', lineHeight: 1.5 },
   // Footer
   footer: { position: 'absolute', bottom: 20, left: 40, right: 40, flexDirection: 'row', justifyContent: 'space-between', fontSize: 8, color: '#9ca3af' },
   // Stats
@@ -63,6 +70,13 @@ const CATEGORY_LABELS: Record<string, string> = {
   cpq_settings: 'CPQ Settings',
   subscriptions: 'Subscriptions',
   quote_lines: 'Quote Lines',
+  summary_variables: 'Summary Variables',
+  approval_rules: 'Approval Rules',
+  quote_calculator_plugin: 'QCP (Custom Scripts)',
+  quote_templates: 'Quote Templates',
+  configuration_attributes: 'Config Attributes',
+  guided_selling: 'Guided Selling',
+  advanced_pricing: 'Advanced Pricing',
 };
 
 function getBarColor(score: number) {
@@ -177,11 +191,18 @@ export function CPQHealthReport({ scan, issues, orgName, companyName, brandColor
               Critical Issues ({criticalIssues.length})
             </Text>
             {criticalIssues.map((issue) => (
-              <View key={issue.id} style={{ ...styles.issueRow, ...styles.issueCritical }}>
-                <Text style={styles.issueCheckId}>{issue.check_id}</Text>
-                <Text style={styles.issueTitle}>{issue.title}</Text>
-                <Text style={styles.issueDesc}>{issue.description}</Text>
-                <Text style={styles.issueRec}>Fix: {issue.recommendation}</Text>
+              <View key={issue.id} style={styles.issueCard} wrap={false}>
+                <View style={{ ...styles.issueCardHeader, ...styles.issueCardHeaderCritical }}>
+                  <Text style={{ ...styles.issueBadge, ...styles.issueBadgeCritical }}>{issue.check_id}</Text>
+                  <Text style={styles.issueTitle}>{issue.title}</Text>
+                </View>
+                <View style={styles.issueCardBody}>
+                  <Text style={styles.issueDesc}>{issue.description}</Text>
+                  <View style={styles.issueRecBox}>
+                    <Text style={styles.issueRecLabel}>Recommendation</Text>
+                    <Text style={styles.issueRecText}>{issue.recommendation}</Text>
+                  </View>
+                </View>
               </View>
             ))}
           </>
@@ -193,11 +214,18 @@ export function CPQHealthReport({ scan, issues, orgName, companyName, brandColor
               Warnings ({warningIssues.length})
             </Text>
             {warningIssues.map((issue) => (
-              <View key={issue.id} style={{ ...styles.issueRow, ...styles.issueWarning }}>
-                <Text style={styles.issueCheckId}>{issue.check_id}</Text>
-                <Text style={styles.issueTitle}>{issue.title}</Text>
-                <Text style={styles.issueDesc}>{issue.description}</Text>
-                <Text style={styles.issueRec}>Fix: {issue.recommendation}</Text>
+              <View key={issue.id} style={styles.issueCard} wrap={false}>
+                <View style={{ ...styles.issueCardHeader, ...styles.issueCardHeaderWarning }}>
+                  <Text style={{ ...styles.issueBadge, ...styles.issueBadgeWarning }}>{issue.check_id}</Text>
+                  <Text style={styles.issueTitle}>{issue.title}</Text>
+                </View>
+                <View style={styles.issueCardBody}>
+                  <Text style={styles.issueDesc}>{issue.description}</Text>
+                  <View style={styles.issueRecBox}>
+                    <Text style={styles.issueRecLabel}>Recommendation</Text>
+                    <Text style={styles.issueRecText}>{issue.recommendation}</Text>
+                  </View>
+                </View>
               </View>
             ))}
           </>
@@ -206,13 +234,17 @@ export function CPQHealthReport({ scan, issues, orgName, companyName, brandColor
         {infoIssues.length > 0 && (
           <>
             <Text style={{ ...styles.sectionTitle, color: '#2563eb' }}>
-              Informational ({infoIssues.length})
+              Best Practice Suggestions ({infoIssues.length})
             </Text>
             {infoIssues.map((issue) => (
-              <View key={issue.id} style={{ ...styles.issueRow, ...styles.issueInfo }}>
-                <Text style={styles.issueCheckId}>{issue.check_id}</Text>
-                <Text style={styles.issueTitle}>{issue.title}</Text>
-                <Text style={styles.issueDesc}>{issue.description}</Text>
+              <View key={issue.id} style={styles.issueCard} wrap={false}>
+                <View style={{ ...styles.issueCardHeader, ...styles.issueCardHeaderInfo }}>
+                  <Text style={{ ...styles.issueBadge, ...styles.issueBadgeInfo }}>{issue.check_id}</Text>
+                  <Text style={styles.issueTitle}>{issue.title}</Text>
+                </View>
+                <View style={styles.issueCardBody}>
+                  <Text style={styles.issueDesc}>{issue.description}</Text>
+                </View>
               </View>
             ))}
           </>

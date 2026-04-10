@@ -5,6 +5,12 @@ import type {
   SFProduct,
   SFProductOption,
   SFProductRule,
+  SFSummaryVariable,
+  SFApprovalRule,
+  SFCustomScript,
+  SFQuoteTemplate,
+  SFConfigurationAttribute,
+  SFGuidedSellingProcess,
   SFSubscription,
   SFQuote,
   SFQuoteLine,
@@ -25,6 +31,12 @@ export async function fetchAllCPQData(conn: Connection): Promise<CPQData> {
     products,
     productOptions,
     productRules,
+    summaryVariables,
+    approvalRules,
+    customScripts,
+    quoteTemplates,
+    configurationAttributes,
+    guidedSellingProcesses,
     subscriptions,
     quotes,
     quoteLines,
@@ -37,6 +49,12 @@ export async function fetchAllCPQData(conn: Connection): Promise<CPQData> {
     fetchProducts(conn),
     fetchProductOptions(conn),
     fetchProductRules(conn),
+    fetchSummaryVariables(conn),
+    fetchApprovalRules(conn),
+    fetchCustomScripts(conn),
+    fetchQuoteTemplates(conn),
+    fetchConfigurationAttributes(conn),
+    fetchGuidedSellingProcesses(conn),
     fetchSubscriptions(conn),
     fetchQuotes(conn),
     fetchQuoteLines(conn),
@@ -51,6 +69,12 @@ export async function fetchAllCPQData(conn: Connection): Promise<CPQData> {
     products,
     productOptions,
     productRules,
+    summaryVariables,
+    approvalRules,
+    customScripts,
+    quoteTemplates,
+    configurationAttributes,
+    guidedSellingProcesses,
     subscriptions,
     quotes,
     quoteLines,
@@ -70,9 +94,9 @@ async function fetchPriceRules(conn: Connection): Promise<SFPriceRule[]> {
       SELECT
         Id, Name, SBQQ__Active__c, SBQQ__EvaluationOrder__c,
         SBQQ__TargetObject__c, SBQQ__LookupObject__c,
-        (SELECT Id, SBQQ__Field__c, SBQQ__Operator__c, SBQQ__Value__c, SBQQ__TestedObject__c
+        (SELECT Id, SBQQ__Field__c, SBQQ__Operator__c, SBQQ__Value__c, SBQQ__Object__c
          FROM SBQQ__PriceConditions__r),
-        (SELECT Id, SBQQ__TargetField__c, SBQQ__Value__c, SBQQ__Formula__c, SBQQ__SourceLookupField__c
+        (SELECT Id, SBQQ__Field__c, SBQQ__Value__c, SBQQ__Formula__c, SBQQ__SourceLookupField__c
          FROM SBQQ__PriceActions__r)
       FROM SBQQ__PriceRule__c
       ORDER BY SBQQ__EvaluationOrder__c ASC NULLS LAST
@@ -142,17 +166,204 @@ async function fetchProductRules(conn: Connection): Promise<SFProductRule[]> {
     const result = await conn.query(`
       SELECT
         Id, Name, SBQQ__Active__c, SBQQ__Type__c,
-        SBQQ__EvaluationOrder__c, SBQQ__ErrorConditionsMet__c,
+        SBQQ__EvaluationOrder__c, SBQQ__ConditionsMet__c,
         (SELECT Id, SBQQ__TestedField__c, SBQQ__Operator__c, SBQQ__FilterValue__c
          FROM SBQQ__ErrorConditions__r),
         (SELECT Id, SBQQ__Type__c, SBQQ__Product__c
-         FROM SBQQ__ProductActions__r)
+         FROM SBQQ__Actions__r)
       FROM SBQQ__ProductRule__c
       ORDER BY SBQQ__EvaluationOrder__c ASC NULLS LAST
     `);
     return result.records as unknown as SFProductRule[];
   } catch (error) {
     console.error('Error fetching product rules:', error);
+    return [];
+  }
+}
+
+async function fetchApprovalRules(conn: Connection): Promise<SFApprovalRule[]> {
+  try {
+    const result = await conn.query(`
+      SELECT
+        Id, Name, SBQQ__Active__c,
+        SBQQ__ApprovalStep__c, SBQQ__Approver__c,
+        SBQQ__ApproverField__c, SBQQ__ConditionsMet__c,
+        SBQQ__EvaluationOrder__c, SBQQ__ApprovalChain__c,
+        (SELECT Id, SBQQ__TestedField__c, SBQQ__Operator__c,
+                SBQQ__Value__c, SBQQ__TestedVariable__c
+         FROM SBQQ__ApprovalConditions__r)
+      FROM SBQQ__ApprovalRule__c
+      ORDER BY SBQQ__EvaluationOrder__c ASC NULLS LAST
+    `);
+    return result.records as unknown as SFApprovalRule[];
+  } catch (error) {
+    console.error('Error fetching approval rules:', error);
+    return [];
+  }
+}
+
+async function fetchCustomScripts(conn: Connection): Promise<SFCustomScript[]> {
+  try {
+    const result = await conn.query(`
+      SELECT
+        Id, Name, SBQQ__Code__c, SBQQ__Type__c,
+        SBQQ__GroupFields__c, SBQQ__QuoteFields__c,
+        SBQQ__QuoteLineFields__c, SBQQ__TranspiledCode__c
+      FROM SBQQ__CustomScript__c
+      ORDER BY Name ASC
+    `);
+    return result.records as unknown as SFCustomScript[];
+  } catch (error) {
+    console.error('Error fetching custom scripts:', error);
+    return [];
+  }
+}
+
+async function fetchQuoteTemplates(conn: Connection): Promise<SFQuoteTemplate[]> {
+  try {
+    const result = await conn.query(`
+      SELECT
+        Id, Name, SBQQ__Default__c, SBQQ__Status__c,
+        (SELECT Id, Name, SBQQ__Content__c
+         FROM SBQQ__TemplateSections__r)
+      FROM SBQQ__QuoteTemplate__c
+      ORDER BY Name ASC
+    `);
+    return result.records as unknown as SFQuoteTemplate[];
+  } catch (error) {
+    console.error('Error fetching quote templates:', error);
+    return [];
+  }
+}
+
+async function fetchConfigurationAttributes(conn: Connection): Promise<SFConfigurationAttribute[]> {
+  try {
+    const result = await conn.query(`
+      SELECT
+        Id, Name,
+        SBQQ__Product__c, SBQQ__Product__r.Name,
+        SBQQ__TargetField__c, SBQQ__Required__c,
+        SBQQ__Hidden__c, SBQQ__DefaultField__c,
+        SBQQ__ColumnOrder__c, SBQQ__DisplayOrder__c,
+        SBQQ__Feature__c, SBQQ__AppliedImmediately__c
+      FROM SBQQ__ConfigurationAttribute__c
+      ORDER BY SBQQ__Product__r.Name, SBQQ__DisplayOrder__c ASC
+    `);
+    return result.records as unknown as SFConfigurationAttribute[];
+  } catch (error) {
+    console.error('Error fetching configuration attributes:', error);
+    return [];
+  }
+}
+
+async function fetchGuidedSellingProcesses(conn: Connection): Promise<SFGuidedSellingProcess[]> {
+  try {
+    const result = await conn.query(`
+      SELECT
+        Id, Name, SBQQ__Active__c,
+        SBQQ__LabelPosition__c, SBQQ__Description__c
+      FROM SBQQ__GuidedSellingProcess__c
+      ORDER BY Name ASC
+    `);
+    const processes = result.records as unknown as SFGuidedSellingProcess[];
+
+    // Count inputs and outputs for each process
+    for (const proc of processes) {
+      proc.inputCount = 0;
+      proc.outputCount = 0;
+    }
+
+    try {
+      const inputResult = await conn.query(`
+        SELECT SBQQ__GuidedSellingProcess__c, COUNT(Id) cnt
+        FROM SBQQ__GuidedSellingInput__c
+        GROUP BY SBQQ__GuidedSellingProcess__c
+      `);
+      for (const rec of inputResult.records as unknown as { SBQQ__GuidedSellingProcess__c: string; cnt: number }[]) {
+        const proc = processes.find((p) => p.Id === rec.SBQQ__GuidedSellingProcess__c);
+        if (proc) proc.inputCount = rec.cnt;
+      }
+    } catch { /* inputs object may not exist */ }
+
+    try {
+      const outputResult = await conn.query(`
+        SELECT SBQQ__GuidedSellingProcess__c, COUNT(Id) cnt
+        FROM SBQQ__GuidedSellingOutput__c
+        GROUP BY SBQQ__GuidedSellingProcess__c
+      `);
+      for (const rec of outputResult.records as unknown as { SBQQ__GuidedSellingProcess__c: string; cnt: number }[]) {
+        const proc = processes.find((p) => p.Id === rec.SBQQ__GuidedSellingProcess__c);
+        if (proc) proc.outputCount = rec.cnt;
+      }
+    } catch { /* outputs object may not exist */ }
+
+    return processes;
+  } catch (error) {
+    console.error('Error fetching guided selling processes:', error);
+    return [];
+  }
+}
+
+async function fetchSummaryVariables(conn: Connection): Promise<SFSummaryVariable[]> {
+  try {
+    const result = await conn.query(`
+      SELECT
+        Id, Name, SBQQ__Active__c,
+        SBQQ__AggregateField__c, SBQQ__AggregateFunction__c,
+        SBQQ__TargetObject__c, SBQQ__Scope__c,
+        SBQQ__FilterField__c, SBQQ__FilterValue__c,
+        SBQQ__Operator__c,
+        SBQQ__CombineWith__c, SBQQ__SecondOperand__c,
+        SBQQ__CompositeOperator__c
+      FROM SBQQ__SummaryVariable__c
+      ORDER BY Name ASC
+    `);
+
+    const variables = result.records as unknown as SFSummaryVariable[];
+
+    // Count references from price rules and product rules
+    // Price rules reference summary variables via conditions
+    // Product rules reference summary variables via error conditions
+    for (const v of variables) {
+      v.referencedByPriceRuleCount = 0;
+      v.referencedByProductRuleCount = 0;
+    }
+
+    // Check price rule conditions for summary variable references
+    try {
+      const priceCondResult = await conn.query(`
+        SELECT SBQQ__Variable__c, COUNT(Id) cnt
+        FROM SBQQ__PriceCondition__c
+        WHERE SBQQ__Variable__c != null
+        GROUP BY SBQQ__Variable__c
+      `);
+      for (const rec of priceCondResult.records as unknown as { SBQQ__Variable__c: string; cnt: number }[]) {
+        const v = variables.find((sv) => sv.Id === rec.SBQQ__Variable__c);
+        if (v) v.referencedByPriceRuleCount = rec.cnt;
+      }
+    } catch {
+      // Price condition object may not exist or field may not exist
+    }
+
+    // Check product rule error conditions for summary variable references
+    try {
+      const prodCondResult = await conn.query(`
+        SELECT SBQQ__Variable__c, COUNT(Id) cnt
+        FROM SBQQ__ErrorCondition__c
+        WHERE SBQQ__Variable__c != null
+        GROUP BY SBQQ__Variable__c
+      `);
+      for (const rec of prodCondResult.records as unknown as { SBQQ__Variable__c: string; cnt: number }[]) {
+        const v = variables.find((sv) => sv.Id === rec.SBQQ__Variable__c);
+        if (v) v.referencedByProductRuleCount = rec.cnt;
+      }
+    } catch {
+      // Error condition object may not exist or field may not exist
+    }
+
+    return variables;
+  } catch (error) {
+    console.error('Error fetching summary variables:', error);
     return [];
   }
 }

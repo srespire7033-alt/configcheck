@@ -2,12 +2,13 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, RefreshCw, Sparkles, Download, Clock, FileBarChart } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
+import { ArrowLeft, RefreshCw, Sparkles, Download, FileBarChart, CalendarClock, ShieldCheck } from 'lucide-react';
 import { HealthScore } from '@/components/scan/health-score';
 import { CategoryBreakdown } from '@/components/scan/category-breakdown';
 import { IssueCard } from '@/components/issues/issue-card';
-import type { DBScan, DBIssue, DBOrganization } from '@/types';
+import { ScheduleModal } from '@/components/schedule/schedule-modal';
+import { ScheduleList } from '@/components/schedule/schedule-list';
+import type { DBScan, DBIssue, DBOrganization, DBScanSchedule } from '@/types';
 
 export default function OrgDetailPage() {
   const params = useParams();
@@ -19,7 +20,8 @@ export default function OrgDetailPage() {
   const [issues, setIssues] = useState<DBIssue[]>([]);
   const [loading, setLoading] = useState(true);
   const [scanning, setScanning] = useState(false);
-  const [filterSeverity, setFilterSeverity] = useState<string>('all');
+  const [schedules, setSchedules] = useState<DBScanSchedule[]>([]);
+  const [showScheduleModal, setShowScheduleModal] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -48,10 +50,50 @@ export default function OrgDetailPage() {
           }
         }
       }
+      // Fetch schedules
+      const schedulesRes = await fetch(`/api/schedules?orgId=${orgId}`);
+      if (schedulesRes.ok) {
+        const schedulesData = await schedulesRes.json();
+        setSchedules(schedulesData);
+      }
     } catch (error) {
       console.error('Failed to fetch data:', error);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function fetchSchedules() {
+    try {
+      const res = await fetch(`/api/schedules?orgId=${orgId}`);
+      if (res.ok) {
+        const data = await res.json();
+        setSchedules(data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch schedules:', error);
+    }
+  }
+
+  async function handleToggleSchedule(scheduleId: string, enabled: boolean) {
+    try {
+      await fetch('/api/schedules', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ scheduleId, enabled }),
+      });
+      fetchSchedules();
+    } catch (error) {
+      console.error('Failed to toggle schedule:', error);
+    }
+  }
+
+  async function handleDeleteSchedule(scheduleId: string) {
+    try {
+      await fetch(`/api/schedules?scheduleId=${scheduleId}`, { method: 'DELETE' });
+      fetchSchedules();
+    } catch (error) {
+      console.error('Failed to delete schedule:', error);
     }
   }
 
@@ -80,17 +122,32 @@ export default function OrgDetailPage() {
     }
   }
 
-  const filteredIssues = issues.filter(
-    (i) => filterSeverity === 'all' || i.severity === filterSeverity
-  );
+  // Time since last scan
+  const getTimeSince = (date: string) => {
+    const diff = Date.now() - new Date(date).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return 'Just now';
+    if (mins < 60) return `${mins} minute${mins > 1 ? 's' : ''} ago`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `${hrs} hour${hrs > 1 ? 's' : ''} ago`;
+    const days = Math.floor(hrs / 24);
+    return `${days} day${days > 1 ? 's' : ''} ago`;
+  };
+
+  // Group issues by severity
+  const criticalIssues = issues.filter(i => i.severity === 'critical');
+  const warningIssues = issues.filter(i => i.severity === 'warning');
+  const infoIssues = issues.filter(i => i.severity === 'info');
 
   if (loading) {
     return (
       <div className="space-y-6 animate-pulse">
         <div className="h-10 w-48 bg-gray-200 rounded-xl" />
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="h-64 bg-white rounded-2xl border border-gray-200" />
-          <div className="h-64 bg-white rounded-2xl border border-gray-200 lg:col-span-2" />
+        <div className="h-64 bg-white rounded-2xl border border-gray-100 shadow-sm" />
+        <div className="grid grid-cols-5 gap-4">
+          {[...Array(5)].map((_, i) => (
+            <div key={i} className="h-28 bg-white rounded-xl border border-gray-100 shadow-sm" />
+          ))}
         </div>
       </div>
     );
@@ -98,62 +155,47 @@ export default function OrgDetailPage() {
 
   return (
     <div>
-      {/* Header */}
-      <div className="flex items-center justify-between mb-8">
-        <div className="flex items-center gap-4">
-          <button
-            onClick={() => router.push('/dashboard')}
-            className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-xl transition-colors"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </button>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">{org?.name || 'Organization'}</h1>
-            <div className="flex items-center gap-2 mt-1">
-              <span className={`inline-flex items-center gap-1.5 text-xs font-medium ${
-                org?.is_sandbox ? 'text-amber-600' : 'text-emerald-600'
-              }`}>
-                <span className={`w-1.5 h-1.5 rounded-full ${
-                  org?.is_sandbox ? 'bg-amber-500' : 'bg-emerald-500'
-                }`} />
-                {org?.is_sandbox ? 'Sandbox' : 'Production'}
-              </span>
-              {org?.cpq_package_version && (
-                <span className="text-xs text-gray-400">| CPQ v{org.cpq_package_version}</span>
-              )}
+      {/* Back Navigation */}
+      <button
+        onClick={() => router.push('/dashboard')}
+        className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700 mb-6 transition-colors"
+      >
+        <ArrowLeft className="h-4 w-4" />
+        Back to Dashboard
+      </button>
+
+      {/* Gradient Org Header */}
+      {org && (
+        <div
+          className="rounded-2xl text-white px-6 py-4 mb-6"
+          style={{ background: 'linear-gradient(135deg, #0b8aff 0%, #00b4b4 100%)' }}
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div
+                className="w-10 h-10 rounded-xl flex items-center justify-center"
+                style={{ background: '#5B9BF3' }}
+              >
+                <ShieldCheck className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h1 className="text-xl font-semibold">ConfigCheck</h1>
+                <p className="text-sm text-white/80">AI-Powered CPQ Configuration Auditor</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-4">
+              <div className="text-right">
+                <p className="text-sm text-white/80">Connected Org</p>
+                <p className="font-medium">{org.name} ({org.is_sandbox ? 'Sandbox' : 'Production'})</p>
+              </div>
+              <div className="w-3 h-3 bg-green-400 rounded-full animate-pulse" />
             </div>
           </div>
         </div>
-        <div className="flex gap-2">
-          {scan && (
-            <a
-              href={`/api/reports?scanId=${scan.id}`}
-              className="px-4 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 hover:border-gray-300 flex items-center gap-2 transition-all shadow-sm"
-            >
-              <Download className="h-4 w-4" />
-              PDF Report
-            </a>
-          )}
-          <button
-            onClick={() => router.push(`/orgs/${orgId}/history`)}
-            className="px-4 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 hover:border-gray-300 flex items-center gap-2 transition-all shadow-sm"
-          >
-            <Clock className="h-4 w-4" />
-            History
-          </button>
-          <button
-            onClick={handleScan}
-            disabled={scanning}
-            className="px-4 py-2.5 text-sm font-semibold text-white bg-blue-600 rounded-xl hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2 transition-all shadow-sm shadow-blue-600/20"
-          >
-            <RefreshCw className={`h-4 w-4 ${scanning ? 'animate-spin' : ''}`} />
-            {scanning ? 'Scanning...' : 'Run Scan'}
-          </button>
-        </div>
-      </div>
+      )}
 
       {!scan ? (
-        <div className="bg-white rounded-2xl border border-gray-200 text-center py-20">
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 text-center py-20">
           <div className="inline-flex p-4 bg-blue-50 rounded-2xl mb-4">
             <FileBarChart className="h-10 w-10 text-blue-400" />
           </div>
@@ -161,87 +203,208 @@ export default function OrgDetailPage() {
           <p className="text-sm text-gray-500 mb-6">Run your first scan to see the health report.</p>
           <button
             onClick={handleScan}
-            className="px-6 py-3 text-sm font-semibold text-white bg-blue-600 rounded-xl hover:bg-blue-700 shadow-sm shadow-blue-600/20"
+            className="px-6 py-3 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 transition"
           >
             Run First Scan
           </button>
         </div>
       ) : (
         <>
-          {/* Score + Categories Row */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-            {/* Health Score */}
-            <div className="bg-white rounded-2xl border border-gray-200 p-8 flex flex-col items-center">
-              <p className="text-sm font-medium text-gray-500 mb-4">Health Score</p>
-              <HealthScore score={scan.overall_score || 0} size="lg" />
-              <div className="flex gap-2 mt-6 flex-wrap justify-center">
-                <Badge variant="critical">{scan.critical_count} Critical</Badge>
-                <Badge variant="warning">{scan.warning_count} Warnings</Badge>
-                <Badge variant="info">{scan.info_count} Info</Badge>
+          {/* ===== HEALTH SCORE CARD — matches ideation exactly ===== */}
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 mb-8">
+            <div className="flex items-center gap-12">
+              {/* Score Ring */}
+              <div className="flex-shrink-0">
+                <HealthScore score={scan.overall_score || 0} size="lg" />
               </div>
-            </div>
 
-            {/* Category Breakdown */}
-            <div className="bg-white rounded-2xl border border-gray-200 p-6 lg:col-span-2">
-              <h3 className="text-sm font-semibold text-gray-900 mb-5">Category Breakdown</h3>
-              {scan.category_scores && (
-                <CategoryBreakdown scores={scan.category_scores} />
-              )}
+              {/* Score Breakdown */}
+              <div className="flex-1">
+                <h2 className="text-2xl font-semibold text-gray-900 mb-4">Your CPQ Health Score</h2>
+                <p className="text-gray-600 mb-6">
+                  Last scan: {getTimeSince(scan.created_at)} &bull; {issues.length} issues found
+                  {org && ` • ${org.name}`}
+                  {org?.is_sandbox === false && ' (Production)'}
+                  {org?.is_sandbox === true && ' (Sandbox)'}
+                </p>
+
+                <div className="grid grid-cols-3 gap-4">
+                  {/* Critical */}
+                  <div className="bg-red-50 rounded-xl p-4 border border-red-100">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="w-3 h-3 bg-red-500 rounded-full" />
+                      <span className="text-2xl font-bold text-red-700">{scan.critical_count}</span>
+                    </div>
+                    <p className="text-sm text-red-600">Critical Issues</p>
+                  </div>
+
+                  {/* Warnings */}
+                  <div className="bg-amber-50 rounded-xl p-4 border border-amber-100">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="w-3 h-3 bg-amber-500 rounded-full" />
+                      <span className="text-2xl font-bold text-amber-700">{scan.warning_count}</span>
+                    </div>
+                    <p className="text-sm text-amber-600">Warnings</p>
+                  </div>
+
+                  {/* Info */}
+                  <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="w-3 h-3 bg-gray-400 rounded-full" />
+                      <span className="text-2xl font-bold text-gray-700">{scan.info_count}</span>
+                    </div>
+                    <p className="text-sm text-gray-600">Best Practices</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex flex-col gap-3 flex-shrink-0">
+                <a
+                  href={`/api/reports?scanId=${scan.id}`}
+                  className="px-6 py-3 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 transition flex items-center gap-2"
+                >
+                  <Download className="w-5 h-5" />
+                  Download Report
+                </a>
+                <button
+                  onClick={handleScan}
+                  disabled={scanning}
+                  className="px-6 py-3 bg-white border border-gray-200 text-gray-700 rounded-xl font-medium hover:bg-gray-50 transition flex items-center gap-2 disabled:opacity-50"
+                >
+                  <RefreshCw className={`w-5 h-5 ${scanning ? 'animate-spin' : ''}`} />
+                  {scanning ? 'Scanning...' : 'Run New Scan'}
+                </button>
+                <button
+                  onClick={() => setShowScheduleModal(true)}
+                  className="px-6 py-3 bg-white border border-gray-200 text-gray-700 rounded-xl font-medium hover:bg-gray-50 transition flex items-center gap-2"
+                >
+                  <CalendarClock className="w-5 h-5" />
+                  Schedule Scan
+                </button>
+              </div>
             </div>
           </div>
 
-          {/* AI Summary */}
+          {/* ===== CATEGORY SCORES — 5-column grid ===== */}
+          <div className="mb-6">
+            {scan.category_scores && (
+              <CategoryBreakdown
+                scores={scan.category_scores}
+                issues={issues}
+                layout="horizontal"
+              />
+            )}
+          </div>
+
+          {/* ===== CRITICAL ISSUES ===== */}
+          {criticalIssues.length > 0 && (
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 mb-8">
+              <div className="px-6 py-4 border-b border-gray-100">
+                <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                  <span className="w-3 h-3 bg-red-500 rounded-full" />
+                  Critical Issues Requiring Immediate Attention
+                </h3>
+              </div>
+              <div className="divide-y divide-gray-100">
+                {criticalIssues.map((issue) => (
+                  <IssueCard
+                    key={issue.id}
+                    issue={issue}
+                    onClick={() => router.push(`/orgs/${orgId}/issues/${issue.id}`)}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* ===== WARNING ISSUES ===== */}
+          {warningIssues.length > 0 && (
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 mb-8">
+              <div className="px-6 py-4 border-b border-gray-100">
+                <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                  <span className="w-3 h-3 bg-amber-500 rounded-full" />
+                  Warnings to Review
+                </h3>
+              </div>
+              <div className="divide-y divide-gray-100">
+                {warningIssues.map((issue) => (
+                  <IssueCard
+                    key={issue.id}
+                    issue={issue}
+                    onClick={() => router.push(`/orgs/${orgId}/issues/${issue.id}`)}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* ===== INFO ISSUES ===== */}
+          {infoIssues.length > 0 && (
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 mb-8">
+              <div className="px-6 py-4 border-b border-gray-100">
+                <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                  <span className="w-3 h-3 bg-blue-500 rounded-full" />
+                  Best Practice Suggestions
+                </h3>
+              </div>
+              <div className="divide-y divide-gray-100">
+                {infoIssues.map((issue) => (
+                  <IssueCard
+                    key={issue.id}
+                    issue={issue}
+                    onClick={() => router.push(`/orgs/${orgId}/issues/${issue.id}`)}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* ===== AI RECOMMENDATIONS ===== */}
           {scan.summary && (
-            <div className="mb-8 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl border border-blue-200/60 p-6">
-              <div className="flex gap-3">
-                <div className="p-2 bg-blue-100 rounded-xl flex-shrink-0">
-                  <Sparkles className="h-5 w-5 text-blue-600" />
+            <div className="bg-gradient-to-r from-blue-50 to-teal-50 rounded-2xl border border-blue-100 p-6 mb-8">
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-sm flex-shrink-0">
+                  <Sparkles className="w-7 h-7 text-blue-600" />
                 </div>
-                <div>
-                  <h3 className="text-sm font-semibold text-blue-900 mb-2">AI Analysis</h3>
-                  <p className="text-sm text-blue-800/80 leading-relaxed whitespace-pre-line">{scan.summary}</p>
+                <div className="flex-1">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">AI-Powered Analysis</h3>
+                  <p className="text-gray-600 leading-relaxed whitespace-pre-line">{scan.summary}</p>
                 </div>
               </div>
             </div>
           )}
 
-          {/* Issues */}
-          <div className="mb-5 flex items-center justify-between">
-            <h3 className="text-lg font-semibold text-gray-900">
-              Issues ({filteredIssues.length})
-            </h3>
-            <div className="flex gap-1.5">
-              {['all', 'critical', 'warning', 'info'].map((sev) => (
-                <button
-                  key={sev}
-                  onClick={() => setFilterSeverity(sev)}
-                  className={`px-3.5 py-1.5 text-xs font-medium rounded-full border transition-all ${
-                    filterSeverity === sev
-                      ? 'bg-blue-600 text-white border-blue-600 shadow-sm shadow-blue-600/20'
-                      : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50 hover:border-gray-300'
-                  }`}
-                >
-                  {sev.charAt(0).toUpperCase() + sev.slice(1)}
-                </button>
-              ))}
-            </div>
-          </div>
+          {/* ===== SCHEDULED SCANS ===== */}
+          <ScheduleList
+            schedules={schedules}
+            onToggle={handleToggleSchedule}
+            onDelete={handleDeleteSchedule}
+            onCreateClick={() => setShowScheduleModal(true)}
+          />
 
-          <div className="space-y-3">
-            {filteredIssues.map((issue) => (
-              <IssueCard
-                key={issue.id}
-                issue={issue}
-                onClick={() => router.push(`/orgs/${orgId}/issues/${issue.id}`)}
-              />
-            ))}
-            {filteredIssues.length === 0 && (
-              <div className="text-center py-12 bg-white rounded-2xl border border-gray-200">
-                <p className="text-gray-400">No issues found for this filter.</p>
+          {/* No issues state */}
+          {issues.length === 0 && (
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 text-center py-16">
+              <div className="inline-flex p-4 bg-green-50 rounded-2xl mb-3">
+                <svg className="w-10 h-10 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
               </div>
-            )}
-          </div>
+              <p className="text-gray-600 font-medium">No issues found!</p>
+              <p className="text-sm text-gray-400 mt-1">Your CPQ configuration looks great.</p>
+            </div>
+          )}
         </>
+      )}
+
+      {/* Schedule Modal */}
+      {showScheduleModal && (
+        <ScheduleModal
+          orgId={orgId}
+          onClose={() => setShowScheduleModal(false)}
+          onCreated={fetchSchedules}
+        />
       )}
     </div>
   );

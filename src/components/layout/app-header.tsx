@@ -1,9 +1,10 @@
 'use client';
 
-import { Shield, LayoutDashboard, Settings } from 'lucide-react';
+import { LayoutDashboard, Settings } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
+import { Logo } from '@/components/ui/logo';
 
 export function AppHeader() {
   const pathname = usePathname();
@@ -18,13 +19,8 @@ export function AppHeader() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
-          <Link href="/dashboard" className="flex items-center gap-2.5 group">
-            <div className="p-1.5 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg shadow-sm shadow-blue-600/20 group-hover:shadow-md group-hover:shadow-blue-600/30 transition-shadow">
-              <Shield className="h-5 w-5 text-white" />
-            </div>
-            <span className="text-lg font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
-              ConfigCheck
-            </span>
+          <Link href="/dashboard">
+            <Logo size="md" />
           </Link>
 
           {/* Nav */}

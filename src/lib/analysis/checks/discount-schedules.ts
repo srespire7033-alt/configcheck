@@ -12,7 +12,7 @@ export const discountScheduleChecks: HealthCheck[] = [
       const issues: Issue[] = [];
 
       for (const schedule of data.discountSchedules) {
-        const tiers = schedule.SBQQ__Tiers__r?.records || [];
+        const tiers = schedule.SBQQ__DiscountTiers__r?.records || [];
         if (tiers.length < 2) continue;
 
         for (let i = 0; i < tiers.length; i++) {
@@ -54,7 +54,7 @@ export const discountScheduleChecks: HealthCheck[] = [
       const issues: Issue[] = [];
 
       for (const schedule of data.discountSchedules) {
-        const tiers = (schedule.SBQQ__Tiers__r?.records || [])
+        const tiers = (schedule.SBQQ__DiscountTiers__r?.records || [])
           .slice()
           .sort((a, b) => a.SBQQ__LowerBound__c - b.SBQQ__LowerBound__c);
 
@@ -97,7 +97,7 @@ export const discountScheduleChecks: HealthCheck[] = [
       const issues: Issue[] = [];
 
       for (const schedule of data.discountSchedules) {
-        const tiers = schedule.SBQQ__Tiers__r?.records || [];
+        const tiers = schedule.SBQQ__DiscountTiers__r?.records || [];
         const negativeTiers = tiers.filter((t) => t.SBQQ__Discount__c < 0);
 
         for (const tier of negativeTiers) {
@@ -132,7 +132,7 @@ export const discountScheduleChecks: HealthCheck[] = [
       // This check would need product-to-discount-schedule mapping
       // For MVP, check if schedule has zero tiers (likely unused)
       const emptySchedules = data.discountSchedules.filter(
-        (s) => !s.SBQQ__Tiers__r?.records || s.SBQQ__Tiers__r.records.length === 0
+        (s) => !s.SBQQ__DiscountTiers__r?.records || s.SBQQ__DiscountTiers__r.records.length === 0
       );
 
       if (emptySchedules.length > 0) {

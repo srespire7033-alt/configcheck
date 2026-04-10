@@ -14,6 +14,12 @@
       "maxDuration": 30
     }
   },
+  "crons": [
+    {
+      "path": "/api/cron/run-scans",
+      "schedule": "0 * * * *"
+    }
+  ],
   "headers": [
     {
       "source": "/api/(.*)",

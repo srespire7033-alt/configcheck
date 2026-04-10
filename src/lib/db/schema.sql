@@ -96,7 +96,9 @@ create table public.issues (
   check_id text not null,
   category text not null check (category in (
     'price_rules', 'discount_schedules', 'products', 'product_rules',
-    'cpq_settings', 'subscriptions', 'twin_fields', 'contracted_prices', 'quote_lines'
+    'cpq_settings', 'subscriptions', 'twin_fields', 'contracted_prices', 'quote_lines',
+    'summary_variables', 'approval_rules', 'quote_calculator_plugin',
+    'quote_templates', 'configuration_attributes', 'guided_selling', 'advanced_pricing'
   )),
   severity text not null check (severity in ('critical', 'warning', 'info')),
   title text not null,

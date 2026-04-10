@@ -95,7 +95,16 @@ export type IssueCategory =
   | 'subscriptions'
   | 'twin_fields'
   | 'contracted_prices'
-  | 'quote_lines';
+  | 'quote_lines'
+  | 'summary_variables'
+  | 'approval_rules'
+  | 'quote_calculator_plugin'
+  | 'quote_templates'
+  | 'configuration_attributes'
+  | 'guided_selling'
+  | 'advanced_pricing'
+  | 'performance'
+  | 'impact_analysis';
 
 export interface CategoryScores {
   price_rules: number;
@@ -106,6 +115,15 @@ export interface CategoryScores {
   subscriptions: number;
   quote_lines: number;
   contracted_prices: number;
+  summary_variables: number;
+  approval_rules: number;
+  quote_calculator_plugin: number;
+  quote_templates: number;
+  configuration_attributes: number;
+  guided_selling: number;
+  advanced_pricing: number;
+  performance: number;
+  impact_analysis: number;
 }
 
 export interface AffectedRecord {
@@ -146,6 +164,12 @@ export interface CPQData {
   products: SFProduct[];
   productOptions: SFProductOption[];
   productRules: SFProductRule[];
+  summaryVariables: SFSummaryVariable[];
+  approvalRules: SFApprovalRule[];
+  customScripts: SFCustomScript[];
+  quoteTemplates: SFQuoteTemplate[];
+  configurationAttributes: SFConfigurationAttribute[];
+  guidedSellingProcesses: SFGuidedSellingProcess[];
   subscriptions: SFSubscription[];
   quoteLines: SFQuoteLine[];
   quotes: SFQuote[];
@@ -173,8 +197,8 @@ export interface SFPriceRule {
   SBQQ__EvaluationOrder__c: number | null;
   SBQQ__TargetObject__c: string | null;
   SBQQ__LookupObject__c: string | null;
-  SBQQ__Conditions__r?: { records: SFPriceCondition[] };
-  SBQQ__Actions__r?: { records: SFPriceAction[] };
+  SBQQ__PriceConditions__r?: { records: SFPriceCondition[] };
+  SBQQ__PriceActions__r?: { records: SFPriceAction[] };
 }
 
 export interface SFPriceCondition {
@@ -182,12 +206,12 @@ export interface SFPriceCondition {
   SBQQ__Field__c: string | null;
   SBQQ__Operator__c: string | null;
   SBQQ__Value__c: string | null;
-  SBQQ__TestedObject__c: string | null;
+  SBQQ__Object__c: string | null;
 }
 
 export interface SFPriceAction {
   Id: string;
-  SBQQ__TargetField__c: string | null;
+  SBQQ__Field__c: string | null;
   SBQQ__Value__c: string | null;
   SBQQ__Formula__c: string | null;
   SBQQ__SourceLookupField__c: string | null;
@@ -198,7 +222,7 @@ export interface SFDiscountSchedule {
   Name: string;
   SBQQ__Type__c: string | null;
   SBQQ__DiscountUnit__c: string | null;
-  SBQQ__Tiers__r?: { records: SFDiscountTier[] };
+  SBQQ__DiscountTiers__r?: { records: SFDiscountTier[] };
 }
 
 export interface SFDiscountTier {
@@ -236,8 +260,8 @@ export interface SFProductRule {
   SBQQ__Active__c: boolean;
   SBQQ__Type__c: string | null;
   SBQQ__EvaluationOrder__c: number | null;
-  SBQQ__ErrorConditionsMet__c: string | null;
-  SBQQ__Conditions__r?: { records: SFProductRuleCondition[] };
+  SBQQ__ConditionsMet__c: string | null;
+  SBQQ__ErrorConditions__r?: { records: SFProductRuleCondition[] };
   SBQQ__Actions__r?: { records: SFProductRuleAction[] };
 }
 
@@ -252,6 +276,96 @@ export interface SFProductRuleAction {
   Id: string;
   SBQQ__Type__c: string | null;
   SBQQ__Product__c: string | null;
+}
+
+export interface SFSummaryVariable {
+  Id: string;
+  Name: string;
+  SBQQ__Active__c: boolean;
+  SBQQ__AggregateField__c: string | null;
+  SBQQ__AggregateFunction__c: string | null;
+  SBQQ__TargetObject__c: string | null;
+  SBQQ__Scope__c: string | null;
+  SBQQ__FilterField__c: string | null;
+  SBQQ__FilterValue__c: string | null;
+  SBQQ__Operator__c: string | null;
+  SBQQ__CombineWith__c: string | null;
+  SBQQ__SecondOperand__c: string | null;
+  SBQQ__CompositeOperator__c: string | null;
+  // Relationships — which rules reference this variable
+  referencedByPriceRuleCount: number;
+  referencedByProductRuleCount: number;
+}
+
+export interface SFApprovalRule {
+  Id: string;
+  Name: string;
+  SBQQ__Active__c: boolean;
+  SBQQ__ApprovalStep__c: number | null;
+  SBQQ__Approver__c: string | null;
+  SBQQ__ApproverField__c: string | null;
+  SBQQ__ConditionsMet__c: string | null;
+  SBQQ__EvaluationOrder__c: number | null;
+  SBQQ__ApprovalChain__c: string | null;
+  SBQQ__ApprovalConditions__r?: { records: SFApprovalCondition[] };
+}
+
+export interface SFApprovalCondition {
+  Id: string;
+  SBQQ__TestedField__c: string | null;
+  SBQQ__Operator__c: string | null;
+  SBQQ__Value__c: string | null;
+  SBQQ__TestedVariable__c: string | null;
+}
+
+export interface SFCustomScript {
+  Id: string;
+  Name: string;
+  SBQQ__Code__c: string | null;
+  SBQQ__Type__c: string | null;
+  SBQQ__GroupFields__c: string | null;
+  SBQQ__QuoteFields__c: string | null;
+  SBQQ__QuoteLineFields__c: string | null;
+  SBQQ__TranspiledCode__c: string | null;
+}
+
+export interface SFQuoteTemplate {
+  Id: string;
+  Name: string;
+  SBQQ__Default__c: boolean;
+  SBQQ__Status__c: string | null;
+  SBQQ__TemplateSections__r?: { records: SFTemplateSection[] };
+}
+
+export interface SFTemplateSection {
+  Id: string;
+  Name: string;
+  SBQQ__Content__c: string | null;
+}
+
+export interface SFConfigurationAttribute {
+  Id: string;
+  Name: string;
+  SBQQ__Product__c: string | null;
+  SBQQ__Product__r?: { Name: string };
+  SBQQ__TargetField__c: string | null;
+  SBQQ__Required__c: boolean;
+  SBQQ__Hidden__c: boolean;
+  SBQQ__DefaultField__c: string | null;
+  SBQQ__ColumnOrder__c: number | null;
+  SBQQ__DisplayOrder__c: number | null;
+  SBQQ__Feature__c: string | null;
+  SBQQ__AppliedImmediately__c: boolean;
+}
+
+export interface SFGuidedSellingProcess {
+  Id: string;
+  Name: string;
+  SBQQ__Active__c: boolean;
+  SBQQ__LabelPosition__c: string | null;
+  SBQQ__Description__c: string | null;
+  inputCount: number;
+  outputCount: number;
 }
 
 export interface SFSubscription {
@@ -319,6 +433,28 @@ export interface SFCPQSettings {
   SBQQ__ContractAutoRenew__c?: boolean;
   SBQQ__EnablePricingGuidance__c?: boolean;
   [key: string]: unknown;
+}
+
+// ============================================
+// SCHEDULED SCAN TYPES
+// ============================================
+
+export interface DBScanSchedule {
+  id: string;
+  user_id: string;
+  organization_id: string;
+  schedule_type: 'once' | 'daily' | 'weekly' | 'monthly';
+  cron_expression: string;
+  timezone: string;
+  scheduled_date: string | null;
+  day_of_week: number | null;
+  day_of_month: number | null;
+  time_of_day: string;
+  enabled: boolean;
+  last_run_at: string | null;
+  next_run_at: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 // ============================================

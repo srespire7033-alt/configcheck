@@ -1,8 +1,6 @@
 'use client';
 
-import { AlertCircle, AlertTriangle, Info, ChevronRight } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
-import { getCategoryLabel } from '@/lib/utils';
+import { AlertCircle, AlertTriangle, Info } from 'lucide-react';
 import type { DBIssue } from '@/types';
 
 interface IssueCardProps {
@@ -13,24 +11,24 @@ interface IssueCardProps {
 const severityConfig = {
   critical: {
     icon: AlertCircle,
-    iconColor: 'text-red-500',
-    bgColor: 'bg-red-50',
-    borderColor: 'border-l-red-500',
-    label: 'Critical',
+    iconColor: 'text-red-600',
+    bgColor: 'bg-red-100',
+    badgeBg: 'bg-red-100',
+    badgeText: 'text-red-700',
   },
   warning: {
     icon: AlertTriangle,
-    iconColor: 'text-amber-500',
-    bgColor: 'bg-amber-50',
-    borderColor: 'border-l-amber-500',
-    label: 'Warning',
+    iconColor: 'text-amber-600',
+    bgColor: 'bg-amber-100',
+    badgeBg: 'bg-amber-100',
+    badgeText: 'text-amber-700',
   },
   info: {
     icon: Info,
-    iconColor: 'text-blue-500',
-    bgColor: 'bg-blue-50',
-    borderColor: 'border-l-blue-500',
-    label: 'Info',
+    iconColor: 'text-blue-600',
+    bgColor: 'bg-blue-100',
+    badgeBg: 'bg-blue-100',
+    badgeText: 'text-blue-700',
   },
 };
 
@@ -39,39 +37,47 @@ export function IssueCard({ issue, onClick }: IssueCardProps) {
   const Icon = config.icon;
 
   return (
-    <button
-      onClick={onClick}
-      className={`w-full text-left bg-white rounded-xl border border-gray-200 border-l-4 ${config.borderColor} hover:shadow-md hover:border-gray-300 transition-all duration-200 p-4 group`}
-    >
-      <div className="flex items-start gap-3">
+    <div className="p-6 hover:bg-gray-50 transition">
+      <div className="flex items-start gap-4">
         {/* Icon */}
-        <div className={`p-1.5 ${config.bgColor} rounded-lg flex-shrink-0 mt-0.5`}>
-          <Icon className={`h-4 w-4 ${config.iconColor}`} />
+        <div className={`w-10 h-10 ${config.bgColor} rounded-xl flex items-center justify-center flex-shrink-0`}>
+          <Icon className={`w-5 h-5 ${config.iconColor}`} />
         </div>
 
         {/* Content */}
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-            <span className="text-xs font-mono text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded">
+          <div className="flex items-center gap-3 mb-1">
+            <h4 className="font-semibold text-gray-900">{issue.title}</h4>
+            <span className={`px-2 py-0.5 ${config.badgeBg} ${config.badgeText} text-xs font-medium rounded-full`}>
               {issue.check_id}
             </span>
-            <Badge variant={issue.severity}>{config.label}</Badge>
-            <Badge>{getCategoryLabel(issue.category)}</Badge>
-            {issue.status !== 'open' && (
-              <Badge variant={issue.status === 'resolved' ? 'success' : 'default'}>
-                {issue.status}
-              </Badge>
-            )}
           </div>
-          <h4 className="text-sm font-semibold text-gray-900 mb-1 group-hover:text-blue-700 transition-colors">
-            {issue.title}
-          </h4>
-          <p className="text-sm text-gray-500 line-clamp-2">{issue.description}</p>
+          <p className="text-gray-600 mb-3 text-sm">{issue.description}</p>
+          {issue.affected_records && issue.affected_records.length > 0 && (
+            <div className="flex items-center gap-6 text-sm">
+              <span className="text-gray-500">
+                📊 <strong className="text-gray-700">Impact:</strong> {issue.affected_records.length} record{issue.affected_records.length > 1 ? 's' : ''} affected
+              </span>
+            </div>
+          )}
         </div>
 
-        {/* Arrow */}
-        <ChevronRight className="h-4 w-4 text-gray-300 group-hover:text-blue-500 flex-shrink-0 mt-1 transition-colors" />
+        {/* Actions */}
+        <div className="flex gap-2 flex-shrink-0">
+          <button
+            onClick={(e) => { e.stopPropagation(); onClick(); }}
+            className="px-4 py-2 bg-blue-50 text-blue-600 rounded-lg text-sm font-medium hover:bg-blue-100 transition"
+          >
+            View Fix
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); onClick(); }}
+            className="px-4 py-2 bg-gray-100 text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-200 transition"
+          >
+            Details
+          </button>
+        </div>
       </div>
-    </button>
+    </div>
   );
 }

@@ -26,9 +26,9 @@ export const priceRuleChecks: HealthCheck[] = [
         // Check if any rules in same order target the same field
         const byTargetField: Record<string, typeof rules> = {};
         for (const rule of rules) {
-          const actions = rule.SBQQ__Actions__r?.records || [];
+          const actions = rule.SBQQ__PriceActions__r?.records || [];
           for (const action of actions) {
-            const field = action.SBQQ__TargetField__c || 'unknown';
+            const field = action.SBQQ__Field__c || 'unknown';
             if (!byTargetField[field]) byTargetField[field] = [];
             byTargetField[field].push(rule);
           }
@@ -69,8 +69,8 @@ export const priceRuleChecks: HealthCheck[] = [
       const activeRules = data.priceRules.filter((r) => r.SBQQ__Active__c);
 
       for (const rule of activeRules) {
-        const conditions = rule.SBQQ__Conditions__r?.records || [];
-        const actions = rule.SBQQ__Actions__r?.records || [];
+        const conditions = rule.SBQQ__PriceConditions__r?.records || [];
+        const actions = rule.SBQQ__PriceActions__r?.records || [];
 
         if (conditions.length === 0 || actions.length === 0) {
           const missing = conditions.length === 0 ? 'conditions' : 'actions';
@@ -155,9 +155,9 @@ export const priceRuleChecks: HealthCheck[] = [
 
       const fieldToRules: Record<string, typeof activeRules> = {};
       for (const rule of activeRules) {
-        const actions = rule.SBQQ__Actions__r?.records || [];
+        const actions = rule.SBQQ__PriceActions__r?.records || [];
         for (const action of actions) {
-          const field = action.SBQQ__TargetField__c;
+          const field = action.SBQQ__Field__c;
           if (!field) continue;
           if (!fieldToRules[field]) fieldToRules[field] = [];
           fieldToRules[field].push(rule);
