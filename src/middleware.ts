@@ -2,6 +2,17 @@ import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
 export async function middleware(request: NextRequest) {
+  // Public routes that don't need auth — check BEFORE calling Supabase
+  const publicPaths = ['/login', '/api/salesforce/callback'];
+  const isPublic =
+    request.nextUrl.pathname === '/' ||
+    publicPaths.some((p) => request.nextUrl.pathname.startsWith(p));
+
+  // Skip auth check for landing page and API callbacks
+  if (request.nextUrl.pathname === '/' || request.nextUrl.pathname.startsWith('/api/salesforce/callback')) {
+    return NextResponse.next({ request });
+  }
+
   let supabaseResponse = NextResponse.next({ request });
 
   const supabase = createServerClient(
@@ -27,21 +38,17 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Public routes that don't need auth
-  const publicPaths = ['/login', '/api/salesforce/callback'];
-  const isPublic =
-    request.nextUrl.pathname === '/' ||
-    publicPaths.some((p) => request.nextUrl.pathname.startsWith(p));
-
-  if (!user && !isPublic) {
-    const url = request.nextUrl.clone();
-    url.pathname = '/login';
-    return NextResponse.redirect(url);
-  }
-
+  // Logged-in user visiting /login → redirect to dashboard
   if (user && request.nextUrl.pathname === '/login') {
     const url = request.nextUrl.clone();
     url.pathname = '/dashboard';
+    return NextResponse.redirect(url);
+  }
+
+  // Not logged in and not on /login → redirect to login
+  if (!user && !request.nextUrl.pathname.startsWith('/login')) {
+    const url = request.nextUrl.clone();
+    url.pathname = '/login';
     return NextResponse.redirect(url);
   }
 

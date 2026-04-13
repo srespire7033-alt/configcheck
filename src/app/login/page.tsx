@@ -75,8 +75,8 @@ export default function LoginPage() {
                 <Zap className="h-4 w-4" />
               </div>
               <div>
-                <p className="font-semibold">24 Health Checks</p>
-                <p className="text-sm text-blue-200">Price rules, products, discounts, subscriptions & more</p>
+                <p className="font-semibold">68 Health Checks</p>
+                <p className="text-sm text-blue-200">17 categories covering price rules, products, QCP scripts & more</p>
               </div>
             </div>
             <div className="flex items-start gap-3">
@@ -85,7 +85,7 @@ export default function LoginPage() {
               </div>
               <div>
                 <p className="font-semibold">AI-Powered Analysis</p>
-                <p className="text-sm text-blue-200">Claude AI generates fix suggestions & executive summaries</p>
+                <p className="text-sm text-blue-200">Gemini AI generates fix suggestions & executive summaries</p>
               </div>
             </div>
             <div className="flex items-start gap-3">
@@ -94,7 +94,7 @@ export default function LoginPage() {
               </div>
               <div>
                 <p className="font-semibold">White-Label PDF Reports</p>
-                <p className="text-sm text-blue-200">Branded reports you can share with clients</p>
+                <p className="text-sm text-blue-200">Branded reports with AI remediation plans</p>
               </div>
             </div>
           </div>
