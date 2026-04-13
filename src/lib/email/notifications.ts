@@ -30,7 +30,7 @@ export async function sendScanNotification(userId: string, data: ScanNotificatio
     .single();
 
   if (error || !user?.email) {
-    console.log('No email found for user', userId);
+    console.log(`[EMAIL] No email found for user ${userId}`, error?.message);
     return;
   }
 
@@ -43,12 +43,17 @@ export async function sendScanNotification(userId: string, data: ScanNotificatio
   const resendKey = process.env.RESEND_API_KEY;
 
   if (!resendKey) {
-    console.log(`[EMAIL] To: ${user.email} | Scan ${data.status} for ${data.orgName} | Score: ${data.overallScore}/100 | Issues: ${data.totalIssues}`);
+    console.log(`[EMAIL] ⚠️ RESEND_API_KEY not set — email would be sent to: ${user.email}`);
+    console.log(`[EMAIL] Subject: Scan ${data.status} for ${data.orgName} | Score: ${data.overallScore}/100 | Issues: ${data.totalIssues}`);
     return;
   }
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
   const name = user.full_name || 'there';
+
+  // Resend free tier: use onboarding@resend.dev (can only send to account owner email)
+  // Production: use verified domain email (e.g. notifications@configcheck.app)
+  const fromAddress = process.env.EMAIL_FROM || 'ConfigCheck <onboarding@resend.dev>';
 
   const subject = data.status === 'completed'
     ? `ConfigCheck: ${data.orgName} scored ${data.overallScore}/100`
@@ -59,6 +64,8 @@ export async function sendScanNotification(userId: string, data: ScanNotificatio
     : buildFailedEmail(name, data, appUrl);
 
   try {
+    console.log(`[EMAIL] Sending to ${user.email} from ${fromAddress}...`);
+
     const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
@@ -66,26 +73,33 @@ export async function sendScanNotification(userId: string, data: ScanNotificatio
         Authorization: `Bearer ${resendKey}`,
       },
       body: JSON.stringify({
-        from: process.env.EMAIL_FROM || 'ConfigCheck <onboarding@resend.dev>',
+        from: fromAddress,
         to: [user.email],
         subject,
         html,
       }),
     });
 
+    const responseBody = await res.text();
+
     if (!res.ok) {
-      console.error('Email send failed:', await res.text());
+      console.error(`[EMAIL] ❌ Send failed (${res.status}):`, responseBody);
+      // Throw so caller knows it failed
+      throw new Error(`Email send failed (${res.status}): ${responseBody}`);
     } else {
-      console.log(`[EMAIL] Sent to ${user.email}: ${subject}`);
+      console.log(`[EMAIL] ✅ Sent to ${user.email}: ${subject}`);
+      console.log(`[EMAIL] Resend response:`, responseBody);
     }
   } catch (err) {
-    console.error('Email error:', err);
+    console.error('[EMAIL] ❌ Error:', err);
+    throw err; // Re-throw so scan route can log it
   }
 }
 
 function buildCompletedEmail(name: string, data: ScanNotificationData, appUrl: string): string {
   const scoreColor = data.overallScore >= 80 ? '#16a34a' : data.overallScore >= 60 ? '#d97706' : '#dc2626';
   const scoreBg = data.overallScore >= 80 ? '#f0fdf4' : data.overallScore >= 60 ? '#fffbeb' : '#fef2f2';
+  const scoreLabel = data.overallScore >= 80 ? 'Healthy' : data.overallScore >= 60 ? 'Needs Attention' : 'Critical';
 
   const topIssuesHtml = data.topIssues && data.topIssues.length > 0
     ? `
@@ -108,11 +122,11 @@ function buildCompletedEmail(name: string, data: ScanNotificationData, appUrl: s
         <table style="width: 100%;">
           <tr>
             <td>
-              <h1 style="color: white; margin: 0; font-size: 20px; font-weight: 700;">ConfigCheck</h1>
+              <h1 style="color: white; margin: 0; font-size: 20px; font-weight: 700;">⛨ ConfigCheck</h1>
               <p style="color: #bfdbfe; margin: 4px 0 0; font-size: 13px;">Salesforce CPQ Health Audit</p>
             </td>
             <td style="text-align: right;">
-              <span style="color: #bfdbfe; font-size: 12px;">Scan Complete</span>
+              <span style="color: #bfdbfe; font-size: 12px;">Scan Complete ✓</span>
             </td>
           </tr>
         </table>
@@ -123,12 +137,13 @@ function buildCompletedEmail(name: string, data: ScanNotificationData, appUrl: s
         <p style="color: #374151; margin: 0 0 20px; font-size: 15px;">Hi ${name},</p>
         <p style="color: #6b7280; margin: 0 0 24px; font-size: 14px;">Your health audit for <strong style="color: #1f2937;">${data.orgName}</strong> has completed. Here are the results:</p>
 
-        <!-- Score circle -->
+        <!-- Score -->
         <div style="text-align: center; margin: 24px 0;">
           <div style="display: inline-block; width: 100px; height: 100px; line-height: 100px; border-radius: 50%; background: ${scoreBg}; border: 3px solid ${scoreColor}; color: ${scoreColor}; font-size: 36px; font-weight: 800;">
             ${data.overallScore}
           </div>
-          <p style="color: #6b7280; margin: 8px 0 0; font-size: 13px;">Health Score out of 100</p>
+          <p style="color: ${scoreColor}; margin: 8px 0 0; font-size: 14px; font-weight: 600;">${scoreLabel}</p>
+          <p style="color: #6b7280; margin: 4px 0 0; font-size: 12px;">Health Score out of 100</p>
         </div>
 
         <!-- Issues breakdown -->
@@ -187,11 +202,11 @@ function buildFailedEmail(name: string, data: ScanNotificationData, appUrl: stri
         <table style="width: 100%;">
           <tr>
             <td>
-              <h1 style="color: white; margin: 0; font-size: 20px; font-weight: 700;">ConfigCheck</h1>
+              <h1 style="color: white; margin: 0; font-size: 20px; font-weight: 700;">⛨ ConfigCheck</h1>
               <p style="color: #fecaca; margin: 4px 0 0; font-size: 13px;">Salesforce CPQ Health Audit</p>
             </td>
             <td style="text-align: right;">
-              <span style="color: #fecaca; font-size: 12px;">Scan Failed</span>
+              <span style="color: #fecaca; font-size: 12px;">Scan Failed ✗</span>
             </td>
           </tr>
         </table>
@@ -200,7 +215,7 @@ function buildFailedEmail(name: string, data: ScanNotificationData, appUrl: stri
       <!-- Body -->
       <div style="background: white; padding: 32px; border: 1px solid #e5e7eb; border-top: none;">
         <p style="color: #374151; margin: 0 0 20px; font-size: 15px;">Hi ${name},</p>
-        <p style="color: #6b7280; margin: 0 0 24px; font-size: 14px;">The scheduled scan for <strong style="color: #1f2937;">${data.orgName}</strong> was unable to complete.</p>
+        <p style="color: #6b7280; margin: 0 0 24px; font-size: 14px;">The scan for <strong style="color: #1f2937;">${data.orgName}</strong> was unable to complete.</p>
 
         <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 10px; padding: 16px 20px; margin: 20px 0;">
           <p style="color: #991b1b; margin: 0; font-size: 14px; font-weight: 500;">Error Details</p>
@@ -208,7 +223,10 @@ function buildFailedEmail(name: string, data: ScanNotificationData, appUrl: stri
         </div>
 
         <p style="color: #6b7280; margin: 20px 0 24px; font-size: 13px;">
-          Common fixes: Reconnect your Salesforce org from the dashboard, or check if your org has API access enabled.
+          <strong>Common fixes:</strong><br/>
+          • Reconnect your Salesforce org from the dashboard<br/>
+          • Check if your org has API access enabled<br/>
+          • Verify the connected user has CPQ permissions
         </p>
 
         <div style="text-align: center; margin: 28px 0 8px;">

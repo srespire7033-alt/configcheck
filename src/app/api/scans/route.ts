@@ -55,21 +55,23 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to create scan' }, { status: 500 });
     }
 
-    // Run scan in background (non-blocking) with 120s timeout
+    // Run scan in background (non-blocking) with 180s hard timeout
+    // Real-world orgs with many rules/products can take 2-3 minutes
     const scanWithTimeout = Promise.race([
       runScanInBackground(scan.id, org),
       new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Scan timed out after 120 seconds')), 120000)
+        setTimeout(() => reject(new Error('Scan timed out after 3 minutes. This usually means the Salesforce connection is slow or expired. Try reconnecting your org.')), 180000)
       ),
     ]).catch(async (error) => {
-      console.error('Background scan failed:', error);
-      // Mark as failed if still running
+      console.error('[SCAN] Background scan failed:', error);
       const svc = createServiceClient();
-      await svc.from('scans').update({
+      const failUpdate = {
         status: 'failed',
         error_message: error instanceof Error ? error.message : 'Scan failed unexpectedly',
         completed_at: new Date().toISOString(),
-      }).eq('id', scan.id).eq('status', 'running');
+      };
+      await svc.from('scans').update(failUpdate).eq('id', scan.id).eq('status', 'running');
+      await svc.from('scans').update(failUpdate).eq('id', scan.id).eq('status', 'pending');
     });
     // Fire and forget
     void scanWithTimeout;
@@ -131,6 +133,7 @@ async function runScanInBackground(
   org: Record<string, unknown>
 ) {
   const supabase = createServiceClient();
+  const scanStartTime = Date.now();
 
   try {
     // Update status to running
@@ -139,23 +142,37 @@ async function runScanInBackground(
       .update({ status: 'running' })
       .eq('id', scanId);
 
-    // Connect to Salesforce (with auto token refresh)
+    // Step 1: Connect to Salesforce (with auto token refresh)
+    console.log(`[SCAN ${scanId}] Connecting to Salesforce...`);
     let conn;
     try {
       const refreshed = await createRefreshableConnection(org.id as string);
       conn = refreshed.conn;
+      console.log(`[SCAN ${scanId}] Connected in ${Date.now() - scanStartTime}ms`);
     } catch (connErr: unknown) {
       const connMsg = connErr instanceof Error ? connErr.message : 'Connection failed';
       throw new Error(`Salesforce connection failed: ${connMsg}`);
     }
 
-    // Fetch all CPQ data
+    // Step 2: Fetch all CPQ data
+    console.log(`[SCAN ${scanId}] Fetching CPQ data...`);
+    const fetchStart = Date.now();
     const cpqData = await fetchAllCPQData(conn);
+    console.log(`[SCAN ${scanId}] CPQ data fetched in ${Date.now() - fetchStart}ms — ` +
+      `${cpqData.priceRules.length} price rules, ${cpqData.products.length} products, ` +
+      `${cpqData.productRules.length} product rules, ${cpqData.quoteLines.length} quote lines, ` +
+      `${cpqData.productOptions.length} product options`);
 
-    // Run analysis
+    // Step 3: Run analysis
+    console.log(`[SCAN ${scanId}] Running analysis...`);
+    const analysisStart = Date.now();
     const result = await runAnalysis(cpqData);
+    console.log(`[SCAN ${scanId}] Analysis done in ${Date.now() - analysisStart}ms — ` +
+      `Score: ${result.overall_score}/100, ${result.issues.length} issues`);
 
-    // Generate AI summary
+    // Step 4: Generate AI summary
+    console.log(`[SCAN ${scanId}] Generating AI summary...`);
+    const aiStart = Date.now();
     try {
       result.summary = await generateExecutiveSummary(
         result.issues,
@@ -167,12 +184,13 @@ async function runScanInBackground(
           totalQuoteLines: cpqData.quoteLines.length,
         }
       );
+      console.log(`[SCAN ${scanId}] AI summary generated in ${Date.now() - aiStart}ms`);
     } catch (aiError) {
-      console.error('AI summary generation failed:', aiError);
+      console.error(`[SCAN ${scanId}] AI summary failed:`, aiError);
       result.summary = `Health score: ${result.overall_score}/100. Found ${result.issues.length} issue(s).`;
     }
 
-    // Save issues to database
+    // Step 5: Save issues to database (batch in chunks for large orgs)
     const issuesToInsert = result.issues.map((issue) => ({
       scan_id: scanId,
       organization_id: org.id as string,
@@ -189,10 +207,18 @@ async function runScanInBackground(
     }));
 
     if (issuesToInsert.length > 0) {
-      await supabase.from('issues').insert(issuesToInsert);
+      // Insert in batches of 50 to avoid payload limits
+      const batchSize = 50;
+      for (let i = 0; i < issuesToInsert.length; i += batchSize) {
+        const batch = issuesToInsert.slice(i, i + batchSize);
+        await supabase.from('issues').insert(batch);
+      }
     }
 
-    // Update scan with results (store revenue + complexity in metadata)
+    // Calculate actual full scan duration
+    const totalDurationMs = Date.now() - scanStartTime;
+
+    // Step 6: Update scan with results
     await supabase
       .from('scans')
       .update({
@@ -204,10 +230,20 @@ async function runScanInBackground(
         critical_count: result.issues.filter((i) => i.severity === 'critical').length,
         warning_count: result.issues.filter((i) => i.severity === 'warning').length,
         info_count: result.issues.filter((i) => i.severity === 'info').length,
-        duration_ms: result.duration_ms,
+        duration_ms: totalDurationMs,
         metadata: {
           revenue_summary: result.revenue_summary || null,
           complexity: result.complexity || null,
+          data_fetched: {
+            priceRules: cpqData.priceRules.length,
+            products: cpqData.products.length,
+            productRules: cpqData.productRules.length,
+            productOptions: cpqData.productOptions.length,
+            quoteLines: cpqData.quoteLines.length,
+            discountSchedules: cpqData.discountSchedules.length,
+            summaryVariables: cpqData.summaryVariables.length,
+            approvalRules: cpqData.approvalRules.length,
+          },
         },
         completed_at: new Date().toISOString(),
       })
@@ -225,48 +261,74 @@ async function runScanInBackground(
       })
       .eq('id', org.id as string);
 
-    // Send email notification
-    sendScanNotification(org.user_id as string, {
-      scanId,
-      orgId: org.id as string,
-      orgName: org.name as string,
-      overallScore: result.overall_score,
-      totalIssues: result.issues.length,
-      criticalCount: result.issues.filter((i) => i.severity === 'critical').length,
-      warningCount: result.issues.filter((i) => i.severity === 'warning').length,
-      infoCount: result.issues.filter((i) => i.severity === 'info').length,
-      topIssues: result.issues
-        .filter((i) => i.severity === 'critical' || i.severity === 'warning')
-        .slice(0, 3)
-        .map((i) => ({ title: i.title, severity: i.severity })),
-      status: 'completed',
-    }).catch((err) => console.error('Notification error:', err));
+    console.log(`[SCAN ${scanId}] ✅ Completed in ${(totalDurationMs / 1000).toFixed(1)}s — Score: ${result.overall_score}/100`);
+
+    // Step 7: Send email notification (await it so we know if it fails)
+    try {
+      await sendScanNotification(org.user_id as string, {
+        scanId,
+        orgId: org.id as string,
+        orgName: org.name as string,
+        overallScore: result.overall_score,
+        totalIssues: result.issues.length,
+        criticalCount: result.issues.filter((i) => i.severity === 'critical').length,
+        warningCount: result.issues.filter((i) => i.severity === 'warning').length,
+        infoCount: result.issues.filter((i) => i.severity === 'info').length,
+        topIssues: (() => {
+          // Deduplicate by title, critical first, then warning — top 5 unique issues
+          const seen = new Set<string>();
+          return result.issues
+            .sort((a, b) => {
+              const order: Record<string, number> = { critical: 0, warning: 1, info: 2 };
+              return (order[a.severity] ?? 3) - (order[b.severity] ?? 3);
+            })
+            .filter(i => {
+              if (i.severity === 'info') return false;
+              if (seen.has(i.title)) return false;
+              seen.add(i.title);
+              return true;
+            })
+            .slice(0, 5)
+            .map(i => ({ title: i.title, severity: i.severity }));
+        })(),
+        status: 'completed',
+      });
+      console.log(`[SCAN ${scanId}] 📧 Email notification sent`);
+    } catch (emailErr) {
+      console.error(`[SCAN ${scanId}] 📧 Email notification failed:`, emailErr);
+    }
 
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Scan failed';
-    console.error('Scan error:', message);
+    const totalDurationMs = Date.now() - scanStartTime;
+    console.error(`[SCAN ${scanId}] ❌ Failed after ${(totalDurationMs / 1000).toFixed(1)}s:`, message);
 
     await supabase
       .from('scans')
       .update({
         status: 'failed',
         error_message: message,
+        duration_ms: totalDurationMs,
         completed_at: new Date().toISOString(),
       })
       .eq('id', scanId);
 
     // Send failure notification
-    sendScanNotification(org.user_id as string, {
-      scanId,
-      orgId: org.id as string,
-      orgName: org.name as string,
-      overallScore: 0,
-      totalIssues: 0,
-      criticalCount: 0,
-      warningCount: 0,
-      infoCount: 0,
-      status: 'failed',
-      errorMessage: message,
-    }).catch((err) => console.error('Notification error:', err));
+    try {
+      await sendScanNotification(org.user_id as string, {
+        scanId,
+        orgId: org.id as string,
+        orgName: org.name as string,
+        overallScore: 0,
+        totalIssues: 0,
+        criticalCount: 0,
+        warningCount: 0,
+        infoCount: 0,
+        status: 'failed',
+        errorMessage: message,
+      });
+    } catch (emailErr) {
+      console.error(`[SCAN ${scanId}] 📧 Failure email failed:`, emailErr);
+    }
   }
 }

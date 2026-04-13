@@ -36,6 +36,7 @@ export default function OrgDetailPage() {
   const [remediationError, setRemediationError] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedIssue, setSelectedIssue] = useState<DBIssue | null>(null);
+  const [severityFilter, setSeverityFilter] = useState<'critical' | 'warning' | 'info' | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -144,7 +145,7 @@ export default function OrgDetailPage() {
       const { scanId } = await res.json();
 
       let pollCount = 0;
-      const maxPolls = 40; // 40 × 3s = 120s max
+      const maxPolls = 65; // 65 × 3s = ~195s max (matches 180s server timeout + buffer)
       const interval = setInterval(async () => {
         pollCount++;
         const statusRes = await fetch(`/api/scans?scanId=${scanId}`);
@@ -152,6 +153,9 @@ export default function OrgDetailPage() {
         if (scanData.status === 'completed' || scanData.status === 'failed') {
           clearInterval(interval);
           setScanning(false);
+          if (scanData.status === 'failed' && scanData.error_message) {
+            setError(scanData.error_message);
+          }
           fetchData();
         } else if (pollCount >= maxPolls) {
           clearInterval(interval);
@@ -335,31 +339,46 @@ export default function OrgDetailPage() {
 
                 <div className="grid grid-cols-3 gap-4">
                   {/* Critical */}
-                  <div className="bg-red-50 dark:bg-red-950/40 rounded-xl p-4 border border-red-100 dark:border-red-900/50">
+                  <button
+                    onClick={() => setSeverityFilter(severityFilter === 'critical' ? null : 'critical')}
+                    className={`text-left bg-red-50 dark:bg-red-950/40 rounded-xl p-4 border transition-all hover:shadow-md cursor-pointer ${
+                      severityFilter === 'critical' ? 'border-red-400 dark:border-red-500 ring-2 ring-red-200 dark:ring-red-800' : 'border-red-100 dark:border-red-900/50'
+                    }`}
+                  >
                     <div className="flex items-center gap-2 mb-1">
                       <span className="w-3 h-3 bg-red-500 rounded-full" />
                       <span className="text-2xl font-bold text-red-700 dark:text-red-400">{scan.critical_count}</span>
                     </div>
                     <p className="text-sm text-red-600 dark:text-red-400/80">Critical Issues</p>
-                  </div>
+                  </button>
 
                   {/* Warnings */}
-                  <div className="bg-amber-50 dark:bg-amber-950/40 rounded-xl p-4 border border-amber-100 dark:border-amber-900/50">
+                  <button
+                    onClick={() => setSeverityFilter(severityFilter === 'warning' ? null : 'warning')}
+                    className={`text-left bg-amber-50 dark:bg-amber-950/40 rounded-xl p-4 border transition-all hover:shadow-md cursor-pointer ${
+                      severityFilter === 'warning' ? 'border-amber-400 dark:border-amber-500 ring-2 ring-amber-200 dark:ring-amber-800' : 'border-amber-100 dark:border-amber-900/50'
+                    }`}
+                  >
                     <div className="flex items-center gap-2 mb-1">
                       <span className="w-3 h-3 bg-amber-500 rounded-full" />
                       <span className="text-2xl font-bold text-amber-700 dark:text-amber-400">{scan.warning_count}</span>
                     </div>
                     <p className="text-sm text-amber-600 dark:text-amber-400/80">Warnings</p>
-                  </div>
+                  </button>
 
                   {/* Info */}
-                  <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
+                  <button
+                    onClick={() => setSeverityFilter(severityFilter === 'info' ? null : 'info')}
+                    className={`text-left bg-gray-50 dark:bg-gray-800 rounded-xl p-4 border transition-all hover:shadow-md cursor-pointer ${
+                      severityFilter === 'info' ? 'border-blue-400 dark:border-blue-500 ring-2 ring-blue-200 dark:ring-blue-800' : 'border-gray-200 dark:border-gray-700'
+                    }`}
+                  >
                     <div className="flex items-center gap-2 mb-1">
                       <span className="w-3 h-3 bg-gray-400 rounded-full" />
                       <span className="text-2xl font-bold text-gray-700 dark:text-gray-300">{scan.info_count}</span>
                     </div>
                     <p className="text-sm text-gray-600 dark:text-gray-400">Best Practices</p>
-                  </div>
+                  </button>
                 </div>
 
                 {/* Resolution Progress */}
@@ -377,6 +396,50 @@ export default function OrgDetailPage() {
                     </div>
                   </div>
                 )}
+                {/* Severity filter expanded panel */}
+                {severityFilter && (() => {
+                  const filtered = issues.filter(i => i.severity === severityFilter);
+                  const label = severityFilter === 'critical' ? 'Critical Issues' : severityFilter === 'warning' ? 'Warnings' : 'Best Practices';
+                  const iconColor = severityFilter === 'critical' ? 'text-red-500' : severityFilter === 'warning' ? 'text-amber-500' : 'text-blue-500';
+                  const bgColor = severityFilter === 'critical' ? 'bg-red-50 dark:bg-red-950/20' : severityFilter === 'warning' ? 'bg-amber-50 dark:bg-amber-950/20' : 'bg-blue-50 dark:bg-blue-950/20';
+                  const SevIcon = severityFilter === 'critical' ? AlertCircle : severityFilter === 'warning' ? AlertTriangle : Info;
+
+                  return (
+                    <div className="mt-4 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+                      <div className={`px-4 py-3 ${bgColor} flex items-center justify-between`}>
+                        <div className="flex items-center gap-2">
+                          <SevIcon className={`w-4 h-4 ${iconColor}`} />
+                          <span className="text-sm font-semibold text-gray-900 dark:text-white">{label} ({filtered.length})</span>
+                        </div>
+                        <button onClick={() => setSeverityFilter(null)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                      <div className="max-h-64 overflow-y-auto divide-y divide-gray-100 dark:divide-gray-800 bg-white dark:bg-gray-900">
+                        {filtered.length === 0 ? (
+                          <p className="px-4 py-6 text-center text-sm text-gray-400">No {label.toLowerCase()} found.</p>
+                        ) : filtered.map((issue) => (
+                          <button
+                            key={issue.id}
+                            onClick={() => setSelectedIssue(issue)}
+                            className="w-full text-left px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition flex items-start gap-3"
+                          >
+                            <SevIcon className={`w-4 h-4 ${iconColor} mt-0.5 flex-shrink-0`} />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{issue.title}</p>
+                              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{getCategoryLabel(issue.category)} {issue.affected_records?.length ? `• ${issue.affected_records.length} affected` : ''}</p>
+                            </div>
+                            <span className={`text-xs px-2 py-0.5 rounded-full flex-shrink-0 ${
+                              issue.status === 'resolved' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
+                            }`}>
+                              {issue.status === 'resolved' ? 'Fixed' : 'Open'}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
 
               {/* Actions */}
@@ -406,6 +469,70 @@ export default function OrgDetailPage() {
               </div>
             </div>
           </div>
+
+          {/* ===== TOP ISSUES TO ADDRESS ===== */}
+          {issues.length > 0 && (() => {
+            // Deduplicate by title, prioritize critical first, then warning
+            const seen = new Set<string>();
+            const topIssues = [...issues]
+              .sort((a, b) => {
+                const order = { critical: 0, warning: 1, info: 2 };
+                const aOrder = order[a.severity as keyof typeof order] ?? 3;
+                const bOrder = order[b.severity as keyof typeof order] ?? 3;
+                if (aOrder !== bOrder) return aOrder - bOrder;
+                return (b.affected_records?.length || 0) - (a.affected_records?.length || 0);
+              })
+              .filter(i => {
+                if (i.severity === 'info') return false; // Only critical + warning
+                if (seen.has(i.title)) return false;
+                seen.add(i.title);
+                return true;
+              })
+              .slice(0, 5);
+
+            if (topIssues.length === 0) return null;
+
+            return (
+              <div className="bg-white dark:bg-[#111827] rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 mb-6">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 bg-red-50 dark:bg-red-900/30 rounded-xl flex items-center justify-center">
+                    <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Top Issues to Address</h3>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Highest priority issues affecting your CPQ config</p>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  {topIssues.map((issue, idx) => (
+                    <button
+                      key={issue.id}
+                      onClick={() => setSelectedIssue(issue)}
+                      className="w-full text-left flex items-start gap-3 p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition border border-gray-100 dark:border-gray-800"
+                    >
+                      <span className="text-sm font-bold text-gray-400 dark:text-gray-500 mt-0.5 w-5 text-center flex-shrink-0">{idx + 1}</span>
+                      <div className={`w-1 self-stretch rounded-full flex-shrink-0 ${issue.severity === 'critical' ? 'bg-red-500' : 'bg-amber-500'}`} />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-0.5">
+                          <span className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${
+                            issue.severity === 'critical' ? 'bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-400' : 'bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-400'
+                          }`}>{issue.severity}</span>
+                          <span className="text-xs text-gray-400 dark:text-gray-500">{getCategoryLabel(issue.category)}</span>
+                        </div>
+                        <p className="text-sm font-medium text-gray-900 dark:text-white">{issue.title}</p>
+                        {issue.description && (
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 line-clamp-1">{issue.description}</p>
+                        )}
+                      </div>
+                      {issue.affected_records?.length ? (
+                        <span className="text-xs text-gray-400 dark:text-gray-500 flex-shrink-0 mt-1">{issue.affected_records.length} affected</span>
+                      ) : null}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
 
           {/* ===== CATEGORY SCORES — 5-column grid ===== */}
           <div className="mb-6">

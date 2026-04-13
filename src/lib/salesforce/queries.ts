@@ -22,16 +22,31 @@ import type {
 } from '@/types';
 
 /**
+ * Wrap a promise-like (including jsforce Query) with a timeout.
+ * Rejects if not resolved within `ms` milliseconds.
+ */
+function withTimeout<T>(promiseLike: PromiseLike<T>, ms: number, label = 'Operation'): Promise<T> {
+  return Promise.race([
+    Promise.resolve(promiseLike),
+    new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error(`${label} timed out after ${ms / 1000}s`)), ms)
+    ),
+  ]);
+}
+
+/**
  * Resilient SOQL query that auto-retries by stripping invalid fields.
  * Handles INVALID_FIELD errors by parsing the bad field name, removing it
  * from the SELECT clause, and retrying — up to maxRetries times.
  * Also handles INVALID_TYPE by returning empty result immediately.
+ * Each query attempt has a 45-second timeout to prevent hanging.
+ * Large orgs with many rules + subqueries may need the full timeout.
  */
 async function safeQuery(conn: Connection, soql: string, maxRetries = 5): Promise<any> {
   let query = soql;
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
-      return await conn.query(query);
+      return await withTimeout(conn.query(query), 45000, 'SOQL query');
     } catch (err: any) {
       const errorCode = err?.errorCode || err?.data?.errorCode || '';
       const errorMsg = err?.message || err?.data?.message || '';
@@ -143,6 +158,7 @@ async function fetchPriceRules(conn: Connection): Promise<SFPriceRule[]> {
          FROM SBQQ__PriceActions__r)
       FROM SBQQ__PriceRule__c
       ORDER BY SBQQ__EvaluationOrder__c ASC NULLS LAST
+      LIMIT 2000
     `);
     return result.records as unknown as SFPriceRule[];
   } catch (error) {
@@ -160,6 +176,7 @@ async function fetchDiscountSchedules(conn: Connection): Promise<SFDiscountSched
          FROM SBQQ__DiscountTiers__r
          ORDER BY SBQQ__LowerBound__c ASC)
       FROM SBQQ__DiscountSchedule__c
+      LIMIT 2000
     `);
     return result.records as unknown as SFDiscountSchedule[];
   } catch (error) {
@@ -179,6 +196,7 @@ async function fetchProducts(conn: Connection): Promise<SFProduct[]> {
       FROM Product2
       WHERE IsActive = true
       ORDER BY Name ASC
+      LIMIT 5000
     `);
     return result.records as unknown as SFProduct[];
   } catch (error) {
@@ -196,6 +214,7 @@ async function fetchProductOptions(conn: Connection): Promise<SFProductOption[]>
         SBQQ__ConfiguredSKU__r.Name, SBQQ__ConfiguredSKU__r.IsActive,
         SBQQ__OptionalSKU__r.Name, SBQQ__OptionalSKU__r.IsActive
       FROM SBQQ__ProductOption__c
+      LIMIT 5000
     `);
     return result.records as unknown as SFProductOption[];
   } catch (error) {
@@ -216,6 +235,7 @@ async function fetchProductRules(conn: Connection): Promise<SFProductRule[]> {
          FROM SBQQ__Actions__r)
       FROM SBQQ__ProductRule__c
       ORDER BY SBQQ__EvaluationOrder__c ASC NULLS LAST
+      LIMIT 2000
     `);
     return result.records as unknown as SFProductRule[];
   } catch (error) {
@@ -237,6 +257,7 @@ async function fetchApprovalRules(conn: Connection): Promise<SFApprovalRule[]> {
          FROM SBQQ__ApprovalConditions__r)
       FROM SBQQ__ApprovalRule__c
       ORDER BY SBQQ__EvaluationOrder__c ASC NULLS LAST
+      LIMIT 2000
     `);
     return result.records as unknown as SFApprovalRule[];
   } catch (error) {
@@ -254,6 +275,7 @@ async function fetchCustomScripts(conn: Connection): Promise<SFCustomScript[]> {
         SBQQ__QuoteLineFields__c, SBQQ__TranspiledCode__c
       FROM SBQQ__CustomScript__c
       ORDER BY Name ASC
+      LIMIT 500
     `);
     return result.records as unknown as SFCustomScript[];
   } catch (error) {
@@ -271,6 +293,7 @@ async function fetchQuoteTemplates(conn: Connection): Promise<SFQuoteTemplate[]>
          FROM SBQQ__TemplateSections__r)
       FROM SBQQ__QuoteTemplate__c
       ORDER BY Name ASC
+      LIMIT 500
     `);
     return result.records as unknown as SFQuoteTemplate[];
   } catch (error) {
@@ -291,6 +314,7 @@ async function fetchConfigurationAttributes(conn: Connection): Promise<SFConfigu
         SBQQ__Feature__c, SBQQ__AppliedImmediately__c
       FROM SBQQ__ConfigurationAttribute__c
       ORDER BY SBQQ__Product__r.Name, SBQQ__DisplayOrder__c ASC
+      LIMIT 5000
     `);
     return result.records as unknown as SFConfigurationAttribute[];
   } catch (error) {
@@ -307,6 +331,7 @@ async function fetchGuidedSellingProcesses(conn: Connection): Promise<SFGuidedSe
         SBQQ__LabelPosition__c, SBQQ__Description__c
       FROM SBQQ__GuidedSellingProcess__c
       ORDER BY Name ASC
+      LIMIT 500
     `);
     const processes = result.records as unknown as SFGuidedSellingProcess[];
 
@@ -360,6 +385,7 @@ async function fetchSummaryVariables(conn: Connection): Promise<SFSummaryVariabl
         SBQQ__CompositeOperator__c
       FROM SBQQ__SummaryVariable__c
       ORDER BY Name ASC
+      LIMIT 2000
     `);
 
     const variables = result.records as unknown as SFSummaryVariable[];
@@ -481,6 +507,7 @@ async function fetchPricebookEntries(conn: Connection): Promise<SFPricebookEntry
         Pricebook2Id, UnitPrice, IsActive
       FROM PricebookEntry
       WHERE IsActive = true
+      LIMIT 10000
     `);
     return result.records as unknown as SFPricebookEntry[];
   } catch (error) {

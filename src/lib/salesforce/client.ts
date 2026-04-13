@@ -12,6 +12,19 @@ const SF_LOGIN_URL = process.env.SALESFORCE_LOGIN_URL || 'https://login.salesfor
 let storedCodeVerifier: string | null = null;
 
 /**
+ * Wrap a promise-like (including jsforce Query) with a timeout.
+ * Rejects if not resolved within `ms` milliseconds.
+ */
+function withTimeout<T>(promiseLike: PromiseLike<T>, ms: number, label = 'Operation'): Promise<T> {
+  return Promise.race([
+    Promise.resolve(promiseLike),
+    new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error(`${label} timed out after ${ms / 1000}s`)), ms)
+    ),
+  ]);
+}
+
+/**
  * Get and clear stored code verifier
  */
 export function getStoredCodeVerifier(): string | null {
@@ -176,12 +189,12 @@ export async function createRefreshableConnection(
     orgId
   );
 
-  // Test the connection; if expired, attempt manual refresh
+  // Test the connection; if expired, attempt manual refresh (15s timeout)
   try {
-    await conn.query('SELECT Id FROM Organization LIMIT 1');
+    await withTimeout(conn.query('SELECT Id FROM Organization LIMIT 1'), 15000, 'Salesforce connection test');
   } catch (err: any) {
     const msg = err?.message || '';
-    if (msg.includes('INVALID_SESSION_ID') || msg.includes('Session expired') || msg.includes('401')) {
+    if (msg.includes('INVALID_SESSION_ID') || msg.includes('Session expired') || msg.includes('401') || msg.includes('timed out')) {
       console.log('Token expired for org', orgId, '— attempting refresh');
       const newTokens = await refreshAccessToken(org.instance_url, org.refresh_token);
       if (newTokens) {
@@ -219,11 +232,15 @@ async function refreshAccessToken(
       refresh_token: refreshToken,
     });
 
-    const res = await fetch(`${SF_LOGIN_URL}/services/oauth2/token`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: params.toString(),
-    });
+    const res = await withTimeout(
+      fetch(`${SF_LOGIN_URL}/services/oauth2/token`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: params.toString(),
+      }),
+      15000,
+      'Token refresh'
+    );
 
     if (!res.ok) {
       console.error('Token refresh failed:', await res.text());
@@ -263,7 +280,7 @@ export async function testConnection(conn: Connection): Promise<{
   error?: string;
 }> {
   try {
-    const result = await conn.query('SELECT Id, Name FROM Organization LIMIT 1');
+    const result = await withTimeout(conn.query('SELECT Id, Name FROM Organization LIMIT 1'), 15000, 'Connection test');
     const org = result.records[0] as any;
     return { success: true, orgName: org.Name };
   } catch (error: unknown) {
