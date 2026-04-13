@@ -50,6 +50,7 @@ export async function GET(request: NextRequest) {
       companyName: userRes.data?.company_name || '',
       brandColor: userRes.data?.report_branding_color || '#1B5E96',
       logoUrl: userRes.data?.company_logo_url || null,
+      remediationPlan: scan.ai_remediation_plan || null,
     });
 
     // Cast needed: CPQHealthReport returns Document but TS can't infer DocumentProps
