@@ -81,6 +81,8 @@ create table public.scans (
   metadata jsonb,
   report_url text,
   error_message text,
+  ai_remediation_plan text,
+  ai_scan_diff_cache jsonb default '{}'::jsonb,
   started_at timestamptz,
   completed_at timestamptz,
   created_at timestamptz default now()

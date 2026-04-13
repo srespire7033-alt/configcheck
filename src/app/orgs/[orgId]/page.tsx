@@ -71,6 +71,11 @@ export default function OrgDetailPage() {
           const latestScan = scans[0];
           setScan(latestScan);
 
+          // Load cached remediation plan if available
+          if (latestScan.ai_remediation_plan) {
+            setRemediationPlan(latestScan.ai_remediation_plan);
+          }
+
           const issuesRes = await fetch(`/api/issues?scanId=${latestScan.id}`);
           if (issuesRes.ok) {
             const issuesData = await issuesRes.json();
@@ -186,6 +191,7 @@ export default function OrgDetailPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           type: 'remediation-plan',
+          scanId: scan.id,
           issues: issues.map((i) => ({
             check_id: i.check_id,
             severity: i.severity,

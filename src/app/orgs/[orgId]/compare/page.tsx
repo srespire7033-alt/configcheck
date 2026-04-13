@@ -89,6 +89,8 @@ export default function ComparePage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           type: 'scan-diff',
+          scanAId: scanAId,
+          scanBId: scanBId,
           prevScore: data.scanA.score,
           newScore: data.scanB.score,
           newIssues: data.newIssues.map((i) => `[${i.check_id}] ${i.title}`),

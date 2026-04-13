@@ -29,7 +29,9 @@ export async function middleware(request: NextRequest) {
 
   // Public routes that don't need auth
   const publicPaths = ['/login', '/api/salesforce/callback'];
-  const isPublic = publicPaths.some((p) => request.nextUrl.pathname.startsWith(p));
+  const isPublic =
+    request.nextUrl.pathname === '/' ||
+    publicPaths.some((p) => request.nextUrl.pathname.startsWith(p));
 
   if (!user && !isPublic) {
     const url = request.nextUrl.clone();

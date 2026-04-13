@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { createServiceClient } from '@/lib/db/client';
 import { getAuthUser } from '@/lib/auth/get-user';
 import { generateScanDiffInsights, generateRemediationPlan } from '@/lib/ai/gemini';
 
@@ -7,6 +8,7 @@ export const dynamic = 'force-dynamic';
 /**
  * POST /api/ai/insights
  * Generate AI insights — scan diff analysis or remediation plan
+ * Results are cached in the database to avoid re-generating on page refresh.
  */
 export async function POST(request: NextRequest) {
   try {
@@ -17,9 +19,26 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     const { type } = body;
+    const supabase = createServiceClient();
 
     if (type === 'scan-diff') {
-      const { prevScore, newScore, newIssues, resolvedIssues, unchangedCount } = body;
+      const { prevScore, newScore, newIssues, resolvedIssues, unchangedCount, scanAId, scanBId } = body;
+
+      // Check cache first if scan IDs are provided
+      if (scanAId && scanBId) {
+        const cacheKey = `${scanAId}_${scanBId}`;
+        const { data: scan } = await supabase
+          .from('scans')
+          .select('ai_scan_diff_cache')
+          .eq('id', scanBId)
+          .single();
+
+        const cached = scan?.ai_scan_diff_cache?.[cacheKey];
+        if (cached) {
+          return NextResponse.json({ insight: cached, cached: true });
+        }
+      }
+
       try {
         const insight = await generateScanDiffInsights(
           prevScore,
@@ -28,6 +47,25 @@ export async function POST(request: NextRequest) {
           resolvedIssues || [],
           unchangedCount || 0
         );
+
+        // Save to cache if scan IDs provided
+        if (scanAId && scanBId && insight) {
+          const cacheKey = `${scanAId}_${scanBId}`;
+          const { data: currentScan } = await supabase
+            .from('scans')
+            .select('ai_scan_diff_cache')
+            .eq('id', scanBId)
+            .single();
+
+          const existingCache = currentScan?.ai_scan_diff_cache || {};
+          await supabase
+            .from('scans')
+            .update({
+              ai_scan_diff_cache: { ...existingCache, [cacheKey]: insight },
+            })
+            .eq('id', scanBId);
+        }
+
         return NextResponse.json({ insight });
       } catch (aiError) {
         const status = (aiError as { status?: number }).status;
@@ -39,9 +77,32 @@ export async function POST(request: NextRequest) {
     }
 
     if (type === 'remediation-plan') {
-      const { issues, overallScore } = body;
+      const { issues, overallScore, scanId } = body;
+
+      // Check cache first if scanId provided
+      if (scanId) {
+        const { data: scan } = await supabase
+          .from('scans')
+          .select('ai_remediation_plan')
+          .eq('id', scanId)
+          .single();
+
+        if (scan?.ai_remediation_plan) {
+          return NextResponse.json({ plan: scan.ai_remediation_plan, cached: true });
+        }
+      }
+
       try {
         const plan = await generateRemediationPlan(issues, overallScore);
+
+        // Save to cache if scanId provided
+        if (scanId && plan) {
+          await supabase
+            .from('scans')
+            .update({ ai_remediation_plan: plan })
+            .eq('id', scanId);
+        }
+
         return NextResponse.json({ plan });
       } catch (aiError) {
         const status = (aiError as { status?: number }).status;
