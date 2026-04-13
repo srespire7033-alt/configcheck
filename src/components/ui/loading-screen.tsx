@@ -22,10 +22,13 @@ interface LoadingScreenProps {
 }
 
 export function LoadingScreen({ message, minimal = false }: LoadingScreenProps) {
-  const [msgIndex, setMsgIndex] = useState(() => Math.floor(Math.random() * loadingMessages.length));
+  // Start with index 0 to avoid hydration mismatch, then randomize on mount
+  const [msgIndex, setMsgIndex] = useState(0);
 
   useEffect(() => {
     if (message) return; // Don't rotate if custom message provided
+    // Pick a random starting point on mount
+    setMsgIndex(Math.floor(Math.random() * loadingMessages.length));
     const interval = setInterval(() => {
       setMsgIndex((prev) => (prev + 1) % loadingMessages.length);
     }, 3000);
