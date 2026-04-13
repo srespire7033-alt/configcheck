@@ -56,6 +56,14 @@ export async function GET(request: NextRequest) {
     // Cast needed: CPQHealthReport returns Document but TS can't infer DocumentProps
     const pdfBuffer = await renderToBuffer(reportElement as React.ReactElement);
 
+    // Log PDF generation usage (fire-and-forget)
+    supabase.from('usage_logs').insert({
+      user_id: user.id,
+      event_type: 'pdf_report',
+      organization_id: scan.organization_id,
+      metadata: { scan_id: scanId },
+    }).then(() => {});
+
     return new NextResponse(new Uint8Array(pdfBuffer), {
       headers: {
         'Content-Type': 'application/pdf',

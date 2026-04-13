@@ -119,6 +119,32 @@ create table public.issues (
 );
 
 -- ============================================
+-- USAGE LOGS TABLE
+-- ============================================
+create table public.usage_logs (
+  id uuid default uuid_generate_v4() primary key,
+  user_id uuid references public.users(id) on delete cascade not null,
+  event_type text not null check (event_type in ('scan', 'pdf_report', 'ai_remediation', 'ai_scan_diff', 'ai_fix_suggestion')),
+  organization_id uuid references public.organizations(id) on delete set null,
+  metadata jsonb default '{}'::jsonb,
+  created_at timestamptz default now()
+);
+
+-- Auto-log usage when a scan is created
+create or replace function public.log_scan_usage()
+returns trigger as $$
+begin
+  insert into public.usage_logs (user_id, event_type, organization_id, metadata)
+  values (new.user_id, 'scan', new.organization_id, jsonb_build_object('scan_id', new.id, 'scan_type', new.scan_type));
+  return new;
+end;
+$$ language plpgsql security definer;
+
+create trigger on_scan_created
+  after insert on public.scans
+  for each row execute function public.log_scan_usage();
+
+-- ============================================
 -- INDEXES
 -- ============================================
 create index idx_organizations_user_id on public.organizations(user_id);
@@ -129,6 +155,9 @@ create index idx_issues_scan_id on public.issues(scan_id);
 create index idx_issues_organization_id on public.issues(organization_id);
 create index idx_issues_severity on public.issues(severity);
 create index idx_issues_status on public.issues(status);
+create index idx_usage_logs_user_id on public.usage_logs(user_id);
+create index idx_usage_logs_event_type on public.usage_logs(event_type);
+create index idx_usage_logs_created_at on public.usage_logs(created_at);
 
 -- ============================================
 -- AUTO-UPDATE updated_at
@@ -224,3 +253,14 @@ create policy "Users can update own issues"
       select id from public.organizations where user_id = auth.uid()
     )
   );
+
+-- Usage Logs: can only read own usage
+alter table public.usage_logs enable row level security;
+
+create policy "Users can read own usage"
+  on public.usage_logs for select
+  using (auth.uid() = user_id);
+
+create policy "Service can insert usage"
+  on public.usage_logs for insert
+  with check (true);

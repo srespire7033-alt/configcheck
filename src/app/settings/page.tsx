@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { Save, LogOut, Upload, X } from 'lucide-react';
+import { Save, LogOut, Upload, X, BarChart3, Scan, FileText, Sparkles } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { createClient } from '@/lib/db/client';
 import { LoadingScreen } from '@/components/ui/loading-screen';
@@ -19,6 +19,12 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [usage, setUsage] = useState<{
+    total_scans: number;
+    scans_this_month: number;
+    ai_calls_this_month: number;
+    pdf_reports_this_month: number;
+  } | null>(null);
 
   useEffect(() => {
     async function loadProfile() {
@@ -39,6 +45,12 @@ export default function SettingsPage() {
       }
     }
     loadProfile();
+
+    // Load usage stats
+    fetch('/api/usage')
+      .then((res) => res.ok ? res.json() : null)
+      .then((data) => data && setUsage(data))
+      .catch(() => {});
   }, []);
 
   async function handleSignOut() {
@@ -236,6 +248,44 @@ export default function SettingsPage() {
               Upgrade
             </button>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Usage Stats */}
+      <Card className="mb-6">
+        <CardHeader>
+          <h3 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+            <BarChart3 className="h-4 w-4" />
+            Usage This Month
+          </h3>
+        </CardHeader>
+        <CardContent>
+          {usage ? (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3 text-center">
+                <Scan className="h-5 w-5 mx-auto text-blue-600 dark:text-blue-400 mb-1" />
+                <p className="text-2xl font-bold text-blue-700 dark:text-blue-300">{usage.scans_this_month}</p>
+                <p className="text-xs text-blue-600 dark:text-blue-400">Scans</p>
+              </div>
+              <div className="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-3 text-center">
+                <Sparkles className="h-5 w-5 mx-auto text-purple-600 dark:text-purple-400 mb-1" />
+                <p className="text-2xl font-bold text-purple-700 dark:text-purple-300">{usage.ai_calls_this_month}</p>
+                <p className="text-xs text-purple-600 dark:text-purple-400">AI Calls</p>
+              </div>
+              <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-3 text-center">
+                <FileText className="h-5 w-5 mx-auto text-green-600 dark:text-green-400 mb-1" />
+                <p className="text-2xl font-bold text-green-700 dark:text-green-300">{usage.pdf_reports_this_month}</p>
+                <p className="text-xs text-green-600 dark:text-green-400">PDF Reports</p>
+              </div>
+              <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3 text-center">
+                <Scan className="h-5 w-5 mx-auto text-gray-600 dark:text-gray-400 mb-1" />
+                <p className="text-2xl font-bold text-gray-700 dark:text-gray-300">{usage.total_scans}</p>
+                <p className="text-xs text-gray-600 dark:text-gray-400">Total Scans</p>
+              </div>
+            </div>
+          ) : (
+            <div className="text-sm text-gray-500 dark:text-gray-400">Loading usage data...</div>
+          )}
         </CardContent>
       </Card>
 

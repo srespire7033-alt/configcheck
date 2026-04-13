@@ -48,6 +48,13 @@ export async function POST(request: NextRequest) {
           unchangedCount || 0
         );
 
+        // Log AI usage (fire-and-forget)
+        supabase.from('usage_logs').insert({
+          user_id: user.id,
+          event_type: 'ai_scan_diff',
+          metadata: { scanAId, scanBId },
+        }).then(() => {});
+
         // Save to cache if scan IDs provided
         if (scanAId && scanBId && insight) {
           const cacheKey = `${scanAId}_${scanBId}`;
@@ -94,6 +101,13 @@ export async function POST(request: NextRequest) {
 
       try {
         const plan = await generateRemediationPlan(issues, overallScore);
+
+        // Log AI usage (fire-and-forget)
+        supabase.from('usage_logs').insert({
+          user_id: user.id,
+          event_type: 'ai_remediation',
+          metadata: { scanId },
+        }).then(() => {});
 
         // Save to cache if scanId provided
         if (scanId && plan) {
