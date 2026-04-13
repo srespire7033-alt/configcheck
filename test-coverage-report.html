@@ -1,0 +1,839 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ConfigCheck — Test Coverage Report</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card: #1e293b;
+      --card-hover: #253349;
+      --border: #334155;
+      --text: #e2e8f0;
+      --text-muted: #94a3b8;
+      --accent: #3b82f6;
+      --accent-light: #60a5fa;
+      --green: #22c55e;
+      --green-bg: rgba(34, 197, 94, 0.12);
+      --red: #ef4444;
+      --red-bg: rgba(239, 68, 68, 0.12);
+      --amber: #f59e0b;
+      --amber-bg: rgba(245, 158, 11, 0.12);
+      --blue-bg: rgba(59, 130, 246, 0.1);
+      --purple: #a78bfa;
+      --purple-bg: rgba(167, 139, 250, 0.1);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      padding: 0;
+    }
+
+    /* Hero */
+    .hero {
+      background: linear-gradient(135deg, #1e3a5f 0%, #0f172a 50%, #1a1a3e 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 48px 40px 40px;
+    }
+    .hero-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .hero h1 {
+      font-size: 2.2rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+      background: linear-gradient(135deg, #60a5fa, #a78bfa);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .hero .subtitle {
+      color: var(--text-muted);
+      font-size: 1rem;
+      margin-bottom: 28px;
+    }
+    .stats-row {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .stat-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px 28px;
+      min-width: 150px;
+      flex: 1;
+    }
+    .stat-card .label {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+    .stat-card .value {
+      font-size: 1.8rem;
+      font-weight: 700;
+    }
+    .stat-card .value.green { color: var(--green); }
+    .stat-card .value.blue { color: var(--accent-light); }
+    .stat-card .value.purple { color: var(--purple); }
+    .stat-card .value.amber { color: var(--amber); }
+
+    /* Main content */
+    .content {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 40px;
+    }
+
+    h2 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin: 48px 0 20px;
+      padding-bottom: 10px;
+      border-bottom: 2px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    h2 .icon { font-size: 1.3rem; }
+
+    h3 {
+      font-size: 1.15rem;
+      font-weight: 600;
+      margin: 28px 0 14px;
+      color: var(--accent-light);
+    }
+
+    /* Tables */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 16px 0 32px;
+      font-size: 0.9rem;
+    }
+    thead th {
+      background: var(--card);
+      color: var(--text-muted);
+      text-transform: uppercase;
+      font-size: 0.75rem;
+      letter-spacing: 0.05em;
+      font-weight: 600;
+      padding: 12px 16px;
+      text-align: left;
+      border-bottom: 2px solid var(--border);
+      position: sticky;
+      top: 0;
+    }
+    tbody td {
+      padding: 12px 16px;
+      border-bottom: 1px solid rgba(51, 65, 85, 0.5);
+      vertical-align: top;
+    }
+    tbody tr:hover {
+      background: var(--card-hover);
+    }
+    tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    /* Badges */
+    .badge {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 50px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+    }
+    .badge-critical {
+      background: var(--red-bg);
+      color: var(--red);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+    .badge-warning {
+      background: var(--amber-bg);
+      color: var(--amber);
+      border: 1px solid rgba(245, 158, 11, 0.3);
+    }
+    .badge-info {
+      background: var(--blue-bg);
+      color: var(--accent-light);
+      border: 1px solid rgba(59, 130, 246, 0.3);
+    }
+    .badge-pass {
+      background: var(--green-bg);
+      color: var(--green);
+      border: 1px solid rgba(34, 197, 94, 0.3);
+    }
+    .badge-detect {
+      background: var(--purple-bg);
+      color: var(--purple);
+      border: 1px solid rgba(167, 139, 250, 0.3);
+    }
+
+    /* Testing type cards */
+    .type-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+      gap: 16px;
+      margin: 16px 0 32px;
+    }
+    .type-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      transition: border-color 0.2s;
+    }
+    .type-card:hover {
+      border-color: var(--accent);
+    }
+    .type-card .type-name {
+      font-weight: 700;
+      font-size: 1rem;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .type-card .type-desc {
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      line-height: 1.5;
+    }
+
+    /* Scenario cards */
+    .scenario-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      margin: 16px 0 28px;
+      overflow: hidden;
+    }
+    .scenario-header {
+      padding: 16px 20px;
+      font-weight: 700;
+      font-size: 0.95rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .scenario-card table {
+      margin: 0;
+    }
+
+    /* File list */
+    .file-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+      gap: 12px;
+      margin: 16px 0;
+    }
+    .file-item {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 18px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .file-item .fname {
+      font-family: 'Cascadia Code', 'Fira Code', monospace;
+      font-size: 0.82rem;
+      color: var(--accent-light);
+    }
+    .file-item .fmeta {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    .file-item .fcount {
+      background: var(--blue-bg);
+      color: var(--accent-light);
+      padding: 2px 10px;
+      border-radius: 50px;
+      font-size: 0.78rem;
+      font-weight: 600;
+    }
+    .file-item .ftag {
+      color: var(--text-muted);
+      font-size: 0.78rem;
+    }
+
+    /* Code block */
+    .code-block {
+      background: #0d1117;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 20px 24px;
+      font-family: 'Cascadia Code', 'Fira Code', monospace;
+      font-size: 0.85rem;
+      color: #c9d1d9;
+      margin: 16px 0;
+      overflow-x: auto;
+    }
+    .code-block .comment { color: #8b949e; }
+    .code-block .cmd { color: var(--green); }
+
+    /* Future scope */
+    .future-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 12px 0;
+      border-bottom: 1px solid rgba(51, 65, 85, 0.4);
+    }
+    .future-item:last-child { border-bottom: none; }
+    .future-icon {
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-size: 0.85rem;
+      margin-top: 2px;
+    }
+    .future-label { font-weight: 600; font-size: 0.9rem; }
+    .future-reason { color: var(--text-muted); font-size: 0.83rem; }
+
+    /* Progress bar */
+    .progress-bar {
+      height: 8px;
+      background: var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+      margin-top: 6px;
+    }
+    .progress-fill {
+      height: 100%;
+      border-radius: 10px;
+      transition: width 1s ease;
+    }
+    .progress-fill.green { background: linear-gradient(90deg, #22c55e, #4ade80); }
+
+    /* Footer */
+    .footer {
+      text-align: center;
+      padding: 40px;
+      color: var(--text-muted);
+      font-size: 0.82rem;
+      border-top: 1px solid var(--border);
+      margin-top: 48px;
+    }
+
+    /* Positive / Negative columns */
+    .col-positive { color: #f87171; font-size: 0.83rem; }
+    .col-negative { color: #4ade80; font-size: 0.83rem; }
+
+    @media (max-width: 768px) {
+      .hero { padding: 28px 20px; }
+      .content { padding: 20px; }
+      .stats-row { flex-direction: column; }
+      .type-grid { grid-template-columns: 1fr; }
+      .file-grid { grid-template-columns: 1fr; }
+      h2 { font-size: 1.2rem; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-inner">
+    <h1>ConfigCheck — Test Coverage Report</h1>
+    <p class="subtitle">AI-Powered Salesforce CPQ Configuration Auditor &mdash; Quality Assurance Dashboard</p>
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="label">Total Tests</div>
+        <div class="value blue">603</div>
+        <div class="progress-bar"><div class="progress-fill green" style="width:100%"></div></div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Passed</div>
+        <div class="value green">603</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Failed</div>
+        <div class="value" style="color:var(--text-muted)">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Test Files</div>
+        <div class="value purple">29</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Health Checks</div>
+        <div class="value amber">68</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Execution Time</div>
+        <div class="value amber">~2.2s</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="content">
+
+<!-- SECTION 1: TESTING TYPES -->
+<h2><span class="icon">&#129514;</span> 1. Testing Types Covered</h2>
+<div class="type-grid">
+  <div class="type-card">
+    <div class="type-name">&#128300; Unit Testing</div>
+    <div class="type-desc">Individual check functions tested in isolation with crafted data. Each of 68 checks gets its own positive & negative test cases across 17 categories.</div>
+  </div>
+  <div class="type-card">
+    <div class="type-name">&#128279; Integration Testing</div>
+    <div class="type-desc">Full engine runs end-to-end with realistic org configurations. Validates scoring, category mapping, and issue detection together.</div>
+  </div>
+  <div class="type-card">
+    <div class="type-name">&#9989; Positive Testing</div>
+    <div class="type-desc">Verifies the system correctly DETECTS issues in problematic data. Ensures no real problems slip through undetected.</div>
+  </div>
+  <div class="type-card">
+    <div class="type-name">&#128683; Negative Testing</div>
+    <div class="type-desc">Verifies the system does NOT raise false positives on clean data. Ensures healthy orgs aren't incorrectly flagged.</div>
+  </div>
+  <div class="type-card">
+    <div class="type-name">&#128207; Boundary Testing</div>
+    <div class="type-desc">Tests at exact thresholds: 2 loops = OK, 3 = flagged. 49 price rules = OK, 50+ = flagged. Score floors at 0, caps at 100.</div>
+  </div>
+  <div class="type-card">
+    <div class="type-name">&#129480; Edge Case Testing</div>
+    <div class="type-desc">Empty arrays, null values, whitespace-only strings, extreme counts, zero-data orgs, inactive record handling.</div>
+  </div>
+  <div class="type-card">
+    <div class="type-name">&#128202; Score Validation</div>
+    <div class="type-desc">Ensures scores stay 0-100, category weights work correctly, severity deductions apply properly, overall weighted scoring.</div>
+  </div>
+  <div class="type-card">
+    <div class="type-name">&#128737;&#65039; Data Integrity Testing</div>
+    <div class="type-desc">Validates all issues have required fields: check_id, category, severity, title, description, affected_records with id/name/type.</div>
+  </div>
+  <div class="type-card">
+    <div class="type-name">&#128260; Regression Testing</div>
+    <div class="type-desc">Original basic tests still pass alongside comprehensive tests. No existing functionality broken by new test additions.</div>
+  </div>
+</div>
+
+<!-- SECTION 2: ALL CATEGORIES & CHECKS -->
+<h2><span class="icon">&#128269;</span> 2. Categories & Checks Covered (68 Checks / 17 Categories)</h2>
+
+<!-- Price Rules -->
+<h3>Price Rules (PR-001 to PR-005) &mdash; 31 tests</h3>
+<table>
+  <thead><tr><th>Check ID</th><th>Check Name</th><th>Severity</th><th>Positive Tests (Issues Detected)</th><th>Negative Tests (No False Positives)</th></tr></thead>
+  <tbody>
+    <tr><td><strong>PR-001</strong></td><td>Conflicting Price Rules</td><td><span class="badge badge-critical">Critical</span></td><td class="col-positive">Same order + same target field; Multiple conflicts</td><td class="col-negative">Unique orders; Different target fields; Inactive skipped; Empty array</td></tr>
+    <tr><td><strong>PR-002</strong></td><td>Dead Price Rules</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">No conditions; No actions; Both missing</td><td class="col-negative">Has conditions + actions; Inactive skipped</td></tr>
+    <tr><td><strong>PR-003</strong></td><td>Evaluation Order Gaps</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">Large gap (10 to 100); Multiple gaps</td><td class="col-negative">Sequential orders; Single rule; Empty</td></tr>
+    <tr><td><strong>PR-004</strong></td><td>Multiple Rules Same Field</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">3+ rules target SBQQ__Discount__c</td><td class="col-negative">Each rule targets different field; Under threshold</td></tr>
+    <tr><td><strong>PR-005</strong></td><td>Missing Evaluation Order</td><td><span class="badge badge-info">Info</span></td><td class="col-positive">Null eval order on active rule</td><td class="col-negative">All have orders; Inactive with null skipped</td></tr>
+  </tbody>
+</table>
+
+<!-- Discount Schedules -->
+<h3>Discount Schedules (DS-001 to DS-004) &mdash; 26 tests</h3>
+<table>
+  <thead><tr><th>Check ID</th><th>Check Name</th><th>Severity</th><th>Positive Tests (Issues Detected)</th><th>Negative Tests (No False Positives)</th></tr></thead>
+  <tbody>
+    <tr><td><strong>DS-001</strong></td><td>Tier Overlap</td><td><span class="badge badge-critical">Critical</span></td><td class="col-positive">Overlapping ranges (1-100 & 50-200); Multiple overlaps; Cross-schedule</td><td class="col-negative">Non-overlapping; Single tier; Empty tiers; Adjacent boundaries</td></tr>
+    <tr><td><strong>DS-002</strong></td><td>Tier Gaps</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">Gap 50-75; Multiple gaps in same schedule</td><td class="col-negative">Continuous coverage; Single tier; Unsorted tiers (sorted before check)</td></tr>
+    <tr><td><strong>DS-003</strong></td><td>Negative Discounts</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">-5% surcharge; Multiple negatives; Cross-schedule negatives</td><td class="col-negative">All positive; Zero discount; Empty tiers</td></tr>
+    <tr><td><strong>DS-004</strong></td><td>Orphaned Schedules</td><td><span class="badge badge-info">Info</span></td><td class="col-positive">Empty tiers; Null tiers subrelation; Multiple empty grouped</td><td class="col-negative">Has tiers; Empty array; All have tiers</td></tr>
+  </tbody>
+</table>
+
+<!-- Products -->
+<h3>Products (PB-001 to PB-004) &mdash; 28 tests</h3>
+<table>
+  <thead><tr><th>Check ID</th><th>Check Name</th><th>Severity</th><th>Positive Tests (Issues Detected)</th><th>Negative Tests (No False Positives)</th></tr></thead>
+  <tbody>
+    <tr><td><strong>PB-001</strong></td><td>No Price Book Entry</td><td><span class="badge badge-critical">Critical</span></td><td class="col-positive">Active product without PBE; Multiple orphans; Count in title</td><td class="col-negative">All have entries; Inactive product skipped; Empty arrays</td></tr>
+    <tr><td><strong>PB-002</strong></td><td>Orphaned Bundle Options</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">Inactive parent bundle; Inactive child product</td><td class="col-negative">Both active; Empty options; Active parent+child</td></tr>
+    <tr><td><strong>PB-003</strong></td><td>Missing Subscription Type</td><td><span class="badge badge-critical">Critical</span></td><td class="col-positive">Recurring + no SubscriptionType; Multiple products</td><td class="col-negative">One-Time charge type; Has SubscriptionType; Inactive skipped</td></tr>
+    <tr><td><strong>PB-004</strong></td><td>Duplicate Product Codes</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">2 products same code; 3 products same code</td><td class="col-negative">Unique codes; Inactive duplicates skipped; No code set</td></tr>
+  </tbody>
+</table>
+
+<!-- Product Rules -->
+<h3>Product Rules (PRD-001 to PRD-004) &mdash; 34 tests</h3>
+<table>
+  <thead><tr><th>Check ID</th><th>Check Name</th><th>Severity</th><th>Positive Tests (Issues Detected)</th><th>Negative Tests (No False Positives)</th></tr></thead>
+  <tbody>
+    <tr><td><strong>PRD-001</strong></td><td>Conflicting Selection Rules</td><td><span class="badge badge-critical">Critical</span></td><td class="col-positive">Same order + same type; Multiple conflicts</td><td class="col-negative">Different orders; Different types; Inactive skipped; Empty</td></tr>
+    <tr><td><strong>PRD-002</strong></td><td>Duplicate Eval Order</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">2 rules same order; Multi-group duplicates</td><td class="col-negative">Unique orders; Null orders; Inactive rules</td></tr>
+    <tr><td><strong>PRD-003</strong></td><td>No Conditions or Actions</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">Empty conditions; Empty actions; Both missing</td><td class="col-negative">Has conditions + actions; Inactive skipped</td></tr>
+    <tr><td><strong>PRD-004</strong></td><td>Missing Condition Logic</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">Null ConditionsMet; Empty string</td><td class="col-negative">ConditionsMet = All; = Any; Inactive skipped</td></tr>
+  </tbody>
+</table>
+
+<!-- Approval Rules -->
+<h3>Approval Rules (AR-001 to AR-004) &mdash; 27 tests</h3>
+<table>
+  <thead><tr><th>Check ID</th><th>Check Name</th><th>Severity</th><th>Positive Tests (Issues Detected)</th><th>Negative Tests (No False Positives)</th></tr></thead>
+  <tbody>
+    <tr><td><strong>AR-001</strong></td><td>Rules Without Approver</td><td><span class="badge badge-critical">Critical</span></td><td class="col-positive">No Approver AND no ApproverField; Multiple broken; Empty string approver</td><td class="col-negative">Approver set; ApproverField set; Both set; Inactive skipped; Empty array</td></tr>
+    <tr><td><strong>AR-002</strong></td><td>Rules Without Conditions</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">Empty conditions; Null conditions; Mixed set flags only bad</td><td class="col-negative">Has conditions; Inactive skipped; Multiple conditions</td></tr>
+    <tr><td><strong>AR-003</strong></td><td>Duplicate Eval Order</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">2 same order; 3 same order; 2 separate groups</td><td class="col-negative">Unique orders; Null orders; Inactive; Single rule</td></tr>
+    <tr><td><strong>AR-004</strong></td><td>Missing Condition Logic</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">Null ConditionsMet; Empty string</td><td class="col-negative">ConditionsMet = All; = Any; No conditions (skipped); Inactive</td></tr>
+  </tbody>
+</table>
+
+<!-- Summary Variables -->
+<h3>Summary Variables (SV-001 to SV-005) &mdash; 31 tests</h3>
+<table>
+  <thead><tr><th>Check ID</th><th>Check Name</th><th>Severity</th><th>Positive Tests (Issues Detected)</th><th>Negative Tests (No False Positives)</th></tr></thead>
+  <tbody>
+    <tr><td><strong>SV-001</strong></td><td>Orphaned Variables</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">Single orphan; 5 orphans grouped; Only orphans in affected records</td><td class="col-negative">Referenced by price rule; By product rule; Both; Inactive; Empty</td></tr>
+    <tr><td><strong>SV-002</strong></td><td>Incomplete Configuration</td><td><span class="badge badge-critical">Critical</span></td><td class="col-positive">Missing AggregateFunction/Field/TargetObject; Missing ALL three; Multiple broken</td><td class="col-negative">Fully configured; Inactive skipped</td></tr>
+    <tr><td><strong>SV-003</strong></td><td>Duplicate Variables</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">2 identical vars; 3 identical vars</td><td class="col-negative">Unique configs; Same field diff function; Same function diff scope</td></tr>
+    <tr><td><strong>SV-004</strong></td><td>Filter Misconfiguration</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">FilterField only; Field+Value no Operator; FilterValue only</td><td class="col-negative">No filter; Fully configured filter</td></tr>
+    <tr><td><strong>SV-005</strong></td><td>Composite Missing Operand</td><td><span class="badge badge-critical">Critical</span></td><td class="col-positive">CombineWith without Operator; Operator without CombineWith</td><td class="col-negative">Not composite; Both set; Inactive skipped</td></tr>
+  </tbody>
+</table>
+
+<!-- Guided Selling -->
+<h3>Guided Selling (GS-001 to GS-003) &mdash; 18 tests</h3>
+<table>
+  <thead><tr><th>Check ID</th><th>Check Name</th><th>Severity</th><th>Positive Tests (Issues Detected)</th><th>Negative Tests (No False Positives)</th></tr></thead>
+  <tbody>
+    <tr><td><strong>GS-001</strong></td><td>Without Inputs</td><td><span class="badge badge-critical">Critical</span></td><td class="col-positive">0 inputs; Multiple broken; 0 inputs AND 0 outputs</td><td class="col-negative">Has inputs; 1 input; Many inputs; Inactive skipped; Empty</td></tr>
+    <tr><td><strong>GS-002</strong></td><td>Without Outputs</td><td><span class="badge badge-critical">Critical</span></td><td class="col-positive">0 outputs; Only flags output-less in mixed set</td><td class="col-negative">Has outputs; 1 output; Inactive skipped</td></tr>
+    <tr><td><strong>GS-003</strong></td><td>Inactive Processes</td><td><span class="badge badge-info">Info</span></td><td class="col-positive">Single inactive; 3 inactive grouped</td><td class="col-negative">All active; Empty array; 3 active</td></tr>
+  </tbody>
+</table>
+
+<!-- Quote Templates -->
+<h3>Quote Templates (QT-001 to QT-004) &mdash; 23 tests</h3>
+<table>
+  <thead><tr><th>Check ID</th><th>Check Name</th><th>Severity</th><th>Positive Tests (Issues Detected)</th><th>Negative Tests (No False Positives)</th></tr></thead>
+  <tbody>
+    <tr><td><strong>QT-001</strong></td><td>No Default Template</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">Single non-default; Multiple non-defaults</td><td class="col-negative">Default exists; No templates; One default among many</td></tr>
+    <tr><td><strong>QT-002</strong></td><td>Non-Active Templates</td><td><span class="badge badge-info">Info</span></td><td class="col-positive">Draft status; Inactive status; Multiple non-active</td><td class="col-negative">All Active; Empty; Null status</td></tr>
+    <tr><td><strong>QT-003</strong></td><td>Empty Templates</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">Empty sections; Null sections; Multiple empty</td><td class="col-negative">Has sections; Multiple sections; Empty array</td></tr>
+    <tr><td><strong>QT-004</strong></td><td>Multiple Defaults</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">2 defaults; 3 defaults</td><td class="col-negative">Single default; No defaults; 1 default among many</td></tr>
+  </tbody>
+</table>
+
+<!-- Custom Scripts / QCP -->
+<h3>Custom Scripts / QCP (QCP-001 to QCP-004) &mdash; 28 tests</h3>
+<table>
+  <thead><tr><th>Check ID</th><th>Check Name</th><th>Severity</th><th>Positive Tests (Issues Detected)</th><th>Negative Tests (No False Positives)</th></tr></thead>
+  <tbody>
+    <tr><td><strong>QCP-001</strong></td><td>Empty QCP Script</td><td><span class="badge badge-critical">Critical</span></td><td class="col-positive">Null code; Empty string; Whitespace-only; Multiple empty</td><td class="col-negative">Has code; Empty array; Minimal code</td></tr>
+    <tr><td><strong>QCP-002</strong></td><td>Missing Transpiled Code</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">Null transpiled; Empty string; Whitespace</td><td class="col-negative">Code + transpiled present; Empty code skipped</td></tr>
+    <tr><td><strong>QCP-003</strong></td><td>Performance Concerns</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">3 nested loops; 500+ lines; >5 console.log; while loops</td><td class="col-negative">Simple code; 2 loops (under threshold); 5 logs (at threshold)</td></tr>
+    <tr><td><strong>QCP-004</strong></td><td>Multiple QCP Scripts</td><td><span class="badge badge-info">Info</span></td><td class="col-positive">2 QCPs; 3 QCPs (excludes non-QCP type)</td><td class="col-negative">Single QCP; No scripts; 1 QCP + non-QCP</td></tr>
+  </tbody>
+</table>
+
+<!-- CPQ Settings -->
+<h3>CPQ Settings (SET-001 to SET-004) &mdash; 24 tests</h3>
+<table>
+  <thead><tr><th>Check ID</th><th>Check Name</th><th>Severity</th><th>Positive Tests (Issues Detected)</th><th>Negative Tests (No False Positives)</th></tr></thead>
+  <tbody>
+    <tr><td><strong>SET-001</strong></td><td>Triggers Disabled</td><td><span class="badge badge-critical">Critical</span></td><td class="col-positive">TriggerDisabled = true; Null cpqSettings</td><td class="col-negative">TriggerDisabled = false; undefined; null</td></tr>
+    <tr><td><strong>SET-002</strong></td><td>QCP Detected</td><td><span class="badge badge-info">Info</span></td><td class="col-positive">Has customScripts; Multiple scripts</td><td class="col-negative">No scripts; Empty array</td></tr>
+    <tr><td><strong>SET-003</strong></td><td>Renewal Model Not Set</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">Null renewal model; Empty string; Undefined</td><td class="col-negative">'Same Products'; 'Assets'; Null cpqSettings</td></tr>
+    <tr><td><strong>SET-004</strong></td><td>Subscription Term Unit Not Set</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">Null term unit; Empty string</td><td class="col-negative">'Month'; 'Year'; Null cpqSettings</td></tr>
+  </tbody>
+</table>
+
+<!-- Configuration Attributes -->
+<h3>Configuration Attributes (CA-001 to CA-004) &mdash; 27 tests</h3>
+<table>
+  <thead><tr><th>Check ID</th><th>Check Name</th><th>Severity</th><th>Positive Tests (Issues Detected)</th><th>Negative Tests (No False Positives)</th></tr></thead>
+  <tbody>
+    <tr><td><strong>CA-001</strong></td><td>Hidden + Required</td><td><span class="badge badge-critical">Critical</span></td><td class="col-positive">Both flags set; Multiple; Product name in description</td><td class="col-negative">Required only; Hidden only; Neither; Empty</td></tr>
+    <tr><td><strong>CA-002</strong></td><td>Missing Target Field</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">Null target; Empty string target; Grouped by product</td><td class="col-negative">All have targets; Empty array</td></tr>
+    <tr><td><strong>CA-003</strong></td><td>Duplicate Attribute Names</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">Duplicate pair; Triple; Separate groups</td><td class="col-negative">Unique names; Same name different products; Single; Empty</td></tr>
+    <tr><td><strong>CA-004</strong></td><td>Required Without Default</td><td><span class="badge badge-info">Info</span></td><td class="col-positive">Required + visible + no default; Grouped by product</td><td class="col-negative">Has default; Not required; Hidden excluded; Empty</td></tr>
+  </tbody>
+</table>
+
+<!-- Subscriptions -->
+<h3>Subscriptions (SR-001 to SR-002) &mdash; 18 tests</h3>
+<table>
+  <thead><tr><th>Check ID</th><th>Check Name</th><th>Severity</th><th>Positive Tests (Issues Detected)</th><th>Negative Tests (No False Positives)</th></tr></thead>
+  <tbody>
+    <tr><td><strong>SR-001</strong></td><td>Zero-Value Subscriptions</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">Zero price; Null price; Multiple zero/null; revenue_impact property</td><td class="col-negative">Positive price; Empty array; Negative/credit price; Small positive</td></tr>
+    <tr><td><strong>SR-002</strong></td><td>Missing Prorate Multiplier</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">Null multiplier; Zero multiplier; Multiple missing</td><td class="col-negative">Positive multiplier; Fractional value; Empty array</td></tr>
+  </tbody>
+</table>
+
+<!-- Quote Lines -->
+<h3>Quote Lines (QL-001 to QL-003) &mdash; 25 tests</h3>
+<table>
+  <thead><tr><th>Check ID</th><th>Check Name</th><th>Severity</th><th>Positive Tests (Issues Detected)</th><th>Negative Tests (No False Positives)</th></tr></thead>
+  <tbody>
+    <tr><td><strong>QL-001</strong></td><td>Zero NetPrice</td><td><span class="badge badge-critical">Critical</span></td><td class="col-positive">Zero NetPrice; Null NetPrice; Grouped by quote; Product names</td><td class="col-negative">Positive NetPrice; Zero Quantity; Zero ListPrice; Null Quantity; Empty</td></tr>
+    <tr><td><strong>QL-002</strong></td><td>NetTotal Mismatch</td><td><span class="badge badge-critical">Critical</span></td><td class="col-positive">Significant mismatch; Multiple lines; Product name</td><td class="col-negative">Exact match; Small rounding; Null fields; Empty</td></tr>
+    <tr><td><strong>QL-003</strong></td><td>Negative Totals</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">Single negative; Multiple negatives grouped; Dollar amounts</td><td class="col-negative">Positive totals; Null; Zero; Empty</td></tr>
+  </tbody>
+</table>
+
+<!-- Twin Fields -->
+<h3>Twin Fields (TF-001) &mdash; 20 tests</h3>
+<table>
+  <thead><tr><th>Check ID</th><th>Check Name</th><th>Severity</th><th>Positive Tests (Issues Detected)</th><th>Negative Tests (No False Positives)</th></tr></thead>
+  <tbody>
+    <tr><td><strong>TF-001</strong></td><td>Conflicting Twin Values</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">Both Discount + AdditionalDiscount; Both Uplift% + UpliftAmount; Combined (2 issues); revenue_impact</td><td class="col-negative">Only Discount set; Only AdditionalDiscount; Both null; Both zero; Only Uplift; Only UpliftAmount; Empty</td></tr>
+  </tbody>
+</table>
+
+<!-- Contracted Prices -->
+<h3>Contracted Prices (CP-001) &mdash; 17 tests</h3>
+<table>
+  <thead><tr><th>Check ID</th><th>Check Name</th><th>Severity</th><th>Positive Tests (Issues Detected)</th><th>Negative Tests (No False Positives)</th></tr></thead>
+  <tbody>
+    <tr><td><strong>CP-001</strong></td><td>Expired / Inactive / Zero Prices</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">Expired prices; Inactive product refs; Zero-price contracts; Combined scenario; revenue_impact</td><td class="col-negative">Valid non-expired; Active product; Multiple valid; Null handling; Empty</td></tr>
+  </tbody>
+</table>
+
+<!-- Advanced Pricing -->
+<h3>Advanced Pricing (AP-001 to AP-004) &mdash; 32 tests</h3>
+<table>
+  <thead><tr><th>Check ID</th><th>Check Name</th><th>Severity</th><th>Positive Tests (Issues Detected)</th><th>Negative Tests (No False Positives)</th></tr></thead>
+  <tbody>
+    <tr><td><strong>AP-001</strong></td><td>MDQ Missing Subscription</td><td><span class="badge badge-critical">Critical</span></td><td class="col-positive">All fields missing; Each individually; Multiple products</td><td class="col-negative">All set; Non-Block; Inactive; Empty</td></tr>
+    <tr><td><strong>AP-002</strong></td><td>% of Total Not In Bundle</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">Standalone PoT product; Multiple; Mixed</td><td class="col-negative">Is bundle option; Non-PoT; Inactive; Empty</td></tr>
+    <tr><td><strong>AP-003</strong></td><td>Cost Without Price Book</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">No PBE for Cost product; Multiple</td><td class="col-negative">Has entry; Non-Cost; Inactive; Empty</td></tr>
+    <tr><td><strong>AP-004</strong></td><td>Recurring No Billing Freq</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">Recurring + no frequency; Multiple; Empty string</td><td class="col-negative">Has frequency; One-Time; Inactive; Empty</td></tr>
+  </tbody>
+</table>
+
+<!-- Performance -->
+<h3>Performance (PERF-001 to PERF-005) &mdash; 32 tests</h3>
+<table>
+  <thead><tr><th>Check ID</th><th>Check Name</th><th>Severity</th><th>Positive Tests (Issues Detected)</th><th>Negative Tests (No False Positives)</th></tr></thead>
+  <tbody>
+    <tr><td><strong>PERF-001</strong></td><td>High Price Rule Count</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">50 active rules = warning; 100+ = critical</td><td class="col-negative">2 rules (clean); 49 rules (under threshold)</td></tr>
+    <tr><td><strong>PERF-002</strong></td><td>High Product Rule Count</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">30 active rules = warning; 60+ = critical</td><td class="col-negative">1 rule; 29 rules (under threshold)</td></tr>
+    <tr><td><strong>PERF-003</strong></td><td>Quote Line Volume</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">max > 100 lines; avg > 50; max > 200 = critical</td><td class="col-negative">Low line count; No quotes; No lines</td></tr>
+    <tr><td><strong>PERF-004</strong></td><td>Summary Variable Overhead</td><td><span class="badge badge-info">Info</span></td><td class="col-positive">20+ active = info; 40+ = warning</td><td class="col-negative">1 variable; 19 (under threshold)</td></tr>
+    <tr><td><strong>PERF-005</strong></td><td>CPQ Complexity Score</td><td><span class="badge badge-info">Info</span></td><td class="col-positive">Score >= 50 = info; >= 100 = warning; >= 200 = critical</td><td class="col-negative">Low complexity (score < 50)</td></tr>
+  </tbody>
+</table>
+
+<!-- Impact Analysis -->
+<h3>Impact Analysis (IA-001 to IA-004) &mdash; 25 tests</h3>
+<table>
+  <thead><tr><th>Check ID</th><th>Check Name</th><th>Severity</th><th>Positive Tests (Issues Detected)</th><th>Negative Tests (No False Positives)</th></tr></thead>
+  <tbody>
+    <tr><td><strong>IA-001</strong></td><td>Dependency Chains</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">Rule A writes field X, Rule B conditions on X; 5+ chains = critical</td><td class="col-negative">Independent rules; No conditions; Empty</td></tr>
+    <tr><td><strong>IA-002</strong></td><td>Overlapping Rule Scope</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">4+ rules target same field; 6+ = critical</td><td class="col-negative">Each targets different field; Under threshold</td></tr>
+    <tr><td><strong>IA-003</strong></td><td>Discount + Price Rule Overlap</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">Discount schedules + price rules target same fields</td><td class="col-negative">No discount schedules; Rules target non-discount fields</td></tr>
+    <tr><td><strong>IA-004</strong></td><td>Orphaned References</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">Contracted prices linked to inactive products</td><td class="col-negative">All products active; No contracted prices; Empty</td></tr>
+  </tbody>
+</table>
+
+<!-- Usage Analytics -->
+<h3>Usage Analytics (UA-001 to UA-003) &mdash; 23 tests</h3>
+<table>
+  <thead><tr><th>Check ID</th><th>Check Name</th><th>Severity</th><th>Positive Tests (Issues Detected)</th><th>Negative Tests (No False Positives)</th></tr></thead>
+  <tbody>
+    <tr><td><strong>UA-001</strong></td><td>Dead-Weight Products</td><td><span class="badge badge-info">Info</span></td><td class="col-positive">5+ unquoted AND >= 20% dead weight</td><td class="col-negative">All quoted; Under 5 unquoted; Under 20% threshold</td></tr>
+    <tr><td><strong>UA-002</strong></td><td>Untriggered Schedules</td><td><span class="badge badge-info">Info</span></td><td class="col-positive">3+ schedules but < 5% lines discounted</td><td class="col-negative">No schedules; No lines; High discount utilization</td></tr>
+    <tr><td><strong>UA-003</strong></td><td>Stale Inactive Rules</td><td><span class="badge badge-info">Info</span></td><td class="col-positive">5+ inactive rules; 3+ inactive at 30%+ ratio</td><td class="col-negative">No inactive; Under threshold; All active</td></tr>
+  </tbody>
+</table>
+
+<!-- SECTION 3: INTEGRATION SCENARIOS -->
+<h2><span class="icon">&#128279;</span> 3. Integration Test Scenarios &mdash; 42 tests</h2>
+
+<div class="scenario-card">
+  <div class="scenario-header">&#128994; Scenario 1: Healthy CPQ Org (Negative Testing &mdash; No Issues Expected)</div>
+  <table>
+    <thead><tr><th>Test</th><th>What It Verifies</th><th>Result</th></tr></thead>
+    <tbody>
+      <tr><td>Approval Rules score = 100</td><td>No false positives on clean approval config</td><td><span class="badge badge-pass">PASS</span></td></tr>
+      <tr><td>Summary Variables score = 100</td><td>No false positives on referenced variables</td><td><span class="badge badge-pass">PASS</span></td></tr>
+      <tr><td>Guided Selling score = 100</td><td>No false positives on valid process</td><td><span class="badge badge-pass">PASS</span></td></tr>
+      <tr><td>Quote Templates score = 100</td><td>No false positives on default active template</td><td><span class="badge badge-pass">PASS</span></td></tr>
+      <tr><td>QCP score = 100</td><td>No false positives on proper script</td><td><span class="badge badge-pass">PASS</span></td></tr>
+      <tr><td>Overall score >= 80</td><td>Healthy org gets good grade</td><td><span class="badge badge-pass">PASS</span></td></tr>
+      <tr><td>Zero critical issues</td><td>No phantom criticals</td><td><span class="badge badge-pass">PASS</span></td></tr>
+      <tr><td>Complexity = Low</td><td>Minimal org not flagged as complex</td><td><span class="badge badge-pass">PASS</span></td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="scenario-card">
+  <div class="scenario-header">&#128308; Scenario 2: Problematic CPQ Org (Positive Testing &mdash; Issues Must Be Detected)</div>
+  <table>
+    <thead><tr><th>Test</th><th>Check ID</th><th>Expected Severity</th><th>Result</th></tr></thead>
+    <tbody>
+      <tr><td>DETECT: Approval rule without approver</td><td>AR-001</td><td><span class="badge badge-critical">Critical</span></td><td><span class="badge badge-detect">DETECTED</span></td></tr>
+      <tr><td>DETECT: Approval rule without conditions</td><td>AR-002</td><td><span class="badge badge-warning">Warning</span></td><td><span class="badge badge-detect">DETECTED</span></td></tr>
+      <tr><td>DETECT: Duplicate evaluation order</td><td>AR-003</td><td><span class="badge badge-warning">Warning</span></td><td><span class="badge badge-detect">DETECTED</span></td></tr>
+      <tr><td>DETECT: Missing condition logic</td><td>AR-004</td><td><span class="badge badge-warning">Warning</span></td><td><span class="badge badge-detect">DETECTED</span></td></tr>
+      <tr><td>DETECT: Orphaned summary variables</td><td>SV-001</td><td><span class="badge badge-warning">Warning</span></td><td><span class="badge badge-detect">DETECTED</span></td></tr>
+      <tr><td>DETECT: Incomplete variable config</td><td>SV-002</td><td><span class="badge badge-critical">Critical</span></td><td><span class="badge badge-detect">DETECTED</span></td></tr>
+      <tr><td>DETECT: Duplicate summary variables</td><td>SV-003</td><td><span class="badge badge-warning">Warning</span></td><td><span class="badge badge-detect">DETECTED</span></td></tr>
+      <tr><td>DETECT: Filter misconfiguration</td><td>SV-004</td><td><span class="badge badge-warning">Warning</span></td><td><span class="badge badge-detect">DETECTED</span></td></tr>
+      <tr><td>DETECT: Composite missing operand</td><td>SV-005</td><td><span class="badge badge-critical">Critical</span></td><td><span class="badge badge-detect">DETECTED</span></td></tr>
+      <tr><td>DETECT: Guided selling without inputs</td><td>GS-001</td><td><span class="badge badge-critical">Critical</span></td><td><span class="badge badge-detect">DETECTED</span></td></tr>
+      <tr><td>DETECT: Guided selling without outputs</td><td>GS-002</td><td><span class="badge badge-critical">Critical</span></td><td><span class="badge badge-detect">DETECTED</span></td></tr>
+      <tr><td>DETECT: Inactive guided selling</td><td>GS-003</td><td><span class="badge badge-info">Info</span></td><td><span class="badge badge-detect">DETECTED</span></td></tr>
+      <tr><td>DETECT: No default template</td><td>QT-001</td><td><span class="badge badge-warning">Warning</span></td><td><span class="badge badge-detect">DETECTED</span></td></tr>
+      <tr><td>DETECT: Non-active template</td><td>QT-002</td><td><span class="badge badge-info">Info</span></td><td><span class="badge badge-detect">DETECTED</span></td></tr>
+      <tr><td>DETECT: Empty template</td><td>QT-003</td><td><span class="badge badge-warning">Warning</span></td><td><span class="badge badge-detect">DETECTED</span></td></tr>
+      <tr><td>DETECT: Empty QCP script</td><td>QCP-001</td><td><span class="badge badge-critical">Critical</span></td><td><span class="badge badge-detect">DETECTED</span></td></tr>
+      <tr><td>DETECT: Missing transpiled code</td><td>QCP-002</td><td><span class="badge badge-warning">Warning</span></td><td><span class="badge badge-detect">DETECTED</span></td></tr>
+      <tr><td>DETECT: QCP performance concerns</td><td>QCP-003</td><td><span class="badge badge-warning">Warning</span></td><td><span class="badge badge-detect">DETECTED</span></td></tr>
+      <tr><td>DETECT: Multiple QCP scripts</td><td>QCP-004</td><td><span class="badge badge-info">Info</span></td><td><span class="badge badge-detect">DETECTED</span></td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="scenario-card">
+  <div class="scenario-header">&#128202; Scenario 3: Score Impact Validation</div>
+  <table>
+    <thead><tr><th>Test</th><th>What It Verifies</th><th>Result</th></tr></thead>
+    <tbody>
+      <tr><td>AR score drops below 100</td><td>Severity deductions work correctly</td><td><span class="badge badge-pass">PASS</span></td></tr>
+      <tr><td>SV score &lt; 70</td><td>Multiple criticals heavily impact score</td><td><span class="badge badge-pass">PASS</span></td></tr>
+      <tr><td>GS score &lt;= 70</td><td>Critical issues deduct -15 each</td><td><span class="badge badge-pass">PASS</span></td></tr>
+      <tr><td>QT score &lt; 100</td><td>Warnings reduce score by -5 each</td><td><span class="badge badge-pass">PASS</span></td></tr>
+      <tr><td>QCP score &lt;= 80</td><td>Mixed severity impacts add up</td><td><span class="badge badge-pass">PASS</span></td></tr>
+      <tr><td>Problematic &lt; Healthy (by 10+)</td><td>Overall weighted scoring differentiates orgs</td><td><span class="badge badge-pass">PASS</span></td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="scenario-card">
+  <div class="scenario-header">&#128256; Scenario 4: Mixed Org (Category Isolation)</div>
+  <table>
+    <thead><tr><th>Test</th><th>What It Verifies</th><th>Result</th></tr></thead>
+    <tbody>
+      <tr><td>Only AR broken &mdash; SV, GS, QT, QCP = 100</td><td>Issues don't bleed across categories</td><td><span class="badge badge-pass">PASS</span></td></tr>
+      <tr><td>Only QCP broken &mdash; AR, SV = 100</td><td>Category isolation works</td><td><span class="badge badge-pass">PASS</span></td></tr>
+      <tr><td>Only GS broken &mdash; QT, QCP = 100</td><td>Independent scoring per category</td><td><span class="badge badge-pass">PASS</span></td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="scenario-card">
+  <div class="scenario-header">&#129480; Scenario 5: Edge Cases & Boundaries</div>
+  <table>
+    <thead><tr><th>Test</th><th>What It Verifies</th><th>Result</th></tr></thead>
+    <tbody>
+      <tr><td>Empty org (no data) = all 100</td><td>No crashes on empty input</td><td><span class="badge badge-pass">PASS</span></td></tr>
+      <tr><td>20 critical issues = score clamped to 0</td><td>Score floor at 0 (never negative)</td><td><span class="badge badge-pass">PASS</span></td></tr>
+      <tr><td>Clean org = all scores &lt;= 100</td><td>Score ceiling at 100 (never exceeds)</td><td><span class="badge badge-pass">PASS</span></td></tr>
+      <tr><td>All issues have check_id, category, severity, title</td><td>Data integrity on every issue</td><td><span class="badge badge-pass">PASS</span></td></tr>
+      <tr><td>All affected records have id, name, type</td><td>Record integrity</td><td><span class="badge badge-pass">PASS</span></td></tr>
+      <tr><td>Duration &gt; 0</td><td>Timing measurement works</td><td><span class="badge badge-pass">PASS</span></td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- SECTION 4: TEST FILES -->
+<h2><span class="icon">&#128193;</span> 4. Test Files Breakdown (29 files)</h2>
+<p style="color:var(--text-muted);margin-bottom:16px;">Comprehensive test files (17) + Basic test files (10) + Integration (2)</p>
+<div class="file-grid">
+  <div class="file-item"><span class="fname">product-rules-comprehensive.test.ts</span><span class="fmeta"><span class="fcount">34</span><span class="ftag">Unit</span></span></div>
+  <div class="file-item"><span class="fname">performance-comprehensive.test.ts</span><span class="fmeta"><span class="fcount">32</span><span class="ftag">Unit</span></span></div>
+  <div class="file-item"><span class="fname">advanced-pricing-comprehensive.test.ts</span><span class="fmeta"><span class="fcount">23</span><span class="ftag">Unit</span></span></div>
+  <div class="file-item"><span class="fname">summary-variables-comprehensive.test.ts</span><span class="fmeta"><span class="fcount">31</span><span class="ftag">Unit</span></span></div>
+  <div class="file-item"><span class="fname">price-rules-comprehensive.test.ts</span><span class="fmeta"><span class="fcount">31</span><span class="ftag">Unit</span></span></div>
+  <div class="file-item"><span class="fname">products-comprehensive.test.ts</span><span class="fmeta"><span class="fcount">28</span><span class="ftag">Unit</span></span></div>
+  <div class="file-item"><span class="fname">custom-scripts-comprehensive.test.ts</span><span class="fmeta"><span class="fcount">28</span><span class="ftag">Unit</span></span></div>
+  <div class="file-item"><span class="fname">configuration-attributes-comprehensive.test.ts</span><span class="fmeta"><span class="fcount">27</span><span class="ftag">Unit</span></span></div>
+  <div class="file-item"><span class="fname">approval-rules-comprehensive.test.ts</span><span class="fmeta"><span class="fcount">27</span><span class="ftag">Unit</span></span></div>
+  <div class="file-item"><span class="fname">discount-schedules-comprehensive.test.ts</span><span class="fmeta"><span class="fcount">26</span><span class="ftag">Unit</span></span></div>
+  <div class="file-item"><span class="fname">quote-lines-comprehensive.test.ts</span><span class="fmeta"><span class="fcount">25</span><span class="ftag">Unit</span></span></div>
+  <div class="file-item"><span class="fname">impact-analysis-comprehensive.test.ts</span><span class="fmeta"><span class="fcount">25</span><span class="ftag">Unit</span></span></div>
+  <div class="file-item"><span class="fname">cpq-settings-comprehensive.test.ts</span><span class="fmeta"><span class="fcount">24</span><span class="ftag">Unit</span></span></div>
+  <div class="file-item"><span class="fname">usage-analytics-comprehensive.test.ts</span><span class="fmeta"><span class="fcount">19</span><span class="ftag">Unit</span></span></div>
+  <div class="file-item"><span class="fname">quote-templates-comprehensive.test.ts</span><span class="fmeta"><span class="fcount">23</span><span class="ftag">Unit</span></span></div>
+  <div class="file-item"><span class="fname">twin-fields-comprehensive.test.ts</span><span class="fmeta"><span class="fcount">20</span><span class="ftag">Unit</span></span></div>
+  <div class="file-item"><span class="fname">subscriptions-comprehensive.test.ts</span><span class="fmeta"><span class="fcount">18</span><span class="ftag">Unit</span></span></div>
+  <div class="file-item"><span class="fname">guided-selling-comprehensive.test.ts</span><span class="fmeta"><span class="fcount">18</span><span class="ftag">Unit</span></span></div>
+  <div class="file-item"><span class="fname">contracted-prices-comprehensive.test.ts</span><span class="fmeta"><span class="fcount">17</span><span class="ftag">Unit</span></span></div>
+  <div class="file-item"><span class="fname">integration-scan-scenarios.test.ts</span><span class="fmeta"><span class="fcount">42</span><span class="ftag">Integration</span></span></div>
+  <div class="file-item"><span class="fname">engine.test.ts</span><span class="fmeta"><span class="fcount">10</span><span class="ftag">Integration</span></span></div>
+  <div class="file-item"><span class="fname">other-checks.test.ts</span><span class="fmeta"><span class="fcount">18</span><span class="ftag">Basic</span></span></div>
+  <div class="file-item"><span class="fname">summary-variables.test.ts</span><span class="fmeta"><span class="fcount">10</span><span class="ftag">Basic</span></span></div>
+  <div class="file-item"><span class="fname">approval-rules.test.ts</span><span class="fmeta"><span class="fcount">8</span><span class="ftag">Basic</span></span></div>
+  <div class="file-item"><span class="fname">custom-scripts.test.ts</span><span class="fmeta"><span class="fcount">8</span><span class="ftag">Basic</span></span></div>
+  <div class="file-item"><span class="fname">performance.test.ts</span><span class="fmeta"><span class="fcount">8</span><span class="ftag">Basic</span></span></div>
+  <div class="file-item"><span class="fname">advanced-pricing.test.ts</span><span class="fmeta"><span class="fcount">8</span><span class="ftag">Basic</span></span></div>
+  <div class="file-item"><span class="fname">impact-analysis.test.ts</span><span class="fmeta"><span class="fcount">8</span><span class="ftag">Basic</span></span></div>
+  <div class="file-item"><span class="fname">usage-analytics.test.ts</span><span class="fmeta"><span class="fcount">7</span><span class="ftag">Basic</span></span></div>
+</div>
+
+<!-- SECTION 5: FUTURE SCOPE -->
+<h2><span class="icon">&#128302;</span> 5. Future Scope (Phase 2)</h2>
+<div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px 24px;margin:16px 0;">
+  <div class="future-item">
+    <div class="future-icon">&#127760;</div>
+    <div><div class="future-label">API Route Testing</div><div class="future-reason">Requires Supabase/auth mocking</div></div>
+  </div>
+  <div class="future-item">
+    <div class="future-icon">&#128421;&#65039;</div>
+    <div><div class="future-label">UI Component Testing</div><div class="future-reason">React Testing Library setup needed</div></div>
+  </div>
+  <div class="future-item">
+    <div class="future-icon">&#9729;&#65039;</div>
+    <div><div class="future-label">Salesforce Connection Testing</div><div class="future-reason">Requires live SF org or mock server</div></div>
+  </div>
+  <div class="future-item">
+    <div class="future-icon">&#129302;</div>
+    <div><div class="future-label">AI/Gemini Response Testing</div><div class="future-reason">Non-deterministic API output</div></div>
+  </div>
+  <div class="future-item">
+    <div class="future-icon">&#127917;</div>
+    <div><div class="future-label">End-to-End Browser Testing</div><div class="future-reason">Playwright/Cypress setup needed</div></div>
+  </div>
+  <div class="future-item">
+    <div class="future-icon">&#9889;</div>
+    <div><div class="future-label">Load/Stress Testing</div><div class="future-reason">Large dataset benchmarking</div></div>
+  </div>
+</div>
+
+<!-- SECTION 6: HOW TO RUN -->
+<h2><span class="icon">&#9654;&#65039;</span> 6. How to Run Tests</h2>
+<div class="code-block">
+<span class="comment"># Run all 603 tests</span>
+<span class="cmd">npx vitest run</span>
+
+<span class="comment"># Run with verbose output (see every test name)</span>
+<span class="cmd">npx vitest run --reporter=verbose</span>
+
+<span class="comment"># Run specific category</span>
+<span class="cmd">npx vitest run src/__tests__/price-rules-comprehensive.test.ts</span>
+
+<span class="comment"># Run only integration tests</span>
+<span class="cmd">npx vitest run src/__tests__/integration-scan-scenarios.test.ts</span>
+
+<span class="comment"># Run all comprehensive tests</span>
+<span class="cmd">npx vitest run src/__tests__/*-comprehensive.test.ts</span>
+
+<span class="comment"># Watch mode (re-runs on file change)</span>
+<span class="cmd">npx vitest</span>
+</div>
+
+</div>
+
+<div class="footer">
+  ConfigCheck &copy; 2026 &mdash; Test Coverage Report &mdash; Generated on April 13, 2026 &mdash; 68 Health Checks / 17 Categories / 603 Tests / 29 Files
+</div>
+
+</body>
+</html>
