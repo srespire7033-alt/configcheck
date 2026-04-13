@@ -143,12 +143,20 @@ export default function OrgDetailPage() {
       });
       const { scanId } = await res.json();
 
+      let pollCount = 0;
+      const maxPolls = 40; // 40 × 3s = 120s max
       const interval = setInterval(async () => {
+        pollCount++;
         const statusRes = await fetch(`/api/scans?scanId=${scanId}`);
         const scanData = await statusRes.json();
         if (scanData.status === 'completed' || scanData.status === 'failed') {
           clearInterval(interval);
           setScanning(false);
+          fetchData();
+        } else if (pollCount >= maxPolls) {
+          clearInterval(interval);
+          setScanning(false);
+          setError('Scan timed out. Please try again.');
           fetchData();
         }
       }, 3000);

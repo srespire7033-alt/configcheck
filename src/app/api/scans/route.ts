@@ -55,10 +55,24 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to create scan' }, { status: 500 });
     }
 
-    // Run scan in background (non-blocking)
-    runScanInBackground(scan.id, org).catch((error) => {
+    // Run scan in background (non-blocking) with 120s timeout
+    const scanWithTimeout = Promise.race([
+      runScanInBackground(scan.id, org),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Scan timed out after 120 seconds')), 120000)
+      ),
+    ]).catch(async (error) => {
       console.error('Background scan failed:', error);
+      // Mark as failed if still running
+      const svc = createServiceClient();
+      await svc.from('scans').update({
+        status: 'failed',
+        error_message: error instanceof Error ? error.message : 'Scan failed unexpectedly',
+        completed_at: new Date().toISOString(),
+      }).eq('id', scan.id).eq('status', 'running');
     });
+    // Fire and forget
+    void scanWithTimeout;
 
     return NextResponse.json({ scanId: scan.id, status: 'pending' });
   } catch (error: unknown) {
