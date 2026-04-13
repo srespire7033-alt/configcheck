@@ -213,12 +213,18 @@ async function runScanInBackground(
 
     // Send email notification
     sendScanNotification(org.user_id as string, {
-      scanId: org.id as string,
+      scanId,
+      orgId: org.id as string,
       orgName: org.name as string,
       overallScore: result.overall_score,
       totalIssues: result.issues.length,
       criticalCount: result.issues.filter((i) => i.severity === 'critical').length,
       warningCount: result.issues.filter((i) => i.severity === 'warning').length,
+      infoCount: result.issues.filter((i) => i.severity === 'info').length,
+      topIssues: result.issues
+        .filter((i) => i.severity === 'critical' || i.severity === 'warning')
+        .slice(0, 3)
+        .map((i) => ({ title: i.title, severity: i.severity })),
       status: 'completed',
     }).catch((err) => console.error('Notification error:', err));
 
@@ -237,12 +243,14 @@ async function runScanInBackground(
 
     // Send failure notification
     sendScanNotification(org.user_id as string, {
-      scanId: org.id as string,
+      scanId,
+      orgId: org.id as string,
       orgName: org.name as string,
       overallScore: 0,
       totalIssues: 0,
       criticalCount: 0,
       warningCount: 0,
+      infoCount: 0,
       status: 'failed',
       errorMessage: message,
     }).catch((err) => console.error('Notification error:', err));

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { Save, LogOut, Upload, X, BarChart3, Scan, FileText, Sparkles } from 'lucide-react';
+import { Save, LogOut, Upload, X, BarChart3, Scan, FileText, Sparkles, Bell } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { createClient } from '@/lib/db/client';
 import { LoadingScreen } from '@/components/ui/loading-screen';
@@ -19,6 +19,7 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [emailNotifications, setEmailNotifications] = useState(true);
   const [usage, setUsage] = useState<{
     total_scans: number;
     scans_this_month: number;
@@ -37,6 +38,7 @@ export default function SettingsPage() {
           setLogoUrl(data.company_logo_url || null);
           setEmail(data.email || '');
           setPlan(data.plan || 'free');
+          setEmailNotifications(data.email_notifications_enabled !== false);
         }
       } catch (err) {
         console.error('Failed to load profile:', err);
@@ -289,6 +291,44 @@ export default function SettingsPage() {
           ) : (
             <div className="text-sm text-gray-500 dark:text-gray-400">Loading usage data...</div>
           )}
+        </CardContent>
+      </Card>
+
+      {/* Notifications */}
+      <Card className="mb-6">
+        <CardHeader>
+          <h3 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+            <Bell className="h-4 w-4" />
+            Notifications
+          </h3>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-900 dark:text-white">Email Notifications</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Receive email when a scan completes or fails</p>
+            </div>
+            <button
+              onClick={async () => {
+                const newVal = !emailNotifications;
+                setEmailNotifications(newVal);
+                await fetch('/api/auth/me', {
+                  method: 'PUT',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ email_notifications_enabled: newVal }),
+                });
+              }}
+              className={`relative w-11 h-6 rounded-full transition-colors duration-200 ${
+                emailNotifications ? 'bg-blue-600' : 'bg-gray-300 dark:bg-gray-600'
+              }`}
+            >
+              <span
+                className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200 ${
+                  emailNotifications ? 'translate-x-5' : 'translate-x-0'
+                }`}
+              />
+            </button>
+          </div>
         </CardContent>
       </Card>
 

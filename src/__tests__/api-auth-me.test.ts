@@ -79,7 +79,7 @@ describe('/api/auth/me', () => {
       expect(json).toEqual(mockProfile);
       expect(mockFrom).toHaveBeenCalledWith('users');
       expect(mockSelect).toHaveBeenCalledWith(
-        'id, email, company_name, company_logo_url, report_branding_color, plan, created_at'
+        'id, email, company_name, company_logo_url, report_branding_color, plan, email_notifications_enabled, created_at'
       );
       expect(mockEq).toHaveBeenCalledWith('id', 'user-123');
     });

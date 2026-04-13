@@ -66,9 +66,11 @@ export default function OrgDetailPage() {
       const scansRes = await fetch(`/api/scans?orgId=${orgId}`);
       if (scansRes.ok) {
         const scans = await scansRes.json();
-        setAllScans(scans.filter((s: DBScan) => s.status === 'completed'));
-        if (scans.length > 0) {
-          const latestScan = scans[0];
+        const completedScans = scans.filter((s: DBScan) => s.status === 'completed');
+        setAllScans(completedScans);
+        // Use the latest COMPLETED scan, not running/failed ones
+        const latestScan = completedScans.length > 0 ? completedScans[0] : (scans.length > 0 ? scans[0] : null);
+        if (latestScan) {
           setScan(latestScan);
 
           // Load cached remediation plan if available

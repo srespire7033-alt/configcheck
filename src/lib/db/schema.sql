@@ -19,6 +19,7 @@ create table public.users (
   timezone text default 'Asia/Kolkata',
   avatar_url text,
   plan text default 'free' check (plan in ('free', 'solo', 'practice', 'partner')),
+  email_notifications_enabled boolean default true,
   created_at timestamptz default now(),
   updated_at timestamptz default now()
 );
