@@ -184,7 +184,7 @@ export const performanceChecks: HealthCheck[] = [
         category: 'performance',
         severity,
         title: `CPQ complexity: ${level} (score: ${Math.round(complexity)})`,
-        description: `Configuration breakdown: ${activePriceRules} price rules, ${activeProductRules} product rules, ${activeSummaryVars} summary variables, ${discountSchedules} discount schedules, ${products} products, ${productOptions} product options${hasQCP ? ', QCP active' : ''}. Complexity score: ${Math.round(complexity)}/300.`,
+        description: `Configuration breakdown: ${activePriceRules} price rules (×3), ${activeProductRules} product rules (×2), ${activeSummaryVars} summary variables (×1.5), ${discountSchedules} discount schedules (×1), ${products} products, ${productOptions} product options (×0.5)${hasQCP ? ', QCP active (+20)' : ''}. Weighted complexity score: ${Math.round(complexity)}. Thresholds: <50 Low, 50-99 Moderate, 100-199 High, 200+ Very High.`,
         impact: level === 'Very High'
           ? 'Expect significant quote calculation times (10s+). Admin maintenance is complex and error-prone.'
           : 'Quote calculation performance may be impacted. Regular audits recommended.',

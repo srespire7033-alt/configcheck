@@ -14,6 +14,29 @@ export default function LoginPage() {
   const [fullName, setFullName] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [resetMode, setResetMode] = useState(false);
+
+  async function handlePasswordReset(e: React.FormEvent) {
+    e.preventDefault();
+    if (!email) {
+      setError('Please enter your email address');
+      return;
+    }
+    setLoading(true);
+    setError('');
+    const supabase = createClient();
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/login`,
+      });
+      if (error) throw error;
+      setError('Password reset link sent! Check your email.');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Something went wrong');
+    } finally {
+      setLoading(false);
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -112,16 +135,18 @@ export default function LoginPage() {
           {/* Card */}
           <div className="bg-white dark:bg-[#111827] rounded-2xl shadow-lg shadow-gray-200/50 dark:shadow-black/30 border border-gray-100 dark:border-gray-800 p-8">
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-1">
-              {isSignUp ? 'Create your account' : 'Welcome back'}
+              {resetMode ? 'Reset your password' : isSignUp ? 'Create your account' : 'Welcome back'}
             </h2>
             <p className="text-sm text-gray-500 dark:text-gray-400 mb-8">
-              {isSignUp
-                ? 'Start auditing Salesforce CPQ configurations'
-                : 'Sign in to your ConfigCheck account'}
+              {resetMode
+                ? 'Enter your email and we\'ll send a reset link'
+                : isSignUp
+                  ? 'Start auditing Salesforce CPQ configurations'
+                  : 'Sign in to your ConfigCheck account'}
             </p>
 
-            <form onSubmit={handleSubmit} className="space-y-5">
-              {isSignUp && (
+            <form onSubmit={resetMode ? handlePasswordReset : handleSubmit} className="space-y-5">
+              {isSignUp && !resetMode && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Full Name</label>
                   <input
@@ -135,34 +160,47 @@ export default function LoginPage() {
                 </div>
               )}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Email</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Email</label>
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                  className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl text-sm bg-white dark:bg-gray-800 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                   placeholder="you@company.com"
                 />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Password</label>
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  minLength={6}
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                  placeholder="Min 6 characters"
-                />
-              </div>
+              {!resetMode && (
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Password</label>
+                    {!isSignUp && (
+                      <button
+                        type="button"
+                        onClick={() => { setResetMode(true); setError(''); }}
+                        className="text-xs text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
+                      >
+                        Forgot password?
+                      </button>
+                    )}
+                  </div>
+                  <input
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    minLength={6}
+                    className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl text-sm bg-white dark:bg-gray-800 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    placeholder="Min 6 characters"
+                  />
+                </div>
+              )}
 
               {error && (
                 <div className={`flex items-center gap-2 p-3 rounded-xl text-sm ${
-                  error.includes('Check your email')
-                    ? 'bg-green-50 text-green-700 border border-green-200'
-                    : 'bg-red-50 text-red-700 border border-red-200'
+                  error.includes('Check your email') || error.includes('reset link sent')
+                    ? 'bg-green-50 text-green-700 border border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800'
+                    : 'bg-red-50 text-red-700 border border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800'
                 }`}>
                   <CheckCircle className="h-4 w-4 flex-shrink-0" />
                   {error}
@@ -178,20 +216,29 @@ export default function LoginPage() {
                   <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
                 ) : (
                   <>
-                    {isSignUp ? 'Create Account' : 'Sign In'}
+                    {resetMode ? 'Send Reset Link' : isSignUp ? 'Create Account' : 'Sign In'}
                     <ArrowRight className="h-4 w-4" />
                   </>
                 )}
               </button>
             </form>
 
-            <div className="mt-6 text-center">
-              <button
-                onClick={() => { setIsSignUp(!isSignUp); setError(''); }}
-                className="text-sm text-blue-600 hover:text-blue-800 transition-colors"
-              >
-                {isSignUp ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}
-              </button>
+            <div className="mt-6 text-center space-y-2">
+              {resetMode ? (
+                <button
+                  onClick={() => { setResetMode(false); setError(''); }}
+                  className="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 transition-colors"
+                >
+                  Back to sign in
+                </button>
+              ) : (
+                <button
+                  onClick={() => { setIsSignUp(!isSignUp); setError(''); }}
+                  className="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 transition-colors"
+                >
+                  {isSignUp ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}
+                </button>
+              )}
             </div>
           </div>
 

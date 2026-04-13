@@ -145,6 +145,27 @@ create trigger on_scan_created
   for each row execute function public.log_scan_usage();
 
 -- ============================================
+-- SCAN SCHEDULES TABLE
+-- ============================================
+create table public.scan_schedules (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users(id) on delete cascade,
+  organization_id uuid references public.organizations(id) on delete cascade,
+  schedule_type text not null check (schedule_type in ('once', 'daily', 'weekly', 'monthly')),
+  cron_expression text not null,
+  timezone text default 'Asia/Kolkata',
+  scheduled_date timestamptz,
+  day_of_week integer check (day_of_week >= 0 and day_of_week <= 6),
+  day_of_month integer check (day_of_month >= 1 and day_of_month <= 31),
+  time_of_day text not null default '06:00',
+  enabled boolean default true,
+  last_run_at timestamptz,
+  next_run_at timestamptz,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+-- ============================================
 -- INDEXES
 -- ============================================
 create index idx_organizations_user_id on public.organizations(user_id);
@@ -158,6 +179,8 @@ create index idx_issues_status on public.issues(status);
 create index idx_usage_logs_user_id on public.usage_logs(user_id);
 create index idx_usage_logs_event_type on public.usage_logs(event_type);
 create index idx_usage_logs_created_at on public.usage_logs(created_at);
+create index idx_scan_schedules_next_run on public.scan_schedules(next_run_at) where enabled = true;
+create index idx_scan_schedules_org on public.scan_schedules(organization_id);
 
 -- ============================================
 -- AUTO-UPDATE updated_at
@@ -264,3 +287,10 @@ create policy "Users can read own usage"
 create policy "Service can insert usage"
   on public.usage_logs for insert
   with check (true);
+
+-- Scan Schedules: can only manage own schedules
+alter table public.scan_schedules enable row level security;
+
+create policy "Users can manage own schedules"
+  on public.scan_schedules for all
+  using (auth.uid() = user_id);

@@ -360,12 +360,12 @@
     <div class="stats-row">
       <div class="stat-card">
         <div class="label">Total Tests</div>
-        <div class="value blue">603</div>
+        <div class="value blue">701</div>
         <div class="progress-bar"><div class="progress-fill green" style="width:100%"></div></div>
       </div>
       <div class="stat-card">
         <div class="label">Passed</div>
-        <div class="value green">603</div>
+        <div class="value green">701</div>
       </div>
       <div class="stat-card">
         <div class="label">Failed</div>
@@ -373,7 +373,7 @@
       </div>
       <div class="stat-card">
         <div class="label">Test Files</div>
-        <div class="value purple">29</div>
+        <div class="value purple">38</div>
       </div>
       <div class="stat-card">
         <div class="label">Health Checks</div>
@@ -381,7 +381,7 @@
       </div>
       <div class="stat-card">
         <div class="label">Execution Time</div>
-        <div class="value amber">~2.2s</div>
+        <div class="value amber">~8.1s</div>
       </div>
     </div>
   </div>
@@ -427,6 +427,10 @@
   <div class="type-card">
     <div class="type-name">&#128260; Regression Testing</div>
     <div class="type-desc">Original basic tests still pass alongside comprehensive tests. No existing functionality broken by new test additions.</div>
+  </div>
+  <div class="type-card">
+    <div class="type-name">&#127760; API Route Testing</div>
+    <div class="type-desc">All 9 API routes tested with mocked Supabase client and auth. Covers auth, orgs, scans, issues, AI endpoints, exports, and usage tracking.</div>
   </div>
 </div>
 
@@ -744,8 +748,8 @@
 </div>
 
 <!-- SECTION 4: TEST FILES -->
-<h2><span class="icon">&#128193;</span> 4. Test Files Breakdown (29 files)</h2>
-<p style="color:var(--text-muted);margin-bottom:16px;">Comprehensive test files (17) + Basic test files (10) + Integration (2)</p>
+<h2><span class="icon">&#128193;</span> 4. Test Files Breakdown (38 files)</h2>
+<p style="color:var(--text-muted);margin-bottom:16px;">Comprehensive test files (17) + API Route tests (9) + Basic test files (10) + Integration (2)</p>
 <div class="file-grid">
   <div class="file-item"><span class="fname">product-rules-comprehensive.test.ts</span><span class="fmeta"><span class="fcount">34</span><span class="ftag">Unit</span></span></div>
   <div class="file-item"><span class="fname">performance-comprehensive.test.ts</span><span class="fmeta"><span class="fcount">32</span><span class="ftag">Unit</span></span></div>
@@ -766,6 +770,15 @@
   <div class="file-item"><span class="fname">subscriptions-comprehensive.test.ts</span><span class="fmeta"><span class="fcount">18</span><span class="ftag">Unit</span></span></div>
   <div class="file-item"><span class="fname">guided-selling-comprehensive.test.ts</span><span class="fmeta"><span class="fcount">18</span><span class="ftag">Unit</span></span></div>
   <div class="file-item"><span class="fname">contracted-prices-comprehensive.test.ts</span><span class="fmeta"><span class="fcount">17</span><span class="ftag">Unit</span></span></div>
+  <div class="file-item"><span class="fname">api-issues.test.ts</span><span class="fmeta"><span class="fcount">17</span><span class="ftag">API</span></span></div>
+  <div class="file-item"><span class="fname">api-scans.test.ts</span><span class="fmeta"><span class="fcount">13</span><span class="ftag">API</span></span></div>
+  <div class="file-item"><span class="fname">api-ai-insights.test.ts</span><span class="fmeta"><span class="fcount">13</span><span class="ftag">API</span></span></div>
+  <div class="file-item"><span class="fname">api-usage.test.ts</span><span class="fmeta"><span class="fcount">12</span><span class="ftag">API</span></span></div>
+  <div class="file-item"><span class="fname">api-auth-me.test.ts</span><span class="fmeta"><span class="fcount">11</span><span class="ftag">API</span></span></div>
+  <div class="file-item"><span class="fname">api-exports.test.ts</span><span class="fmeta"><span class="fcount">10</span><span class="ftag">API</span></span></div>
+  <div class="file-item"><span class="fname">api-orgs.test.ts</span><span class="fmeta"><span class="fcount">8</span><span class="ftag">API</span></span></div>
+  <div class="file-item"><span class="fname">api-ai-fix.test.ts</span><span class="fmeta"><span class="fcount">8</span><span class="ftag">API</span></span></div>
+  <div class="file-item"><span class="fname">api-ai-explain.test.ts</span><span class="fmeta"><span class="fcount">6</span><span class="ftag">API</span></span></div>
   <div class="file-item"><span class="fname">integration-scan-scenarios.test.ts</span><span class="fmeta"><span class="fcount">42</span><span class="ftag">Integration</span></span></div>
   <div class="file-item"><span class="fname">engine.test.ts</span><span class="fmeta"><span class="fcount">10</span><span class="ftag">Integration</span></span></div>
   <div class="file-item"><span class="fname">other-checks.test.ts</span><span class="fmeta"><span class="fcount">18</span><span class="ftag">Basic</span></span></div>
@@ -779,11 +792,11 @@
 </div>
 
 <!-- SECTION 5: FUTURE SCOPE -->
-<h2><span class="icon">&#128302;</span> 5. Future Scope (Phase 2)</h2>
+<h2><span class="icon">&#128302;</span> 5. Future Scope (Phase 3)</h2>
 <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px 24px;margin:16px 0;">
   <div class="future-item">
     <div class="future-icon">&#127760;</div>
-    <div><div class="future-label">API Route Testing</div><div class="future-reason">Requires Supabase/auth mocking</div></div>
+    <div><div class="future-label">API Route Testing</div><div class="future-reason" style="color:var(--green);">&#9989; COMPLETED &mdash; 9 test files, 98 tests covering all API routes with Supabase/auth mocking</div></div>
   </div>
   <div class="future-item">
     <div class="future-icon">&#128421;&#65039;</div>
@@ -810,7 +823,7 @@
 <!-- SECTION 6: HOW TO RUN -->
 <h2><span class="icon">&#9654;&#65039;</span> 6. How to Run Tests</h2>
 <div class="code-block">
-<span class="comment"># Run all 603 tests</span>
+<span class="comment"># Run all 701 tests</span>
 <span class="cmd">npx vitest run</span>
 
 <span class="comment"># Run with verbose output (see every test name)</span>
@@ -818,6 +831,9 @@
 
 <span class="comment"># Run specific category</span>
 <span class="cmd">npx vitest run src/__tests__/price-rules-comprehensive.test.ts</span>
+
+<span class="comment"># Run only API route tests</span>
+<span class="cmd">npx vitest run src/__tests__/api-*.test.ts</span>
 
 <span class="comment"># Run only integration tests</span>
 <span class="cmd">npx vitest run src/__tests__/integration-scan-scenarios.test.ts</span>
@@ -832,7 +848,7 @@
 </div>
 
 <div class="footer">
-  ConfigCheck &copy; 2026 &mdash; Test Coverage Report &mdash; Generated on April 13, 2026 &mdash; 68 Health Checks / 17 Categories / 603 Tests / 29 Files
+  ConfigCheck &copy; 2026 &mdash; Test Coverage Report &mdash; Updated on April 13, 2026 &mdash; 68 Health Checks / 17 Categories / 701 Tests / 38 Files
 </div>
 
 </body>

@@ -11,7 +11,7 @@ export async function GET() {
     const response = NextResponse.json({ url });
     response.cookies.set('sf_code_verifier', codeVerifier, {
       httpOnly: true,
-      secure: false, // localhost uses http
+      secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       maxAge: 600, // 10 minutes
       path: '/',
