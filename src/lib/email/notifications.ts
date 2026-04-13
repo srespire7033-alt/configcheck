@@ -66,7 +66,7 @@ export async function sendScanNotification(userId: string, data: ScanNotificatio
         Authorization: `Bearer ${resendKey}`,
       },
       body: JSON.stringify({
-        from: 'ConfigCheck <notifications@configcheck.app>',
+        from: process.env.EMAIL_FROM || 'ConfigCheck <onboarding@resend.dev>',
         to: [user.email],
         subject,
         html,
