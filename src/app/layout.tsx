@@ -12,12 +12,6 @@ const geistSans = localFont({
 export const metadata: Metadata = {
   title: "ConfigCheck - Salesforce CPQ Health Audit",
   description: "AI-powered Salesforce CPQ configuration auditor for consulting firms",
-  icons: {
-    icon: [
-      { url: "/favicon.svg", type: "image/svg+xml" },
-    ],
-    apple: "/apple-touch-icon.svg",
-  },
   openGraph: {
     title: "ConfigCheck - Salesforce CPQ Health Audit",
     description: "68 automated checks across 17 categories. AI-powered fix suggestions and remediation plans for Salesforce CPQ.",
