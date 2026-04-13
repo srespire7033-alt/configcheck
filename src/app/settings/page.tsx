@@ -238,10 +238,10 @@ export default function SettingsPage() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-900 dark:text-white">
-                {plan === 'free' ? 'Free Plan' : plan === 'pro' ? 'Pro Plan' : 'Team Plan'}
+                {plan === 'free' ? 'Free Plan' : plan === 'solo' ? 'Solo Plan' : plan === 'practice' ? 'Practice Plan' : 'Partner Plan'}
               </p>
               <p className="text-xs text-gray-500 dark:text-gray-400">
-                {plan === 'free' ? '3 orgs, 10 scans/month' : plan === 'pro' ? '10 orgs, unlimited scans' : 'Unlimited orgs & scans'}
+                {plan === 'free' ? '3 orgs, 10 scans/month' : plan === 'solo' ? '5 orgs, 30 scans/month' : plan === 'practice' ? '15 orgs, unlimited scans' : 'Unlimited orgs & scans'}
               </p>
             </div>
             <button className="px-4 py-2 text-sm font-medium text-blue-600 border border-blue-600 rounded-lg hover:bg-blue-50">

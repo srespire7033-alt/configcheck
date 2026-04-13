@@ -138,7 +138,7 @@ export function createConnection(
   });
 
   conn.on('refresh', (newAccessToken: string) => {
-    console.log('Salesforce token refreshed');
+    // Token refreshed silently
     if (orgId) {
       persistRefreshedToken(orgId, newAccessToken).catch((err) =>
         console.error('Failed to persist refreshed token:', err)
