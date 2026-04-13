@@ -217,9 +217,9 @@ export default function OrgDetailPage() {
   }
 
   // Group issues by severity
-  const criticalIssues = issues.filter(i => i.severity === 'critical');
-  const warningIssues = issues.filter(i => i.severity === 'warning');
-  const infoIssues = issues.filter(i => i.severity === 'info');
+  const _criticalIssues = issues.filter(i => i.severity === 'critical');
+  const _warningIssues = issues.filter(i => i.severity === 'warning');
+  const _infoIssues = issues.filter(i => i.severity === 'info');
   const resolvedCount = issues.filter(i => i.status === 'resolved').length;
 
   if (loading) {

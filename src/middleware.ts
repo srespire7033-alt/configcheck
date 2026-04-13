@@ -2,13 +2,7 @@ import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
 export async function middleware(request: NextRequest) {
-  // Public routes that don't need auth — check BEFORE calling Supabase
-  const publicPaths = ['/login', '/api/salesforce/callback'];
-  const isPublic =
-    request.nextUrl.pathname === '/' ||
-    publicPaths.some((p) => request.nextUrl.pathname.startsWith(p));
-
-  // Skip auth check for landing page and API callbacks
+  // Skip auth check entirely for public routes (landing page, Salesforce callback)
   if (request.nextUrl.pathname === '/' || request.nextUrl.pathname.startsWith('/api/salesforce/callback')) {
     return NextResponse.next({ request });
   }

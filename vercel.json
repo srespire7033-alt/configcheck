@@ -17,7 +17,7 @@
   "crons": [
     {
       "path": "/api/cron/run-scans",
-      "schedule": "0 * * * *"
+      "schedule": "0 6 * * *"
     }
   ],
   "headers": [

@@ -5,7 +5,6 @@ import { useEffect, useState } from 'react';
 import {
   ShieldCheck,
   Zap,
-  BarChart3,
   FileText,
   ArrowRight,
   CheckCircle,
@@ -15,9 +14,6 @@ import {
   Lock,
   ChevronRight,
   AlertTriangle,
-  TrendingUp,
-  Users,
-  Clock,
   Target,
 } from 'lucide-react';
 
