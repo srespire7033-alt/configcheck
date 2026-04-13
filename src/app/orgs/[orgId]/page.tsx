@@ -9,6 +9,7 @@ import { LoadingScreen } from '@/components/ui/loading-screen';
 import { CategoryBreakdown } from '@/components/scan/category-breakdown';
 import { IssueCard } from '@/components/issues/issue-card';
 import { IssueDetailModal } from '@/components/issues/issue-detail-modal';
+import { SeverityModal } from '@/components/issues/severity-modal';
 import { RevenueRiskCard } from '@/components/scan/revenue-risk-card';
 import { ComplexityCard } from '@/components/scan/complexity-card';
 import { ScheduleModal } from '@/components/schedule/schedule-modal';
@@ -396,50 +397,6 @@ export default function OrgDetailPage() {
                     </div>
                   </div>
                 )}
-                {/* Severity filter expanded panel */}
-                {severityFilter && (() => {
-                  const filtered = issues.filter(i => i.severity === severityFilter);
-                  const label = severityFilter === 'critical' ? 'Critical Issues' : severityFilter === 'warning' ? 'Warnings' : 'Best Practices';
-                  const iconColor = severityFilter === 'critical' ? 'text-red-500' : severityFilter === 'warning' ? 'text-amber-500' : 'text-blue-500';
-                  const bgColor = severityFilter === 'critical' ? 'bg-red-50 dark:bg-red-950/20' : severityFilter === 'warning' ? 'bg-amber-50 dark:bg-amber-950/20' : 'bg-blue-50 dark:bg-blue-950/20';
-                  const SevIcon = severityFilter === 'critical' ? AlertCircle : severityFilter === 'warning' ? AlertTriangle : Info;
-
-                  return (
-                    <div className="mt-4 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
-                      <div className={`px-4 py-3 ${bgColor} flex items-center justify-between`}>
-                        <div className="flex items-center gap-2">
-                          <SevIcon className={`w-4 h-4 ${iconColor}`} />
-                          <span className="text-sm font-semibold text-gray-900 dark:text-white">{label} ({filtered.length})</span>
-                        </div>
-                        <button onClick={() => setSeverityFilter(null)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
-                          <X className="w-4 h-4" />
-                        </button>
-                      </div>
-                      <div className="max-h-64 overflow-y-auto divide-y divide-gray-100 dark:divide-gray-800 bg-white dark:bg-gray-900">
-                        {filtered.length === 0 ? (
-                          <p className="px-4 py-6 text-center text-sm text-gray-400">No {label.toLowerCase()} found.</p>
-                        ) : filtered.map((issue) => (
-                          <button
-                            key={issue.id}
-                            onClick={() => setSelectedIssue(issue)}
-                            className="w-full text-left px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition flex items-start gap-3"
-                          >
-                            <SevIcon className={`w-4 h-4 ${iconColor} mt-0.5 flex-shrink-0`} />
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{issue.title}</p>
-                              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{getCategoryLabel(issue.category)} {issue.affected_records?.length ? `• ${issue.affected_records.length} affected` : ''}</p>
-                            </div>
-                            <span className={`text-xs px-2 py-0.5 rounded-full flex-shrink-0 ${
-                              issue.status === 'resolved' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
-                            }`}>
-                              {issue.status === 'resolved' ? 'Fixed' : 'Open'}
-                            </span>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  );
-                })()}
               </div>
 
               {/* Actions */}
@@ -864,6 +821,19 @@ export default function OrgDetailPage() {
           orgId={orgId}
           onClose={() => setShowScheduleModal(false)}
           onCreated={fetchSchedules}
+        />
+      )}
+
+      {/* Severity Issues Modal */}
+      {severityFilter && (
+        <SeverityModal
+          severity={severityFilter}
+          issues={issues.filter(i => i.severity === severityFilter)}
+          onClose={() => setSeverityFilter(null)}
+          onIssueClick={(issue) => {
+            setSeverityFilter(null);
+            setSelectedIssue(issue);
+          }}
         />
       )}
 
