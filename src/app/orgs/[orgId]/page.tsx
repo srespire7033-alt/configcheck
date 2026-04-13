@@ -338,47 +338,47 @@ export default function OrgDetailPage() {
                   {org?.is_sandbox === true && ' (Sandbox)'}
                 </p>
 
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-3 gap-2 sm:gap-4">
                   {/* Critical */}
                   <button
                     onClick={() => setSeverityFilter(severityFilter === 'critical' ? null : 'critical')}
-                    className={`text-left bg-red-50 dark:bg-red-950/40 rounded-xl p-4 border transition-all hover:shadow-md cursor-pointer ${
+                    className={`text-left bg-red-50 dark:bg-red-950/40 rounded-xl p-2.5 sm:p-4 border transition-all hover:shadow-md cursor-pointer ${
                       severityFilter === 'critical' ? 'border-red-400 dark:border-red-500 ring-2 ring-red-200 dark:ring-red-800' : 'border-red-100 dark:border-red-900/50'
                     }`}
                   >
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="w-3 h-3 bg-red-500 rounded-full" />
-                      <span className="text-2xl font-bold text-red-700 dark:text-red-400">{scan.critical_count}</span>
+                    <div className="flex items-center gap-1.5 sm:gap-2 mb-1">
+                      <span className="w-2.5 h-2.5 sm:w-3 sm:h-3 bg-red-500 rounded-full" />
+                      <span className="text-xl sm:text-2xl font-bold text-red-700 dark:text-red-400">{scan.critical_count}</span>
                     </div>
-                    <p className="text-sm text-red-600 dark:text-red-400/80">Critical Issues</p>
+                    <p className="text-xs sm:text-sm text-red-600 dark:text-red-400/80">Critical</p>
                   </button>
 
                   {/* Warnings */}
                   <button
                     onClick={() => setSeverityFilter(severityFilter === 'warning' ? null : 'warning')}
-                    className={`text-left bg-amber-50 dark:bg-amber-950/40 rounded-xl p-4 border transition-all hover:shadow-md cursor-pointer ${
+                    className={`text-left bg-amber-50 dark:bg-amber-950/40 rounded-xl p-2.5 sm:p-4 border transition-all hover:shadow-md cursor-pointer ${
                       severityFilter === 'warning' ? 'border-amber-400 dark:border-amber-500 ring-2 ring-amber-200 dark:ring-amber-800' : 'border-amber-100 dark:border-amber-900/50'
                     }`}
                   >
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="w-3 h-3 bg-amber-500 rounded-full" />
-                      <span className="text-2xl font-bold text-amber-700 dark:text-amber-400">{scan.warning_count}</span>
+                    <div className="flex items-center gap-1.5 sm:gap-2 mb-1">
+                      <span className="w-2.5 h-2.5 sm:w-3 sm:h-3 bg-amber-500 rounded-full" />
+                      <span className="text-xl sm:text-2xl font-bold text-amber-700 dark:text-amber-400">{scan.warning_count}</span>
                     </div>
-                    <p className="text-sm text-amber-600 dark:text-amber-400/80">Warnings</p>
+                    <p className="text-xs sm:text-sm text-amber-600 dark:text-amber-400/80">Warnings</p>
                   </button>
 
                   {/* Info */}
                   <button
                     onClick={() => setSeverityFilter(severityFilter === 'info' ? null : 'info')}
-                    className={`text-left bg-gray-50 dark:bg-gray-800 rounded-xl p-4 border transition-all hover:shadow-md cursor-pointer ${
+                    className={`text-left bg-gray-50 dark:bg-gray-800 rounded-xl p-2.5 sm:p-4 border transition-all hover:shadow-md cursor-pointer ${
                       severityFilter === 'info' ? 'border-blue-400 dark:border-blue-500 ring-2 ring-blue-200 dark:ring-blue-800' : 'border-gray-200 dark:border-gray-700'
                     }`}
                   >
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="w-3 h-3 bg-gray-400 rounded-full" />
-                      <span className="text-2xl font-bold text-gray-700 dark:text-gray-300">{scan.info_count}</span>
+                    <div className="flex items-center gap-1.5 sm:gap-2 mb-1">
+                      <span className="w-2.5 h-2.5 sm:w-3 sm:h-3 bg-gray-400 rounded-full" />
+                      <span className="text-xl sm:text-2xl font-bold text-gray-700 dark:text-gray-300">{scan.info_count}</span>
                     </div>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">Best Practices</p>
+                    <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Best Practices</p>
                   </button>
                 </div>
 
@@ -400,28 +400,28 @@ export default function OrgDetailPage() {
               </div>
 
               {/* Actions */}
-              <div className="flex flex-row lg:flex-col gap-3 flex-shrink-0 w-full lg:w-auto">
+              <div className="grid grid-cols-3 lg:grid-cols-1 gap-2 sm:gap-3 flex-shrink-0 w-full lg:w-auto">
                 <a
                   href={`/api/reports?scanId=${scan.id}`}
-                  className="px-6 py-3 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 transition flex items-center gap-2"
+                  className="px-3 sm:px-6 py-2.5 sm:py-3 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 transition flex items-center justify-center gap-2 text-sm sm:text-base"
                 >
-                  <Download className="w-5 h-5" />
-                  Download Report
+                  <Download className="w-4 h-4 sm:w-5 sm:h-5" />
+                  <span className="hidden xs:inline">Download</span> Report
                 </a>
                 <button
                   onClick={handleScan}
                   disabled={scanning}
-                  className="px-6 py-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-xl font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition flex items-center gap-2 disabled:opacity-50"
+                  className="px-3 sm:px-6 py-2.5 sm:py-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-xl font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition flex items-center justify-center gap-2 disabled:opacity-50 text-sm sm:text-base"
                 >
-                  <RefreshCw className={`w-5 h-5 ${scanning ? 'animate-spin' : ''}`} />
-                  {scanning ? 'Scanning...' : 'Run New Scan'}
+                  <RefreshCw className={`w-4 h-4 sm:w-5 sm:h-5 ${scanning ? 'animate-spin' : ''}`} />
+                  {scanning ? 'Scanning...' : 'New Scan'}
                 </button>
                 <button
                   onClick={() => setShowScheduleModal(true)}
-                  className="px-6 py-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-xl font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition flex items-center gap-2"
+                  className="px-3 sm:px-6 py-2.5 sm:py-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-xl font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition flex items-center justify-center gap-2 text-sm sm:text-base"
                 >
-                  <CalendarClock className="w-5 h-5" />
-                  Schedule Scan
+                  <CalendarClock className="w-4 h-4 sm:w-5 sm:h-5" />
+                  Schedule
                 </button>
               </div>
             </div>
@@ -450,14 +450,14 @@ export default function OrgDetailPage() {
             if (topIssues.length === 0) return null;
 
             return (
-              <div className="bg-white dark:bg-[#111827] rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 mb-6">
+              <div className="bg-white dark:bg-[#111827] rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-4 sm:p-6 mb-6">
                 <div className="flex items-center gap-3 mb-4">
-                  <div className="w-10 h-10 bg-red-50 dark:bg-red-900/30 rounded-xl flex items-center justify-center">
-                    <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400" />
+                  <div className="w-9 h-9 sm:w-10 sm:h-10 bg-red-50 dark:bg-red-900/30 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 text-red-600 dark:text-red-400" />
                   </div>
                   <div>
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Top Issues to Address</h3>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Highest priority issues affecting your CPQ config</p>
+                    <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">Top Issues to Address</h3>
+                    <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">Highest priority issues affecting your CPQ config</p>
                   </div>
                 </div>
                 <div className="space-y-2">
@@ -465,7 +465,7 @@ export default function OrgDetailPage() {
                     <button
                       key={issue.id}
                       onClick={() => setSelectedIssue(issue)}
-                      className="w-full text-left flex items-start gap-3 p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition border border-gray-100 dark:border-gray-800"
+                      className="w-full text-left flex items-start gap-2 sm:gap-3 p-2.5 sm:p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition border border-gray-100 dark:border-gray-800"
                     >
                       <span className="text-sm font-bold text-gray-400 dark:text-gray-500 mt-0.5 w-5 text-center flex-shrink-0">{idx + 1}</span>
                       <div className={`w-1 self-stretch rounded-full flex-shrink-0 ${issue.severity === 'critical' ? 'bg-red-500' : 'bg-amber-500'}`} />

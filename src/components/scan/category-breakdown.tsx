@@ -115,11 +115,11 @@ function SortableCategoryCard({
     >
       {/* Drag handle + clickable area */}
       <div className="flex">
-        {/* Drag handle */}
+        {/* Drag handle — hidden on mobile */}
         <div
           {...attributes}
           {...listeners}
-          className="flex items-center justify-center w-8 flex-shrink-0 cursor-grab active:cursor-grabbing text-gray-300 dark:text-gray-600 hover:text-gray-500 dark:hover:text-gray-400 transition rounded-l-xl hover:bg-gray-50 dark:hover:bg-gray-800/50"
+          className="hidden sm:flex items-center justify-center w-8 flex-shrink-0 cursor-grab active:cursor-grabbing text-gray-300 dark:text-gray-600 hover:text-gray-500 dark:hover:text-gray-400 transition rounded-l-xl hover:bg-gray-50 dark:hover:bg-gray-800/50"
           title="Drag to reorder"
         >
           <GripVertical className="w-4 h-4" />
@@ -128,7 +128,7 @@ function SortableCategoryCard({
         {/* Card content — clickable */}
         <button
           onClick={() => onCategoryClick?.(category)}
-          className="flex-1 text-left p-4 min-w-0"
+          className="flex-1 text-left p-3 sm:p-4 min-w-0"
         >
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2 min-w-0">
@@ -255,7 +255,7 @@ export function CategoryBreakdown({ scores, issues = [], layout = 'vertical', se
 
     return (
       <div>
-        <div className="flex items-center justify-between mb-3">
+        <div className="hidden sm:flex items-center justify-between mb-3">
           <p className="text-xs text-gray-400 dark:text-gray-500 flex items-center gap-1.5">
             <GripVertical className="w-3 h-3" />
             Drag cards to reorder
@@ -269,7 +269,7 @@ export function CategoryBreakdown({ scores, issues = [], layout = 'vertical', se
         </div>
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <SortableContext items={orderedCategories} strategy={rectSortingStrategy}>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+            <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
               {orderedCategories.map((category) => {
                 const score = scoresMap[category];
                 if (score === undefined) return null;

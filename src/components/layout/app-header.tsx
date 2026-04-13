@@ -18,15 +18,15 @@ export function AppHeader() {
 
   return (
     <header className="bg-white/80 dark:bg-[#111827]/80 backdrop-blur-md border-b border-gray-200/60 dark:border-gray-700/60 sticky top-0 z-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+        <div className="flex justify-between items-center h-14 sm:h-16">
           {/* Logo */}
           <Link href="/dashboard">
             <Logo size="md" />
           </Link>
 
           {/* Nav */}
-          <nav className="flex items-center gap-1">
+          <nav className="flex items-center gap-0.5 sm:gap-1">
             {navLinks.map(({ href, label, icon: Icon }) => {
               const isActive = pathname === href || pathname.startsWith(href + '/');
               return (
@@ -34,20 +34,21 @@ export function AppHeader() {
                   key={href}
                   href={href}
                   className={cn(
-                    'flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200',
+                    'flex items-center gap-2 px-2.5 sm:px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200',
                     isActive
                       ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400'
                       : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50 dark:text-gray-400 dark:hover:text-gray-200 dark:hover:bg-gray-800'
                   )}
+                  title={label}
                 >
                   <Icon className="h-4 w-4" />
-                  {label}
+                  <span className="hidden sm:inline">{label}</span>
                 </Link>
               );
             })}
             <button
               onClick={toggleTheme}
-              className="ml-2 p-2 rounded-lg text-gray-500 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-gray-200 dark:hover:bg-gray-800 transition-colors"
+              className="ml-1 sm:ml-2 p-2 rounded-lg text-gray-500 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-gray-200 dark:hover:bg-gray-800 transition-colors"
               title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
             >
               {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
