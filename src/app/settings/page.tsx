@@ -244,9 +244,12 @@ export default function SettingsPage() {
                 {plan === 'free' ? '3 orgs, 10 scans/month' : plan === 'solo' ? '5 orgs, 30 scans/month' : plan === 'practice' ? '15 orgs, unlimited scans' : 'Unlimited orgs & scans'}
               </p>
             </div>
-            <button className="px-4 py-2 text-sm font-medium text-blue-600 border border-blue-600 rounded-lg hover:bg-blue-50">
+            <a
+              href="/#pricing"
+              className="px-4 py-2 text-sm font-medium text-blue-600 border border-blue-600 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 inline-block"
+            >
               Upgrade
-            </button>
+            </a>
           </div>
         </CardContent>
       </Card>
