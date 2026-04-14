@@ -54,7 +54,10 @@ export function IssueCard({ issue, onClick, onStatusChange }: IssueCardProps) {
   const isResolved = issue.status === 'resolved' || issue.status === 'ignored';
 
   return (
-    <div className={`p-4 sm:p-6 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition ${isResolved ? 'opacity-60' : ''}`}>
+    <div
+      onClick={onClick}
+      className={`p-4 sm:p-6 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition cursor-pointer ${isResolved ? 'opacity-60' : ''}`}
+    >
       <div className="flex flex-col sm:flex-row items-start gap-4">
         {/* Icon */}
         <div className={`w-10 h-10 ${config.bgColor} rounded-xl flex items-center justify-center flex-shrink-0`}>
