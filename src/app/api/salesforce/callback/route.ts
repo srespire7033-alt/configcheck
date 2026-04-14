@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { handleOAuthCallback, getCPQPackageVersion, createConnection } from '@/lib/salesforce/client';
 import { createServiceClient } from '@/lib/db/client';
 import { getAuthUser } from '@/lib/auth/get-user';
+import { checkQuota } from '@/lib/quota';
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
@@ -67,6 +68,14 @@ export async function GET(request: NextRequest) {
         })
         .eq('id', existingOrg.id);
     } else {
+      // Check org quota before adding a new org
+      const orgQuota = await checkQuota(user.id, 'orgs');
+      if (!orgQuota.allowed) {
+        return NextResponse.redirect(
+          new URL(`/dashboard?error=You've reached the limit of ${orgQuota.limit} connected org(s) on your plan. Upgrade to connect more.`, process.env.NEXT_PUBLIC_APP_URL!)
+        );
+      }
+
       await supabase.from('organizations').insert({
         user_id: user.id,
         name: orgName,

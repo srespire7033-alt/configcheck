@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { renderToBuffer } from '@react-pdf/renderer';
 import { createServiceClient } from '@/lib/db/client';
 import { getAuthUser } from '@/lib/auth/get-user';
+import { checkQuota } from '@/lib/quota';
 import { CPQHealthReport } from '@/lib/report/pdf-generator';
 import React from 'react';
 
@@ -21,6 +22,18 @@ export async function GET(request: NextRequest) {
 
   if (!scanId) {
     return NextResponse.json({ error: 'scanId is required' }, { status: 400 });
+  }
+
+  // Check PDF report quota
+  const quota = await checkQuota(user.id, 'pdf_reports');
+  if (!quota.allowed) {
+    return NextResponse.json({
+      error: 'pdf_limit_reached',
+      message: `You've used all ${quota.limit} PDF reports for this month. Your limit resets on ${quota.resetDate}.`,
+      limit: quota.limit,
+      used: quota.used,
+      resetDate: quota.resetDate,
+    }, { status: 429 });
   }
 
   const supabase = createServiceClient();

@@ -265,6 +265,14 @@ export default function OrgDetailPage() {
       });
 
       const data = await res.json();
+
+      // Handle quota limit
+      if (res.status === 429) {
+        setError(data.message || 'You have reached your plan limit. Please upgrade to continue.');
+        setScanning(false);
+        return;
+      }
+
       if (!data.scanId) throw new Error(data.error || 'No scanId returned');
       pollForScan(data.scanId);
     } catch (error) {

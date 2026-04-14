@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/db/client';
 import { getAuthUser } from '@/lib/auth/get-user';
+import { checkQuota } from '@/lib/quota';
 import { generateFixSuggestion } from '@/lib/ai/gemini';
 
 /**
@@ -12,6 +13,18 @@ export async function POST(request: NextRequest) {
     const user = await getAuthUser(request);
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Check AI quota
+    const quota = await checkQuota(user.id, 'ai_calls');
+    if (!quota.allowed) {
+      return NextResponse.json({
+        error: 'ai_limit_reached',
+        message: `You've used all ${quota.limit} AI calls for this month. Your limit resets on ${quota.resetDate}.`,
+        limit: quota.limit,
+        used: quota.used,
+        resetDate: quota.resetDate,
+      }, { status: 429 });
     }
 
     const { issueId } = await request.json();

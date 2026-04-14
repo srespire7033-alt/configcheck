@@ -68,7 +68,15 @@ function DashboardContent() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ organizationId: orgId, productType }),
       });
-      const { scanId } = await res.json();
+      const data = await res.json();
+
+      // Handle quota limit
+      if (res.status === 429) {
+        setScanningOrg(null);
+        alert(data.message || 'You have reached your scan limit. Please upgrade to continue.');
+        return;
+      }
+      const scanId = data.scanId;
 
       const interval = setInterval(async () => {
         const statusRes = await fetch(`/api/scans?scanId=${scanId}`);

@@ -9,6 +9,7 @@ import { runAnalysis } from '@/lib/analysis/engine';
 import { runBillingAnalysis } from '@/lib/analysis/billing-engine';
 import { generateExecutiveSummary } from '@/lib/ai/gemini';
 import { sendScanNotification } from '@/lib/email/notifications';
+import { checkQuota } from '@/lib/quota';
 import type { ProductType } from '@/types';
 
 // Allow up to 180s for scans (Vercel Pro: 300s max, Hobby: 60s max)
@@ -51,6 +52,18 @@ export async function POST(request: NextRequest) {
 
     if (orgError || !org) {
       return NextResponse.json({ error: 'Organization not found' }, { status: 404 });
+    }
+
+    // Check scan quota
+    const quota = await checkQuota(user.id, 'scans');
+    if (!quota.allowed) {
+      return NextResponse.json({
+        error: 'scan_limit_reached',
+        message: `You've used all ${quota.limit} scans for this month. Your limit resets on ${quota.resetDate}.`,
+        limit: quota.limit,
+        used: quota.used,
+        resetDate: quota.resetDate,
+      }, { status: 429 });
     }
 
     // Create scan record (pending)
