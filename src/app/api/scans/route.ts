@@ -117,7 +117,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Scan not found' }, { status: 404 });
     }
 
-    return NextResponse.json(scan);
+    return NextResponse.json(scan, {
+      headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' },
+    });
   }
 
   if (orgId) {
@@ -132,7 +134,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to fetch scans' }, { status: 500 });
     }
 
-    return NextResponse.json(scans);
+    return NextResponse.json(scans, {
+      headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' },
+    });
   }
 
   return NextResponse.json({ error: 'scanId or orgId required' }, { status: 400 });

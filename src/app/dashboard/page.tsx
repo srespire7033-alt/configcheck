@@ -31,7 +31,7 @@ function DashboardContent() {
 
   async function fetchOrgs() {
     try {
-      const res = await fetch('/api/orgs');
+      const res = await fetch('/api/orgs', { cache: 'no-store' });
       if (res.ok) {
         const data = await res.json();
         setOrgs(data);

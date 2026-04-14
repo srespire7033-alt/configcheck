@@ -28,7 +28,11 @@ export async function GET(request: NextRequest) {
     if (error || !data) {
       return NextResponse.json({ error: 'Organization not found' }, { status: 404 });
     }
-    return NextResponse.json(data);
+    return NextResponse.json(data, {
+      headers: {
+        'Cache-Control': 'no-store, no-cache, must-revalidate',
+      },
+    });
   }
 
   // List all orgs for the authenticated user
@@ -48,5 +52,9 @@ export async function GET(request: NextRequest) {
     critical_count: 0, // Would need a join/subquery in production
   }));
 
-  return NextResponse.json(orgs);
+  return NextResponse.json(orgs, {
+    headers: {
+      'Cache-Control': 'no-store, no-cache, must-revalidate',
+    },
+  });
 }
