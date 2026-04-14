@@ -24,6 +24,11 @@ import type { CategoryScores } from '@/types';
 
 const STORAGE_KEY = 'configcheck-category-order';
 
+const BILLING_CATEGORIES = new Set([
+  'billing_rules', 'rev_rec_rules', 'tax_rules', 'finance_books',
+  'gl_rules', 'legal_entity', 'product_billing_config', 'invoicing',
+]);
+
 const categoryIcons: Record<string, React.ElementType> = {
   price_rules: DollarSign,
   discount_schedules: Percent,
@@ -262,6 +267,11 @@ export function CategoryBreakdown({ scores, issues = [], layout = 'vertical', se
       </div>;
     }
 
+    // Split into CPQ and Billing groups
+    const cpqCategories = orderedCategories.filter((c) => !BILLING_CATEGORIES.has(c) && scoresMap[c] !== undefined);
+    const billingCategories = orderedCategories.filter((c) => BILLING_CATEGORIES.has(c) && scoresMap[c] !== undefined);
+    const hasBilling = billingCategories.length > 0;
+
     return (
       <div>
         <div className="hidden sm:flex items-center justify-between mb-3">
@@ -278,8 +288,18 @@ export function CategoryBreakdown({ scores, issues = [], layout = 'vertical', se
         </div>
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <SortableContext items={orderedCategories} strategy={rectSortingStrategy}>
+            {/* CPQ Categories */}
+            {hasBilling && (
+              <div className="flex items-center gap-3 mb-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-blue-500" />
+                  <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">CPQ</span>
+                </div>
+                <div className="flex-1 h-px bg-gray-200 dark:bg-gray-700" />
+              </div>
+            )}
             <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
-              {orderedCategories.map((category) => {
+              {cpqCategories.map((category) => {
                 const score = scoresMap[category];
                 if (score === undefined) return null;
                 const { critical, warning, total } = getCategoryCounts(category);
@@ -298,6 +318,39 @@ export function CategoryBreakdown({ scores, issues = [], layout = 'vertical', se
                 );
               })}
             </div>
+
+            {/* Billing Categories */}
+            {hasBilling && (
+              <>
+                <div className="flex items-center gap-3 mt-6 mb-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-emerald-500" />
+                    <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Billing</span>
+                  </div>
+                  <div className="flex-1 h-px bg-gray-200 dark:bg-gray-700" />
+                </div>
+                <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
+                  {billingCategories.map((category) => {
+                    const score = scoresMap[category];
+                    if (score === undefined) return null;
+                    const { critical, warning, total } = getCategoryCounts(category);
+                    return (
+                      <SortableCategoryCard
+                        key={category}
+                        id={category}
+                        category={category}
+                        score={score}
+                        critical={critical}
+                        warning={warning}
+                        total={total}
+                        isSelected={selectedCategory === category}
+                        onCategoryClick={onCategoryClick}
+                      />
+                    );
+                  })}
+                </div>
+              </>
+            )}
           </SortableContext>
         </DndContext>
       </div>
