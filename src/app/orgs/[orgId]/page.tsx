@@ -312,21 +312,32 @@ export default function OrgDetailPage() {
             <FileBarChart className="h-10 w-10 text-blue-400" />
           </div>
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">No scans yet</h3>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">Run your first scan to see the health report.</p>
-          <div className="flex items-center gap-3 justify-center">
-            <select
-              value={scanProductType}
-              onChange={(e) => setScanProductType(e.target.value as ProductType)}
-              className="text-sm px-3 py-3 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300"
-            >
-              <option value="cpq">CPQ Only</option>
-              <option value="cpq_billing">CPQ + Billing</option>
-              <option value="arm">ARM</option>
-            </select>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">Choose your scan type and run your first health check.</p>
+          <div className="flex flex-col items-center gap-4">
+            <div className="inline-flex rounded-xl bg-gray-100 dark:bg-gray-800 p-1 border border-gray-200 dark:border-gray-700">
+              {([
+                { value: 'cpq' as ProductType, label: 'CPQ' },
+                { value: 'cpq_billing' as ProductType, label: 'CPQ + Billing' },
+                { value: 'arm' as ProductType, label: 'ARM' },
+              ]).map(({ value, label }) => (
+                <button
+                  key={value}
+                  onClick={() => setScanProductType(value)}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                    scanProductType === value
+                      ? 'bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-sm'
+                      : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
             <button
               onClick={handleScan}
-              className="px-6 py-3 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 transition"
+              className="px-6 py-3 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 transition flex items-center gap-2"
             >
+              <RefreshCw className="w-4 h-4" />
               Run First Scan
             </button>
           </div>
@@ -415,15 +426,36 @@ export default function OrgDetailPage() {
               </div>
 
               {/* Actions */}
-              <div className="grid grid-cols-3 lg:grid-cols-1 gap-2 sm:gap-3 flex-shrink-0 w-full lg:w-auto">
-                <a
-                  href={`/api/reports?scanId=${scan.id}`}
-                  className="px-3 sm:px-6 py-2.5 sm:py-3 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 transition flex items-center justify-center gap-2 text-sm sm:text-base"
-                >
-                  <Download className="w-4 h-4 sm:w-5 sm:h-5" />
-                  <span className="hidden xs:inline">Download</span> Report
-                </a>
-                <div className="flex flex-col gap-1.5">
+              <div className="flex flex-col gap-2 sm:gap-3 flex-shrink-0 w-full lg:w-auto">
+                {/* Scan type pills */}
+                <div className="inline-flex rounded-xl bg-gray-100 dark:bg-gray-800 p-1 border border-gray-200 dark:border-gray-700 self-center lg:self-auto">
+                  {([
+                    { value: 'cpq' as ProductType, label: 'CPQ' },
+                    { value: 'cpq_billing' as ProductType, label: 'CPQ + Billing' },
+                    { value: 'arm' as ProductType, label: 'ARM' },
+                  ]).map(({ value, label }) => (
+                    <button
+                      key={value}
+                      onClick={() => setScanProductType(value)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${
+                        scanProductType === value
+                          ? 'bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-sm'
+                          : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+                {/* Action buttons */}
+                <div className="grid grid-cols-3 lg:grid-cols-1 gap-2 sm:gap-3">
+                  <a
+                    href={`/api/reports?scanId=${scan.id}`}
+                    className="px-3 sm:px-6 py-2.5 sm:py-3 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 transition flex items-center justify-center gap-2 text-sm sm:text-base"
+                  >
+                    <Download className="w-4 h-4 sm:w-5 sm:h-5" />
+                    <span className="hidden xs:inline">Download</span> Report
+                  </a>
                   <button
                     onClick={handleScan}
                     disabled={scanning}
@@ -432,23 +464,14 @@ export default function OrgDetailPage() {
                     <RefreshCw className={`w-4 h-4 sm:w-5 sm:h-5 ${scanning ? 'animate-spin' : ''}`} />
                     {scanning ? 'Scanning...' : 'New Scan'}
                   </button>
-                  <select
-                    value={scanProductType}
-                    onChange={(e) => setScanProductType(e.target.value as ProductType)}
-                    className="text-xs px-2 py-1 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400"
+                  <button
+                    onClick={() => setShowScheduleModal(true)}
+                    className="px-3 sm:px-6 py-2.5 sm:py-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-xl font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition flex items-center justify-center gap-2 text-sm sm:text-base"
                   >
-                    <option value="cpq">CPQ Only</option>
-                    <option value="cpq_billing">CPQ + Billing</option>
-                    <option value="arm">ARM</option>
-                  </select>
+                    <CalendarClock className="w-4 h-4 sm:w-5 sm:h-5" />
+                    Schedule
+                  </button>
                 </div>
-                <button
-                  onClick={() => setShowScheduleModal(true)}
-                  className="px-3 sm:px-6 py-2.5 sm:py-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-xl font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition flex items-center justify-center gap-2 text-sm sm:text-base"
-                >
-                  <CalendarClock className="w-4 h-4 sm:w-5 sm:h-5" />
-                  Schedule
-                </button>
               </div>
             </div>
           </div>
