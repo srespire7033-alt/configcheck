@@ -40,6 +40,8 @@ export default function OrgDetailPage() {
   const [selectedIssue, setSelectedIssue] = useState<DBIssue | null>(null);
   const [severityFilter, setSeverityFilter] = useState<'critical' | 'warning' | 'info' | null>(null);
   const [scanProductType, setScanProductType] = useState<ProductType>('cpq');
+  const [availableScanTypes, setAvailableScanTypes] = useState<Array<{ value: string; label: string }>>([]);
+  const [detectingPackages, setDetectingPackages] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -65,6 +67,14 @@ export default function OrgDetailPage() {
       // Check if Salesforce connection is expired
       if (orgData.connection_status === 'expired') {
         setError('Your Salesforce connection has expired. Please reconnect your org from the Dashboard.');
+      }
+
+      // Load cached installed packages or detect them
+      if (orgData.installed_packages && orgData.installed_packages.length > 0) {
+        applyAvailableScanTypes(orgData.installed_packages);
+      } else if (orgData.connection_status === 'connected') {
+        // No cached packages — detect in background
+        detectPackages(orgData.id);
       }
 
       const scansRes = await fetch(`/api/scans?orgId=${orgId}`);
@@ -100,6 +110,51 @@ export default function OrgDetailPage() {
       setError('Something went wrong loading this page. Please try again.');
     } finally {
       setLoading(false);
+    }
+  }
+
+  function applyAvailableScanTypes(packages: string[]) {
+    const types: Array<{ value: string; label: string }> = [];
+    const hasCPQ = packages.includes('cpq');
+    const hasBilling = packages.includes('billing');
+    const hasARM = packages.includes('arm');
+
+    if (hasCPQ) types.push({ value: 'cpq', label: 'CPQ' });
+    if (hasCPQ && hasBilling) types.push({ value: 'cpq_billing', label: 'CPQ + Billing' });
+    if (hasARM) types.push({ value: 'arm', label: 'ARM' });
+
+    // Fallback
+    if (types.length === 0) types.push({ value: 'cpq', label: 'CPQ' });
+
+    setAvailableScanTypes(types);
+    // Auto-select the best option
+    if (hasCPQ && hasBilling) {
+      setScanProductType('cpq_billing');
+    } else if (hasARM) {
+      setScanProductType('arm');
+    } else {
+      setScanProductType('cpq');
+    }
+  }
+
+  async function detectPackages(orgIdToDetect: string) {
+    setDetectingPackages(true);
+    try {
+      const res = await fetch('/api/orgs/detect-packages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ organizationId: orgIdToDetect }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        applyAvailableScanTypes(data.packages);
+      }
+    } catch (err) {
+      console.error('Package detection failed:', err);
+      // Fallback to CPQ only
+      setAvailableScanTypes([{ value: 'cpq', label: 'CPQ' }]);
+    } finally {
+      setDetectingPackages(false);
     }
   }
 
@@ -312,30 +367,41 @@ export default function OrgDetailPage() {
             <FileBarChart className="h-10 w-10 text-blue-400" />
           </div>
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">No scans yet</h3>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">Choose your scan type and run your first health check.</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
+            {detectingPackages ? 'Detecting installed packages...' : 'Choose your scan type and run your first health check.'}
+          </p>
           <div className="flex flex-col items-center gap-4">
-            <div className="inline-flex rounded-xl bg-gray-100 dark:bg-gray-800 p-1 border border-gray-200 dark:border-gray-700">
-              {([
-                { value: 'cpq' as ProductType, label: 'CPQ' },
-                { value: 'cpq_billing' as ProductType, label: 'CPQ + Billing' },
-                { value: 'arm' as ProductType, label: 'ARM' },
-              ]).map(({ value, label }) => (
-                <button
-                  key={value}
-                  onClick={() => setScanProductType(value)}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                    scanProductType === value
-                      ? 'bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-sm'
-                      : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
-                  }`}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
+            {detectingPackages ? (
+              <div className="inline-flex items-center gap-2 text-sm text-gray-400">
+                <RefreshCw className="w-4 h-4 animate-spin" />
+                Checking Salesforce packages...
+              </div>
+            ) : availableScanTypes.length > 1 ? (
+              <div className="inline-flex rounded-xl bg-gray-100 dark:bg-gray-800 p-1 border border-gray-200 dark:border-gray-700">
+                {availableScanTypes.map(({ value, label }) => (
+                  <button
+                    key={value}
+                    onClick={() => setScanProductType(value as ProductType)}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                      scanProductType === value
+                        ? 'bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-sm'
+                        : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            ) : availableScanTypes.length === 1 ? (
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800">
+                <ShieldCheck className="w-4 h-4 text-blue-500" />
+                <span className="text-sm font-medium text-blue-700 dark:text-blue-400">{availableScanTypes[0].label} detected</span>
+              </div>
+            ) : null}
             <button
               onClick={handleScan}
-              className="px-6 py-3 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 transition flex items-center gap-2"
+              disabled={detectingPackages}
+              className="px-6 py-3 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 transition flex items-center gap-2 disabled:opacity-50"
             >
               <RefreshCw className="w-4 h-4" />
               Run First Scan
@@ -428,25 +494,32 @@ export default function OrgDetailPage() {
               {/* Actions */}
               <div className="flex flex-col gap-2 sm:gap-3 flex-shrink-0 w-full lg:w-auto">
                 {/* Scan type pills */}
-                <div className="inline-flex rounded-xl bg-gray-100 dark:bg-gray-800 p-1 border border-gray-200 dark:border-gray-700 self-center lg:self-auto">
-                  {([
-                    { value: 'cpq' as ProductType, label: 'CPQ' },
-                    { value: 'cpq_billing' as ProductType, label: 'CPQ + Billing' },
-                    { value: 'arm' as ProductType, label: 'ARM' },
-                  ]).map(({ value, label }) => (
-                    <button
-                      key={value}
-                      onClick={() => setScanProductType(value)}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${
-                        scanProductType === value
-                          ? 'bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-sm'
-                          : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
-                      }`}
-                    >
-                      {label}
-                    </button>
-                  ))}
-                </div>
+                {detectingPackages ? (
+                  <div className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 self-center lg:self-auto">
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin text-gray-400" />
+                    <span className="text-xs text-gray-500 dark:text-gray-400">Detecting packages...</span>
+                  </div>
+                ) : availableScanTypes.length > 1 ? (
+                  <div className="inline-flex rounded-xl bg-gray-100 dark:bg-gray-800 p-1 border border-gray-200 dark:border-gray-700 self-center lg:self-auto">
+                    {availableScanTypes.map(({ value, label }) => (
+                      <button
+                        key={value}
+                        onClick={() => setScanProductType(value as ProductType)}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${
+                          scanProductType === value
+                            ? 'bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-sm'
+                            : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                ) : availableScanTypes.length === 1 ? (
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 self-center lg:self-auto">
+                    <span className="text-xs font-medium text-blue-600 dark:text-blue-400">{availableScanTypes[0].label}</span>
+                  </div>
+                ) : null}
                 {/* Action buttons */}
                 <div className="grid grid-cols-3 lg:grid-cols-1 gap-2 sm:gap-3">
                   <a

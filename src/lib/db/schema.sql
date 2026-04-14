@@ -53,6 +53,7 @@ create table public.organizations (
   is_sandbox boolean default false,
   connection_status text default 'connected' check (connection_status in ('connected', 'expired', 'error')),
   cpq_package_version text,
+  installed_packages jsonb default '[]'::jsonb,
   total_quote_lines integer,
   total_price_rules integer,
   total_products integer,

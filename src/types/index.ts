@@ -30,6 +30,7 @@ export interface DBOrganization {
   is_sandbox: boolean;
   connection_status: 'connected' | 'expired' | 'error';
   cpq_package_version: string | null;
+  installed_packages: string[];
   total_quote_lines: number | null;
   total_price_rules: number | null;
   total_products: number | null;
