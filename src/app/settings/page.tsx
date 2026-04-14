@@ -23,48 +23,43 @@ const TABS: { id: SettingsTab; label: string; icon: React.ElementType }[] = [
 
 const PLAN_INFO: Record<string, {
   label: string;
+  price: string;
+  priceNote: string;
   color: string;
   bg: string;
   border: string;
   dot: string;
-  limits: { orgs: string; scans: string; ai: string; reports: string };
   features: string[];
 }> = {
   free: {
     label: 'Free',
+    price: '$0',
+    priceNote: 'forever',
     color: 'text-gray-700 dark:text-gray-300',
     bg: 'bg-gray-50 dark:bg-gray-800',
     border: 'border-gray-200 dark:border-gray-700',
     dot: 'bg-gray-400',
-    limits: { orgs: '3', scans: '10 / month', ai: '5 / month', reports: '5 / month' },
-    features: ['CPQ health checks (68 rules)', 'PDF reports', 'Email notifications', 'Scan history'],
+    features: ['1 Salesforce org', '5 scans per month', '100+ health checks', 'AI fix suggestions', 'Basic PDF report'],
   },
-  solo: {
-    label: 'Solo',
+  pro: {
+    label: 'Pro',
+    price: '$49',
+    priceNote: 'per month',
     color: 'text-blue-700 dark:text-blue-300',
     bg: 'bg-blue-50 dark:bg-blue-900/20',
     border: 'border-blue-200 dark:border-blue-800',
     dot: 'bg-blue-500',
-    limits: { orgs: '5', scans: '30 / month', ai: '30 / month', reports: 'Unlimited' },
-    features: ['Everything in Free', 'AI remediation plans', 'Scan comparison', 'Priority support'],
+    features: ['5 Salesforce orgs', 'Unlimited scans', 'White-label PDF reports', 'Scan comparison & history', 'AI remediation plans', 'Priority support'],
   },
-  practice: {
-    label: 'Practice',
+  enterprise: {
+    label: 'Enterprise',
+    price: 'Custom',
+    priceNote: 'talk to us',
     color: 'text-purple-700 dark:text-purple-300',
     bg: 'bg-purple-50 dark:bg-purple-900/20',
     border: 'border-purple-200 dark:border-purple-800',
     dot: 'bg-purple-500',
-    limits: { orgs: '15', scans: 'Unlimited', ai: 'Unlimited', reports: 'Unlimited' },
-    features: ['Everything in Solo', 'Scheduled scans', 'White-label reports', 'Team branding'],
-  },
-  partner: {
-    label: 'Partner',
-    color: 'text-amber-700 dark:text-amber-300',
-    bg: 'bg-amber-50 dark:bg-amber-900/20',
-    border: 'border-amber-200 dark:border-amber-800',
-    dot: 'bg-amber-500',
-    limits: { orgs: 'Unlimited', scans: 'Unlimited', ai: 'Unlimited', reports: 'Unlimited' },
-    features: ['Everything in Practice', 'Unlimited orgs', 'API access', 'Dedicated support'],
+    features: ['Unlimited orgs', 'Unlimited scans', 'Custom branding', 'API access', 'SSO / SAML', 'Dedicated support'],
   },
 };
 
@@ -269,10 +264,10 @@ export default function SettingsPage() {
   if (loading) return <LoadingScreen />;
 
   const planInfo = PLAN_INFO[plan] || PLAN_INFO.free;
-  const scanLimit = plan === 'free' ? 10 : plan === 'solo' ? 30 : null;
-  const aiLimit = plan === 'free' ? 5 : plan === 'solo' ? 30 : null;
-  const pdfLimit = plan === 'free' ? 5 : plan === 'solo' ? null : null; // null = unlimited
-  const orgLimit = plan === 'free' ? 3 : plan === 'solo' ? 5 : null;
+  const scanLimit = plan === 'free' ? 5 : null; // Pro & Enterprise = unlimited
+  const aiLimit = plan === 'free' ? 5 : null;
+  const pdfLimit = plan === 'free' ? 5 : null;
+  const orgLimit = plan === 'free' ? 1 : plan === 'pro' ? 5 : null;
 
   // Reset date: 1st of next month
   const now = new Date();
@@ -408,15 +403,21 @@ export default function SettingsPage() {
                 <div className={`flex items-center justify-between p-5 rounded-xl border-2 ${planInfo.border} ${planInfo.bg} shadow-sm`}>
                   <div className="flex items-center gap-4">
                     <div className={`w-12 h-12 rounded-xl ${planInfo.bg} border-2 ${planInfo.border} flex items-center justify-center shadow-sm`}>
-                      {plan === 'partner' || plan === 'practice'
+                      {plan === 'enterprise'
                         ? <Crown className={`w-6 h-6 ${planInfo.color}`} />
-                        : <Shield className={`w-6 h-6 ${planInfo.color}`} />
+                        : plan === 'pro'
+                          ? <Zap className={`w-6 h-6 ${planInfo.color}`} />
+                          : <Shield className={`w-6 h-6 ${planInfo.color}`} />
                       }
                     </div>
                     <div>
-                      <h4 className={`text-lg font-bold ${planInfo.color}`}>{planInfo.label} Plan</h4>
+                      <div className="flex items-baseline gap-2">
+                        <h4 className={`text-lg font-bold ${planInfo.color}`}>{planInfo.label}</h4>
+                        <span className="text-lg font-bold text-gray-900 dark:text-white">{planInfo.price}</span>
+                        <span className="text-xs text-gray-400 dark:text-gray-500">{planInfo.priceNote}</span>
+                      </div>
                       <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-                        {plan === 'free' ? 'Get started with basic features' : `Active subscription`}
+                        {plan === 'free' ? 'Get started with basic features' : plan === 'pro' ? 'For growing consulting firms' : 'Custom plan for your team'}
                       </p>
                     </div>
                   </div>
@@ -424,7 +425,7 @@ export default function SettingsPage() {
                     href="/#pricing"
                     className="flex items-center gap-1.5 px-5 py-2.5 text-sm font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
                   >
-                    {plan === 'free' ? 'Upgrade' : 'Change Plan'}
+                    {plan === 'free' ? 'Upgrade' : 'Manage Plan'}
                     <ExternalLink className="w-3.5 h-3.5" />
                   </a>
                 </div>
@@ -435,7 +436,7 @@ export default function SettingsPage() {
                 <div className="space-y-5">
                   <UsageBar
                     label="Scans"
-                    description={`Up to ${scanLimit ?? '∞'} scans per month`}
+                    description={scanLimit ? `Up to ${scanLimit} scans per month` : 'Unlimited scans'}
                     used={usage?.scans_this_month ?? 0}
                     limit={scanLimit}
                     color="blue"
@@ -444,7 +445,7 @@ export default function SettingsPage() {
                   <div className="border-t border-gray-100 dark:border-gray-800" />
                   <UsageBar
                     label="AI Remediation Calls"
-                    description={`Up to ${aiLimit ?? '∞'} AI calls per month`}
+                    description={aiLimit ? `Up to ${aiLimit} AI calls per month` : 'Unlimited AI calls'}
                     used={usage?.ai_calls_this_month ?? 0}
                     limit={aiLimit}
                     color="purple"
@@ -492,7 +493,7 @@ export default function SettingsPage() {
                   <div className="space-y-5">
                     <UsageBar
                       label="Scans"
-                      description={`Up to ${scanLimit ?? '∞'} scans per month`}
+                      description={scanLimit ? `Up to ${scanLimit} scans per month` : 'Unlimited scans'}
                       used={usage.scans_this_month}
                       limit={scanLimit}
                       color="blue"
@@ -501,7 +502,7 @@ export default function SettingsPage() {
                     <div className="border-t border-gray-100 dark:border-gray-800" />
                     <UsageBar
                       label="AI Remediation Calls"
-                      description={`Up to ${aiLimit ?? '∞'} AI calls per month`}
+                      description={aiLimit ? `Up to ${aiLimit} AI calls per month` : 'Unlimited AI calls'}
                       used={usage.ai_calls_this_month}
                       limit={aiLimit}
                       color="purple"
