@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
 
   // Fetch all usage logs for this user
-  const [totalRes, monthRes, byTypeRes] = await Promise.all([
+  const [totalRes, monthRes, byTypeRes, orgsRes] = await Promise.all([
     // Total scans ever
     supabase
       .from('usage_logs')
@@ -43,6 +43,11 @@ export async function GET(request: NextRequest) {
       .eq('user_id', user.id)
       .gte('created_at', monthStart)
       .order('created_at', { ascending: false }),
+    // Connected orgs count
+    supabase
+      .from('organizations')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', user.id),
   ]);
 
   // Count by type
@@ -65,6 +70,7 @@ export async function GET(request: NextRequest) {
     scans_this_month: monthRes.count || 0,
     ai_calls_this_month: (eventCounts['ai_remediation'] || 0) + (eventCounts['ai_scan_diff'] || 0) + (eventCounts['ai_fix_suggestion'] || 0),
     pdf_reports_this_month: eventCounts['pdf_report'] || 0,
+    connected_orgs: orgsRes.count || 0,
     daily_scans: dailyScans,
     event_counts: eventCounts,
   });

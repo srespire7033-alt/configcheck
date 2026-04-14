@@ -118,6 +118,7 @@ export default function SettingsPage() {
     scans_this_month: number;
     ai_calls_this_month: number;
     pdf_reports_this_month: number;
+    connected_orgs: number;
   } | null>(null);
 
   useEffect(() => {
@@ -459,13 +460,14 @@ export default function SettingsPage() {
                     resetDate={resetDateStr}
                   />
                   <div className="border-t border-gray-100 dark:border-gray-800" />
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Connected Orgs</p>
-                      <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Up to {orgLimit ?? '∞'} Salesforce orgs</p>
-                    </div>
-                    <span className="text-sm font-mono text-gray-500 dark:text-gray-400">No limit on current plan</span>
-                  </div>
+                  <UsageBar
+                    label="Connected Orgs"
+                    description={orgLimit ? `Up to ${orgLimit} Salesforce orgs` : 'Unlimited Salesforce orgs'}
+                    used={usage?.connected_orgs ?? 0}
+                    limit={orgLimit}
+                    color="blue"
+                    resetDate={resetDateStr}
+                  />
                 </div>
               </SectionCard>
 
