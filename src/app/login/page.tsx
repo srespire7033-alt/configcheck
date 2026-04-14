@@ -47,7 +47,7 @@ export default function LoginPage() {
 
     try {
       if (isSignUp) {
-        const { error } = await supabase.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
           email,
           password,
           options: {
@@ -55,6 +55,15 @@ export default function LoginPage() {
           },
         });
         if (error) throw error;
+
+        // Supabase returns a fake user with no identities if email already exists
+        // (to prevent email enumeration). Detect this and show a clear message.
+        if (data.user && data.user.identities && data.user.identities.length === 0) {
+          setError('An account with this email already exists. Please sign in instead.');
+          setLoading(false);
+          return;
+        }
+
         setError('Check your email for a confirmation link!');
         setLoading(false);
         return;
