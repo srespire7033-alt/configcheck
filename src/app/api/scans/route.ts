@@ -3,9 +3,12 @@ import { createServiceClient } from '@/lib/db/client';
 import { getAuthUser } from '@/lib/auth/get-user';
 import { createRefreshableConnection } from '@/lib/salesforce/client';
 import { fetchAllCPQData } from '@/lib/salesforce/queries';
+import { fetchAllBillingData, isBillingPackageInstalled } from '@/lib/salesforce/queries-billing';
 import { runAnalysis } from '@/lib/analysis/engine';
+import { runBillingAnalysis } from '@/lib/analysis/billing-engine';
 import { generateExecutiveSummary } from '@/lib/ai/gemini';
 import { sendScanNotification } from '@/lib/email/notifications';
+import type { ProductType } from '@/types';
 
 /**
  * POST /api/scans
@@ -18,11 +21,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { organizationId } = await request.json();
+    const { organizationId, productType: requestedProductType } = await request.json();
 
     if (!organizationId) {
       return NextResponse.json({ error: 'organizationId is required' }, { status: 400 });
     }
+
+    // Default to 'cpq' if not specified; validate product type
+    const productType: ProductType = (['cpq', 'cpq_billing', 'arm'] as const).includes(requestedProductType)
+      ? requestedProductType
+      : 'cpq';
 
     const supabase = createServiceClient();
 
@@ -46,6 +54,7 @@ export async function POST(request: NextRequest) {
         user_id: org.user_id,
         status: 'pending',
         scan_type: 'full',
+        product_type: productType,
         started_at: new Date().toISOString(),
       })
       .select()
@@ -58,7 +67,7 @@ export async function POST(request: NextRequest) {
     // Run scan in background (non-blocking) with 180s hard timeout
     // Real-world orgs with many rules/products can take 2-3 minutes
     const scanWithTimeout = Promise.race([
-      runScanInBackground(scan.id, org),
+      runScanInBackground(scan.id, org, productType),
       new Promise((_, reject) =>
         setTimeout(() => reject(new Error('Scan timed out after 3 minutes. This usually means the Salesforce connection is slow or expired. Try reconnecting your org.')), 180000)
       ),
@@ -130,7 +139,8 @@ export async function GET(request: NextRequest) {
  */
 async function runScanInBackground(
   scanId: string,
-  org: Record<string, unknown>
+  org: Record<string, unknown>,
+  productType: ProductType = 'cpq'
 ) {
   const supabase = createServiceClient();
   const scanStartTime = Date.now();
@@ -154,8 +164,8 @@ async function runScanInBackground(
       throw new Error(`Salesforce connection failed: ${connMsg}`);
     }
 
-    // Step 2: Fetch all CPQ data
-    console.log(`[SCAN ${scanId}] Fetching CPQ data...`);
+    // Step 2: Fetch data based on product type
+    console.log(`[SCAN ${scanId}] Fetching data (product_type: ${productType})...`);
     const fetchStart = Date.now();
     const cpqData = await fetchAllCPQData(conn);
     console.log(`[SCAN ${scanId}] CPQ data fetched in ${Date.now() - fetchStart}ms — ` +
@@ -163,12 +173,53 @@ async function runScanInBackground(
       `${cpqData.productRules.length} product rules, ${cpqData.quoteLines.length} quote lines, ` +
       `${cpqData.productOptions.length} product options`);
 
+    // Fetch billing data if product type includes billing
+    let billingData = null;
+    if (productType === 'cpq_billing') {
+      console.log(`[SCAN ${scanId}] Checking for Salesforce Billing package...`);
+      const hasBilling = await isBillingPackageInstalled(conn);
+      if (hasBilling) {
+        console.log(`[SCAN ${scanId}] Billing package detected, fetching billing data...`);
+        const billingFetchStart = Date.now();
+        billingData = await fetchAllBillingData(conn);
+        console.log(`[SCAN ${scanId}] Billing data fetched in ${Date.now() - billingFetchStart}ms`);
+      } else {
+        console.log(`[SCAN ${scanId}] ⚠️ Billing package not installed — skipping billing checks`);
+      }
+    }
+
     // Step 3: Run analysis
-    console.log(`[SCAN ${scanId}] Running analysis...`);
+    console.log(`[SCAN ${scanId}] Running CPQ analysis...`);
     const analysisStart = Date.now();
     const result = await runAnalysis(cpqData);
-    console.log(`[SCAN ${scanId}] Analysis done in ${Date.now() - analysisStart}ms — ` +
+    console.log(`[SCAN ${scanId}] CPQ analysis done in ${Date.now() - analysisStart}ms — ` +
       `Score: ${result.overall_score}/100, ${result.issues.length} issues`);
+
+    // Run billing analysis if data was fetched
+    let billingResult = null;
+    if (billingData) {
+      console.log(`[SCAN ${scanId}] Running billing analysis...`);
+      const billingAnalysisStart = Date.now();
+      billingResult = await runBillingAnalysis(billingData);
+      console.log(`[SCAN ${scanId}] Billing analysis done in ${Date.now() - billingAnalysisStart}ms — ` +
+        `Score: ${billingResult.overall_score}/100, ${billingResult.issues.length} issues`);
+
+      // Merge billing issues into result
+      result.issues.push(...billingResult.issues);
+
+      // Merge category scores
+      result.category_scores = {
+        ...result.category_scores,
+        ...billingResult.category_scores,
+      } as typeof result.category_scores;
+
+      // Recalculate combined overall score (weighted average of CPQ and Billing)
+      const cpqWeight = 0.6;
+      const billingWeight = 0.4;
+      result.overall_score = Math.round(
+        result.overall_score * cpqWeight + billingResult.overall_score * billingWeight
+      );
+    }
 
     // Step 4: Generate AI summary
     console.log(`[SCAN ${scanId}] Generating AI summary...`);
@@ -234,6 +285,7 @@ async function runScanInBackground(
         metadata: {
           revenue_summary: result.revenue_summary || null,
           complexity: result.complexity || null,
+          product_type: productType,
           data_fetched: {
             priceRules: cpqData.priceRules.length,
             products: cpqData.products.length,
@@ -243,6 +295,16 @@ async function runScanInBackground(
             discountSchedules: cpqData.discountSchedules.length,
             summaryVariables: cpqData.summaryVariables.length,
             approvalRules: cpqData.approvalRules.length,
+            ...(billingData ? {
+              billingRules: billingData.billingRules.length,
+              revRecRules: billingData.revRecRules.length,
+              taxRules: billingData.taxRules.length,
+              financeBooks: billingData.financeBooks.length,
+              financePeriods: billingData.financePeriods.length,
+              glRules: billingData.glRules.length,
+              legalEntities: billingData.legalEntities.length,
+              invoices: billingData.invoices.length,
+            } : {}),
           },
         },
         completed_at: new Date().toISOString(),

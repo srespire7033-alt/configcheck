@@ -2,6 +2,8 @@
 // DATABASE TYPES
 // ============================================
 
+export type ProductType = 'cpq' | 'cpq_billing' | 'arm';
+
 export interface DBUser {
   id: string;
   email: string;
@@ -12,6 +14,7 @@ export interface DBUser {
   timezone: string;
   avatar_url: string | null;
   plan: 'free' | 'solo' | 'practice' | 'partner';
+  subscribed_products: ProductType[];
   created_at: string;
   updated_at: string;
 }
@@ -43,6 +46,7 @@ export interface DBScan {
   user_id: string;
   status: 'pending' | 'running' | 'completed' | 'failed';
   scan_type: 'full' | 'quick';
+  product_type: ProductType;
   overall_score: number | null;
   category_scores: CategoryScores | null;
   summary: string | null;
@@ -86,7 +90,8 @@ export interface DBIssue {
 
 export type IssueSeverity = 'critical' | 'warning' | 'info';
 export type IssueStatus = 'open' | 'acknowledged' | 'resolved' | 'ignored';
-export type IssueCategory =
+// CPQ categories
+export type CPQCategory =
   | 'price_rules'
   | 'discount_schedules'
   | 'products'
@@ -106,25 +111,22 @@ export type IssueCategory =
   | 'performance'
   | 'impact_analysis';
 
-export interface CategoryScores {
-  price_rules: number;
-  discount_schedules: number;
-  products: number;
-  product_rules: number;
-  cpq_settings: number;
-  subscriptions: number;
-  quote_lines: number;
-  contracted_prices: number;
-  summary_variables: number;
-  approval_rules: number;
-  quote_calculator_plugin: number;
-  quote_templates: number;
-  configuration_attributes: number;
-  guided_selling: number;
-  advanced_pricing: number;
-  performance: number;
-  impact_analysis: number;
-}
+// Billing categories (blng__ namespace)
+export type BillingCategory =
+  | 'billing_rules'
+  | 'rev_rec_rules'
+  | 'tax_rules'
+  | 'finance_books'
+  | 'gl_rules'
+  | 'legal_entity'
+  | 'product_billing_config'
+  | 'invoicing';
+
+export type IssueCategory = CPQCategory | BillingCategory;
+
+// Category scores are stored as a dynamic record since scans can include
+// CPQ categories, Billing categories, or both (for cpq_billing scans).
+export type CategoryScores = Record<string, number>;
 
 export interface AffectedRecord {
   id: string;
@@ -143,6 +145,15 @@ export interface HealthCheck {
   severity: IssueSeverity;
   description: string;
   run: (data: CPQData) => Promise<Issue[]>;
+}
+
+export interface BillingHealthCheck {
+  id: string;
+  name: string;
+  category: BillingCategory;
+  severity: IssueSeverity;
+  description: string;
+  run: (data: BillingData) => Promise<Issue[]>;
 }
 
 export interface Issue {
@@ -454,6 +465,135 @@ export interface SFCPQSettings {
   SBQQ__ContractAutoRenew__c?: boolean;
   SBQQ__EnablePricingGuidance__c?: boolean;
   [key: string]: unknown;
+}
+
+// ============================================
+// SALESFORCE BILLING OBJECT TYPES (blng__)
+// ============================================
+
+export interface SFBillingRule {
+  Id: string;
+  Name: string;
+  blng__Active__c: boolean;
+  blng__InitialBillingTrigger__c: string | null;
+  blng__PartialPeriodTreatment__c: string | null;
+  blng__GenerateInvoices__c: string | null;
+  blng__DefaultBillingRule__c?: boolean;
+}
+
+export interface SFRevRecRule {
+  Id: string;
+  Name: string;
+  blng__Active__c: boolean;
+  blng__RevenueRecognitionTreatment__c: string | null;
+  blng__RevenueScheduleType__c: string | null;
+  blng__RevenueRecognitionType__c: string | null;
+  blng__CreateRevenueSchedule__c: string | null;
+}
+
+export interface SFTaxRule {
+  Id: string;
+  Name: string;
+  blng__Active__c: boolean;
+  blng__TaxableYN__c: string | null;
+  blng__TaxPercentage__c: number | null;
+  blng__TaxIntegration__c: string | null;
+}
+
+export interface SFFinanceBook {
+  Id: string;
+  Name: string;
+  blng__Active__c: boolean;
+  blng__PeriodType__c: string | null;
+  blng__FinancePeriods__r?: { totalSize: number; records: SFFinancePeriod[] };
+}
+
+export interface SFFinancePeriod {
+  Id: string;
+  Name: string;
+  blng__FinanceBook__c: string;
+  blng__PeriodStartDate__c: string | null;
+  blng__PeriodEndDate__c: string | null;
+  blng__PeriodStatus__c: string | null;
+  blng__PeriodType__c: string | null;
+}
+
+export interface SFGLRule {
+  Id: string;
+  Name: string;
+  blng__Active__c: boolean;
+  blng__GLTreatments__r?: { totalSize: number; records: SFGLTreatment[] };
+}
+
+export interface SFGLTreatment {
+  Id: string;
+  Name: string;
+  blng__Active__c: boolean;
+  blng__CreditGLAccount__c: string | null;
+  blng__DebitGLAccount__c: string | null;
+  blng__GLRule__c: string | null;
+  blng__CreditGLAccount__r?: { Name: string; blng__Active__c?: boolean };
+  blng__DebitGLAccount__r?: { Name: string; blng__Active__c?: boolean };
+}
+
+export interface SFLegalEntity {
+  Id: string;
+  Name: string;
+  blng__Active__c: boolean;
+  blng__Street__c: string | null;
+  blng__City__c: string | null;
+  blng__State__c: string | null;
+  blng__PostalCode__c: string | null;
+  blng__Country__c: string | null;
+}
+
+export interface SFBillingInvoice {
+  Id: string;
+  Name: string;
+  blng__InvoiceStatus__c: string | null;
+  blng__TotalAmount__c: number | null;
+  blng__Account__c: string | null;
+  blng__InvoiceDate__c: string | null;
+  blng__DueDate__c: string | null;
+  CreatedDate: string;
+}
+
+export interface SFCreditNote {
+  Id: string;
+  Name: string;
+  blng__Status__c: string | null;
+  blng__TotalAmount__c: number | null;
+  blng__Balance__c: number | null;
+  blng__CreditNoteDate__c: string | null;
+}
+
+export interface SFProductBillingFields {
+  Id: string;
+  Name: string;
+  IsActive: boolean;
+  blng__BillingRule__c: string | null;
+  blng__RevenueRecognitionRule__c: string | null;
+  blng__TaxRule__c: string | null;
+  SBQQ__ChargeType__c: string | null;
+  SBQQ__BillingType__c: string | null;
+  SBQQ__BillingFrequency__c: string | null;
+  blng__BillingRule__r?: { Name: string; blng__Active__c?: boolean };
+  blng__RevenueRecognitionRule__r?: { Name: string; blng__Active__c?: boolean };
+  blng__TaxRule__r?: { Name: string; blng__Active__c?: boolean };
+}
+
+export interface BillingData {
+  billingRules: SFBillingRule[];
+  revRecRules: SFRevRecRule[];
+  taxRules: SFTaxRule[];
+  financeBooks: SFFinanceBook[];
+  financePeriods: SFFinancePeriod[];
+  glRules: SFGLRule[];
+  glTreatments: SFGLTreatment[];
+  legalEntities: SFLegalEntity[];
+  invoices: SFBillingInvoice[];
+  creditNotes: SFCreditNote[];
+  productBillingConfigs: SFProductBillingFields[];
 }
 
 // ============================================

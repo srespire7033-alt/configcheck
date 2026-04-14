@@ -72,6 +72,24 @@ export function getCategoryLabel(category: string): string {
     advanced_pricing: 'Advanced Pricing',
     performance: 'Performance',
     impact_analysis: 'Impact Analysis',
+    // Billing categories
+    billing_rules: 'Billing Rules',
+    rev_rec_rules: 'Revenue Recognition',
+    tax_rules: 'Tax Rules',
+    finance_books: 'Finance Books',
+    gl_rules: 'GL Rules',
+    legal_entity: 'Legal Entity',
+    product_billing_config: 'Product Billing Config',
+    invoicing: 'Invoicing',
   };
   return labels[category] || category;
+}
+
+export function getProductTypeLabel(productType: string): string {
+  const labels: Record<string, string> = {
+    cpq: 'CPQ',
+    cpq_billing: 'CPQ + Billing',
+    arm: 'ARM',
+  };
+  return labels[productType] || productType;
 }

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { getCategoryLabel } from '@/lib/utils';
-import { DollarSign, Percent, Package, GitBranch, Settings, RefreshCw, FileText, Handshake, Variable, ShieldCheck, Code, FileSpreadsheet, SlidersHorizontal, Compass, Layers, Gauge, Network, ChevronRight, GripVertical } from 'lucide-react';
+import { DollarSign, Percent, Package, GitBranch, Settings, RefreshCw, FileText, Handshake, Variable, ShieldCheck, Code, FileSpreadsheet, SlidersHorizontal, Compass, Layers, Gauge, Network, ChevronRight, GripVertical, Receipt, BookOpen, Landmark, Building2, CircleDollarSign, Scale, BadgeDollarSign, FileCheck } from 'lucide-react';
 import {
   DndContext,
   closestCenter,
@@ -42,6 +42,15 @@ const categoryIcons: Record<string, React.ElementType> = {
   advanced_pricing: Layers,
   performance: Gauge,
   impact_analysis: Network,
+  // Billing categories
+  billing_rules: Receipt,
+  rev_rec_rules: BookOpen,
+  tax_rules: Landmark,
+  finance_books: CircleDollarSign,
+  gl_rules: Scale,
+  legal_entity: Building2,
+  product_billing_config: BadgeDollarSign,
+  invoicing: FileCheck,
 };
 
 interface CategoryBreakdownProps {

@@ -19,6 +19,7 @@ create table public.users (
   timezone text default 'Asia/Kolkata',
   avatar_url text,
   plan text default 'free' check (plan in ('free', 'solo', 'practice', 'partner')),
+  subscribed_products jsonb default '["cpq"]'::jsonb,
   email_notifications_enabled boolean default true,
   created_at timestamptz default now(),
   updated_at timestamptz default now()
@@ -71,6 +72,7 @@ create table public.scans (
   user_id uuid references public.users(id) on delete cascade not null,
   status text default 'pending' check (status in ('pending', 'running', 'completed', 'failed')),
   scan_type text default 'full' check (scan_type in ('full', 'quick')),
+  product_type text default 'cpq' check (product_type in ('cpq', 'cpq_billing', 'arm')),
   overall_score integer,
   category_scores jsonb,
   summary text,
@@ -102,7 +104,9 @@ create table public.issues (
     'cpq_settings', 'subscriptions', 'twin_fields', 'contracted_prices', 'quote_lines',
     'summary_variables', 'approval_rules', 'quote_calculator_plugin',
     'quote_templates', 'configuration_attributes', 'guided_selling', 'advanced_pricing',
-    'performance', 'impact_analysis'
+    'performance', 'impact_analysis',
+    'billing_rules', 'rev_rec_rules', 'tax_rules', 'finance_books',
+    'gl_rules', 'legal_entity', 'product_billing_config', 'invoicing'
   )),
   severity text not null check (severity in ('critical', 'warning', 'info')),
   title text not null,
