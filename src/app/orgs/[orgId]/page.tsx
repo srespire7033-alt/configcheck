@@ -495,34 +495,46 @@ export default function OrgDetailPage() {
               {/* Actions */}
               <div className="flex flex-col gap-2 sm:gap-3 flex-shrink-0 w-full lg:w-auto">
                 {/* Scan type pills */}
-                {detectingPackages ? (
-                  <div className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 self-center lg:self-auto">
-                    <RefreshCw className="w-3.5 h-3.5 animate-spin text-gray-400" />
-                    <span className="text-xs text-gray-500 dark:text-gray-400">Detecting packages...</span>
-                  </div>
-                ) : availableScanTypes.length > 1 ? (
-                  <div className="inline-flex rounded-xl bg-gray-100 dark:bg-gray-800 p-1 border border-gray-200 dark:border-gray-700 self-center lg:self-auto">
-                    {availableScanTypes.map(({ value, label }) => (
-                      <button
-                        key={value}
-                        onClick={() => setScanProductType(value as ProductType)}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${
-                          scanProductType === value
-                            ? 'bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-sm'
-                            : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
-                        }`}
-                      >
-                        {label}
-                      </button>
-                    ))}
-                  </div>
-                ) : availableScanTypes.length === 1 ? (
-                  <div className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600/10 to-cyan-600/10 dark:from-blue-500/15 dark:to-cyan-500/15 border border-blue-200/60 dark:border-blue-700/50 self-center lg:self-auto">
-                    <ShieldCheck className="w-4 h-4 text-blue-500 dark:text-blue-400" />
-                    <span className="text-sm font-semibold text-blue-700 dark:text-blue-300">{availableScanTypes[0].label}</span>
-                    <span className="text-[10px] font-medium text-blue-500/70 dark:text-blue-400/60 uppercase tracking-wider">scan</span>
-                  </div>
-                ) : null}
+                <div className="flex items-center gap-2 self-center lg:self-auto">
+                  {detectingPackages ? (
+                    <div className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin text-gray-400" />
+                      <span className="text-xs text-gray-500 dark:text-gray-400">Detecting packages...</span>
+                    </div>
+                  ) : availableScanTypes.length > 1 ? (
+                    <div className="inline-flex rounded-xl bg-gray-100 dark:bg-gray-800 p-1 border border-gray-200 dark:border-gray-700">
+                      {availableScanTypes.map(({ value, label }) => (
+                        <button
+                          key={value}
+                          onClick={() => setScanProductType(value as ProductType)}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${
+                            scanProductType === value
+                              ? 'bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-sm'
+                              : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                          }`}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                  ) : availableScanTypes.length === 1 ? (
+                    <div className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600/10 to-cyan-600/10 dark:from-blue-500/15 dark:to-cyan-500/15 border border-blue-200/60 dark:border-blue-700/50">
+                      <ShieldCheck className="w-4 h-4 text-blue-500 dark:text-blue-400" />
+                      <span className="text-sm font-semibold text-blue-700 dark:text-blue-300">{availableScanTypes[0].label}</span>
+                      <span className="text-[10px] font-medium text-blue-500/70 dark:text-blue-400/60 uppercase tracking-wider">scan</span>
+                    </div>
+                  ) : null}
+                  {/* Re-detect packages button */}
+                  {!detectingPackages && (
+                    <button
+                      onClick={() => org && detectPackages(org.id)}
+                      className="p-1.5 rounded-lg text-gray-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+                      title="Re-detect installed packages"
+                    >
+                      <RefreshCw className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
                 {/* Action buttons */}
                 <div className="grid grid-cols-3 lg:grid-cols-1 gap-2 sm:gap-3">
                   <a
