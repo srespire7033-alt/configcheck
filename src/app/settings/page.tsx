@@ -3,9 +3,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-  Save, LogOut, Upload, X, Scan, FileText, Sparkles,
+  Save, LogOut, Upload, X,
   Bell, BellOff, Crown, Shield, CheckCircle2, Zap,
-  BarChart3, Clock, ExternalLink, User, Palette,
+  Clock, ExternalLink, User, Palette,
   CreditCard, Activity, Phone, MapPin, Briefcase, Globe, Mail
 } from 'lucide-react';
 import { createClient } from '@/lib/db/client';
@@ -269,7 +269,15 @@ export default function SettingsPage() {
 
   const planInfo = PLAN_INFO[plan] || PLAN_INFO.free;
   const scanLimit = plan === 'free' ? 10 : plan === 'solo' ? 30 : null;
-  const scanPercent = scanLimit && usage ? Math.min((usage.scans_this_month / scanLimit) * 100, 100) : null;
+  const aiLimit = plan === 'free' ? 5 : plan === 'solo' ? 30 : null;
+  const pdfLimit = plan === 'free' ? 5 : plan === 'solo' ? null : null; // null = unlimited
+  const orgLimit = plan === 'free' ? 3 : plan === 'solo' ? 5 : null;
+
+  // Reset date: 1st of next month
+  const now = new Date();
+  const resetDate = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+  const resetDateStr = resetDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+  const daysUntilReset = Math.ceil((resetDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
   const memberSince = createdAt
     ? new Date(createdAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
     : null;
@@ -421,12 +429,43 @@ export default function SettingsPage() {
                 </div>
               </SectionCard>
 
-              <SectionCard title="Plan Limits" description="Resource limits for your current plan.">
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                  <LimitCard label="Connected Orgs" value={planInfo.limits.orgs} />
-                  <LimitCard label="Scans" value={planInfo.limits.scans} />
-                  <LimitCard label="AI Calls" value={planInfo.limits.ai} />
-                  <LimitCard label="PDF Reports" value={planInfo.limits.reports} />
+              {/* Usage limits with progress bars */}
+              <SectionCard title="Plan Usage" description={`Resets on ${resetDateStr} (${daysUntilReset} days)`}>
+                <div className="space-y-5">
+                  <UsageBar
+                    label="Scans"
+                    description={`Up to ${scanLimit ?? '∞'} scans per month`}
+                    used={usage?.scans_this_month ?? 0}
+                    limit={scanLimit}
+                    color="blue"
+                    resetDate={resetDateStr}
+                  />
+                  <div className="border-t border-gray-100 dark:border-gray-800" />
+                  <UsageBar
+                    label="AI Remediation Calls"
+                    description={`Up to ${aiLimit ?? '∞'} AI calls per month`}
+                    used={usage?.ai_calls_this_month ?? 0}
+                    limit={aiLimit}
+                    color="purple"
+                    resetDate={resetDateStr}
+                  />
+                  <div className="border-t border-gray-100 dark:border-gray-800" />
+                  <UsageBar
+                    label="PDF Reports"
+                    description={pdfLimit ? `Up to ${pdfLimit} reports per month` : 'Unlimited reports'}
+                    used={usage?.pdf_reports_this_month ?? 0}
+                    limit={pdfLimit}
+                    color="green"
+                    resetDate={resetDateStr}
+                  />
+                  <div className="border-t border-gray-100 dark:border-gray-800" />
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Connected Orgs</p>
+                      <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Up to {orgLimit ?? '∞'} Salesforce orgs</p>
+                    </div>
+                    <span className="text-sm font-mono text-gray-500 dark:text-gray-400">No limit on current plan</span>
+                  </div>
                 </div>
               </SectionCard>
 
@@ -446,45 +485,43 @@ export default function SettingsPage() {
           {/* ==================== USAGE TAB ==================== */}
           {activeTab === 'usage' && (
             <div className="space-y-6">
-              <SectionCard title="Usage This Month" description="Track your monthly consumption across features.">
+              <SectionCard title="Usage This Month" description={`Resets on ${resetDateStr} (${daysUntilReset} days remaining)`}>
                 {usage ? (
-                  <div className="space-y-6">
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                      <UsageTile icon={<Scan className="w-5 h-5" />} value={usage.scans_this_month} label="Scans" limit={scanLimit} color="blue" />
-                      <UsageTile icon={<Sparkles className="w-5 h-5" />} value={usage.ai_calls_this_month} label="AI Calls" color="purple" />
-                      <UsageTile icon={<FileText className="w-5 h-5" />} value={usage.pdf_reports_this_month} label="PDF Reports" color="green" />
-                      <UsageTile icon={<BarChart3 className="w-5 h-5" />} value={usage.total_scans} label="All-time Scans" color="gray" />
-                    </div>
-
-                    {scanPercent !== null && (
-                      <div className="p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
-                        <div className="flex items-center justify-between text-sm mb-2">
-                          <span className="font-medium text-gray-700 dark:text-gray-300">Monthly Scan Quota</span>
-                          <span className="font-mono text-gray-500 dark:text-gray-400">
-                            {usage.scans_this_month} of {scanLimit} used
-                          </span>
-                        </div>
-                        <div className="w-full h-2.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                          <div
-                            className={`h-full rounded-full transition-all duration-500 ${
-                              scanPercent >= 100 ? 'bg-red-500' : scanPercent > 75 ? 'bg-amber-500' : 'bg-blue-500'
-                            }`}
-                            style={{ width: `${scanPercent}%` }}
-                          />
-                        </div>
-                        {scanPercent >= 100 && (
-                          <div className="flex items-center justify-between mt-2">
-                            <p className="text-xs text-red-600 dark:text-red-400 flex items-center gap-1">
-                              <Zap className="w-3 h-3" />
-                              Scan limit reached
-                            </p>
-                            <a href="/#pricing" className="text-xs text-blue-600 dark:text-blue-400 hover:underline font-medium">
-                              Upgrade to continue
-                            </a>
-                          </div>
-                        )}
+                  <div className="space-y-5">
+                    <UsageBar
+                      label="Scans"
+                      description={`Up to ${scanLimit ?? '∞'} scans per month`}
+                      used={usage.scans_this_month}
+                      limit={scanLimit}
+                      color="blue"
+                      resetDate={resetDateStr}
+                    />
+                    <div className="border-t border-gray-100 dark:border-gray-800" />
+                    <UsageBar
+                      label="AI Remediation Calls"
+                      description={`Up to ${aiLimit ?? '∞'} AI calls per month`}
+                      used={usage.ai_calls_this_month}
+                      limit={aiLimit}
+                      color="purple"
+                      resetDate={resetDateStr}
+                    />
+                    <div className="border-t border-gray-100 dark:border-gray-800" />
+                    <UsageBar
+                      label="PDF Reports"
+                      description={pdfLimit ? `Up to ${pdfLimit} reports per month` : 'Unlimited reports'}
+                      used={usage.pdf_reports_this_month}
+                      limit={pdfLimit}
+                      color="green"
+                      resetDate={resetDateStr}
+                    />
+                    <div className="border-t border-gray-100 dark:border-gray-800" />
+                    <div className="flex items-center justify-between py-1">
+                      <div>
+                        <p className="text-sm font-medium text-gray-700 dark:text-gray-300">All-time Scans</p>
+                        <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Total scans run across all orgs</p>
                       </div>
-                    )}
+                      <span className="text-lg font-bold text-gray-900 dark:text-white">{usage.total_scans}</span>
+                    </div>
                   </div>
                 ) : (
                   <div className="flex items-center gap-2 py-8 justify-center text-sm text-gray-500 dark:text-gray-400">
@@ -815,47 +852,75 @@ function SaveBar({
   );
 }
 
-function LimitCard({ label, value }: { label: string; value: string }) {
-  const isUnlimited = value === 'Unlimited';
-  return (
-    <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 p-4 text-center shadow-sm">
-      <p className={`text-xl font-bold ${isUnlimited ? 'text-green-600 dark:text-green-400' : 'text-gray-900 dark:text-white'}`}>
-        {value}
-      </p>
-      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1.5 font-medium">{label}</p>
-    </div>
-  );
-}
-
-function UsageTile({
-  icon,
-  value,
+function UsageBar({
   label,
+  description,
+  used,
   limit,
   color,
+  resetDate,
 }: {
-  icon: React.ReactNode;
-  value: number;
   label: string;
-  limit?: number | null;
-  color: 'blue' | 'purple' | 'green' | 'gray';
+  description: string;
+  used: number;
+  limit: number | null;
+  color: 'blue' | 'purple' | 'green';
+  resetDate: string;
 }) {
-  const colorMap = {
-    blue: { bg: 'bg-blue-50 dark:bg-blue-900/20', icon: 'text-blue-500 dark:text-blue-400', text: 'text-blue-700 dark:text-blue-300' },
-    purple: { bg: 'bg-purple-50 dark:bg-purple-900/20', icon: 'text-purple-500 dark:text-purple-400', text: 'text-purple-700 dark:text-purple-300' },
-    green: { bg: 'bg-green-50 dark:bg-green-900/20', icon: 'text-green-500 dark:text-green-400', text: 'text-green-700 dark:text-green-300' },
-    gray: { bg: 'bg-gray-50 dark:bg-gray-800', icon: 'text-gray-500 dark:text-gray-400', text: 'text-gray-700 dark:text-gray-300' },
-  };
-  const c = colorMap[color];
+  const isUnlimited = limit === null;
+  const percent = isUnlimited ? 0 : Math.min((used / limit) * 100, 100);
+  const isAtLimit = !isUnlimited && used >= limit;
+  const isNearLimit = !isUnlimited && percent > 75 && !isAtLimit;
+
+  const barColor = isAtLimit
+    ? 'bg-red-500'
+    : isNearLimit
+      ? 'bg-amber-500'
+      : color === 'blue' ? 'bg-blue-500' : color === 'purple' ? 'bg-purple-500' : 'bg-green-500';
 
   return (
-    <div className={`${c.bg} rounded-xl p-4 text-center`}>
-      <div className={`${c.icon} flex justify-center mb-2`}>{icon}</div>
-      <p className={`text-2xl font-bold ${c.text}`}>
-        {value}
-        {limit && <span className="text-sm font-normal opacity-60">/{limit}</span>}
-      </p>
-      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{label}</p>
+    <div className="space-y-2.5">
+      <div className="flex items-start justify-between">
+        <div>
+          <p className="text-sm font-medium text-gray-700 dark:text-gray-300">{label}</p>
+          <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{description}</p>
+        </div>
+        <span className="text-sm font-mono text-gray-500 dark:text-gray-400 tabular-nums">
+          {isUnlimited ? (
+            <>{used} used</>
+          ) : (
+            <>{used} <span className="text-gray-300 dark:text-gray-600">/</span> {limit}</>
+          )}
+        </span>
+      </div>
+
+      {!isUnlimited && (
+        <div className="w-full h-2 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
+          <div
+            className={`h-full rounded-full transition-all duration-500 ${barColor}`}
+            style={{ width: `${Math.max(percent, used > 0 ? 2 : 0)}%` }}
+          />
+        </div>
+      )}
+
+      {isAtLimit && (
+        <div className="flex items-center justify-between p-3 bg-red-50 dark:bg-red-900/15 border border-red-200 dark:border-red-800/40 rounded-lg">
+          <div className="flex items-center gap-2">
+            <Zap className="w-3.5 h-3.5 text-red-500" />
+            <p className="text-xs text-red-600 dark:text-red-400 font-medium">
+              {label} limit reached — resets {resetDate}
+            </p>
+          </div>
+          <a href="/#pricing" className="text-xs text-blue-600 dark:text-blue-400 hover:underline font-semibold flex-shrink-0 ml-4">
+            Upgrade plan
+          </a>
+        </div>
+      )}
+      {isNearLimit && (
+        <p className="text-xs text-amber-600 dark:text-amber-400">
+          {limit - used} remaining — resets {resetDate}
+        </p>
+      )}
     </div>
   );
 }
