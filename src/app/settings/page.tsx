@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Save, LogOut, Upload, X,
-  Bell, BellOff, Crown, CheckCircle2, Zap, Gift,
+  Bell, BellOff, CheckCircle2, Zap,
   Clock, ExternalLink, User, Palette,
   CreditCard, Activity, Phone, MapPin, Briefcase, Globe, Mail
 } from 'lucide-react';
@@ -402,13 +402,12 @@ export default function SettingsPage() {
                 {/* Active plan card */}
                 <div className={`flex items-center justify-between p-5 rounded-xl border-2 ${planInfo.border} ${planInfo.bg} shadow-sm`}>
                   <div className="flex items-center gap-4">
-                    <div className={`w-12 h-12 rounded-xl ${planInfo.bg} border-2 ${planInfo.border} flex items-center justify-center shadow-sm`}>
-                      {plan === 'enterprise'
-                        ? <Crown className={`w-6 h-6 ${planInfo.color}`} />
-                        : plan === 'pro'
-                          ? <Zap className={`w-6 h-6 ${planInfo.color}`} />
-                          : <Gift className={`w-6 h-6 ${planInfo.color}`} />
-                      }
+                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center shadow-sm text-xl ${
+                      plan === 'enterprise' ? 'bg-purple-600 text-white' :
+                      plan === 'pro' ? 'bg-blue-600 text-white' :
+                      'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
+                    }`}>
+                      {plan === 'enterprise' ? '👑' : plan === 'pro' ? '⚡' : '🎁'}
                     </div>
                     <div>
                       <div className="flex items-baseline gap-2">
