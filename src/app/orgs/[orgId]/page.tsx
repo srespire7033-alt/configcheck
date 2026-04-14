@@ -94,14 +94,14 @@ export default function OrgDetailPage() {
         const completedScans = scans.filter((s: DBScan) => s.status === 'completed');
         setAllScans(completedScans);
 
-        // Check if there's a running/pending scan — resume polling only if recent (< 5 min old)
+        // Check if there's a running/pending scan — resume polling only if recent (< 10 min old)
+        // Heavy orgs can take up to 3-4 min for scan + AI summary, plus network buffer
         const runningScan = scans.find((s: DBScan) => s.status === 'running' || s.status === 'pending');
         if (runningScan) {
           const scanAge = Date.now() - new Date(runningScan.created_at).getTime();
-          if (scanAge < 5 * 60 * 1000) {
+          if (scanAge < 10 * 60 * 1000) {
             pollForScan(runningScan.id);
           }
-          // Stale scans (> 5 min) are silently ignored — they likely failed
         }
 
         // Use the latest COMPLETED scan, not running/failed ones
