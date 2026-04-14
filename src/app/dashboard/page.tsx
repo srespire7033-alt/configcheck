@@ -17,8 +17,16 @@ function DashboardContent() {
   const successMsg = searchParams.get('success');
   const errorMsg = searchParams.get('error');
 
+  // Refetch orgs on mount AND when page becomes visible again
+  // (Next.js client-side router cache can serve stale data on back-navigation)
   useEffect(() => {
     fetchOrgs();
+
+    const refetch = () => {
+      if (document.visibilityState === 'visible') fetchOrgs();
+    };
+    document.addEventListener('visibilitychange', refetch);
+    return () => document.removeEventListener('visibilitychange', refetch);
   }, []);
 
   async function fetchOrgs() {
