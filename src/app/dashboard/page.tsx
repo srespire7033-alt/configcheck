@@ -56,10 +56,17 @@ function DashboardContent() {
   async function handleScan(orgId: string) {
     setScanningOrg(orgId);
     try {
+      // Determine the best scan type from installed packages
+      const org = orgs.find((o) => o.id === orgId);
+      const packages = org?.installed_packages || [];
+      const hasCPQ = packages.includes('cpq');
+      const hasBilling = packages.includes('billing');
+      const productType = hasCPQ && hasBilling ? 'cpq_billing' : hasCPQ ? 'cpq' : 'cpq';
+
       const res = await fetch('/api/scans', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ organizationId: orgId }),
+        body: JSON.stringify({ organizationId: orgId, productType }),
       });
       const { scanId } = await res.json();
 

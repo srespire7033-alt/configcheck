@@ -635,6 +635,7 @@ export interface OrgCardData {
   last_scan_score: number | null;
   last_scan_at: string | null;
   critical_count: number;
+  installed_packages?: string[];
 }
 
 export interface IssueFilters {
