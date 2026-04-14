@@ -269,7 +269,21 @@ async function runScanInBackground(
     // Calculate actual full scan duration
     const totalDurationMs = Date.now() - scanStartTime;
 
-    // Step 6: Update scan with results
+    // Step 6: Update org FIRST (before marking scan completed)
+    // This prevents the race condition where the client sees 'completed'
+    // but reads stale org data because the org update hasn't happened yet.
+    await supabase
+      .from('organizations')
+      .update({
+        last_scan_score: result.overall_score,
+        last_scan_at: new Date().toISOString(),
+        total_price_rules: cpqData.priceRules.length,
+        total_products: cpqData.products.length,
+        total_quote_lines: cpqData.quoteLines.length,
+      })
+      .eq('id', org.id as string);
+
+    // Now mark scan as completed (client polls for this status)
     await supabase
       .from('scans')
       .update({
@@ -310,18 +324,6 @@ async function runScanInBackground(
         completed_at: new Date().toISOString(),
       })
       .eq('id', scanId);
-
-    // Update org with latest scan info
-    await supabase
-      .from('organizations')
-      .update({
-        last_scan_score: result.overall_score,
-        last_scan_at: new Date().toISOString(),
-        total_price_rules: cpqData.priceRules.length,
-        total_products: cpqData.products.length,
-        total_quote_lines: cpqData.quoteLines.length,
-      })
-      .eq('id', org.id as string);
 
     console.log(`[SCAN ${scanId}] ✅ Completed in ${(totalDurationMs / 1000).toFixed(1)}s — Score: ${result.overall_score}/100`);
 

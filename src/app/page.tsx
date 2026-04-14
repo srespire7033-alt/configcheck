@@ -79,7 +79,7 @@ export default function LandingPage() {
           {/* Badge */}
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 text-blue-700 dark:text-blue-400 text-sm font-medium mb-8">
             <Sparkles className="h-4 w-4" />
-            AI-Powered Salesforce CPQ Auditor
+            AI-Powered Salesforce Configuration Auditor
           </div>
 
           <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight mb-6 leading-[1.1]">
@@ -91,8 +91,8 @@ export default function LandingPage() {
           </h1>
 
           <p className="text-lg md:text-xl text-gray-600 dark:text-gray-400 max-w-2xl mx-auto mb-10 leading-relaxed">
-            Connect your Salesforce org, run 68 health checks in seconds, and get AI-powered fix suggestions.
-            Built for CPQ consultants who need to deliver audits fast.
+            Connect your Salesforce org, run 100+ health checks in seconds, and get AI-powered fix suggestions.
+            Built for CPQ, Billing &amp; ARM consultants who need to deliver audits fast.
           </p>
 
           <div className="flex items-center justify-center gap-4 mb-16">
@@ -156,7 +156,7 @@ export default function LandingPage() {
               },
               {
                 icon: Zap,
-                title: '68 Automated Health Checks',
+                title: '100+ Automated Health Checks',
                 desc: 'Price rules, discount schedules, products, approval rules, QCP scripts, and 12 more categories scanned automatically.',
                 color: 'amber',
               },
@@ -231,7 +231,7 @@ export default function LandingPage() {
                 step: '02',
                 icon: Target,
                 title: 'Run Health Scan',
-                desc: '68 checks across 17 categories execute in under 30 seconds. Issues are ranked by severity with affected records.',
+                desc: '100+ checks across CPQ, Billing &amp; ARM execute in under 30 seconds. Issues are ranked by severity with affected records.',
               },
               {
                 step: '03',
@@ -262,7 +262,7 @@ export default function LandingPage() {
       <section id="checks" className="py-24">
         <div className="max-w-7xl mx-auto px-6">
           <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">68 Health Checks Across 17 Categories</h2>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">100+ Health Checks Across CPQ, Billing &amp; ARM</h2>
             <p className="text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
               Every critical CPQ configuration area is covered. Issues are classified as Critical, Warning, or Info.
             </p>
@@ -351,7 +351,7 @@ export default function LandingPage() {
               <ul className="space-y-4">
                 {[
                   'Full audit in under 30 seconds',
-                  '68 automated checks catch every issue',
+                  '100+ automated checks catch every issue',
                   'Consistent, repeatable audit process',
                   'Professional PDF reports in one click',
                   'Track health over time with scan history',
@@ -384,7 +384,7 @@ export default function LandingPage() {
               <div className="text-4xl font-bold mb-1">$0</div>
               <div className="text-sm text-gray-500 dark:text-gray-400 mb-6">forever</div>
               <ul className="space-y-3 mb-8">
-                {['1 Salesforce org', '5 scans per month', '68 health checks', 'AI fix suggestions', 'Basic PDF report'].map((f, i) => (
+                {['1 Salesforce org', '5 scans per month', '100+ health checks', 'AI fix suggestions', 'Basic PDF report'].map((f, i) => (
                   <li key={i} className="flex items-center gap-2 text-sm">
                     <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0" />
                     {f}

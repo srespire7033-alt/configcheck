@@ -10,11 +10,11 @@ const geistSans = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "ConfigCheck - Salesforce CPQ Health Audit",
-  description: "AI-powered Salesforce CPQ configuration auditor for consulting firms",
+  title: "ConfigCheck - Salesforce Configuration Audit",
+  description: "AI-powered Salesforce configuration auditor for CPQ, Billing, and ARM",
   openGraph: {
-    title: "ConfigCheck - Salesforce CPQ Health Audit",
-    description: "68 automated checks across 17 categories. AI-powered fix suggestions and remediation plans for Salesforce CPQ.",
+    title: "ConfigCheck - Salesforce Configuration Audit",
+    description: "100+ automated checks across CPQ, Billing, and ARM. AI-powered fix suggestions and remediation plans for Salesforce.",
     siteName: "ConfigCheck",
     type: "website",
   },

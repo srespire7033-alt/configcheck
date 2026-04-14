@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, RefreshCw, Sparkles, Download, FileBarChart, CalendarClock, ShieldCheck, FileSpreadsheet, ChevronDown, AlertTriangle, AlertCircle, Info, TrendingUp, History, X } from 'lucide-react';
 import { getCategoryLabel } from '@/lib/utils';
@@ -42,6 +42,17 @@ export default function OrgDetailPage() {
   const [scanProductType, setScanProductType] = useState<ProductType>('cpq');
   const [availableScanTypes, setAvailableScanTypes] = useState<Array<{ value: string; label: string }>>([]);
   const [detectingPackages, setDetectingPackages] = useState(false);
+  const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Cleanup polling on unmount
+  useEffect(() => {
+    return () => {
+      if (pollIntervalRef.current) {
+        clearInterval(pollIntervalRef.current);
+        pollIntervalRef.current = null;
+      }
+    };
+  }, []);
 
   useEffect(() => {
     fetchData();
@@ -82,6 +93,13 @@ export default function OrgDetailPage() {
         const scans = await scansRes.json();
         const completedScans = scans.filter((s: DBScan) => s.status === 'completed');
         setAllScans(completedScans);
+
+        // Check if there's a running/pending scan — resume polling if so
+        const runningScan = scans.find((s: DBScan) => s.status === 'running' || s.status === 'pending');
+        if (runningScan) {
+          pollForScan(runningScan.id);
+        }
+
         // Use the latest COMPLETED scan, not running/failed ones
         const latestScan = completedScans.length > 0 ? completedScans[0] : (scans.length > 0 ? scans[0] : null);
         if (latestScan) {
@@ -192,6 +210,47 @@ export default function OrgDetailPage() {
     }
   }
 
+  // Poll for a running/pending scan until it completes
+  function pollForScan(scanId: string) {
+    // Clear any existing poll
+    if (pollIntervalRef.current) {
+      clearInterval(pollIntervalRef.current);
+    }
+
+    setScanning(true);
+    let pollCount = 0;
+    const maxPolls = 65; // 65 × 3s = ~195s max
+
+    pollIntervalRef.current = setInterval(async () => {
+      pollCount++;
+      try {
+        const statusRes = await fetch(`/api/scans?scanId=${scanId}`);
+        const scanData = await statusRes.json();
+        if (scanData.status === 'completed' || scanData.status === 'failed') {
+          if (pollIntervalRef.current) {
+            clearInterval(pollIntervalRef.current);
+            pollIntervalRef.current = null;
+          }
+          setScanning(false);
+          if (scanData.status === 'failed' && scanData.error_message) {
+            setError(scanData.error_message);
+          }
+          fetchData();
+        } else if (pollCount >= maxPolls) {
+          if (pollIntervalRef.current) {
+            clearInterval(pollIntervalRef.current);
+            pollIntervalRef.current = null;
+          }
+          setScanning(false);
+          setError('Scan timed out. Please try again.');
+          fetchData();
+        }
+      } catch {
+        // Network error during poll — keep trying
+      }
+    }, 3000);
+  }
+
   async function handleScan() {
     setScanning(true);
     try {
@@ -201,27 +260,7 @@ export default function OrgDetailPage() {
         body: JSON.stringify({ organizationId: orgId, productType: scanProductType }),
       });
       const { scanId } = await res.json();
-
-      let pollCount = 0;
-      const maxPolls = 65; // 65 × 3s = ~195s max (matches 180s server timeout + buffer)
-      const interval = setInterval(async () => {
-        pollCount++;
-        const statusRes = await fetch(`/api/scans?scanId=${scanId}`);
-        const scanData = await statusRes.json();
-        if (scanData.status === 'completed' || scanData.status === 'failed') {
-          clearInterval(interval);
-          setScanning(false);
-          if (scanData.status === 'failed' && scanData.error_message) {
-            setError(scanData.error_message);
-          }
-          fetchData();
-        } else if (pollCount >= maxPolls) {
-          clearInterval(interval);
-          setScanning(false);
-          setError('Scan timed out. Please try again.');
-          fetchData();
-        }
-      }, 3000);
+      pollForScan(scanId);
     } catch (error) {
       console.error('Failed to start scan:', error);
       setScanning(false);
@@ -347,7 +386,7 @@ export default function OrgDetailPage() {
               </div>
               <div>
                 <h1 className="text-xl font-semibold">ConfigCheck</h1>
-                <p className="text-sm text-white/80">AI-Powered CPQ Configuration Auditor</p>
+                <p className="text-sm text-white/80">AI-Powered Salesforce Configuration Auditor</p>
               </div>
             </div>
             <div className="flex items-center gap-4">

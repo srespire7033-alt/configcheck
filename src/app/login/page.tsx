@@ -98,8 +98,8 @@ export default function LoginPage() {
                 <Zap className="h-4 w-4" />
               </div>
               <div>
-                <p className="font-semibold">68 Health Checks</p>
-                <p className="text-sm text-blue-200">17 categories covering price rules, products, QCP scripts & more</p>
+                <p className="font-semibold">100+ Health Checks</p>
+                <p className="text-sm text-blue-200">CPQ, Billing &amp; ARM — price rules, products, invoicing &amp; more</p>
               </div>
             </div>
             <div className="flex items-start gap-3">
