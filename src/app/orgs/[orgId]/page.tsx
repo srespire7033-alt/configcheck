@@ -264,19 +264,9 @@ export default function OrgDetailPage() {
         body: JSON.stringify({ organizationId: orgId, productType: scanProductType }),
       });
 
-      // Read only the FIRST chunk from the stream (contains scanId).
-      // Don't use res.text() — that waits for the entire stream to close,
-      // which only happens after the scan finishes, blocking polling.
-      const reader = res.body?.getReader();
-      if (!reader) throw new Error('No response body');
-      const { value } = await reader.read();
-      // Release the reader — we don't need the rest of the stream
-      reader.releaseLock();
-
-      const text = new TextDecoder().decode(value);
-      const { scanId } = JSON.parse(text);
-      if (!scanId) throw new Error('No scanId returned');
-      pollForScan(scanId);
+      const data = await res.json();
+      if (!data.scanId) throw new Error(data.error || 'No scanId returned');
+      pollForScan(data.scanId);
     } catch (error) {
       console.error('Failed to start scan:', error);
       setScanning(false);

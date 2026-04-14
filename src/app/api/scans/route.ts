@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { waitUntil } from '@vercel/functions';
 import { createServiceClient } from '@/lib/db/client';
 import { getAuthUser } from '@/lib/auth/get-user';
 import { createRefreshableConnection } from '@/lib/salesforce/client';
@@ -16,7 +17,8 @@ export const maxDuration = 180;
 /**
  * POST /api/scans
  * Start a new health check scan for an org.
- * Runs the full scan synchronously and returns the result.
+ * Creates the scan record, returns scanId immediately,
+ * then runs the scan in the background via waitUntil.
  * Client polls GET /api/scans?scanId=xxx for status updates.
  */
 export async function POST(request: NextRequest) {
@@ -69,17 +71,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to create scan' }, { status: 500 });
     }
 
-    // Use a streaming response to keep the Vercel function alive.
-    // Send the scanId immediately so the client can start polling,
-    // then run the scan in the same function context.
-    const stream = new TransformStream();
-    const writer = stream.writable.getWriter();
-
-    // Start scan in parallel — writes to stream when done
-    const scanPromise = (async () => {
-      try {
-        await runScanInBackground(scan.id, org, productType);
-      } catch (error) {
+    // Use waitUntil to run the scan AFTER the response is sent.
+    // This keeps the Vercel function alive for up to maxDuration (180s)
+    // while the scan runs in the background.
+    waitUntil(
+      runScanInBackground(scan.id, org, productType).catch(async (error) => {
         console.error('[SCAN] Scan execution failed:', error);
         const svc = createServiceClient();
         const failUpdate = {
@@ -89,24 +85,11 @@ export async function POST(request: NextRequest) {
         };
         await svc.from('scans').update(failUpdate).eq('id', scan.id).eq('status', 'running');
         await svc.from('scans').update(failUpdate).eq('id', scan.id).eq('status', 'pending');
-      } finally {
-        await writer.close();
-      }
-    })();
+      })
+    );
 
-    // Write the scanId immediately
-    const encoder = new TextEncoder();
-    await writer.write(encoder.encode(JSON.stringify({ scanId: scan.id, status: 'pending' })));
-
-    // Keep function alive by referencing the promise
-    void scanPromise;
-
-    return new Response(stream.readable, {
-      headers: {
-        'Content-Type': 'application/json',
-        'Transfer-Encoding': 'chunked',
-      },
-    });
+    // Return scanId immediately — client starts polling right away
+    return NextResponse.json({ scanId: scan.id, status: 'pending' });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json({ error: message }, { status: 500 });
