@@ -694,7 +694,7 @@ export default function OrgDetailPage() {
             )}
           </div>
 
-          {/* ===== CATEGORY ISSUES PANEL ===== */}
+          {/* ===== CATEGORY ISSUES MODAL ===== */}
           {selectedCategory && (() => {
             const catIssues = issues.filter(i => i.category === selectedCategory);
             const catCritical = catIssues.filter(i => i.severity === 'critical');
@@ -702,90 +702,99 @@ export default function OrgDetailPage() {
             const catInfo = catIssues.filter(i => i.severity === 'info');
 
             return (
-              <div className="bg-white dark:bg-[#111827] rounded-2xl shadow-sm border border-blue-200 dark:border-blue-800/50 mb-8 overflow-hidden">
-                {/* Panel header */}
-                <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between bg-blue-50/50 dark:bg-blue-900/10">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                    {getCategoryLabel(selectedCategory)} Issues
-                    <span className="ml-2 text-sm font-normal text-gray-500 dark:text-gray-400">
-                      ({catIssues.length} total)
-                    </span>
-                  </h3>
-                  <button
-                    onClick={() => setSelectedCategory(null)}
-                    className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition"
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
+              <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                {/* Backdrop */}
+                <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setSelectedCategory(null)} />
+
+                {/* Modal */}
+                <div className="relative bg-white dark:bg-[#111827] rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 w-full max-w-3xl max-h-[85vh] flex flex-col overflow-hidden">
+                  {/* Header */}
+                  <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between bg-gray-50 dark:bg-gray-900/50 flex-shrink-0">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                      {getCategoryLabel(selectedCategory)} Issues
+                      <span className="ml-2 text-sm font-normal text-gray-500 dark:text-gray-400">
+                        ({catIssues.length} total)
+                      </span>
+                    </h3>
+                    <button
+                      onClick={() => setSelectedCategory(null)}
+                      className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+
+                  {/* Scrollable content */}
+                  <div className="overflow-y-auto flex-1">
+                    {catIssues.length === 0 ? (
+                      <div className="px-6 py-10 text-center">
+                        <p className="text-sm text-gray-500 dark:text-gray-400">No issues found in this category.</p>
+                      </div>
+                    ) : (
+                      <div>
+                        {/* Critical */}
+                        {catCritical.length > 0 && (
+                          <div>
+                            <div className="px-6 py-2.5 bg-red-50/50 dark:bg-red-950/20 border-b border-gray-100 dark:border-gray-800 flex items-center gap-2 sticky top-0 z-10">
+                              <AlertCircle className="w-4 h-4 text-red-500" />
+                              <span className="text-sm font-semibold text-red-700 dark:text-red-400">Critical ({catCritical.length})</span>
+                            </div>
+                            <div className="divide-y divide-gray-100 dark:divide-gray-800">
+                              {catCritical.map((issue) => (
+                                <IssueCard
+                                  key={issue.id}
+                                  issue={issue}
+                                  onClick={() => setSelectedIssue(issue)}
+                                  onStatusChange={handleIssueStatusChange}
+                                />
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Warning */}
+                        {catWarning.length > 0 && (
+                          <div>
+                            <div className="px-6 py-2.5 bg-amber-50/50 dark:bg-amber-950/20 border-b border-gray-100 dark:border-gray-800 flex items-center gap-2 sticky top-0 z-10">
+                              <AlertTriangle className="w-4 h-4 text-amber-500" />
+                              <span className="text-sm font-semibold text-amber-700 dark:text-amber-400">Warnings ({catWarning.length})</span>
+                            </div>
+                            <div className="divide-y divide-gray-100 dark:divide-gray-800">
+                              {catWarning.map((issue) => (
+                                <IssueCard
+                                  key={issue.id}
+                                  issue={issue}
+                                  onClick={() => setSelectedIssue(issue)}
+                                  onStatusChange={handleIssueStatusChange}
+                                />
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Best Practice */}
+                        {catInfo.length > 0 && (
+                          <div>
+                            <div className="px-6 py-2.5 bg-blue-50/50 dark:bg-blue-950/20 border-b border-gray-100 dark:border-gray-800 flex items-center gap-2 sticky top-0 z-10">
+                              <Info className="w-4 h-4 text-blue-500" />
+                              <span className="text-sm font-semibold text-blue-700 dark:text-blue-400">Best Practices ({catInfo.length})</span>
+                            </div>
+                            <div className="divide-y divide-gray-100 dark:divide-gray-800">
+                              {catInfo.map((issue) => (
+                                <IssueCard
+                                  key={issue.id}
+                                  issue={issue}
+                                  onClick={() => setSelectedIssue(issue)}
+                                  onStatusChange={handleIssueStatusChange}
+                                />
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
-
-                {catIssues.length === 0 ? (
-                  <div className="px-6 py-10 text-center">
-                    <p className="text-sm text-gray-500 dark:text-gray-400">No issues found in this category.</p>
-                  </div>
-                ) : (
-                  <div>
-                    {/* Critical */}
-                    {catCritical.length > 0 && (
-                      <div>
-                        <div className="px-6 py-2.5 bg-red-50/50 dark:bg-red-950/20 border-b border-gray-100 dark:border-gray-800 flex items-center gap-2">
-                          <AlertCircle className="w-4 h-4 text-red-500" />
-                          <span className="text-sm font-semibold text-red-700 dark:text-red-400">Critical ({catCritical.length})</span>
-                        </div>
-                        <div className="divide-y divide-gray-100 dark:divide-gray-800">
-                          {catCritical.map((issue) => (
-                            <IssueCard
-                              key={issue.id}
-                              issue={issue}
-                              onClick={() => setSelectedIssue(issue)}
-                              onStatusChange={handleIssueStatusChange}
-                            />
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Warning */}
-                    {catWarning.length > 0 && (
-                      <div>
-                        <div className="px-6 py-2.5 bg-amber-50/50 dark:bg-amber-950/20 border-b border-gray-100 dark:border-gray-800 flex items-center gap-2">
-                          <AlertTriangle className="w-4 h-4 text-amber-500" />
-                          <span className="text-sm font-semibold text-amber-700 dark:text-amber-400">Warnings ({catWarning.length})</span>
-                        </div>
-                        <div className="divide-y divide-gray-100 dark:divide-gray-800">
-                          {catWarning.map((issue) => (
-                            <IssueCard
-                              key={issue.id}
-                              issue={issue}
-                              onClick={() => setSelectedIssue(issue)}
-                              onStatusChange={handleIssueStatusChange}
-                            />
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Best Practice */}
-                    {catInfo.length > 0 && (
-                      <div>
-                        <div className="px-6 py-2.5 bg-blue-50/50 dark:bg-blue-950/20 border-b border-gray-100 dark:border-gray-800 flex items-center gap-2">
-                          <Info className="w-4 h-4 text-blue-500" />
-                          <span className="text-sm font-semibold text-blue-700 dark:text-blue-400">Best Practices ({catInfo.length})</span>
-                        </div>
-                        <div className="divide-y divide-gray-100 dark:divide-gray-800">
-                          {catInfo.map((issue) => (
-                            <IssueCard
-                              key={issue.id}
-                              issue={issue}
-                              onClick={() => setSelectedIssue(issue)}
-                              onStatusChange={handleIssueStatusChange}
-                            />
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
               </div>
             );
           })()}
