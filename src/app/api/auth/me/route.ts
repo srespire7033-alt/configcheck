@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
   const supabase = createServiceClient();
   const { data, error } = await supabase
     .from('users')
-    .select('id, email, full_name, phone, job_title, location, company_name, company_logo_url, report_branding_color, timezone, plan, email_notifications_enabled, created_at')
+    .select('id, email, full_name, phone, job_title, location, company_name, company_logo_url, report_branding_color, timezone, plan, email_notifications_enabled, notification_emails, created_at')
     .eq('id', user.id)
     .single();
 
@@ -45,11 +45,25 @@ export async function PUT(request: NextRequest) {
     const allowedFields = [
       'full_name', 'phone', 'job_title', 'location',
       'company_name', 'company_logo_url', 'report_branding_color',
-      'timezone', 'email_notifications_enabled',
+      'timezone', 'email_notifications_enabled', 'notification_emails',
     ];
     for (const field of allowedFields) {
       if (body[field] !== undefined) {
         updates[field] = body[field];
+      }
+    }
+
+    // Validate notification_emails: max 5, valid email format
+    if (updates.notification_emails) {
+      const emails = updates.notification_emails as string[];
+      if (!Array.isArray(emails) || emails.length > 5) {
+        return NextResponse.json({ error: 'Maximum 5 notification emails allowed' }, { status: 400 });
+      }
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      for (const e of emails) {
+        if (!emailRegex.test(e)) {
+          return NextResponse.json({ error: `Invalid email: ${e}` }, { status: 400 });
+        }
       }
     }
 

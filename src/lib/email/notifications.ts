@@ -22,10 +22,10 @@ interface ScanNotificationData {
 export async function sendScanNotification(userId: string, data: ScanNotificationData) {
   const supabase = createServiceClient();
 
-  // Get user email and notification preference
+  // Get user email, notification preference, and additional notification emails
   const { data: user, error } = await supabase
     .from('users')
-    .select('email, full_name, email_notifications_enabled')
+    .select('email, full_name, email_notifications_enabled, notification_emails')
     .eq('id', userId)
     .single();
 
@@ -40,10 +40,19 @@ export async function sendScanNotification(userId: string, data: ScanNotificatio
     return;
   }
 
+  // Build recipient list: user's own email + any additional notification emails
+  const recipients: string[] = [user.email];
+  const extraEmails = (user.notification_emails as string[]) || [];
+  for (const e of extraEmails) {
+    if (e && !recipients.includes(e)) {
+      recipients.push(e);
+    }
+  }
+
   const resendKey = process.env.RESEND_API_KEY;
 
   if (!resendKey) {
-    console.log(`[EMAIL] ⚠️ RESEND_API_KEY not set — email would be sent to: ${user.email}`);
+    console.log(`[EMAIL] ⚠️ RESEND_API_KEY not set — email would be sent to: ${recipients.join(', ')}`);
     console.log(`[EMAIL] Subject: Scan ${data.status} for ${data.orgName} | Score: ${data.overallScore}/100 | Issues: ${data.totalIssues}`);
     return;
   }
@@ -64,7 +73,7 @@ export async function sendScanNotification(userId: string, data: ScanNotificatio
     : buildFailedEmail(name, data, appUrl);
 
   try {
-    console.log(`[EMAIL] Sending to ${user.email} from ${fromAddress}...`);
+    console.log(`[EMAIL] Sending to ${recipients.join(', ')} from ${fromAddress}...`);
 
     const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
@@ -74,7 +83,7 @@ export async function sendScanNotification(userId: string, data: ScanNotificatio
       },
       body: JSON.stringify({
         from: fromAddress,
-        to: [user.email],
+        to: recipients,
         subject,
         html,
       }),
@@ -84,15 +93,14 @@ export async function sendScanNotification(userId: string, data: ScanNotificatio
 
     if (!res.ok) {
       console.error(`[EMAIL] ❌ Send failed (${res.status}):`, responseBody);
-      // Throw so caller knows it failed
       throw new Error(`Email send failed (${res.status}): ${responseBody}`);
     } else {
-      console.log(`[EMAIL] ✅ Sent to ${user.email}: ${subject}`);
+      console.log(`[EMAIL] ✅ Sent to ${recipients.join(', ')}: ${subject}`);
       console.log(`[EMAIL] Resend response:`, responseBody);
     }
   } catch (err) {
     console.error('[EMAIL] ❌ Error:', err);
-    throw err; // Re-throw so scan route can log it
+    throw err;
   }
 }
 

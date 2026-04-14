@@ -102,6 +102,10 @@ export default function SettingsPage() {
   const [createdAt, setCreatedAt] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [emailNotifications, setEmailNotifications] = useState(true);
+  const [notificationEmails, setNotificationEmails] = useState<string[]>([]);
+  const [newNotifEmail, setNewNotifEmail] = useState('');
+  const [notifEmailError, setNotifEmailError] = useState('');
+  const [savingNotifEmails, setSavingNotifEmails] = useState(false);
 
   // Save states per section
   const [savingAccount, setSavingAccount] = useState(false);
@@ -134,6 +138,7 @@ export default function SettingsPage() {
           setPlan(data.plan || 'free');
           setCreatedAt(data.created_at || null);
           setEmailNotifications(data.email_notifications_enabled !== false);
+          setNotificationEmails(data.notification_emails || []);
         }
       } catch (err) {
         console.error('Failed to load profile:', err);
@@ -185,6 +190,51 @@ export default function SettingsPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ company_logo_url: null }),
     });
+  }
+
+  async function addNotificationEmail() {
+    const trimmed = newNotifEmail.trim().toLowerCase();
+    if (!trimmed) return;
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(trimmed)) {
+      setNotifEmailError('Please enter a valid email address');
+      return;
+    }
+    if (trimmed === email.toLowerCase()) {
+      setNotifEmailError('This is already your account email');
+      return;
+    }
+    if (notificationEmails.includes(trimmed)) {
+      setNotifEmailError('This email is already added');
+      return;
+    }
+    if (notificationEmails.length >= 5) {
+      setNotifEmailError('Maximum 5 emails allowed');
+      return;
+    }
+
+    const updated = [...notificationEmails, trimmed];
+    setSavingNotifEmails(true);
+    try {
+      const res = await fetch('/api/auth/me', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notification_emails: updated }),
+      });
+      if (res.ok) {
+        setNotificationEmails(updated);
+        setNewNotifEmail('');
+        setNotifEmailError('');
+      } else {
+        const data = await res.json();
+        setNotifEmailError(data.error || 'Failed to add email');
+      }
+    } catch {
+      setNotifEmailError('Failed to save');
+    } finally {
+      setSavingNotifEmails(false);
+    }
   }
 
   async function saveAccount() {
@@ -336,9 +386,8 @@ export default function SettingsPage() {
                 {memberSince && (
                   <p className="text-xs text-gray-400 dark:text-gray-500 mt-4">Member since {memberSince}</p>
                 )}
+                <SaveBar saving={savingAccount} saved={savedAccount} onSave={saveAccount} />
               </SectionCard>
-
-              <SaveBar saving={savingAccount} saved={savedAccount} onSave={saveAccount} />
             </div>
           )}
 
@@ -531,9 +580,8 @@ export default function SettingsPage() {
                     )}
                   </FormField>
                 </div>
+                <SaveBar saving={savingBranding} saved={savedBranding} onSave={saveBranding} />
               </SectionCard>
-
-              <SaveBar saving={savingBranding} saved={savedBranding} onSave={saveBranding} />
             </div>
           )}
 
@@ -571,6 +619,80 @@ export default function SettingsPage() {
                       </p>
                     </div>
                   </div>
+                </div>
+              </SectionCard>
+
+              {/* Notification Recipients */}
+              <SectionCard title="Notification Recipients" description="Add up to 5 email addresses to receive scan notifications. Your account email always receives notifications.">
+                <div className="space-y-4 max-w-lg">
+                  {/* Account email (always included) */}
+                  <div className="flex items-center gap-3 px-3 py-2.5 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
+                    <Mail className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                    <span className="text-sm text-gray-600 dark:text-gray-300 flex-1">{email}</span>
+                    <span className="text-[10px] font-medium text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 px-2 py-0.5 rounded-full">Account</span>
+                  </div>
+
+                  {/* Additional emails list */}
+                  {notificationEmails.map((ne, idx) => (
+                    <div key={idx} className="flex items-center gap-3 px-3 py-2.5 bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 group">
+                      <Mail className="w-4 h-4 text-blue-400 flex-shrink-0" />
+                      <span className="text-sm text-gray-700 dark:text-gray-300 flex-1">{ne}</span>
+                      <button
+                        onClick={async () => {
+                          const updated = notificationEmails.filter((_, i) => i !== idx);
+                          setNotificationEmails(updated);
+                          setSavingNotifEmails(true);
+                          await fetch('/api/auth/me', {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ notification_emails: updated }),
+                          });
+                          setSavingNotifEmails(false);
+                        }}
+                        className="p-1 rounded-md text-gray-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 opacity-0 group-hover:opacity-100 transition-all"
+                        title="Remove"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ))}
+
+                  {/* Add new email */}
+                  {notificationEmails.length < 5 && (
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="email"
+                          placeholder="colleague@company.com"
+                          value={newNotifEmail}
+                          onChange={(e) => { setNewNotifEmail(e.target.value); setNotifEmailError(''); }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              addNotificationEmail();
+                            }
+                          }}
+                          className="form-input flex-1"
+                        />
+                        <button
+                          onClick={addNotificationEmail}
+                          disabled={!newNotifEmail || savingNotifEmails}
+                          className="px-4 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex-shrink-0"
+                        >
+                          {savingNotifEmails ? '...' : 'Add'}
+                        </button>
+                      </div>
+                      {notifEmailError && (
+                        <p className="text-xs text-red-500 mt-1.5">{notifEmailError}</p>
+                      )}
+                      <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
+                        {5 - notificationEmails.length} of 5 slots remaining
+                      </p>
+                    </div>
+                  )}
+                  {notificationEmails.length >= 5 && (
+                    <p className="text-xs text-amber-500">Maximum 5 additional emails reached. Remove one to add another.</p>
+                  )}
                 </div>
               </SectionCard>
             </div>
@@ -676,7 +798,7 @@ function SaveBar({
   onSave: () => void;
 }) {
   return (
-    <div className="flex justify-end p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/30">
+    <div className="flex justify-end pt-2">
       <button
         onClick={onSave}
         disabled={saving}
