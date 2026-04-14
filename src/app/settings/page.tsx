@@ -239,10 +239,10 @@ export default function SettingsPage() {
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
                     isActive
-                      ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400'
-                      : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white'
+                      ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 shadow-sm border border-blue-100 dark:border-blue-800/50'
+                      : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white border border-transparent'
                   }`}
                 >
                   <Icon className={`w-4 h-4 ${isActive ? 'text-blue-600 dark:text-blue-400' : ''}`} />
@@ -347,24 +347,24 @@ export default function SettingsPage() {
             <div className="space-y-6">
               <SectionCard title="Current Plan" description="Manage your subscription and view plan details.">
                 {/* Active plan card */}
-                <div className={`flex items-center justify-between p-4 rounded-xl border-2 ${planInfo.border} ${planInfo.bg}`}>
-                  <div className="flex items-center gap-3">
-                    <div className={`w-10 h-10 rounded-lg ${planInfo.bg} border ${planInfo.border} flex items-center justify-center`}>
+                <div className={`flex items-center justify-between p-5 rounded-xl border-2 ${planInfo.border} ${planInfo.bg} shadow-sm`}>
+                  <div className="flex items-center gap-4">
+                    <div className={`w-12 h-12 rounded-xl ${planInfo.bg} border-2 ${planInfo.border} flex items-center justify-center shadow-sm`}>
                       {plan === 'partner' || plan === 'practice'
-                        ? <Crown className={`w-5 h-5 ${planInfo.color}`} />
-                        : <Shield className={`w-5 h-5 ${planInfo.color}`} />
+                        ? <Crown className={`w-6 h-6 ${planInfo.color}`} />
+                        : <Shield className={`w-6 h-6 ${planInfo.color}`} />
                       }
                     </div>
                     <div>
-                      <h4 className={`text-base font-semibold ${planInfo.color}`}>{planInfo.label} Plan</h4>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                      <h4 className={`text-lg font-bold ${planInfo.color}`}>{planInfo.label} Plan</h4>
+                      <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
                         {plan === 'free' ? 'Get started with basic features' : `Active subscription`}
                       </p>
                     </div>
                   </div>
                   <a
                     href="/#pricing"
-                    className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-lg hover:bg-gray-800 dark:hover:bg-gray-100 transition-colors"
+                    className="flex items-center gap-1.5 px-5 py-2.5 text-sm font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
                   >
                     {plan === 'free' ? 'Upgrade' : 'Change Plan'}
                     <ExternalLink className="w-3.5 h-3.5" />
@@ -382,11 +382,11 @@ export default function SettingsPage() {
               </SectionCard>
 
               <SectionCard title="Plan Features" description="What's included in your plan.">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                   {planInfo.features.map((feature) => (
-                    <div key={feature} className="flex items-center gap-2 py-1.5">
+                    <div key={feature} className="flex items-center gap-2.5 py-2 px-3 rounded-lg bg-green-50 dark:bg-green-900/10 border border-green-100 dark:border-green-900/30">
                       <CheckCircle2 className="w-4 h-4 text-green-500 flex-shrink-0" />
-                      <span className="text-sm text-gray-700 dark:text-gray-300">{feature}</span>
+                      <span className="text-sm text-gray-700 dark:text-gray-300 font-medium">{feature}</span>
                     </div>
                   ))}
                 </div>
@@ -582,25 +582,36 @@ export default function SettingsPage() {
       <style jsx global>{`
         .form-input {
           width: 100%;
-          padding: 0.5rem 0.75rem;
+          padding: 0.625rem 0.875rem;
           border: 1px solid;
           border-radius: 0.5rem;
           font-size: 0.875rem;
-          transition: all 0.15s;
+          line-height: 1.25rem;
+          transition: all 0.15s ease;
           border-color: rgb(209 213 219);
-          background-color: white;
+          background-color: rgb(249 250 251);
           color: rgb(17 24 39);
         }
         .dark .form-input {
           border-color: rgb(75 85 99);
-          background-color: rgb(17 24 39);
+          background-color: rgba(17, 24, 39, 0.8);
           color: white;
+        }
+        .form-input:hover {
+          border-color: rgb(156 163 175);
+        }
+        .dark .form-input:hover {
+          border-color: rgb(107 114 128);
         }
         .form-input:focus {
           outline: none;
-          ring: 2px;
           border-color: rgb(59 130 246);
-          box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3);
+          background-color: white;
+          box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+        }
+        .dark .form-input:focus {
+          background-color: rgb(17, 24, 39);
+          box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
         }
         .form-input::placeholder {
           color: rgb(156 163 175);
@@ -625,8 +636,8 @@ function SectionCard({
   children: React.ReactNode;
 }) {
   return (
-    <div className="rounded-xl border border-gray-200 dark:border-gray-700/60 bg-white dark:bg-[#111827] overflow-hidden">
-      <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-800">
+    <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-[#111827] shadow-sm">
+      <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700/80">
         <h3 className="text-base font-semibold text-gray-900 dark:text-white">{title}</h3>
         <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{description}</p>
       </div>
@@ -665,14 +676,14 @@ function SaveBar({
   onSave: () => void;
 }) {
   return (
-    <div className="flex justify-end">
+    <div className="flex justify-end p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/30">
       <button
         onClick={onSave}
         disabled={saving}
-        className={`flex items-center gap-2 px-6 py-2.5 text-sm font-medium rounded-lg transition-all ${
+        className={`flex items-center gap-2 px-6 py-2.5 text-sm font-semibold rounded-lg transition-all shadow-sm ${
           saved
-            ? 'bg-green-600 text-white'
-            : 'bg-gray-900 dark:bg-white text-white dark:text-gray-900 hover:bg-gray-800 dark:hover:bg-gray-100'
+            ? 'bg-green-600 text-white shadow-green-200 dark:shadow-green-900/30'
+            : 'bg-blue-600 text-white hover:bg-blue-700 shadow-blue-200 dark:shadow-blue-900/30'
         } disabled:opacity-50`}
       >
         {saved ? <CheckCircle2 className="h-4 w-4" /> : <Save className="h-4 w-4" />}
@@ -685,11 +696,11 @@ function SaveBar({
 function LimitCard({ label, value }: { label: string; value: string }) {
   const isUnlimited = value === 'Unlimited';
   return (
-    <div className="rounded-xl border border-gray-200 dark:border-gray-700 p-4 text-center">
-      <p className={`text-lg font-bold ${isUnlimited ? 'text-green-600 dark:text-green-400' : 'text-gray-900 dark:text-white'}`}>
+    <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 p-4 text-center shadow-sm">
+      <p className={`text-xl font-bold ${isUnlimited ? 'text-green-600 dark:text-green-400' : 'text-gray-900 dark:text-white'}`}>
         {value}
       </p>
-      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{label}</p>
+      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1.5 font-medium">{label}</p>
     </div>
   );
 }
