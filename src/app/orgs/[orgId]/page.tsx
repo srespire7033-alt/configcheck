@@ -393,9 +393,10 @@ export default function OrgDetailPage() {
                 ))}
               </div>
             ) : availableScanTypes.length === 1 ? (
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800">
-                <ShieldCheck className="w-4 h-4 text-blue-500" />
-                <span className="text-sm font-medium text-blue-700 dark:text-blue-400">{availableScanTypes[0].label} detected</span>
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600/10 to-cyan-600/10 dark:from-blue-500/15 dark:to-cyan-500/15 border border-blue-200/60 dark:border-blue-700/50">
+                <ShieldCheck className="w-4 h-4 text-blue-500 dark:text-blue-400" />
+                <span className="text-sm font-semibold text-blue-700 dark:text-blue-300">{availableScanTypes[0].label}</span>
+                <span className="text-[10px] font-medium text-blue-500/70 dark:text-blue-400/60 uppercase tracking-wider">detected</span>
               </div>
             ) : null}
             <button
@@ -516,8 +517,10 @@ export default function OrgDetailPage() {
                     ))}
                   </div>
                 ) : availableScanTypes.length === 1 ? (
-                  <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 self-center lg:self-auto">
-                    <span className="text-xs font-medium text-blue-600 dark:text-blue-400">{availableScanTypes[0].label}</span>
+                  <div className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600/10 to-cyan-600/10 dark:from-blue-500/15 dark:to-cyan-500/15 border border-blue-200/60 dark:border-blue-700/50 self-center lg:self-auto">
+                    <ShieldCheck className="w-4 h-4 text-blue-500 dark:text-blue-400" />
+                    <span className="text-sm font-semibold text-blue-700 dark:text-blue-300">{availableScanTypes[0].label}</span>
+                    <span className="text-[10px] font-medium text-blue-500/70 dark:text-blue-400/60 uppercase tracking-wider">scan</span>
                   </div>
                 ) : null}
                 {/* Action buttons */}
