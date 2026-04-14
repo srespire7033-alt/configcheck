@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Save, LogOut, Upload, X,
-  Bell, BellOff, Crown, Shield, CheckCircle2, Zap,
+  Bell, BellOff, Crown, CheckCircle2, Zap, Gift,
   Clock, ExternalLink, User, Palette,
   CreditCard, Activity, Phone, MapPin, Briefcase, Globe, Mail
 } from 'lucide-react';
@@ -407,7 +407,7 @@ export default function SettingsPage() {
                         ? <Crown className={`w-6 h-6 ${planInfo.color}`} />
                         : plan === 'pro'
                           ? <Zap className={`w-6 h-6 ${planInfo.color}`} />
-                          : <Shield className={`w-6 h-6 ${planInfo.color}`} />
+                          : <Gift className={`w-6 h-6 ${planInfo.color}`} />
                       }
                     </div>
                     <div>
