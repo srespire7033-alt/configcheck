@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
   const supabase = createServiceClient();
   const { data, error } = await supabase
     .from('users')
-    .select('id, email, company_name, company_logo_url, report_branding_color, plan, email_notifications_enabled, created_at')
+    .select('id, email, full_name, phone, job_title, location, company_name, company_logo_url, report_branding_color, timezone, plan, email_notifications_enabled, created_at')
     .eq('id', user.id)
     .single();
 
@@ -42,17 +42,15 @@ export async function PUT(request: NextRequest) {
     const body = await request.json();
     const updates: Record<string, unknown> = {};
 
-    if (body.company_name !== undefined) {
-      updates.company_name = body.company_name;
-    }
-    if (body.report_branding_color !== undefined) {
-      updates.report_branding_color = body.report_branding_color;
-    }
-    if (body.company_logo_url !== undefined) {
-      updates.company_logo_url = body.company_logo_url;
-    }
-    if (body.email_notifications_enabled !== undefined) {
-      updates.email_notifications_enabled = body.email_notifications_enabled;
+    const allowedFields = [
+      'full_name', 'phone', 'job_title', 'location',
+      'company_name', 'company_logo_url', 'report_branding_color',
+      'timezone', 'email_notifications_enabled',
+    ];
+    for (const field of allowedFields) {
+      if (body[field] !== undefined) {
+        updates[field] = body[field];
+      }
     }
 
     if (Object.keys(updates).length === 0) {

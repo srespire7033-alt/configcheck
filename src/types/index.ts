@@ -8,6 +8,9 @@ export interface DBUser {
   id: string;
   email: string;
   full_name: string | null;
+  phone: string | null;
+  job_title: string | null;
+  location: string | null;
   company_name: string | null;
   company_logo_url: string | null;
   report_branding_color: string | null;
@@ -15,6 +18,7 @@ export interface DBUser {
   avatar_url: string | null;
   plan: 'free' | 'solo' | 'practice' | 'partner';
   subscribed_products: ProductType[];
+  email_notifications_enabled: boolean;
   created_at: string;
   updated_at: string;
 }

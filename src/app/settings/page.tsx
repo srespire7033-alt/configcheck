@@ -5,56 +5,94 @@ import { useRouter } from 'next/navigation';
 import {
   Save, LogOut, Upload, X, Scan, FileText, Sparkles,
   Bell, BellOff, Crown, Shield, CheckCircle2, Zap,
-  BarChart3, Clock, ExternalLink, Copy, Check
+  BarChart3, Clock, ExternalLink, User, Palette,
+  CreditCard, Activity, Phone, MapPin, Briefcase, Globe, Mail
 } from 'lucide-react';
 import { createClient } from '@/lib/db/client';
 import { LoadingScreen } from '@/components/ui/loading-screen';
+
+type SettingsTab = 'account' | 'plan' | 'usage' | 'branding' | 'notifications';
+
+const TABS: { id: SettingsTab; label: string; icon: React.ElementType }[] = [
+  { id: 'account', label: 'Account', icon: User },
+  { id: 'plan', label: 'Plan & Billing', icon: CreditCard },
+  { id: 'usage', label: 'Usage', icon: Activity },
+  { id: 'branding', label: 'Branding', icon: Palette },
+  { id: 'notifications', label: 'Notifications', icon: Bell },
+];
 
 const PLAN_INFO: Record<string, {
   label: string;
   color: string;
   bg: string;
   border: string;
-  icon: typeof Shield;
+  dot: string;
   limits: { orgs: string; scans: string; ai: string; reports: string };
+  features: string[];
 }> = {
   free: {
     label: 'Free',
     color: 'text-gray-700 dark:text-gray-300',
-    bg: 'bg-gray-100 dark:bg-gray-800',
+    bg: 'bg-gray-50 dark:bg-gray-800',
     border: 'border-gray-200 dark:border-gray-700',
-    icon: Shield,
-    limits: { orgs: '3 orgs', scans: '10 / month', ai: '5 / month', reports: '5 / month' },
+    dot: 'bg-gray-400',
+    limits: { orgs: '3', scans: '10 / month', ai: '5 / month', reports: '5 / month' },
+    features: ['CPQ health checks (68 rules)', 'PDF reports', 'Email notifications', 'Scan history'],
   },
   solo: {
     label: 'Solo',
     color: 'text-blue-700 dark:text-blue-300',
     bg: 'bg-blue-50 dark:bg-blue-900/20',
     border: 'border-blue-200 dark:border-blue-800',
-    icon: Shield,
-    limits: { orgs: '5 orgs', scans: '30 / month', ai: '30 / month', reports: 'Unlimited' },
+    dot: 'bg-blue-500',
+    limits: { orgs: '5', scans: '30 / month', ai: '30 / month', reports: 'Unlimited' },
+    features: ['Everything in Free', 'AI remediation plans', 'Scan comparison', 'Priority support'],
   },
   practice: {
     label: 'Practice',
     color: 'text-purple-700 dark:text-purple-300',
     bg: 'bg-purple-50 dark:bg-purple-900/20',
     border: 'border-purple-200 dark:border-purple-800',
-    icon: Crown,
-    limits: { orgs: '15 orgs', scans: 'Unlimited', ai: 'Unlimited', reports: 'Unlimited' },
+    dot: 'bg-purple-500',
+    limits: { orgs: '15', scans: 'Unlimited', ai: 'Unlimited', reports: 'Unlimited' },
+    features: ['Everything in Solo', 'Scheduled scans', 'White-label reports', 'Team branding'],
   },
   partner: {
     label: 'Partner',
     color: 'text-amber-700 dark:text-amber-300',
     bg: 'bg-amber-50 dark:bg-amber-900/20',
     border: 'border-amber-200 dark:border-amber-800',
-    icon: Crown,
+    dot: 'bg-amber-500',
     limits: { orgs: 'Unlimited', scans: 'Unlimited', ai: 'Unlimited', reports: 'Unlimited' },
+    features: ['Everything in Practice', 'Unlimited orgs', 'API access', 'Dedicated support'],
   },
 };
+
+const TIMEZONES = [
+  { value: 'Asia/Kolkata', label: 'India (IST)' },
+  { value: 'America/New_York', label: 'Eastern (ET)' },
+  { value: 'America/Chicago', label: 'Central (CT)' },
+  { value: 'America/Denver', label: 'Mountain (MT)' },
+  { value: 'America/Los_Angeles', label: 'Pacific (PT)' },
+  { value: 'Europe/London', label: 'London (GMT)' },
+  { value: 'Europe/Paris', label: 'Central Europe (CET)' },
+  { value: 'Asia/Singapore', label: 'Singapore (SGT)' },
+  { value: 'Australia/Sydney', label: 'Sydney (AEST)' },
+  { value: 'Asia/Tokyo', label: 'Tokyo (JST)' },
+  { value: 'Asia/Dubai', label: 'Dubai (GST)' },
+];
 
 export default function SettingsPage() {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [activeTab, setActiveTab] = useState<SettingsTab>('account');
+
+  // Profile fields
+  const [fullName, setFullName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [jobTitle, setJobTitle] = useState('');
+  const [location, setLocation] = useState('');
+  const [timezone, setTimezone] = useState('Asia/Kolkata');
   const [companyName, setCompanyName] = useState('');
   const [brandingColor, setBrandingColor] = useState('#1B5E96');
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
@@ -63,10 +101,14 @@ export default function SettingsPage() {
   const [plan, setPlan] = useState('free');
   const [createdAt, setCreatedAt] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
   const [emailNotifications, setEmailNotifications] = useState(true);
-  const [copiedEmail, setCopiedEmail] = useState(false);
+
+  // Save states per section
+  const [savingAccount, setSavingAccount] = useState(false);
+  const [savedAccount, setSavedAccount] = useState(false);
+  const [savingBranding, setSavingBranding] = useState(false);
+  const [savedBranding, setSavedBranding] = useState(false);
+
   const [usage, setUsage] = useState<{
     total_scans: number;
     scans_this_month: number;
@@ -80,6 +122,11 @@ export default function SettingsPage() {
         const res = await fetch('/api/auth/me');
         if (res.ok) {
           const data = await res.json();
+          setFullName(data.full_name || '');
+          setPhone(data.phone || '');
+          setJobTitle(data.job_title || '');
+          setLocation(data.location || '');
+          setTimezone(data.timezone || 'Asia/Kolkata');
           setCompanyName(data.company_name || '');
           setBrandingColor(data.report_branding_color || '#1B5E96');
           setLogoUrl(data.company_logo_url || null);
@@ -111,27 +158,15 @@ export default function SettingsPage() {
   async function handleLogoUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-
     const allowedTypes = ['image/png', 'image/svg+xml', 'image/jpeg', 'image/webp'];
-    if (!allowedTypes.includes(file.type)) {
-      alert('Only PNG, SVG, JPEG, and WebP files are allowed');
-      return;
-    }
-    if (file.size > 2 * 1024 * 1024) {
-      alert('File must be under 2MB');
-      return;
-    }
+    if (!allowedTypes.includes(file.type)) { alert('Only PNG, SVG, JPEG, and WebP files are allowed'); return; }
+    if (file.size > 2 * 1024 * 1024) { alert('File must be under 2MB'); return; }
 
     setUploading(true);
     try {
       const formData = new FormData();
       formData.append('logo', file);
-
-      const res = await fetch('/api/auth/logo', {
-        method: 'POST',
-        body: formData,
-      });
-
+      const res = await fetch('/api/auth/logo', { method: 'POST', body: formData });
       if (res.ok) {
         const data = await res.json();
         setLogoUrl(data.url);
@@ -139,12 +174,8 @@ export default function SettingsPage() {
         const err = await res.json();
         alert(err.error || 'Upload failed');
       }
-    } catch (error) {
-      console.error('Upload failed:', error);
-      alert('Upload failed');
-    } finally {
-      setUploading(false);
-    }
+    } catch { alert('Upload failed'); }
+    finally { setUploading(false); }
   }
 
   async function handleRemoveLogo() {
@@ -156,38 +187,37 @@ export default function SettingsPage() {
     });
   }
 
-  async function handleSave() {
-    setSaving(true);
+  async function saveAccount() {
+    setSavingAccount(true);
     try {
       await fetch('/api/auth/me', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          company_name: companyName,
-          report_branding_color: brandingColor,
-        }),
+        body: JSON.stringify({ full_name: fullName, phone, job_title: jobTitle, location, timezone }),
       });
-      setSaved(true);
-      setTimeout(() => setSaved(false), 3000);
-    } catch (error) {
-      console.error('Failed to save:', error);
-    } finally {
-      setSaving(false);
-    }
+      setSavedAccount(true);
+      setTimeout(() => setSavedAccount(false), 3000);
+    } catch { /* ignore */ }
+    finally { setSavingAccount(false); }
   }
 
-  function copyEmail() {
-    navigator.clipboard.writeText(email);
-    setCopiedEmail(true);
-    setTimeout(() => setCopiedEmail(false), 2000);
+  async function saveBranding() {
+    setSavingBranding(true);
+    try {
+      await fetch('/api/auth/me', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ company_name: companyName, report_branding_color: brandingColor }),
+      });
+      setSavedBranding(true);
+      setTimeout(() => setSavedBranding(false), 3000);
+    } catch { /* ignore */ }
+    finally { setSavingBranding(false); }
   }
 
-  if (loading) {
-    return <LoadingScreen />;
-  }
+  if (loading) return <LoadingScreen />;
 
   const planInfo = PLAN_INFO[plan] || PLAN_INFO.free;
-  const PlanIcon = planInfo.icon;
   const scanLimit = plan === 'free' ? 10 : plan === 'solo' ? 30 : null;
   const scanPercent = scanLimit && usage ? Math.min((usage.scans_this_month / scanLimit) * 100, 100) : null;
   const memberSince = createdAt
@@ -195,368 +225,472 @@ export default function SettingsPage() {
     : null;
 
   return (
-    <div className="max-w-3xl mx-auto">
-      {/* Page Header */}
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Settings</h1>
-      </div>
+    <div className="max-w-6xl mx-auto">
+      <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Settings</h1>
 
-      {/* ===== SECTION: Account ===== */}
-      <Section
-        title="Account"
-        description="Your account information and login details."
-      >
-        <div className="space-y-4">
-          <SettingRow label="Email">
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-900 dark:text-white font-medium">{email}</span>
+      <div className="flex flex-col lg:flex-row gap-6">
+        {/* ===== LEFT SIDEBAR ===== */}
+        <nav className="lg:w-56 flex-shrink-0">
+          <div className="lg:sticky lg:top-20 space-y-1">
+            {TABS.map((tab) => {
+              const Icon = tab.icon;
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                    isActive
+                      ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400'
+                      : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white'
+                  }`}
+                >
+                  <Icon className={`w-4 h-4 ${isActive ? 'text-blue-600 dark:text-blue-400' : ''}`} />
+                  {tab.label}
+                </button>
+              );
+            })}
+
+            {/* Sign out at bottom */}
+            <div className="pt-4 mt-4 border-t border-gray-200 dark:border-gray-700">
               <button
-                onClick={copyEmail}
-                className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
-                title="Copy email"
+                onClick={handleSignOut}
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
               >
-                {copiedEmail ? <Check className="w-3.5 h-3.5 text-green-500" /> : <Copy className="w-3.5 h-3.5" />}
+                <LogOut className="w-4 h-4" />
+                Sign Out
               </button>
             </div>
-          </SettingRow>
-          {memberSince && (
-            <SettingRow label="Member since">
-              <span className="text-sm text-gray-600 dark:text-gray-400">{memberSince}</span>
-            </SettingRow>
-          )}
-          <SettingRow label="Session">
-            <button
-              onClick={handleSignOut}
-              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-            >
-              <LogOut className="h-4 w-4" />
-              Sign Out
-            </button>
-          </SettingRow>
-        </div>
-      </Section>
-
-      {/* ===== SECTION: Plan ===== */}
-      <Section
-        title="Plan"
-        description="Your current subscription and usage limits."
-        action={
-          <a
-            href="/#pricing"
-            className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
-          >
-            Upgrade
-            <ExternalLink className="w-3.5 h-3.5" />
-          </a>
-        }
-      >
-        <div className="space-y-5">
-          {/* Current Plan Badge */}
-          <div className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border ${planInfo.border} ${planInfo.bg}`}>
-            <PlanIcon className={`w-4 h-4 ${planInfo.color}`} />
-            <span className={`text-sm font-semibold ${planInfo.color}`}>{planInfo.label} Plan</span>
           </div>
+        </nav>
 
-          {/* Plan Limits Table */}
-          <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
-            <table className="w-full text-sm">
-              <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                <LimitRow label="Connected Orgs" value={planInfo.limits.orgs} />
-                <LimitRow label="Scans" value={planInfo.limits.scans} />
-                <LimitRow label="AI Calls" value={planInfo.limits.ai} />
-                <LimitRow label="PDF Reports" value={planInfo.limits.reports} />
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </Section>
+        {/* ===== RIGHT CONTENT ===== */}
+        <div className="flex-1 min-w-0">
 
-      {/* ===== SECTION: Usage ===== */}
-      <Section
-        title="Usage This Month"
-        description="Track your monthly consumption across features."
-      >
-        {usage ? (
-          <div className="space-y-5">
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              <UsageTile icon={<Scan className="w-4 h-4" />} value={usage.scans_this_month} label="Scans" limit={scanLimit} />
-              <UsageTile icon={<Sparkles className="w-4 h-4" />} value={usage.ai_calls_this_month} label="AI Calls" />
-              <UsageTile icon={<FileText className="w-4 h-4" />} value={usage.pdf_reports_this_month} label="PDF Reports" />
-              <UsageTile icon={<BarChart3 className="w-4 h-4" />} value={usage.total_scans} label="All-time Scans" />
-            </div>
-
-            {/* Progress bar for scan limit */}
-            {scanPercent !== null && (
-              <div>
-                <div className="flex items-center justify-between text-xs mb-1.5">
-                  <span className="text-gray-500 dark:text-gray-400">Monthly scan usage</span>
-                  <span className="font-mono font-medium text-gray-700 dark:text-gray-300">
-                    {usage.scans_this_month} / {scanLimit}
-                  </span>
+          {/* ==================== ACCOUNT TAB ==================== */}
+          {activeTab === 'account' && (
+            <div className="space-y-6">
+              <SectionCard title="Profile" description="Your personal information. This is used across the platform.">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                  <FormField label="Full Name" icon={<User className="w-4 h-4" />}>
+                    <input
+                      type="text"
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                      placeholder="John Doe"
+                      className="form-input"
+                    />
+                  </FormField>
+                  <FormField label="Email Address" icon={<Mail className="w-4 h-4" />}>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="email"
+                        value={email}
+                        disabled
+                        className="form-input opacity-60 cursor-not-allowed"
+                      />
+                      <span className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded-md whitespace-nowrap flex-shrink-0">
+                        <CheckCircle2 className="w-3 h-3" /> Verified
+                      </span>
+                    </div>
+                  </FormField>
+                  <FormField label="Phone Number" icon={<Phone className="w-4 h-4" />}>
+                    <input
+                      type="tel"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      placeholder="+91 98765 43210"
+                      className="form-input"
+                    />
+                  </FormField>
+                  <FormField label="Job Title" icon={<Briefcase className="w-4 h-4" />}>
+                    <input
+                      type="text"
+                      value={jobTitle}
+                      onChange={(e) => setJobTitle(e.target.value)}
+                      placeholder="Salesforce CPQ Consultant"
+                      className="form-input"
+                    />
+                  </FormField>
+                  <FormField label="Location" icon={<MapPin className="w-4 h-4" />}>
+                    <input
+                      type="text"
+                      value={location}
+                      onChange={(e) => setLocation(e.target.value)}
+                      placeholder="Vadodara, India"
+                      className="form-input"
+                    />
+                  </FormField>
+                  <FormField label="Timezone" icon={<Globe className="w-4 h-4" />}>
+                    <select
+                      value={timezone}
+                      onChange={(e) => setTimezone(e.target.value)}
+                      className="form-input"
+                    >
+                      {TIMEZONES.map((tz) => (
+                        <option key={tz.value} value={tz.value}>{tz.label}</option>
+                      ))}
+                    </select>
+                  </FormField>
                 </div>
-                <div className="w-full h-1.5 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
-                  <div
-                    className={`h-full rounded-full transition-all duration-500 ${
-                      scanPercent >= 100 ? 'bg-red-500' : scanPercent > 75 ? 'bg-amber-500' : 'bg-blue-500'
-                    }`}
-                    style={{ width: `${scanPercent}%` }}
-                  />
-                </div>
-                {scanPercent >= 100 && (
-                  <p className="text-xs text-red-600 dark:text-red-400 mt-1.5 flex items-center gap-1">
-                    <Zap className="w-3 h-3" />
-                    Scan limit reached — upgrade to continue
-                  </p>
+                {memberSince && (
+                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-4">Member since {memberSince}</p>
                 )}
-              </div>
-            )}
-          </div>
-        ) : (
-          <div className="flex items-center gap-2 py-4 text-sm text-gray-500 dark:text-gray-400">
-            <div className="animate-spin h-4 w-4 border-2 border-blue-600 border-t-transparent rounded-full" />
-            Loading usage data...
-          </div>
-        )}
-      </Section>
+              </SectionCard>
 
-      {/* ===== SECTION: Company & Branding ===== */}
-      <Section
-        title="Company & Branding"
-        description="Used for white-label PDF reports. Your company name and logo appear in report headers."
-        footer={
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className={`flex items-center gap-2 px-5 py-2 text-sm font-medium rounded-lg transition-all ${
-              saved
-                ? 'bg-green-600 text-white'
-                : 'bg-gray-900 dark:bg-white text-white dark:text-gray-900 hover:bg-gray-800 dark:hover:bg-gray-100'
-            } disabled:opacity-50`}
-          >
-            {saved ? <CheckCircle2 className="h-4 w-4" /> : <Save className="h-4 w-4" />}
-            {saving ? 'Saving...' : saved ? 'Saved' : 'Save'}
-          </button>
-        }
-      >
-        <div className="space-y-5">
-          {/* Company Name */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-              Company Name
-            </label>
-            <input
-              type="text"
-              value={companyName}
-              onChange={(e) => setCompanyName(e.target.value)}
-              placeholder="Your consulting firm name"
-              className="w-full max-w-md px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-            />
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Displayed on PDF report headers.</p>
-          </div>
-
-          {/* Brand Color */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-              Brand Color
-            </label>
-            <div className="flex items-center gap-3 max-w-md">
-              <input
-                type="color"
-                value={brandingColor}
-                onChange={(e) => setBrandingColor(e.target.value)}
-                className="h-10 w-12 rounded-lg cursor-pointer border border-gray-300 dark:border-gray-600 bg-transparent"
-              />
-              <input
-                type="text"
-                value={brandingColor}
-                onChange={(e) => setBrandingColor(e.target.value)}
-                className="w-28 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-mono bg-white dark:bg-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
-              <div
-                className="h-10 flex-1 rounded-lg border border-gray-200 dark:border-gray-600"
-                style={{ backgroundColor: brandingColor }}
-              />
+              <SaveBar saving={savingAccount} saved={savedAccount} onSave={saveAccount} />
             </div>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Used as the accent color in PDF reports.</p>
-          </div>
+          )}
 
-          {/* Company Logo */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-              Company Logo
-            </label>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/png,image/svg+xml,image/jpeg,image/webp"
-              onChange={handleLogoUpload}
-              className="hidden"
-            />
-            {logoUrl ? (
-              <div className="flex items-center gap-4 max-w-md">
-                <div className="w-16 h-16 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden bg-white dark:bg-gray-800 flex items-center justify-center flex-shrink-0">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={logoUrl} alt="Company logo" className="max-w-full max-h-full object-contain p-1.5" />
-                </div>
-                <div className="flex gap-3 text-sm">
-                  <button
-                    onClick={() => fileInputRef.current?.click()}
-                    className="text-blue-600 dark:text-blue-400 hover:underline font-medium"
+          {/* ==================== PLAN TAB ==================== */}
+          {activeTab === 'plan' && (
+            <div className="space-y-6">
+              <SectionCard title="Current Plan" description="Manage your subscription and view plan details.">
+                {/* Active plan card */}
+                <div className={`flex items-center justify-between p-4 rounded-xl border-2 ${planInfo.border} ${planInfo.bg}`}>
+                  <div className="flex items-center gap-3">
+                    <div className={`w-10 h-10 rounded-lg ${planInfo.bg} border ${planInfo.border} flex items-center justify-center`}>
+                      {plan === 'partner' || plan === 'practice'
+                        ? <Crown className={`w-5 h-5 ${planInfo.color}`} />
+                        : <Shield className={`w-5 h-5 ${planInfo.color}`} />
+                      }
+                    </div>
+                    <div>
+                      <h4 className={`text-base font-semibold ${planInfo.color}`}>{planInfo.label} Plan</h4>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                        {plan === 'free' ? 'Get started with basic features' : `Active subscription`}
+                      </p>
+                    </div>
+                  </div>
+                  <a
+                    href="/#pricing"
+                    className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-lg hover:bg-gray-800 dark:hover:bg-gray-100 transition-colors"
                   >
-                    Change
-                  </button>
-                  <button
-                    onClick={handleRemoveLogo}
-                    className="flex items-center gap-1 text-red-500 dark:text-red-400 hover:underline font-medium"
-                  >
-                    <X className="h-3 w-3" /> Remove
-                  </button>
+                    {plan === 'free' ? 'Upgrade' : 'Change Plan'}
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </a>
                 </div>
-              </div>
-            ) : (
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={uploading}
-                className="max-w-md w-full border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg p-6 text-center hover:border-gray-400 dark:hover:border-gray-500 transition-colors cursor-pointer disabled:opacity-50"
-              >
-                {uploading ? (
-                  <div className="flex items-center justify-center gap-2">
-                    <div className="animate-spin h-5 w-5 border-2 border-blue-600 border-t-transparent rounded-full" />
-                    <span className="text-sm text-gray-500">Uploading...</span>
+              </SectionCard>
+
+              <SectionCard title="Plan Limits" description="Resource limits for your current plan.">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                  <LimitCard label="Connected Orgs" value={planInfo.limits.orgs} />
+                  <LimitCard label="Scans" value={planInfo.limits.scans} />
+                  <LimitCard label="AI Calls" value={planInfo.limits.ai} />
+                  <LimitCard label="PDF Reports" value={planInfo.limits.reports} />
+                </div>
+              </SectionCard>
+
+              <SectionCard title="Plan Features" description="What's included in your plan.">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {planInfo.features.map((feature) => (
+                    <div key={feature} className="flex items-center gap-2 py-1.5">
+                      <CheckCircle2 className="w-4 h-4 text-green-500 flex-shrink-0" />
+                      <span className="text-sm text-gray-700 dark:text-gray-300">{feature}</span>
+                    </div>
+                  ))}
+                </div>
+              </SectionCard>
+            </div>
+          )}
+
+          {/* ==================== USAGE TAB ==================== */}
+          {activeTab === 'usage' && (
+            <div className="space-y-6">
+              <SectionCard title="Usage This Month" description="Track your monthly consumption across features.">
+                {usage ? (
+                  <div className="space-y-6">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                      <UsageTile icon={<Scan className="w-5 h-5" />} value={usage.scans_this_month} label="Scans" limit={scanLimit} color="blue" />
+                      <UsageTile icon={<Sparkles className="w-5 h-5" />} value={usage.ai_calls_this_month} label="AI Calls" color="purple" />
+                      <UsageTile icon={<FileText className="w-5 h-5" />} value={usage.pdf_reports_this_month} label="PDF Reports" color="green" />
+                      <UsageTile icon={<BarChart3 className="w-5 h-5" />} value={usage.total_scans} label="All-time Scans" color="gray" />
+                    </div>
+
+                    {scanPercent !== null && (
+                      <div className="p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
+                        <div className="flex items-center justify-between text-sm mb-2">
+                          <span className="font-medium text-gray-700 dark:text-gray-300">Monthly Scan Quota</span>
+                          <span className="font-mono text-gray-500 dark:text-gray-400">
+                            {usage.scans_this_month} of {scanLimit} used
+                          </span>
+                        </div>
+                        <div className="w-full h-2.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                          <div
+                            className={`h-full rounded-full transition-all duration-500 ${
+                              scanPercent >= 100 ? 'bg-red-500' : scanPercent > 75 ? 'bg-amber-500' : 'bg-blue-500'
+                            }`}
+                            style={{ width: `${scanPercent}%` }}
+                          />
+                        </div>
+                        {scanPercent >= 100 && (
+                          <div className="flex items-center justify-between mt-2">
+                            <p className="text-xs text-red-600 dark:text-red-400 flex items-center gap-1">
+                              <Zap className="w-3 h-3" />
+                              Scan limit reached
+                            </p>
+                            <a href="/#pricing" className="text-xs text-blue-600 dark:text-blue-400 hover:underline font-medium">
+                              Upgrade to continue
+                            </a>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 ) : (
-                  <>
-                    <Upload className="h-5 w-5 mx-auto text-gray-400 mb-1.5" />
-                    <p className="text-sm text-gray-600 dark:text-gray-400">Click to upload your logo</p>
-                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">PNG, SVG, JPEG or WebP, max 2MB</p>
-                  </>
+                  <div className="flex items-center gap-2 py-8 justify-center text-sm text-gray-500 dark:text-gray-400">
+                    <div className="animate-spin h-4 w-4 border-2 border-blue-600 border-t-transparent rounded-full" />
+                    Loading usage data...
+                  </div>
                 )}
-              </button>
-            )}
-          </div>
-        </div>
-      </Section>
+              </SectionCard>
+            </div>
+          )}
 
-      {/* ===== SECTION: Notifications ===== */}
-      <Section
-        title="Notifications"
-        description="Choose how and when you want to be notified."
-      >
-        <div className="space-y-4">
-          <div className="flex items-center justify-between max-w-lg">
-            <div className="flex items-start gap-3">
-              <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                emailNotifications
-                  ? 'bg-blue-50 dark:bg-blue-900/20'
-                  : 'bg-gray-100 dark:bg-gray-800'
-              }`}>
-                {emailNotifications ? (
-                  <Bell className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                ) : (
-                  <BellOff className="w-4 h-4 text-gray-400" />
-                )}
-              </div>
-              <div>
-                <p className="text-sm font-medium text-gray-900 dark:text-white">Email Notifications</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                  Receive email when a scan completes or fails
-                </p>
-              </div>
-            </div>
-            <button
-              onClick={async () => {
-                const newVal = !emailNotifications;
-                setEmailNotifications(newVal);
-                await fetch('/api/auth/me', {
-                  method: 'PUT',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ email_notifications_enabled: newVal }),
-                });
-              }}
-              className={`relative w-11 h-6 rounded-full transition-colors duration-200 flex-shrink-0 ${
-                emailNotifications ? 'bg-blue-600' : 'bg-gray-300 dark:bg-gray-600'
-              }`}
-            >
-              <span
-                className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200 ${
-                  emailNotifications ? 'translate-x-5' : 'translate-x-0'
-                }`}
-              />
-            </button>
-          </div>
+          {/* ==================== BRANDING TAB ==================== */}
+          {activeTab === 'branding' && (
+            <div className="space-y-6">
+              <SectionCard title="Company & Branding" description="Customize white-label PDF reports with your brand identity.">
+                <div className="space-y-5 max-w-lg">
+                  <FormField label="Company Name">
+                    <input
+                      type="text"
+                      value={companyName}
+                      onChange={(e) => setCompanyName(e.target.value)}
+                      placeholder="Your consulting firm name"
+                      className="form-input"
+                    />
+                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-1.5">Displayed on PDF report headers and footers.</p>
+                  </FormField>
 
-          <div className="flex items-start gap-3 max-w-lg">
-            <div className="w-8 h-8 rounded-lg bg-purple-50 dark:bg-purple-900/20 flex items-center justify-center flex-shrink-0">
-              <Clock className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                  <FormField label="Brand Color">
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="color"
+                        value={brandingColor}
+                        onChange={(e) => setBrandingColor(e.target.value)}
+                        className="h-10 w-12 rounded-lg cursor-pointer border border-gray-300 dark:border-gray-600 bg-transparent"
+                      />
+                      <input
+                        type="text"
+                        value={brandingColor}
+                        onChange={(e) => setBrandingColor(e.target.value)}
+                        className="w-28 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-mono bg-white dark:bg-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                      <div
+                        className="h-10 w-20 rounded-lg border border-gray-200 dark:border-gray-600"
+                        style={{ backgroundColor: brandingColor }}
+                      />
+                    </div>
+                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-1.5">Used as the accent color in PDF reports.</p>
+                  </FormField>
+
+                  <FormField label="Company Logo">
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/png,image/svg+xml,image/jpeg,image/webp"
+                      onChange={handleLogoUpload}
+                      className="hidden"
+                    />
+                    {logoUrl ? (
+                      <div className="flex items-center gap-4">
+                        <div className="w-16 h-16 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden bg-white dark:bg-gray-800 flex items-center justify-center flex-shrink-0">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={logoUrl} alt="Company logo" className="max-w-full max-h-full object-contain p-1.5" />
+                        </div>
+                        <div className="flex gap-3 text-sm">
+                          <button onClick={() => fileInputRef.current?.click()} className="text-blue-600 dark:text-blue-400 hover:underline font-medium">
+                            Change
+                          </button>
+                          <button onClick={handleRemoveLogo} className="flex items-center gap-1 text-red-500 dark:text-red-400 hover:underline font-medium">
+                            <X className="h-3 w-3" /> Remove
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={uploading}
+                        className="w-full border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg p-6 text-center hover:border-gray-400 dark:hover:border-gray-500 transition-colors cursor-pointer disabled:opacity-50"
+                      >
+                        {uploading ? (
+                          <div className="flex items-center justify-center gap-2">
+                            <div className="animate-spin h-5 w-5 border-2 border-blue-600 border-t-transparent rounded-full" />
+                            <span className="text-sm text-gray-500">Uploading...</span>
+                          </div>
+                        ) : (
+                          <>
+                            <Upload className="h-5 w-5 mx-auto text-gray-400 mb-1.5" />
+                            <p className="text-sm text-gray-600 dark:text-gray-400">Click to upload your logo</p>
+                            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">PNG, SVG, JPEG or WebP, max 2MB</p>
+                          </>
+                        )}
+                      </button>
+                    )}
+                  </FormField>
+                </div>
+              </SectionCard>
+
+              <SaveBar saving={savingBranding} saved={savedBranding} onSave={saveBranding} />
             </div>
-            <div>
-              <p className="text-sm font-medium text-gray-900 dark:text-white">Scheduled Scan Alerts</p>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                Results from scheduled scans are automatically emailed after each run
-              </p>
+          )}
+
+          {/* ==================== NOTIFICATIONS TAB ==================== */}
+          {activeTab === 'notifications' && (
+            <div className="space-y-6">
+              <SectionCard title="Notifications" description="Control how and when you receive updates.">
+                <div className="space-y-4 max-w-lg">
+                  <NotificationRow
+                    icon={<Bell className="w-4 h-4" />}
+                    activeIcon={<Bell className="w-4 h-4 text-blue-600 dark:text-blue-400" />}
+                    inactiveIcon={<BellOff className="w-4 h-4 text-gray-400" />}
+                    title="Email Notifications"
+                    description="Get notified when scans complete, fail, or find critical issues"
+                    enabled={emailNotifications}
+                    onToggle={async () => {
+                      const newVal = !emailNotifications;
+                      setEmailNotifications(newVal);
+                      await fetch('/api/auth/me', {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email_notifications_enabled: newVal }),
+                      });
+                    }}
+                  />
+                  <div className="border-t border-gray-100 dark:border-gray-800" />
+                  <div className="flex items-start gap-3 py-1">
+                    <div className="w-8 h-8 rounded-lg bg-purple-50 dark:bg-purple-900/20 flex items-center justify-center flex-shrink-0">
+                      <Clock className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-900 dark:text-white">Scheduled Scan Alerts</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                        Results from scheduled scans are automatically emailed after each run
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </SectionCard>
             </div>
-          </div>
+          )}
         </div>
-      </Section>
+      </div>
+
+      {/* Global styles for form inputs */}
+      <style jsx global>{`
+        .form-input {
+          width: 100%;
+          padding: 0.5rem 0.75rem;
+          border: 1px solid;
+          border-radius: 0.5rem;
+          font-size: 0.875rem;
+          transition: all 0.15s;
+          border-color: rgb(209 213 219);
+          background-color: white;
+          color: rgb(17 24 39);
+        }
+        .dark .form-input {
+          border-color: rgb(75 85 99);
+          background-color: rgb(17 24 39);
+          color: white;
+        }
+        .form-input:focus {
+          outline: none;
+          ring: 2px;
+          border-color: rgb(59 130 246);
+          box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3);
+        }
+        .form-input::placeholder {
+          color: rgb(156 163 175);
+        }
+        .dark .form-input::placeholder {
+          color: rgb(107 114 128);
+        }
+      `}</style>
     </div>
   );
 }
 
-/* =================== Layout Components =================== */
+/* =================== Reusable Components =================== */
 
-function Section({
+function SectionCard({
   title,
   description,
-  action,
-  footer,
   children,
 }: {
   title: string;
   description: string;
-  action?: React.ReactNode;
-  footer?: React.ReactNode;
   children: React.ReactNode;
 }) {
   return (
-    <div className="mb-8 rounded-lg border border-gray-200 dark:border-gray-700/60 bg-white dark:bg-[#111827] overflow-hidden">
-      {/* Header */}
-      <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-800 flex items-start justify-between gap-4">
-        <div>
-          <h3 className="text-base font-semibold text-gray-900 dark:text-white">{title}</h3>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{description}</p>
-        </div>
-        {action && <div className="flex-shrink-0">{action}</div>}
+    <div className="rounded-xl border border-gray-200 dark:border-gray-700/60 bg-white dark:bg-[#111827] overflow-hidden">
+      <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-800">
+        <h3 className="text-base font-semibold text-gray-900 dark:text-white">{title}</h3>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{description}</p>
       </div>
-      {/* Content */}
-      <div className="px-6 py-5">
-        {children}
-      </div>
-      {/* Footer */}
-      {footer && (
-        <div className="px-6 py-3 border-t border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/50 flex justify-end">
-          {footer}
-        </div>
-      )}
+      <div className="px-6 py-5">{children}</div>
     </div>
   );
 }
 
-function SettingRow({ label, children }: { label: string; children: React.ReactNode }) {
+function FormField({
+  label,
+  icon,
+  children,
+}: {
+  label: string;
+  icon?: React.ReactNode;
+  children: React.ReactNode;
+}) {
   return (
-    <div className="flex items-center justify-between py-1">
-      <span className="text-sm text-gray-500 dark:text-gray-400">{label}</span>
-      <div>{children}</div>
+    <div>
+      <label className="flex items-center gap-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+        {icon && <span className="text-gray-400">{icon}</span>}
+        {label}
+      </label>
+      {children}
     </div>
   );
 }
 
-function LimitRow({ label, value }: { label: string; value: string }) {
+function SaveBar({
+  saving,
+  saved,
+  onSave,
+}: {
+  saving: boolean;
+  saved: boolean;
+  onSave: () => void;
+}) {
   return (
-    <tr>
-      <td className="px-4 py-2.5 text-gray-500 dark:text-gray-400">{label}</td>
-      <td className="px-4 py-2.5 text-right font-medium text-gray-900 dark:text-white">{value}</td>
-    </tr>
+    <div className="flex justify-end">
+      <button
+        onClick={onSave}
+        disabled={saving}
+        className={`flex items-center gap-2 px-6 py-2.5 text-sm font-medium rounded-lg transition-all ${
+          saved
+            ? 'bg-green-600 text-white'
+            : 'bg-gray-900 dark:bg-white text-white dark:text-gray-900 hover:bg-gray-800 dark:hover:bg-gray-100'
+        } disabled:opacity-50`}
+      >
+        {saved ? <CheckCircle2 className="h-4 w-4" /> : <Save className="h-4 w-4" />}
+        {saving ? 'Saving...' : saved ? 'Saved!' : 'Save Changes'}
+      </button>
+    </div>
+  );
+}
+
+function LimitCard({ label, value }: { label: string; value: string }) {
+  const isUnlimited = value === 'Unlimited';
+  return (
+    <div className="rounded-xl border border-gray-200 dark:border-gray-700 p-4 text-center">
+      <p className={`text-lg font-bold ${isUnlimited ? 'text-green-600 dark:text-green-400' : 'text-gray-900 dark:text-white'}`}>
+        {value}
+      </p>
+      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{label}</p>
+    </div>
   );
 }
 
@@ -565,20 +699,73 @@ function UsageTile({
   value,
   label,
   limit,
+  color,
 }: {
   icon: React.ReactNode;
   value: number;
   label: string;
   limit?: number | null;
+  color: 'blue' | 'purple' | 'green' | 'gray';
+}) {
+  const colorMap = {
+    blue: { bg: 'bg-blue-50 dark:bg-blue-900/20', icon: 'text-blue-500 dark:text-blue-400', text: 'text-blue-700 dark:text-blue-300' },
+    purple: { bg: 'bg-purple-50 dark:bg-purple-900/20', icon: 'text-purple-500 dark:text-purple-400', text: 'text-purple-700 dark:text-purple-300' },
+    green: { bg: 'bg-green-50 dark:bg-green-900/20', icon: 'text-green-500 dark:text-green-400', text: 'text-green-700 dark:text-green-300' },
+    gray: { bg: 'bg-gray-50 dark:bg-gray-800', icon: 'text-gray-500 dark:text-gray-400', text: 'text-gray-700 dark:text-gray-300' },
+  };
+  const c = colorMap[color];
+
+  return (
+    <div className={`${c.bg} rounded-xl p-4 text-center`}>
+      <div className={`${c.icon} flex justify-center mb-2`}>{icon}</div>
+      <p className={`text-2xl font-bold ${c.text}`}>
+        {value}
+        {limit && <span className="text-sm font-normal opacity-60">/{limit}</span>}
+      </p>
+      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{label}</p>
+    </div>
+  );
+}
+
+function NotificationRow({
+  activeIcon,
+  inactiveIcon,
+  title,
+  description,
+  enabled,
+  onToggle,
+}: {
+  icon: React.ReactNode;
+  activeIcon: React.ReactNode;
+  inactiveIcon: React.ReactNode;
+  title: string;
+  description: string;
+  enabled: boolean;
+  onToggle: () => void;
 }) {
   return (
-    <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-3 text-center">
-      <div className="text-gray-400 dark:text-gray-500 flex justify-center mb-1">{icon}</div>
-      <p className="text-xl font-bold text-gray-900 dark:text-white">
-        {value}
-        {limit && <span className="text-sm font-normal text-gray-400 dark:text-gray-500">/{limit}</span>}
-      </p>
-      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{label}</p>
+    <div className="flex items-center justify-between py-1">
+      <div className="flex items-start gap-3">
+        <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
+          enabled ? 'bg-blue-50 dark:bg-blue-900/20' : 'bg-gray-100 dark:bg-gray-800'
+        }`}>
+          {enabled ? activeIcon : inactiveIcon}
+        </div>
+        <div>
+          <p className="text-sm font-medium text-gray-900 dark:text-white">{title}</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{description}</p>
+        </div>
+      </div>
+      <button
+        onClick={onToggle}
+        className={`relative w-11 h-6 rounded-full transition-colors duration-200 flex-shrink-0 ${
+          enabled ? 'bg-blue-600' : 'bg-gray-300 dark:bg-gray-600'
+        }`}
+      >
+        <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200 ${
+          enabled ? 'translate-x-5' : 'translate-x-0'
+        }`} />
+      </button>
     </div>
   );
 }
