@@ -10,9 +10,14 @@ import { generateExecutiveSummary } from '@/lib/ai/gemini';
 import { sendScanNotification } from '@/lib/email/notifications';
 import type { ProductType } from '@/types';
 
+// Allow up to 180s for scans (Vercel Pro: 300s max, Hobby: 60s max)
+export const maxDuration = 180;
+
 /**
  * POST /api/scans
- * Start a new health check scan for an org
+ * Start a new health check scan for an org.
+ * Runs the full scan synchronously and returns the result.
+ * Client polls GET /api/scans?scanId=xxx for status updates.
  */
 export async function POST(request: NextRequest) {
   try {
@@ -64,28 +69,44 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to create scan' }, { status: 500 });
     }
 
-    // Run scan in background (non-blocking) with 180s hard timeout
-    // Real-world orgs with many rules/products can take 2-3 minutes
-    const scanWithTimeout = Promise.race([
-      runScanInBackground(scan.id, org, productType),
-      new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Scan timed out after 3 minutes. This usually means the Salesforce connection is slow or expired. Try reconnecting your org.')), 180000)
-      ),
-    ]).catch(async (error) => {
-      console.error('[SCAN] Background scan failed:', error);
-      const svc = createServiceClient();
-      const failUpdate = {
-        status: 'failed',
-        error_message: error instanceof Error ? error.message : 'Scan failed unexpectedly',
-        completed_at: new Date().toISOString(),
-      };
-      await svc.from('scans').update(failUpdate).eq('id', scan.id).eq('status', 'running');
-      await svc.from('scans').update(failUpdate).eq('id', scan.id).eq('status', 'pending');
-    });
-    // Fire and forget
-    void scanWithTimeout;
+    // Use a streaming response to keep the Vercel function alive.
+    // Send the scanId immediately so the client can start polling,
+    // then run the scan in the same function context.
+    const stream = new TransformStream();
+    const writer = stream.writable.getWriter();
 
-    return NextResponse.json({ scanId: scan.id, status: 'pending' });
+    // Start scan in parallel — writes to stream when done
+    const scanPromise = (async () => {
+      try {
+        await runScanInBackground(scan.id, org, productType);
+      } catch (error) {
+        console.error('[SCAN] Scan execution failed:', error);
+        const svc = createServiceClient();
+        const failUpdate = {
+          status: 'failed',
+          error_message: error instanceof Error ? error.message : 'Scan failed unexpectedly',
+          completed_at: new Date().toISOString(),
+        };
+        await svc.from('scans').update(failUpdate).eq('id', scan.id).eq('status', 'running');
+        await svc.from('scans').update(failUpdate).eq('id', scan.id).eq('status', 'pending');
+      } finally {
+        await writer.close();
+      }
+    })();
+
+    // Write the scanId immediately
+    const encoder = new TextEncoder();
+    await writer.write(encoder.encode(JSON.stringify({ scanId: scan.id, status: 'pending' })));
+
+    // Keep function alive by referencing the promise
+    void scanPromise;
+
+    return new Response(stream.readable, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Transfer-Encoding': 'chunked',
+      },
+    });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json({ error: message }, { status: 500 });

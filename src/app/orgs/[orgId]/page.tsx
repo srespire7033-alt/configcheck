@@ -259,7 +259,10 @@ export default function OrgDetailPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ organizationId: orgId, productType: scanProductType }),
       });
-      const { scanId } = await res.json();
+      // The response is streamed — read the first chunk which contains the scanId
+      const text = await res.text();
+      const { scanId } = JSON.parse(text);
+      if (!scanId) throw new Error('No scanId returned');
       pollForScan(scanId);
     } catch (error) {
       console.error('Failed to start scan:', error);
