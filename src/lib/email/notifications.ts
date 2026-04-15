@@ -104,6 +104,64 @@ export async function sendScanNotification(userId: string, data: ScanNotificatio
   }
 }
 
+/**
+ * Send welcome email after signup.
+ * Called from the onboarding completion flow.
+ */
+export async function sendWelcomeEmail(userId: string) {
+  const supabase = createServiceClient();
+
+  const { data: user, error } = await supabase
+    .from('users')
+    .select('email, full_name')
+    .eq('id', userId)
+    .single();
+
+  if (error || !user?.email) {
+    console.log(`[EMAIL] No email found for user ${userId}`, error?.message);
+    return;
+  }
+
+  const resendKey = process.env.RESEND_API_KEY;
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+  const name = user.full_name || 'there';
+  const fromAddress = process.env.EMAIL_FROM || 'ConfigCheck <onboarding@resend.dev>';
+
+  const subject = 'Welcome to ConfigCheck! 🚀';
+  const html = buildWelcomeEmail(name, appUrl);
+
+  if (!resendKey) {
+    console.log(`[EMAIL] ⚠️ RESEND_API_KEY not set — welcome email would be sent to: ${user.email}`);
+    console.log(`[EMAIL] Subject: ${subject}`);
+    return;
+  }
+
+  try {
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${resendKey}`,
+      },
+      body: JSON.stringify({
+        from: fromAddress,
+        to: [user.email],
+        subject,
+        html,
+      }),
+    });
+
+    if (!res.ok) {
+      const body = await res.text();
+      console.error(`[EMAIL] ❌ Welcome email failed (${res.status}):`, body);
+    } else {
+      console.log(`[EMAIL] ✅ Welcome email sent to ${user.email}`);
+    }
+  } catch (err) {
+    console.error('[EMAIL] ❌ Welcome email error:', err);
+  }
+}
+
 function buildCompletedEmail(name: string, data: ScanNotificationData, appUrl: string): string {
   const scoreColor = data.overallScore >= 80 ? '#16a34a' : data.overallScore >= 60 ? '#d97706' : '#dc2626';
   const scoreBg = data.overallScore >= 80 ? '#f0fdf4' : data.overallScore >= 60 ? '#fffbeb' : '#fef2f2';
@@ -246,6 +304,86 @@ function buildFailedEmail(name: string, data: ScanNotificationData, appUrl: stri
       <div style="padding: 20px 32px; text-align: center; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 12px 12px; background: #f9fafb;">
         <p style="color: #9ca3af; font-size: 11px; margin: 0;">
           You received this because email notifications are enabled.
+          <a href="${appUrl}/settings" style="color: #6b7280; text-decoration: underline;">Manage preferences</a>
+        </p>
+      </div>
+    </div>
+  `;
+}
+
+function buildWelcomeEmail(name: string, appUrl: string): string {
+  return `
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 560px; margin: 0 auto; padding: 0; background: #f9fafb;">
+      <!-- Header -->
+      <div style="background: #2563eb; padding: 28px 32px; border-radius: 12px 12px 0 0; text-align: center;">
+        <h1 style="color: white; margin: 0; font-size: 22px; font-weight: 700;">⛨ ConfigCheck</h1>
+        <p style="color: #bfdbfe; margin: 6px 0 0; font-size: 13px;">AI-Driven Config Audits for Salesforce Revenue Cloud</p>
+      </div>
+
+      <!-- Body -->
+      <div style="background: white; padding: 32px; border: 1px solid #e5e7eb; border-top: none;">
+        <h2 style="color: #1f2937; margin: 0 0 16px; font-size: 20px; font-weight: 700;">Welcome to ConfigCheck, ${name}!</h2>
+        <p style="color: #6b7280; margin: 0 0 28px; font-size: 14px; line-height: 1.6;">
+          You're all set to start auditing your Salesforce Revenue Cloud configurations. ConfigCheck helps you catch misconfigurations, enforce best practices, and keep your CPQ org healthy.
+        </p>
+
+        <!-- Quick Start Steps -->
+        <div style="margin: 0 0 28px;">
+          <p style="font-weight: 600; color: #1f2937; margin: 0 0 16px; font-size: 15px;">Quick Start Guide</p>
+
+          <div style="margin-bottom: 12px;">
+            <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 10px; padding: 16px 20px;">
+              <table style="width: 100%;">
+                <tr>
+                  <td style="width: 40px; vertical-align: top; font-size: 24px;">🔗</td>
+                  <td>
+                    <p style="color: #1f2937; margin: 0; font-size: 14px; font-weight: 600;">Step 1: Connect your Salesforce org</p>
+                    <p style="color: #6b7280; margin: 4px 0 0; font-size: 13px;">Link your sandbox or production environment securely via OAuth.</p>
+                  </td>
+                </tr>
+              </table>
+            </div>
+          </div>
+
+          <div style="margin-bottom: 12px;">
+            <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 10px; padding: 16px 20px;">
+              <table style="width: 100%;">
+                <tr>
+                  <td style="width: 40px; vertical-align: top; font-size: 24px;">🔍</td>
+                  <td>
+                    <p style="color: #1f2937; margin: 0; font-size: 14px; font-weight: 600;">Step 2: Run your first health scan</p>
+                    <p style="color: #6b7280; margin: 4px 0 0; font-size: 13px;">Our AI engine analyzes your CPQ rules, bundles, pricing, and more.</p>
+                  </td>
+                </tr>
+              </table>
+            </div>
+          </div>
+
+          <div style="margin-bottom: 0;">
+            <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 10px; padding: 16px 20px;">
+              <table style="width: 100%;">
+                <tr>
+                  <td style="width: 40px; vertical-align: top; font-size: 24px;">📊</td>
+                  <td>
+                    <p style="color: #1f2937; margin: 0; font-size: 14px; font-weight: 600;">Step 3: Review issues and generate reports</p>
+                    <p style="color: #6b7280; margin: 4px 0 0; font-size: 13px;">Get actionable recommendations prioritized by severity.</p>
+                  </td>
+                </tr>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- CTA Button -->
+        <div style="text-align: center; margin: 28px 0 8px;">
+          <a href="${appUrl}/dashboard" style="display: inline-block; padding: 14px 32px; background: #2563eb; color: white; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 14px;">Go to Dashboard</a>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div style="padding: 20px 32px; text-align: center; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 12px 12px; background: #f9fafb;">
+        <p style="color: #9ca3af; font-size: 11px; margin: 0;">
+          You received this because you signed up for ConfigCheck.
           <a href="${appUrl}/settings" style="color: #6b7280; text-decoration: underline;">Manage preferences</a>
         </p>
       </div>

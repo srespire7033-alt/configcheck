@@ -2,7 +2,7 @@ import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
 export async function middleware(request: NextRequest) {
-  // Skip auth check entirely for public routes (landing page, Salesforce callback)
+  // Skip auth check for public routes
   if (request.nextUrl.pathname === '/' || request.nextUrl.pathname.startsWith('/api/salesforce/callback')) {
     return NextResponse.next({ request });
   }
@@ -44,6 +44,26 @@ export async function middleware(request: NextRequest) {
     const url = request.nextUrl.clone();
     url.pathname = '/login';
     return NextResponse.redirect(url);
+  }
+
+  // Onboarding redirect: logged-in user who hasn't completed onboarding
+  if (user && !request.nextUrl.pathname.startsWith('/onboarding') && !request.nextUrl.pathname.startsWith('/api/')) {
+    const onboardingDone = request.cookies.get('onboarding_completed')?.value === 'true';
+    if (!onboardingDone) {
+      const url = request.nextUrl.clone();
+      url.pathname = '/onboarding';
+      return NextResponse.redirect(url);
+    }
+  }
+
+  // Already completed onboarding but visiting /onboarding → redirect to dashboard
+  if (user && request.nextUrl.pathname.startsWith('/onboarding')) {
+    const onboardingDone = request.cookies.get('onboarding_completed')?.value === 'true';
+    if (onboardingDone) {
+      const url = request.nextUrl.clone();
+      url.pathname = '/dashboard';
+      return NextResponse.redirect(url);
+    }
   }
 
   return supabaseResponse;

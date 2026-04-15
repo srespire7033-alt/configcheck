@@ -79,7 +79,7 @@ describe('/api/auth/me', () => {
       expect(json).toEqual(mockProfile);
       expect(mockFrom).toHaveBeenCalledWith('users');
       expect(mockSelect).toHaveBeenCalledWith(
-        'id, email, full_name, phone, job_title, location, company_name, company_logo_url, report_branding_color, timezone, plan, is_admin, email_notifications_enabled, notification_emails, created_at'
+        'id, email, full_name, phone, job_title, location, company_name, company_logo_url, report_branding_color, timezone, plan, is_admin, email_notifications_enabled, notification_emails, onboarding_completed, referral_source, role, company_size, checklist_dismissed, checklist_progress, created_at'
       );
       expect(mockEq).toHaveBeenCalledWith('id', 'user-123');
     });

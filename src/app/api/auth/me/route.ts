@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/db/client';
 import { getAuthUser } from '@/lib/auth/get-user';
+import { sendWelcomeEmail } from '@/lib/email/notifications';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,7 +18,7 @@ export async function GET(request: NextRequest) {
   const supabase = createServiceClient();
   const { data, error } = await supabase
     .from('users')
-    .select('id, email, full_name, phone, job_title, location, company_name, company_logo_url, report_branding_color, timezone, plan, is_admin, email_notifications_enabled, notification_emails, created_at')
+    .select('id, email, full_name, phone, job_title, location, company_name, company_logo_url, report_branding_color, timezone, plan, is_admin, email_notifications_enabled, notification_emails, onboarding_completed, referral_source, role, company_size, checklist_dismissed, checklist_progress, created_at')
     .eq('id', user.id)
     .single();
 
@@ -46,6 +47,8 @@ export async function PUT(request: NextRequest) {
       'full_name', 'phone', 'job_title', 'location',
       'company_name', 'company_logo_url', 'report_branding_color',
       'timezone', 'email_notifications_enabled', 'notification_emails',
+      'onboarding_completed', 'referral_source', 'role', 'company_size',
+      'checklist_dismissed', 'checklist_progress',
     ];
     for (const field of allowedFields) {
       if (body[field] !== undefined) {
@@ -79,6 +82,13 @@ export async function PUT(request: NextRequest) {
 
     if (error) {
       return NextResponse.json({ error: 'Failed to update profile' }, { status: 500 });
+    }
+
+    // Send welcome email when onboarding is completed
+    if (updates.onboarding_completed === true) {
+      sendWelcomeEmail(user.id).catch((err) =>
+        console.error('[AUTH] Welcome email error:', err)
+      );
     }
 
     return NextResponse.json({ success: true });

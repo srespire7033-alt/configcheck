@@ -90,14 +90,20 @@ export async function GET(request: NextRequest) {
       });
     }
 
+    // Redirect back to onboarding if user hasn't completed it, otherwise dashboard
+    const onboardingDone = request.cookies.get('onboarding_completed')?.value === 'true';
+    const redirectPath = onboardingDone ? '/dashboard' : '/onboarding';
+
     return NextResponse.redirect(
-      new URL(`/dashboard?success=Connected ${orgName}`, process.env.NEXT_PUBLIC_APP_URL!)
+      new URL(`${redirectPath}?success=Connected ${orgName}`, process.env.NEXT_PUBLIC_APP_URL!)
     );
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'OAuth failed';
     console.error('Salesforce OAuth error:', message);
+    const onboardingDone = request.cookies.get('onboarding_completed')?.value === 'true';
+    const redirectPath = onboardingDone ? '/dashboard' : '/onboarding';
     return NextResponse.redirect(
-      new URL(`/dashboard?error=${encodeURIComponent(message)}`, process.env.NEXT_PUBLIC_APP_URL!)
+      new URL(`${redirectPath}?error=${encodeURIComponent(message)}`, process.env.NEXT_PUBLIC_APP_URL!)
     );
   }
 }
