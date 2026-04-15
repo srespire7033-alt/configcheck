@@ -1,3 +1,5 @@
+import { withSentryConfig } from '@sentry/nextjs';
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   // Webpack config for @react-pdf/renderer (uses node APIs)
@@ -40,4 +42,27 @@ const nextConfig = {
   },
 };
 
-export default nextConfig;
+export default withSentryConfig(nextConfig, {
+  // Suppress source map upload logs during build
+  silent: true,
+
+  // Upload source maps for better stack traces
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+
+  // Only upload source maps when SENTRY_AUTH_TOKEN is set
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+
+  // Hides source maps from generated client bundles
+  hideSourceMaps: true,
+
+  // Automatically tree-shake Sentry logger in production
+  webpack: {
+    treeshake: {
+      removeDebugLogging: true,
+    },
+  },
+
+  // Tunnel route to avoid ad-blockers
+  tunnelRoute: '/monitoring',
+});
