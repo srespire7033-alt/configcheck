@@ -26,16 +26,16 @@ function ensureCleanup() {
   if (cleanupInterval) return;
   cleanupInterval = setInterval(() => {
     const now = Date.now();
-    for (const [key, entry] of store) {
+    store.forEach((entry: RateLimitEntry, key: string) => {
       // Remove entries where all timestamps are older than 5 minutes
       // (generous max window to avoid premature cleanup)
-      const fresh = entry.timestamps.filter((t) => now - t < 5 * 60 * 1000);
+      const fresh = entry.timestamps.filter((t: number) => now - t < 5 * 60 * 1000);
       if (fresh.length === 0) {
         store.delete(key);
       } else {
         entry.timestamps = fresh;
       }
-    }
+    });
   }, 60_000);
 
   // Allow the process to exit without waiting for the interval
