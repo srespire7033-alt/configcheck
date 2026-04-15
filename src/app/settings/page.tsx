@@ -6,7 +6,8 @@ import {
   Save, LogOut, Upload, X,
   Bell, BellOff, CheckCircle2, Zap,
   Clock, ExternalLink, User, Palette,
-  CreditCard, Activity, Phone, MapPin, Briefcase, Globe, Mail
+  CreditCard, Activity, Phone, MapPin, Briefcase, Globe, Mail,
+  AlertTriangle, Download, Trash2
 } from 'lucide-react';
 import { createClient } from '@/lib/db/client';
 import { LoadingScreen } from '@/components/ui/loading-screen';
@@ -107,6 +108,12 @@ export default function SettingsPage() {
   const [savedAccount, setSavedAccount] = useState(false);
   const [savingBranding, setSavingBranding] = useState(false);
   const [savedBranding, setSavedBranding] = useState(false);
+
+  // Danger zone states
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
 
   const [usage, setUsage] = useState<{
     total_scans: number;
@@ -261,6 +268,54 @@ export default function SettingsPage() {
     finally { setSavingBranding(false); }
   }
 
+  async function handleExportData() {
+    setIsExporting(true);
+    try {
+      const res = await fetch('/api/account/export');
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: 'Export failed' }));
+        alert(err.error || 'Export failed');
+        return;
+      }
+      const data = await res.json();
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      const dateStr = new Date().toISOString().split('T')[0];
+      a.href = url;
+      a.download = `configcheck-data-export-${dateStr}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch {
+      alert('Export failed. Please try again.');
+    } finally {
+      setIsExporting(false);
+    }
+  }
+
+  async function handleDeleteAccount() {
+    setIsDeleting(true);
+    try {
+      const res = await fetch('/api/account/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ confirmation: 'DELETE MY ACCOUNT' }),
+      });
+      if (res.ok) {
+        router.push('/login');
+      } else {
+        const err = await res.json().catch(() => ({ error: 'Deletion failed' }));
+        alert(err.error || 'Account deletion failed. Please try again.');
+      }
+    } catch {
+      alert('Account deletion failed. Please try again.');
+    } finally {
+      setIsDeleting(false);
+    }
+  }
+
   if (loading) return <LoadingScreen />;
 
   const planInfo = PLAN_INFO[plan] || PLAN_INFO.free;
@@ -392,6 +447,64 @@ export default function SettingsPage() {
                 )}
                 <SaveBar saving={savingAccount} saved={savedAccount} onSave={saveAccount} />
               </SectionCard>
+
+              {/* Danger Zone */}
+              <div className="rounded-xl border-2 border-red-300 dark:border-red-800/60 bg-white dark:bg-[#111827] shadow-sm">
+                <div className="px-6 py-4 border-b border-red-200 dark:border-red-800/40">
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="w-4 h-4 text-red-500" />
+                    <h3 className="text-base font-semibold text-red-600 dark:text-red-400">Danger Zone</h3>
+                  </div>
+                  <p className="text-sm text-red-500/70 dark:text-red-400/60 mt-0.5">These actions are irreversible</p>
+                </div>
+                <div className="px-6 py-5 space-y-5">
+                  {/* Export Data */}
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-gray-900 dark:text-white">Export My Data</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                        Download a JSON file containing all your account data
+                      </p>
+                    </div>
+                    <button
+                      onClick={handleExportData}
+                      disabled={isExporting}
+                      className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-lg transition-all shadow-sm bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isExporting ? (
+                        <>
+                          <div className="animate-spin h-4 w-4 border-2 border-gray-500 border-t-transparent rounded-full" />
+                          Exporting...
+                        </>
+                      ) : (
+                        <>
+                          <Download className="w-4 h-4" />
+                          Export My Data
+                        </>
+                      )}
+                    </button>
+                  </div>
+
+                  <div className="border-t border-red-100 dark:border-red-900/30" />
+
+                  {/* Delete Account */}
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-gray-900 dark:text-white">Delete My Account</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                        Permanently delete your account and all associated data
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => { setShowDeleteModal(true); setDeleteConfirmText(''); }}
+                      className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-lg transition-all shadow-sm bg-red-600 text-white hover:bg-red-700 shadow-red-200 dark:shadow-red-900/30"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      Delete My Account
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
 
@@ -738,6 +851,96 @@ export default function SettingsPage() {
           )}
         </div>
       </div>
+
+      {/* Delete Account Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            onClick={() => !isDeleting && setShowDeleteModal(false)}
+          />
+          {/* Modal */}
+          <div className="relative w-full max-w-md bg-white dark:bg-[#111827] rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+            {/* Red header */}
+            <div className="px-6 py-5 bg-red-50 dark:bg-red-900/20 border-b border-red-200 dark:border-red-800/40">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-red-100 dark:bg-red-900/40 flex items-center justify-center flex-shrink-0">
+                  <AlertTriangle className="w-5 h-5 text-red-600 dark:text-red-400" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-red-700 dark:text-red-400">Delete Account</h3>
+                  <p className="text-sm text-red-600/70 dark:text-red-400/60">This action cannot be undone</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Body */}
+            <div className="px-6 py-5 space-y-4">
+              <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+                This will permanently delete your account and <strong>ALL</strong> associated data including:
+              </p>
+              <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1.5 pl-1">
+                <li className="flex items-start gap-2">
+                  <span className="text-red-400 mt-0.5">&#x2022;</span>
+                  Connected Salesforce orgs
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-red-400 mt-0.5">&#x2022;</span>
+                  Scan history
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-red-400 mt-0.5">&#x2022;</span>
+                  Issues, reports, and schedules
+                </li>
+              </ul>
+
+              <div className="pt-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                  Type <span className="font-mono text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 px-1.5 py-0.5 rounded text-xs">DELETE MY ACCOUNT</span> to confirm
+                </label>
+                <input
+                  type="text"
+                  value={deleteConfirmText}
+                  onChange={(e) => setDeleteConfirmText(e.target.value)}
+                  placeholder="DELETE MY ACCOUNT"
+                  className="form-input"
+                  disabled={isDeleting}
+                  autoFocus
+                />
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="px-6 py-4 bg-gray-50 dark:bg-gray-800/50 border-t border-gray-200 dark:border-gray-700 flex items-center justify-end gap-3">
+              <button
+                onClick={() => setShowDeleteModal(false)}
+                disabled={isDeleting}
+                className="px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteAccount}
+                disabled={deleteConfirmText !== 'DELETE MY ACCOUNT' || isDeleting}
+                className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                {isDeleting ? (
+                  <>
+                    <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4" />
+                    Delete My Account
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Global styles for form inputs */}
       <style jsx global>{`
