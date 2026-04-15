@@ -4,6 +4,9 @@ import { NextRequest } from 'next/server';
 vi.mock('@/lib/auth/get-user', () => ({ getAuthUser: vi.fn() }));
 vi.mock('@/lib/db/client', () => ({ createServiceClient: vi.fn() }));
 vi.mock('@/lib/ai/gemini', () => ({ generateFixSuggestion: vi.fn() }));
+vi.mock('@/lib/quota', () => ({
+  checkQuota: vi.fn().mockResolvedValue({ allowed: true, limit: null, used: 0, remaining: null, resetDate: 'May 1, 2026', isAdmin: false }),
+}));
 
 import { getAuthUser } from '@/lib/auth/get-user';
 import { createServiceClient } from '@/lib/db/client';

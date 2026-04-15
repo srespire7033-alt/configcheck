@@ -7,6 +7,9 @@ vi.mock('@/lib/ai/gemini', () => ({
   generateScanDiffInsights: vi.fn(),
   generateRemediationPlan: vi.fn(),
 }));
+vi.mock('@/lib/quota', () => ({
+  checkQuota: vi.fn().mockResolvedValue({ allowed: true, limit: null, used: 0, remaining: null, resetDate: 'May 1, 2026', isAdmin: false }),
+}));
 
 import { getAuthUser } from '@/lib/auth/get-user';
 import { createServiceClient } from '@/lib/db/client';
