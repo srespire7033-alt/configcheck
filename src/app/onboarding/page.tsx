@@ -676,7 +676,7 @@ function OnboardingContent() {
                       Scanning your org...
                     </p>
                     <p className="text-xs text-gray-400 dark:text-gray-500">
-                      Analyzing CPQ configuration, price rules, and products
+                      Analyzing Revenue Cloud configuration and rules
                     </p>
                   </div>
                 )}
@@ -742,7 +742,7 @@ function OnboardingContent() {
           )}
 
           <p className="text-xs text-gray-400 text-center mt-6">
-            Built for Salesforce CPQ consulting firms
+            Built for Salesforce Revenue Cloud consulting firms
           </p>
         </div>
       </main>

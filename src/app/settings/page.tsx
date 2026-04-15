@@ -417,7 +417,7 @@ export default function SettingsPage() {
                       type="text"
                       value={jobTitle}
                       onChange={(e) => setJobTitle(e.target.value)}
-                      placeholder="Salesforce CPQ Consultant"
+                      placeholder="Salesforce Revenue Cloud Consultant"
                       className="form-input"
                     />
                   </FormField>

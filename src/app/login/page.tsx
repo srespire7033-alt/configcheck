@@ -150,7 +150,7 @@ export default function LoginPage() {
               {resetMode
                 ? 'Enter your email and we\'ll send a reset link'
                 : isSignUp
-                  ? 'Start auditing Salesforce CPQ configurations'
+                  ? 'Start auditing Salesforce Revenue Cloud configurations'
                   : 'Sign in to your ConfigCheck account'}
             </p>
 
@@ -252,7 +252,7 @@ export default function LoginPage() {
           </div>
 
           <p className="text-xs text-gray-400 text-center mt-6">
-            Built for Salesforce CPQ consulting firms
+            Built for Salesforce Revenue Cloud consulting firms
           </p>
         </div>
       </div>

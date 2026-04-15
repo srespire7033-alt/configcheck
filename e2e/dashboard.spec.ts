@@ -38,7 +38,7 @@ test.describe('Dashboard', () => {
 
     // The description text is also present
     await expect(
-      page.getByText('Connect Salesforce orgs to scan their CPQ configuration')
+      page.getByText('Connect Salesforce orgs to scan their Revenue Cloud configuration')
     ).toBeVisible();
   });
 

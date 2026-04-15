@@ -81,7 +81,7 @@ export function ScheduleList({ schedules, onToggle, onDelete, onCreateClick }: S
           <CalendarPlus className="w-7 h-7 text-blue-400" />
         </div>
         <p className="text-gray-600 dark:text-gray-300 font-medium mb-1">No scheduled scans</p>
-        <p className="text-sm text-gray-400 dark:text-gray-500 mb-4">Set up automated scans to monitor your CPQ config.</p>
+        <p className="text-sm text-gray-400 dark:text-gray-500 mb-4">Set up automated scans to monitor your configuration.</p>
         <button
           onClick={onCreateClick}
           className="px-5 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-medium hover:bg-blue-700 transition"

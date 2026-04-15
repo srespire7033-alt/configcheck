@@ -7,9 +7,9 @@ function getClient() {
   });
 }
 
-const SYSTEM_PROMPT = `You are a Salesforce CPQ expert analyzing health check results for a consulting firm's client org.
+const SYSTEM_PROMPT = `You are a Salesforce Revenue Cloud expert analyzing health check results for a consulting firm's client org.
 
-Your audience is a CPQ consultant who will present this analysis to their client (VP of Sales, RevOps lead, or CTO).
+Your audience is a Revenue Cloud consultant who will present this analysis to their client (VP of Sales, RevOps lead, or CTO).
 
 Write in a professional, clear tone. Be specific about what's wrong and what to do. Avoid generic advice. Reference actual check IDs and affected records when relevant.
 
@@ -27,7 +27,7 @@ export async function generateExecutiveSummary(
   const criticalIssues = issues.filter((i) => i.severity === 'critical');
   const warningIssues = issues.filter((i) => i.severity === 'warning');
 
-  const prompt = `Analyze these Salesforce CPQ health check results and write an executive summary.
+  const prompt = `Analyze these Salesforce Revenue Cloud health check results and write an executive summary.
 
 ## Org Stats
 - Total Price Rules: ${orgStats.totalPriceRules}
@@ -78,7 +78,7 @@ Do NOT use markdown headers. Use plain paragraphs. Keep it concise and actionabl
  * Generate a detailed AI fix suggestion for a specific issue
  */
 export async function generateFixSuggestion(issue: Issue): Promise<string> {
-  const prompt = `You are helping a Salesforce CPQ consultant fix this issue in their client's org.
+  const prompt = `You are helping a Salesforce Revenue Cloud consultant fix this issue in their client's org.
 
 ## Issue
 - Check: ${issue.check_id}
@@ -100,7 +100,7 @@ If relevant, include SOQL queries they can run to validate before and after. Be 
     const response = await getClient().messages.create({
       model: 'claude-sonnet-4-6',
       max_tokens: 1024,
-      system: 'You are a Salesforce CPQ expert providing step-by-step fix instructions. Be specific, practical, and include exact Salesforce navigation paths.',
+      system: 'You are a Salesforce Revenue Cloud expert providing step-by-step fix instructions. Be specific, practical, and include exact Salesforce navigation paths.',
       messages: [{ role: 'user', content: prompt }],
     });
 
@@ -122,7 +122,7 @@ function generateFallbackSummary(issues: Issue[], overallScore: number): string 
   const health =
     overallScore >= 80 ? 'good' : overallScore >= 60 ? 'moderate with areas of concern' : 'critical and requires immediate attention';
 
-  return `This Salesforce CPQ org scored ${overallScore}/100, indicating the overall health is ${health}. The scan found ${critical} critical issue(s) and ${warnings} warning(s) that should be reviewed. ${
+  return `This Salesforce org scored ${overallScore}/100, indicating the overall health is ${health}. The scan found ${critical} critical issue(s) and ${warnings} warning(s) that should be reviewed. ${
     critical > 0
       ? `The critical issues should be addressed first as they may be causing revenue miscalculations or broken automation.`
       : `No critical issues were found, but the warnings should be reviewed to prevent future problems.`

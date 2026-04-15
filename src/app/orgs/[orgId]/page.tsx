@@ -647,7 +647,7 @@ export default function OrgDetailPage() {
                   </div>
                   <div>
                     <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">Top Issues to Address</h3>
-                    <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">Highest priority issues affecting your CPQ config</p>
+                    <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">Highest priority issues affecting your configuration</p>
                   </div>
                 </div>
                 <div className="space-y-2">
@@ -1008,7 +1008,7 @@ export default function OrgDetailPage() {
                 </svg>
               </div>
               <p className="text-gray-600 dark:text-gray-300 font-medium">No issues found!</p>
-              <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">Your CPQ configuration looks great.</p>
+              <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">Your Revenue Cloud configuration looks great.</p>
             </div>
           )}
         </>

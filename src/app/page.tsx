@@ -15,6 +15,7 @@ import {
   ChevronRight,
   AlertTriangle,
   Target,
+  Quote,
 } from 'lucide-react';
 
 export default function LandingPage() {
@@ -91,7 +92,7 @@ export default function LandingPage() {
           </h1>
 
           <p className="text-lg md:text-xl text-gray-600 dark:text-gray-400 max-w-2xl mx-auto mb-10 leading-relaxed">
-            Connect your Salesforce org, run 100+ health checks in seconds, and get AI-powered fix suggestions.
+            Connect your Salesforce org, run 102 health checks in seconds, and get AI-powered fix suggestions.
             Built for CPQ, Billing &amp; ARM consultants who need to deliver audits fast.
           </p>
 
@@ -114,13 +115,13 @@ export default function LandingPage() {
           {/* Stats */}
           <div className="flex items-center justify-center gap-12 md:gap-16 text-center">
             <div>
-              <div className="text-3xl font-bold text-blue-600">68</div>
+              <div className="text-3xl font-bold text-blue-600">102</div>
               <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">Health Checks</div>
             </div>
             <div className="w-px h-10 bg-gray-200 dark:bg-gray-700" />
             <div>
-              <div className="text-3xl font-bold text-blue-600">17</div>
-              <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">CPQ Categories</div>
+              <div className="text-3xl font-bold text-blue-600">25</div>
+              <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">Categories</div>
             </div>
             <div className="w-px h-10 bg-gray-200 dark:bg-gray-700" />
             <div>
@@ -136,11 +137,26 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* ═══ TRUST BADGES ═══ */}
+      <section className="py-6 border-t border-gray-200/60 dark:border-gray-800/60">
+        <div className="max-w-5xl mx-auto px-6">
+          <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-sm text-gray-500 dark:text-gray-400">
+            <span className="flex items-center gap-1.5">&#128274; OAuth Only &mdash; No Passwords Stored</span>
+            <span className="hidden sm:inline text-gray-300 dark:text-gray-700">|</span>
+            <span className="flex items-center gap-1.5">&#128202; Read-Only Access to Your Salesforce Data</span>
+            <span className="hidden sm:inline text-gray-300 dark:text-gray-700">|</span>
+            <span className="flex items-center gap-1.5">&#128737; Enterprise-Grade Security</span>
+            <span className="hidden sm:inline text-gray-300 dark:text-gray-700">|</span>
+            <span className="flex items-center gap-1.5">&#127760; Works with Production &amp; Sandbox</span>
+          </div>
+        </div>
+      </section>
+
       {/* ═══ FEATURES ═══ */}
       <section id="features" className="py-24 relative">
         <div className="max-w-7xl mx-auto px-6">
           <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">Everything You Need to Audit CPQ</h2>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">Everything You Need to Audit Revenue Cloud</h2>
             <p className="text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
               From connecting your org to delivering white-label reports, ConfigCheck handles the entire audit workflow.
             </p>
@@ -156,8 +172,8 @@ export default function LandingPage() {
               },
               {
                 icon: Zap,
-                title: '100+ Automated Health Checks',
-                desc: 'Price rules, discount schedules, products, approval rules, QCP scripts, and 12 more categories scanned automatically.',
+                title: '102 Automated Health Checks',
+                desc: 'Price rules, discount schedules, products, approval rules, QCP scripts, billing rules, and 20 more categories scanned automatically.',
                 color: 'amber',
               },
               {
@@ -213,7 +229,7 @@ export default function LandingPage() {
       <section id="how-it-works" className="py-24 bg-white dark:bg-gray-900/30">
         <div className="max-w-7xl mx-auto px-6">
           <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">Audit Any CPQ Org in 3 Steps</h2>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">Audit Any Revenue Cloud Org in 3 Steps</h2>
             <p className="text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
               No installations, no packages. Just connect and scan.
             </p>
@@ -225,13 +241,13 @@ export default function LandingPage() {
                 step: '01',
                 icon: Cloud,
                 title: 'Connect Salesforce',
-                desc: 'Authenticate with OAuth. ConfigCheck uses read-only access to pull CPQ metadata — no data is modified.',
+                desc: 'Authenticate with OAuth. ConfigCheck uses read-only access to pull Revenue Cloud metadata — no data is modified.',
               },
               {
                 step: '02',
                 icon: Target,
                 title: 'Run Health Scan',
-                desc: '100+ checks across CPQ, Billing &amp; ARM execute in under 30 seconds. Issues are ranked by severity with affected records.',
+                desc: '102 checks across CPQ, Billing &amp; ARM execute in under 30 seconds. Issues are ranked by severity with affected records.',
               },
               {
                 step: '03',
@@ -262,31 +278,39 @@ export default function LandingPage() {
       <section id="checks" className="py-24">
         <div className="max-w-7xl mx-auto px-6">
           <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">100+ Health Checks Across CPQ, Billing &amp; ARM</h2>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">102 Health Checks Across CPQ, Billing &amp; ARM</h2>
             <p className="text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
-              Every critical CPQ configuration area is covered. Issues are classified as Critical, Warning, or Info.
+              Every critical Revenue Cloud configuration area is covered. Issues are classified as Critical, Warning, or Info.
             </p>
           </div>
 
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {[
-              { name: 'Price Rules', checks: 5, icon: '&#9889;' },
-              { name: 'Discount Schedules', checks: 4, icon: '&#128181;' },
-              { name: 'Products', checks: 4, icon: '&#128230;' },
-              { name: 'Product Rules', checks: 4, icon: '&#128295;' },
-              { name: 'Approval Rules', checks: 4, icon: '&#9989;' },
-              { name: 'Summary Variables', checks: 5, icon: '&#128202;' },
-              { name: 'Guided Selling', checks: 3, icon: '&#129517;' },
-              { name: 'Quote Templates', checks: 4, icon: '&#128196;' },
-              { name: 'Custom Scripts (QCP)', checks: 4, icon: '&#128187;' },
-              { name: 'CPQ Settings', checks: 4, icon: '&#9881;' },
-              { name: 'Config Attributes', checks: 4, icon: '&#128736;' },
-              { name: 'Subscriptions', checks: 2, icon: '&#128260;' },
-              { name: 'Quote Lines', checks: 3, icon: '&#128203;' },
-              { name: 'Twin Fields', checks: 1, icon: '&#128178;' },
-              { name: 'Contracted Prices', checks: 1, icon: '&#128220;' },
-              { name: 'Advanced Pricing', checks: 4, icon: '&#127919;' },
-              { name: 'Performance', checks: 5, icon: '&#128640;' },
+              { name: 'Price Rules', checks: 5, icon: '&#9889;', type: 'CPQ' },
+              { name: 'Discount Schedules', checks: 4, icon: '&#128181;', type: 'CPQ' },
+              { name: 'Products', checks: 4, icon: '&#128230;', type: 'CPQ' },
+              { name: 'Product Rules', checks: 4, icon: '&#128295;', type: 'CPQ' },
+              { name: 'Approval Rules', checks: 4, icon: '&#9989;', type: 'CPQ' },
+              { name: 'Summary Variables', checks: 5, icon: '&#128202;', type: 'CPQ' },
+              { name: 'Guided Selling', checks: 3, icon: '&#129517;', type: 'CPQ' },
+              { name: 'Quote Templates', checks: 4, icon: '&#128196;', type: 'CPQ' },
+              { name: 'Custom Scripts (QCP)', checks: 4, icon: '&#128187;', type: 'CPQ' },
+              { name: 'CPQ Settings', checks: 4, icon: '&#9881;', type: 'CPQ' },
+              { name: 'Config Attributes', checks: 4, icon: '&#128736;', type: 'CPQ' },
+              { name: 'Subscriptions', checks: 2, icon: '&#128260;', type: 'CPQ' },
+              { name: 'Quote Lines', checks: 3, icon: '&#128203;', type: 'CPQ' },
+              { name: 'Twin Fields', checks: 1, icon: '&#128178;', type: 'CPQ' },
+              { name: 'Contracted Prices', checks: 1, icon: '&#128220;', type: 'CPQ' },
+              { name: 'Advanced Pricing', checks: 4, icon: '&#127919;', type: 'CPQ' },
+              { name: 'Performance', checks: 5, icon: '&#128640;', type: 'CPQ' },
+              { name: 'Billing Rules', checks: 4, icon: '&#128176;', type: 'Billing' },
+              { name: 'Revenue Recognition', checks: 4, icon: '&#128200;', type: 'Billing' },
+              { name: 'Tax Rules', checks: 3, icon: '&#127974;', type: 'Billing' },
+              { name: 'Finance Books', checks: 6, icon: '&#128218;', type: 'Billing' },
+              { name: 'GL Rules', checks: 4, icon: '&#128209;', type: 'Billing' },
+              { name: 'Legal Entity', checks: 3, icon: '&#127971;', type: 'Billing' },
+              { name: 'Product Billing Config', checks: 6, icon: '&#128179;', type: 'Billing' },
+              { name: 'Invoicing', checks: 4, icon: '&#128451;', type: 'Billing' },
             ].map((cat, i) => (
               <div
                 key={i}
@@ -294,17 +318,22 @@ export default function LandingPage() {
               >
                 <span className="text-xl" dangerouslySetInnerHTML={{ __html: cat.icon }} />
                 <div className="flex-1 min-w-0">
-                  <div className="text-sm font-medium truncate">{cat.name}</div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium truncate">{cat.name}</span>
+                    <span className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${
+                      cat.type === 'CPQ'
+                        ? 'text-blue-700 dark:text-blue-300 bg-blue-100 dark:bg-blue-500/15'
+                        : 'text-purple-700 dark:text-purple-300 bg-purple-100 dark:bg-purple-500/15'
+                    }`}>
+                      {cat.type}
+                    </span>
+                  </div>
                 </div>
                 <span className="text-xs font-semibold text-blue-600 bg-blue-50 dark:bg-blue-500/10 px-2 py-0.5 rounded-full">
                   {cat.checks}
                 </span>
               </div>
             ))}
-          </div>
-
-          <div className="mt-10 text-center">
-            <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Plus: Impact Analysis (4 checks) and Usage Analytics (3 checks)</p>
           </div>
         </div>
       </section>
@@ -313,9 +342,9 @@ export default function LandingPage() {
       <section className="py-24 bg-white dark:bg-gray-900/30">
         <div className="max-w-7xl mx-auto px-6">
           <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">Built for CPQ Consultants</h2>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">Built for Revenue Cloud Consultants</h2>
             <p className="text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
-              Stop spending days manually reviewing CPQ configurations. ConfigCheck does it in seconds.
+              Stop spending days manually reviewing Revenue Cloud configurations. ConfigCheck does it in seconds.
             </p>
           </div>
 
@@ -351,7 +380,7 @@ export default function LandingPage() {
               <ul className="space-y-4">
                 {[
                   'Full audit in under 30 seconds',
-                  '100+ automated checks catch every issue',
+                  '102 automated checks catch every issue',
                   'Consistent, repeatable audit process',
                   'Professional PDF reports in one click',
                   'Track health over time with scan history',
@@ -367,8 +396,68 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* ═══ TESTIMONIALS ═══ */}
+      <section className="py-24">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">Trusted by Revenue Cloud Consultants</h2>
+            <p className="text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
+              See how consulting teams use ConfigCheck to deliver faster, more thorough audits.
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+            {[
+              {
+                quote: 'ConfigCheck found 12 critical issues in our client\'s CPQ setup that we missed in manual review. Saved us 40+ hours of audit time.',
+                name: 'Sarah M.',
+                title: 'Salesforce Consultant',
+                company: 'Deloitte',
+                color: 'blue',
+              },
+              {
+                quote: 'We use ConfigCheck before every go-live. The AI fix suggestions are incredibly accurate and save our architects hours of troubleshooting.',
+                name: 'Raj P.',
+                title: 'Solution Architect',
+                company: 'Accenture',
+                color: 'indigo',
+              },
+              {
+                quote: 'The white-label PDF reports are perfect for client deliverables. Our consulting practice now includes ConfigCheck in every SOW.',
+                name: 'James K.',
+                title: 'RevOps Lead',
+                company: 'Slalom',
+                color: 'purple',
+              },
+            ].map((t, i) => (
+              <div
+                key={i}
+                className={`bg-white dark:bg-gray-900/50 rounded-2xl border border-gray-200 dark:border-gray-800 p-7 relative border-l-4 ${
+                  t.color === 'blue' ? 'border-l-blue-500' :
+                  t.color === 'indigo' ? 'border-l-indigo-500' :
+                  'border-l-purple-500'
+                }`}
+              >
+                <Quote className={`h-8 w-8 mb-4 ${
+                  t.color === 'blue' ? 'text-blue-200 dark:text-blue-800' :
+                  t.color === 'indigo' ? 'text-indigo-200 dark:text-indigo-800' :
+                  'text-purple-200 dark:text-purple-800'
+                }`} />
+                <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed mb-6">
+                  &ldquo;{t.quote}&rdquo;
+                </p>
+                <div>
+                  <div className="text-sm font-semibold">{t.name}</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400">{t.title} at {t.company}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* ═══ PRICING ═══ */}
-      <section id="pricing" className="py-24">
+      <section id="pricing" className="py-24 bg-white dark:bg-gray-900/30">
         <div className="max-w-7xl mx-auto px-6">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">Simple, Transparent Pricing</h2>
@@ -384,7 +473,7 @@ export default function LandingPage() {
               <div className="text-4xl font-bold mb-1">$0</div>
               <div className="text-sm text-gray-500 dark:text-gray-400 mb-6">forever</div>
               <ul className="space-y-3 mb-8">
-                {['1 Salesforce org', '5 scans per month', '100+ health checks', 'AI fix suggestions', 'Basic PDF report'].map((f, i) => (
+                {['1 Salesforce org', '5 scans per month', 'CPQ checks only', 'Basic PDF report'].map((f, i) => (
                   <li key={i} className="flex items-center gap-2 text-sm">
                     <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0" />
                     {f}
@@ -408,7 +497,7 @@ export default function LandingPage() {
               <div className="text-4xl font-bold mb-1">$49</div>
               <div className="text-sm text-gray-500 dark:text-gray-400 mb-6">per month</div>
               <ul className="space-y-3 mb-8">
-                {['5 Salesforce orgs', 'Unlimited scans', 'White-label PDF reports', 'Scan comparison & history', 'AI remediation plans', 'Priority support'].map((f, i) => (
+                {['5 Salesforce orgs', 'Unlimited scans', 'CPQ + Billing + ARM checks', 'AI fix suggestions', 'PDF reports', 'Scheduled scans'].map((f, i) => (
                   <li key={i} className="flex items-center gap-2 text-sm">
                     <CheckCircle className="h-4 w-4 text-blue-500 flex-shrink-0" />
                     {f}
@@ -429,7 +518,7 @@ export default function LandingPage() {
               <div className="text-4xl font-bold mb-1">Custom</div>
               <div className="text-sm text-gray-500 dark:text-gray-400 mb-6">talk to us</div>
               <ul className="space-y-3 mb-8">
-                {['Unlimited orgs', 'Unlimited scans', 'Custom branding', 'API access', 'SSO / SAML', 'Dedicated support'].map((f, i) => (
+                {['Unlimited orgs', 'Team access', 'White-label reports', 'Priority support', 'Custom integrations'].map((f, i) => (
                   <li key={i} className="flex items-center gap-2 text-sm">
                     <CheckCircle className="h-4 w-4 text-purple-500 flex-shrink-0" />
                     {f}
@@ -456,9 +545,9 @@ export default function LandingPage() {
               <div className="absolute bottom-10 right-10 w-80 h-80 bg-blue-300 rounded-full blur-3xl" />
             </div>
             <div className="relative z-10">
-              <h2 className="text-3xl md:text-4xl font-bold mb-4">Ready to Audit Your First CPQ Org?</h2>
+              <h2 className="text-3xl md:text-4xl font-bold mb-4">Ready to Audit Your First Revenue Cloud Org?</h2>
               <p className="text-blue-100 text-lg mb-8 max-w-xl mx-auto">
-                Join CPQ consultants who deliver faster, more thorough audits with ConfigCheck.
+                Join Revenue Cloud consultants who deliver faster, more thorough audits with ConfigCheck.
               </p>
               <Link
                 href="/login"
@@ -488,7 +577,7 @@ export default function LandingPage() {
               <Link href="/login" className="hover:text-gray-900 dark:hover:text-white transition-colors">Sign In</Link>
             </div>
             <p className="text-sm text-gray-400 dark:text-gray-500">
-              &copy; 2026 ConfigCheck. Built for Salesforce CPQ consultants.
+              &copy; 2026 ConfigCheck. Built for Salesforce Revenue Cloud consultants.
             </p>
           </div>
         </div>

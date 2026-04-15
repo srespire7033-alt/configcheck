@@ -174,7 +174,7 @@ function DashboardContent() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Your Organizations</h1>
           <p className="text-gray-500 dark:text-gray-400 mt-1">
-            Connect Salesforce orgs to scan their CPQ configuration
+            Connect Salesforce orgs to scan their Revenue Cloud configuration
           </p>
         </div>
         {orgs.length >= 2 && (

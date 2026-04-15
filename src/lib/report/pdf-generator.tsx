@@ -125,7 +125,7 @@ export function CPQHealthReport({ scan, issues, orgName, companyName, brandColor
         )}
         <View style={{ marginTop: 120 }}>
           <Text style={{ ...styles.coverTitle, color: brandColor }}>CPQ Health Check Report</Text>
-          <Text style={styles.coverSubtitle}>Salesforce CPQ Configuration Audit</Text>
+          <Text style={styles.coverSubtitle}>Salesforce Revenue Cloud Configuration Audit</Text>
           <View style={{ height: 2, backgroundColor: brandColor, width: 60, marginBottom: 30 }} />
           <Text style={styles.coverOrgName}>{orgName}</Text>
           <Text style={styles.coverDate}>{scanDate}</Text>

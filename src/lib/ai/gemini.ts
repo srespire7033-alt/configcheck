@@ -30,9 +30,9 @@ async function withRetry<T>(fn: () => Promise<T>, maxRetries = 2): Promise<T> {
   throw new Error('Max retries exceeded');
 }
 
-const SYSTEM_PROMPT = `You are a Salesforce CPQ expert analyzing health check results for a consulting firm's client org.
+const SYSTEM_PROMPT = `You are a Salesforce Revenue Cloud expert analyzing health check results for a consulting firm's client org.
 
-Your audience is a CPQ consultant who will present this analysis to their client (VP of Sales, RevOps lead, or CTO).
+Your audience is a Revenue Cloud consultant who will present this analysis to their client (VP of Sales, RevOps lead, or CTO).
 
 Write in a professional, clear tone. Be specific about what's wrong and what to do. Avoid generic advice. Reference actual check IDs and affected records when relevant.
 
@@ -52,7 +52,7 @@ export async function generateExecutiveSummary(
 
   const prompt = `${SYSTEM_PROMPT}
 
-Analyze these Salesforce CPQ health check results and write an executive summary.
+Analyze these Salesforce Revenue Cloud health check results and write an executive summary.
 
 ## Org Stats
 - Total Price Rules: ${orgStats.totalPriceRules}
@@ -97,9 +97,9 @@ Do NOT use markdown headers. Use plain paragraphs. Keep it concise and actionabl
  * Generate a detailed AI fix suggestion for a specific issue
  */
 export async function generateFixSuggestion(issue: Issue): Promise<string> {
-  const prompt = `You are a Salesforce CPQ expert providing step-by-step fix instructions. Be specific, practical, and include exact Salesforce navigation paths.
+  const prompt = `You are a Salesforce Revenue Cloud expert providing step-by-step fix instructions. Be specific, practical, and include exact Salesforce navigation paths.
 
-You are helping a Salesforce CPQ consultant fix this issue in their client's org.
+You are helping a Salesforce Revenue Cloud consultant fix this issue in their client's org.
 
 ## Issue
 - Check: ${issue.check_id}
@@ -138,9 +138,9 @@ export async function generateExplanation(issue: {
   category: string;
   severity: string;
 }): Promise<string> {
-  const prompt = `You explain technical Salesforce CPQ issues in plain, non-technical English for business stakeholders. Be concise, specific, and jargon-free.
+  const prompt = `You explain technical Salesforce configuration issues in plain, non-technical English for business stakeholders. Be concise, specific, and jargon-free.
 
-You are explaining a Salesforce CPQ configuration issue to someone who is NOT a CPQ expert — they might be a VP of Sales, CFO, or RevOps manager.
+You are explaining a Salesforce configuration issue to someone who is NOT a technical expert — they might be a VP of Sales, CFO, or RevOps manager.
 
 ## Issue Details
 - Check ID: ${issue.checkId}
@@ -180,7 +180,7 @@ export async function generateScanDiffInsights(
   resolvedIssues: string[],
   unchangedCount: number
 ): Promise<string> {
-  const prompt = `You are a Salesforce CPQ expert analyzing changes between two health check scans.
+  const prompt = `You are a Salesforce Revenue Cloud expert analyzing changes between two health check scans.
 
 ## Score Change
 - Previous score: ${prevScore}/100
@@ -224,7 +224,7 @@ export async function generateRemediationPlan(
     .map((i) => `- [${i.check_id}] ${i.severity.toUpperCase()}: ${i.title} (${i.affected_records?.length || 0} records, est. ${i.effort_hours || '?'}h)`)
     .join('\n');
 
-  const prompt = `You are a Salesforce CPQ expert creating a remediation plan for a consulting engagement.
+  const prompt = `You are a Salesforce Revenue Cloud expert creating a remediation plan for a consulting engagement.
 
 ## Current Score: ${overallScore}/100
 ## Issues to Address:
@@ -262,7 +262,7 @@ function generateFallbackSummary(issues: Issue[], overallScore: number): string 
   const health =
     overallScore >= 80 ? 'good' : overallScore >= 60 ? 'moderate with areas of concern' : 'critical and requires immediate attention';
 
-  return `This Salesforce CPQ org scored ${overallScore}/100, indicating the overall health is ${health}. The scan found ${critical} critical issue(s) and ${warnings} warning(s) that should be reviewed. ${
+  return `This Salesforce org scored ${overallScore}/100, indicating the overall health is ${health}. The scan found ${critical} critical issue(s) and ${warnings} warning(s) that should be reviewed. ${
     critical > 0
       ? `The critical issues should be addressed first as they may be causing revenue miscalculations or broken automation.`
       : `No critical issues were found, but the warnings should be reviewed to prevent future problems.`

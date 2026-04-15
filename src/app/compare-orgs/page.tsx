@@ -125,7 +125,7 @@ export default function CompareOrgsPage() {
         </button>
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Sandbox vs Production</h1>
-          <p className="text-sm text-gray-500 mt-0.5">Compare CPQ configurations between two Salesforce orgs</p>
+          <p className="text-sm text-gray-500 mt-0.5">Compare Revenue Cloud configurations across Salesforce orgs</p>
         </div>
       </div>
 
