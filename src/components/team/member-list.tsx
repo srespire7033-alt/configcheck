@@ -135,8 +135,8 @@ export function MemberList({ members, currentUserId, currentUserRole, teamId, on
             className="flex items-center gap-3 px-4 py-3 rounded-lg border border-gray-100 dark:border-gray-700/60 bg-white dark:bg-[#111827] hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
           >
             {/* Avatar */}
-            {/* eslint-disable-next-line @next/next/no-img-element */}
             {member.users.avatar_url ? (
+              // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={member.users.avatar_url}
                 alt={member.users.full_name}

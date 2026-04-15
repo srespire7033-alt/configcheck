@@ -31,6 +31,16 @@ const nextConfig = {
     ];
   },
 
+  // Skip type checking during build (handled by dedicated tsc step in CI)
+  typescript: {
+    ignoreBuildErrors: true,
+  },
+
+  // Skip ESLint during build (handled by dedicated lint step)
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
+
   // Allowed image domains (for future logo uploads)
   images: {
     remotePatterns: [
