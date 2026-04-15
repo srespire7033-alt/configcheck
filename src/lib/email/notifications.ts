@@ -131,7 +131,7 @@ function buildCompletedEmail(name: string, data: ScanNotificationData, appUrl: s
           <tr>
             <td>
               <h1 style="color: white; margin: 0; font-size: 20px; font-weight: 700;">⛨ ConfigCheck</h1>
-              <p style="color: #bfdbfe; margin: 4px 0 0; font-size: 13px;">Salesforce CPQ Health Audit</p>
+              <p style="color: #bfdbfe; margin: 4px 0 0; font-size: 13px;">AI-Driven Config Audits for Salesforce Revenue Cloud</p>
             </td>
             <td style="text-align: right;">
               <span style="color: #bfdbfe; font-size: 12px;">Scan Complete ✓</span>
@@ -211,7 +211,7 @@ function buildFailedEmail(name: string, data: ScanNotificationData, appUrl: stri
           <tr>
             <td>
               <h1 style="color: white; margin: 0; font-size: 20px; font-weight: 700;">⛨ ConfigCheck</h1>
-              <p style="color: #fecaca; margin: 4px 0 0; font-size: 13px;">Salesforce CPQ Health Audit</p>
+              <p style="color: #fecaca; margin: 4px 0 0; font-size: 13px;">AI-Driven Config Audits for Salesforce Revenue Cloud</p>
             </td>
             <td style="text-align: right;">
               <span style="color: #fecaca; font-size: 12px;">Scan Failed ✗</span>

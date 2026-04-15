@@ -400,7 +400,7 @@ export default function OrgDetailPage() {
               </div>
               <div>
                 <h1 className="text-xl font-semibold">ConfigCheck</h1>
-                <p className="text-sm text-white/80">AI-Powered Salesforce Configuration Auditor</p>
+                <p className="text-sm text-white/80">AI-Driven Config Audits for Salesforce Revenue Cloud</p>
               </div>
             </div>
             <div className="flex items-center gap-4">

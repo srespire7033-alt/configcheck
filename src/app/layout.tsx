@@ -11,7 +11,7 @@ const geistSans = localFont({
 
 export const metadata: Metadata = {
   title: "ConfigCheck - Salesforce Configuration Audit",
-  description: "AI-powered Salesforce configuration auditor for CPQ, Billing, and ARM",
+  description: "AI-Driven Config Audits for Salesforce Revenue Cloud",
   openGraph: {
     title: "ConfigCheck - Salesforce Configuration Audit",
     description: "100+ automated checks across CPQ, Billing, and ARM. AI-powered fix suggestions and remediation plans for Salesforce.",

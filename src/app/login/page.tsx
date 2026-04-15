@@ -95,7 +95,7 @@ export default function LoginPage() {
             <Logo size="lg" variant="white" />
           </div>
           <h1 className="text-4xl font-bold mb-4 leading-tight">
-            AI-Powered CPQ<br />Health Audits
+            AI-Driven Config Audits<br />for Salesforce Revenue Cloud
           </h1>
           <p className="text-blue-100 text-lg mb-10 max-w-md">
             Connect your Salesforce orgs, detect misconfigurations, and deliver professional audit reports to your clients.

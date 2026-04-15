@@ -356,7 +356,7 @@
 <div class="hero">
   <div class="hero-inner">
     <h1>ConfigCheck — Test Coverage Report</h1>
-    <p class="subtitle">AI-Powered Salesforce CPQ Configuration Auditor &mdash; Quality Assurance Dashboard</p>
+    <p class="subtitle">AI-Driven Config Audits for Salesforce Revenue Cloud &mdash; Quality Assurance Dashboard</p>
     <div class="stats-row">
       <div class="stat-card">
         <div class="label">Total Tests</div>
@@ -377,7 +377,11 @@
       </div>
       <div class="stat-card">
         <div class="label">Health Checks</div>
-        <div class="value amber">68</div>
+        <div class="value amber">102</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Products</div>
+        <div class="value purple">CPQ + Billing</div>
       </div>
       <div class="stat-card">
         <div class="label">Execution Time</div>
@@ -394,7 +398,7 @@
 <div class="type-grid">
   <div class="type-card">
     <div class="type-name">&#128300; Unit Testing</div>
-    <div class="type-desc">Individual check functions tested in isolation with crafted data. Each of 68 checks gets its own positive & negative test cases across 17 categories.</div>
+    <div class="type-desc">Individual check functions tested in isolation with crafted data. Each of 102 checks (68 CPQ + 34 Billing) gets its own positive & negative test cases across 25 categories.</div>
   </div>
   <div class="type-card">
     <div class="type-name">&#128279; Integration Testing</div>
@@ -430,12 +434,20 @@
   </div>
   <div class="type-card">
     <div class="type-name">&#127760; API Route Testing</div>
-    <div class="type-desc">All 9 API routes tested with mocked Supabase client and auth. Covers auth, orgs, scans, issues, AI endpoints, exports, and usage tracking.</div>
+    <div class="type-desc">All 9 API routes tested with mocked Supabase client and auth. Covers auth, orgs, scans, issues, AI endpoints, exports, usage tracking, and quota enforcement.</div>
+  </div>
+  <div class="type-card">
+    <div class="type-name">&#128274; Plan & Quota Testing</div>
+    <div class="type-desc">Quota enforcement per plan (Free/Pro/Enterprise), admin bypass, monthly usage counting, HTTP 429 limit responses, and org connection limits.</div>
+  </div>
+  <div class="type-card">
+    <div class="type-name">&#128176; Billing Engine Testing</div>
+    <div class="type-desc">34 billing health checks across 8 categories: billing rules, rev rec, tax, finance books, GL rules, legal entity, product config, and invoicing.</div>
   </div>
 </div>
 
 <!-- SECTION 2: ALL CATEGORIES & CHECKS -->
-<h2><span class="icon">&#128269;</span> 2. Categories & Checks Covered (68 Checks / 17 Categories)</h2>
+<h2><span class="icon">&#128269;</span> 2. CPQ Categories & Checks (68 Checks / 17 Categories)</h2>
 
 <!-- Price Rules -->
 <h3>Price Rules (PR-001 to PR-005) &mdash; 31 tests</h3>
@@ -657,8 +669,216 @@
   </tbody>
 </table>
 
+<!-- SECTION 2B: BILLING CHECKS -->
+<h2><span class="icon">&#128176;</span> 2b. Billing Categories & Checks (34 Checks / 8 Categories)</h2>
+<p style="color:var(--text-muted);margin-bottom:20px;">Salesforce Billing health checks covering billing rules, revenue recognition, tax, finance books, GL rules, legal entity, product billing config, and invoicing.</p>
+
+<!-- Billing Rules -->
+<h3>Billing Rules (BR-001 to BR-004)</h3>
+<table>
+  <thead><tr><th>Check ID</th><th>Check Name</th><th>Severity</th><th>Positive Tests (Issues Detected)</th><th>Negative Tests (No False Positives)</th></tr></thead>
+  <tbody>
+    <tr><td><strong>BR-001</strong></td><td>Inactive Billing Rules Referenced by Products</td><td><span class="badge badge-critical">Critical</span></td><td class="col-positive">Inactive rule linked to active product; Multiple products referencing same inactive rule</td><td class="col-negative">Active billing rules; No product references; Inactive product skipped</td></tr>
+    <tr><td><strong>BR-002</strong></td><td>Billing Rules Without GL Treatment</td><td><span class="badge badge-critical">Critical</span></td><td class="col-positive">Rule with no GL treatment; Multiple rules missing; Empty treatment array</td><td class="col-negative">All rules have treatments; Inactive rules skipped</td></tr>
+    <tr><td><strong>BR-003</strong></td><td>Orphaned Billing Rules</td><td><span class="badge badge-info">Info</span></td><td class="col-positive">Rule not referenced by any product; Multiple orphans</td><td class="col-negative">All rules referenced; Empty rules array</td></tr>
+    <tr><td><strong>BR-004</strong></td><td>Duplicate Billing Rule Names</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">2 rules same name; 3 rules same name</td><td class="col-negative">Unique names; Inactive duplicates skipped</td></tr>
+  </tbody>
+</table>
+
+<!-- Revenue Recognition Rules -->
+<h3>Revenue Recognition Rules (RR-001 to RR-004)</h3>
+<table>
+  <thead><tr><th>Check ID</th><th>Check Name</th><th>Severity</th><th>Positive Tests (Issues Detected)</th><th>Negative Tests (No False Positives)</th></tr></thead>
+  <tbody>
+    <tr><td><strong>RR-001</strong></td><td>Inactive Rev Rec Rules Referenced by Products</td><td><span class="badge badge-critical">Critical</span></td><td class="col-positive">Inactive rule on active product; Multiple references</td><td class="col-negative">Active rules; No product refs; Inactive product skipped</td></tr>
+    <tr><td><strong>RR-002</strong></td><td>Rev Rec Rules Without Revenue Schedule Type</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">Null schedule type; Empty string type</td><td class="col-negative">Schedule type set; Inactive skipped</td></tr>
+    <tr><td><strong>RR-003</strong></td><td>Rev Rec Rules Not Creating Schedules</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">CreateRevSchedule = false; Null value</td><td class="col-negative">CreateRevSchedule = true; Inactive skipped</td></tr>
+    <tr><td><strong>RR-004</strong></td><td>Orphaned Revenue Recognition Rules</td><td><span class="badge badge-info">Info</span></td><td class="col-positive">Rule not referenced by any product; Multiple orphans</td><td class="col-negative">All rules referenced; Empty array</td></tr>
+  </tbody>
+</table>
+
+<!-- Tax Rules -->
+<h3>Tax Rules (TR-001 to TR-003)</h3>
+<table>
+  <thead><tr><th>Check ID</th><th>Check Name</th><th>Severity</th><th>Positive Tests (Issues Detected)</th><th>Negative Tests (No False Positives)</th></tr></thead>
+  <tbody>
+    <tr><td><strong>TR-001</strong></td><td>Active Products Without Tax Rule</td><td><span class="badge badge-critical">Critical</span></td><td class="col-positive">Active product no tax rule; Multiple products</td><td class="col-negative">All have tax rule; Inactive skipped; Empty</td></tr>
+    <tr><td><strong>TR-002</strong></td><td>Inactive Tax Rules Referenced by Products</td><td><span class="badge badge-critical">Critical</span></td><td class="col-positive">Inactive tax rule on active product; Multiple</td><td class="col-negative">Active tax rule; No product refs</td></tr>
+    <tr><td><strong>TR-003</strong></td><td>Tax Rules With Zero Percent Tax</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">TaxRate = 0; Null tax rate</td><td class="col-negative">Positive rate; Inactive skipped</td></tr>
+  </tbody>
+</table>
+
+<!-- Finance Books -->
+<h3>Finance Books (FB-001 to FB-006)</h3>
+<table>
+  <thead><tr><th>Check ID</th><th>Check Name</th><th>Severity</th><th>Positive Tests (Issues Detected)</th><th>Negative Tests (No False Positives)</th></tr></thead>
+  <tbody>
+    <tr><td><strong>FB-001</strong></td><td>No Open Finance Period for Current Date</td><td><span class="badge badge-critical">Critical</span></td><td class="col-positive">No period covering today; All periods closed; Future periods only</td><td class="col-negative">Open period for today; Multiple valid periods</td></tr>
+    <tr><td><strong>FB-002</strong></td><td>Gaps Between Finance Periods</td><td><span class="badge badge-critical">Critical</span></td><td class="col-positive">Gap between consecutive periods; Multiple gaps</td><td class="col-negative">Continuous coverage; Single period; Adjacent boundaries</td></tr>
+    <tr><td><strong>FB-003</strong></td><td>Overlapping Finance Periods</td><td><span class="badge badge-critical">Critical</span></td><td class="col-positive">Overlapping date ranges; Multiple overlaps</td><td class="col-negative">Non-overlapping; Single period; Adjacent</td></tr>
+    <tr><td><strong>FB-004</strong></td><td>Finance Book Without Periods</td><td><span class="badge badge-critical">Critical</span></td><td class="col-positive">Book with zero periods; Null periods; Multiple empty books</td><td class="col-negative">All books have periods; Empty books array</td></tr>
+    <tr><td><strong>FB-005</strong></td><td>Prior Year Periods Still Open</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">Last year period still Open; Multiple prior year open</td><td class="col-negative">Prior year closed; Current year open (ok); No prior periods</td></tr>
+    <tr><td><strong>FB-006</strong></td><td>No Active Finance Book</td><td><span class="badge badge-critical">Critical</span></td><td class="col-positive">All books inactive; No books defined; Null active flag</td><td class="col-negative">Active book exists; Multiple active books</td></tr>
+  </tbody>
+</table>
+
+<!-- GL Rules -->
+<h3>GL Rules (GL-001 to GL-004)</h3>
+<table>
+  <thead><tr><th>Check ID</th><th>Check Name</th><th>Severity</th><th>Positive Tests (Issues Detected)</th><th>Negative Tests (No False Positives)</th></tr></thead>
+  <tbody>
+    <tr><td><strong>GL-001</strong></td><td>GL Treatment Missing GL Account</td><td><span class="badge badge-critical">Critical</span></td><td class="col-positive">Null GL account; Empty string; Multiple missing</td><td class="col-negative">GL account set; Inactive skipped</td></tr>
+    <tr><td><strong>GL-002</strong></td><td>GL Rule Without Treatments</td><td><span class="badge badge-critical">Critical</span></td><td class="col-positive">Empty treatments; Null treatments; Multiple rules</td><td class="col-negative">Has treatments; Inactive rules skipped</td></tr>
+    <tr><td><strong>GL-003</strong></td><td>Inactive GL Treatments on Active Rules</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">Inactive treatment on active rule; Multiple</td><td class="col-negative">All treatments active; Inactive rule skipped</td></tr>
+    <tr><td><strong>GL-004</strong></td><td>GL Treatment Missing One Side</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">Debit set but no credit; Credit set but no debit</td><td class="col-negative">Both sides set; Neither (skipped); Inactive</td></tr>
+  </tbody>
+</table>
+
+<!-- Legal Entity -->
+<h3>Legal Entity (LE-001 to LE-003)</h3>
+<table>
+  <thead><tr><th>Check ID</th><th>Check Name</th><th>Severity</th><th>Positive Tests (Issues Detected)</th><th>Negative Tests (No False Positives)</th></tr></thead>
+  <tbody>
+    <tr><td><strong>LE-001</strong></td><td>No Legal Entity Defined</td><td><span class="badge badge-critical">Critical</span></td><td class="col-positive">Empty array; Null entities; Zero count</td><td class="col-negative">At least one entity; Multiple entities</td></tr>
+    <tr><td><strong>LE-002</strong></td><td>Legal Entity Missing Address</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">No street; No city; No country; Multiple fields missing</td><td class="col-negative">Full address; Inactive entity skipped</td></tr>
+    <tr><td><strong>LE-003</strong></td><td>Inactive Legal Entity</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">Single inactive; All inactive (escalates to critical)</td><td class="col-negative">All active; Mix active/inactive; Empty</td></tr>
+  </tbody>
+</table>
+
+<!-- Product Billing Config -->
+<h3>Product Billing Config (PBC-001 to PBC-006)</h3>
+<table>
+  <thead><tr><th>Check ID</th><th>Check Name</th><th>Severity</th><th>Positive Tests (Issues Detected)</th><th>Negative Tests (No False Positives)</th></tr></thead>
+  <tbody>
+    <tr><td><strong>PBC-001</strong></td><td>Product Missing Billing Rule</td><td><span class="badge badge-critical">Critical</span></td><td class="col-positive">Active product no billing rule; Multiple products</td><td class="col-negative">Billing rule set; Inactive skipped</td></tr>
+    <tr><td><strong>PBC-002</strong></td><td>Product Missing Revenue Recognition Rule</td><td><span class="badge badge-critical">Critical</span></td><td class="col-positive">Active product no rev rec rule; Multiple</td><td class="col-negative">Rev rec rule set; Inactive skipped</td></tr>
+    <tr><td><strong>PBC-003</strong></td><td>Product Missing Tax Rule</td><td><span class="badge badge-critical">Critical</span></td><td class="col-positive">Active product no tax rule; Multiple</td><td class="col-negative">Tax rule set; Inactive skipped</td></tr>
+    <tr><td><strong>PBC-004</strong></td><td>Product Missing Charge Type</td><td><span class="badge badge-critical">Critical</span></td><td class="col-positive">Null charge type; Empty string; Multiple products</td><td class="col-negative">Charge type set; Inactive skipped</td></tr>
+    <tr><td><strong>PBC-005</strong></td><td>Billing Type Mismatch With Frequency</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">Recurring type but no frequency; Evergreen with null frequency</td><td class="col-negative">One-Time (no freq needed); Recurring + frequency; Inactive</td></tr>
+    <tr><td><strong>PBC-006</strong></td><td>Products Referencing Inactive Rules</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">Active product refs inactive billing/revRec/tax rule; Multiple</td><td class="col-negative">All rules active; Inactive product skipped; No refs</td></tr>
+  </tbody>
+</table>
+
+<!-- Invoicing -->
+<h3>Invoicing (INV-001 to INV-004)</h3>
+<table>
+  <thead><tr><th>Check ID</th><th>Check Name</th><th>Severity</th><th>Positive Tests (Issues Detected)</th><th>Negative Tests (No False Positives)</th></tr></thead>
+  <tbody>
+    <tr><td><strong>INV-001</strong></td><td>Invoices Stuck in Draft</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">Draft status > 7 days; Multiple stuck drafts</td><td class="col-negative">Posted invoices; Recent drafts; Cancelled</td></tr>
+    <tr><td><strong>INV-002</strong></td><td>Zero Amount Invoices</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">Zero total; Null total; Multiple zero-amount</td><td class="col-negative">Positive amount; Draft excluded; Empty</td></tr>
+    <tr><td><strong>INV-003</strong></td><td>Credit Notes With Remaining Balance</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">Credit note with unapplied balance; Multiple</td><td class="col-negative">Fully applied; No credit notes; Zero balance</td></tr>
+    <tr><td><strong>INV-004</strong></td><td>Overdue Invoices</td><td><span class="badge badge-info">Info</span></td><td class="col-positive">Due date in past + unpaid; 30+ days overdue; Multiple</td><td class="col-negative">Paid invoices; Future due date; Draft status</td></tr>
+  </tbody>
+</table>
+
+<!-- SECTION 2C: PLATFORM FEATURE TESTS -->
+<h2><span class="icon">&#9881;&#65039;</span> 2c. Platform Feature Test Scenarios</h2>
+<p style="color:var(--text-muted);margin-bottom:20px;">Test coverage for quota enforcement, notification emails, scan execution, authentication, and UI features.</p>
+
+<h3>Quota & Plan Enforcement</h3>
+<div class="scenario-card">
+  <div class="scenario-header">&#128274; Quota Enforcement (checkQuota utility)</div>
+  <table>
+    <thead><tr><th>Test Scenario</th><th>What It Verifies</th><th>Expected Result</th></tr></thead>
+    <tbody>
+      <tr><td>Free plan — 5 scans limit</td><td>User blocked after 5 scans/month</td><td>HTTP 429 with limit info</td></tr>
+      <tr><td>Free plan — 5 AI calls limit</td><td>User blocked after 5 AI fix/insight calls/month</td><td>HTTP 429 with limit info</td></tr>
+      <tr><td>Free plan — 5 PDF reports limit</td><td>User blocked after 5 PDF report generations/month</td><td>HTTP 429 with limit info</td></tr>
+      <tr><td>Free plan — 1 org limit</td><td>Org connection blocked after 1 connected org</td><td>Redirect with error message</td></tr>
+      <tr><td>Pro plan — unlimited scans</td><td>No blocking on Pro plan scans</td><td>Allowed (null limit)</td></tr>
+      <tr><td>Pro plan — 5 orgs limit</td><td>Org connection blocked after 5 orgs</td><td>HTTP 429 with limit info</td></tr>
+      <tr><td>Enterprise plan — no limits</td><td>All actions allowed without restriction</td><td>Always allowed</td></tr>
+      <tr><td>Admin bypass — free plan</td><td>Admin (is_admin=true) bypasses all limits</td><td>Always allowed regardless of plan</td></tr>
+      <tr><td>Monthly reset — usage count</td><td>Usage resets on 1st of each month</td><td>Only counts current month</td></tr>
+      <tr><td>Reset date display</td><td>Shows correct next month reset date</td><td>e.g. &quot;May 1, 2026&quot;</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<h3>Notification Email Recipients</h3>
+<div class="scenario-card">
+  <div class="scenario-header">&#128231; Email Notification System</div>
+  <table>
+    <thead><tr><th>Test Scenario</th><th>What It Verifies</th><th>Expected Result</th></tr></thead>
+    <tbody>
+      <tr><td>Add notification email</td><td>User can add up to 5 email recipients</td><td>Saved to user profile</td></tr>
+      <tr><td>Remove notification email</td><td>User can remove individual recipients</td><td>Email removed from list</td></tr>
+      <tr><td>Max 5 emails validation</td><td>Cannot add more than 5 notification emails</td><td>HTTP 400 error</td></tr>
+      <tr><td>Invalid email format</td><td>Rejects malformed email addresses</td><td>HTTP 400 with invalid email msg</td></tr>
+      <tr><td>Scan completion email</td><td>Email sent to user + all notification recipients</td><td>All recipients receive notification</td></tr>
+      <tr><td>Empty notification list</td><td>Only user email receives notification</td><td>Single recipient email</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<h3>Scan Execution & Background Processing</h3>
+<div class="scenario-card">
+  <div class="scenario-header">&#9889; Scan Lifecycle (waitUntil)</div>
+  <table>
+    <thead><tr><th>Test Scenario</th><th>What It Verifies</th><th>Expected Result</th></tr></thead>
+    <tbody>
+      <tr><td>Scan initiation</td><td>POST /api/scans returns scanId + pending status immediately</td><td>200 with scanId</td></tr>
+      <tr><td>Background execution (waitUntil)</td><td>Scan runs in background via Vercel waitUntil</td><td>Response returned before scan completes</td></tr>
+      <tr><td>Polling for completion</td><td>GET /api/scans?scanId=X returns current status</td><td>pending → completed/failed</td></tr>
+      <tr><td>Product type detection — CPQ</td><td>Org with CPQ package triggers CPQ-only scan</td><td>productType = &apos;cpq&apos;</td></tr>
+      <tr><td>Product type detection — CPQ+Billing</td><td>Org with both packages triggers combined scan</td><td>productType = &apos;cpq_billing&apos;</td></tr>
+      <tr><td>Quota check before scan</td><td>Scan blocked if quota exceeded</td><td>HTTP 429</td></tr>
+      <tr><td>Scan error handling</td><td>Failed scan updates status + logs error</td><td>status = &apos;failed&apos;</td></tr>
+      <tr><td>Email on completion</td><td>Notification email sent when scan finishes</td><td>Email delivered to all recipients</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<h3>Authentication & Account Security</h3>
+<div class="scenario-card">
+  <div class="scenario-header">&#128272; Auth & Account Management</div>
+  <table>
+    <thead><tr><th>Test Scenario</th><th>What It Verifies</th><th>Expected Result</th></tr></thead>
+    <tbody>
+      <tr><td>Duplicate email signup</td><td>Same email cannot create second account</td><td>Shows &quot;account already exists&quot; message</td></tr>
+      <tr><td>Fake user detection</td><td>Checks identities.length === 0 for existing email</td><td>Prevents silent fake account creation</td></tr>
+      <tr><td>Password reset flow</td><td>Reset link sent to valid email</td><td>Success message + email sent</td></tr>
+      <tr><td>Invalid login credentials</td><td>Wrong password shows error</td><td>Error message, no redirect</td></tr>
+      <tr><td>Successful login redirect</td><td>Valid login redirects to /dashboard</td><td>router.push(&apos;/dashboard&apos;)</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<h3>Dashboard & Navigation</h3>
+<div class="scenario-card">
+  <div class="scenario-header">&#128202; Dashboard Data Freshness</div>
+  <table>
+    <thead><tr><th>Test Scenario</th><th>What It Verifies</th><th>Expected Result</th></tr></thead>
+    <tbody>
+      <tr><td>Cache-busting on fetch</td><td>API calls use cache: &apos;no-store&apos;</td><td>Fresh data on every load</td></tr>
+      <tr><td>Visibility change refetch</td><td>Re-fetches orgs when tab becomes visible</td><td>Updated scores/timestamps</td></tr>
+      <tr><td>Router cache invalidation</td><td>router.refresh() before router.push()</td><td>No stale page data</td></tr>
+      <tr><td>API Cache-Control headers</td><td>no-store, no-cache, must-revalidate on responses</td><td>No Vercel edge CDN caching</td></tr>
+      <tr><td>Installed packages in org data</td><td>installed_packages column in API select</td><td>Correct productType detection</td></tr>
+      <tr><td>Category issues modal popup</td><td>Category card opens modal overlay (not inline)</td><td>fixed inset-0 z-50 modal</td></tr>
+      <tr><td>Issue card full clickability</td><td>Entire card clickable, not just Details button</td><td>onClick on outer div</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<h3>Settings & Plan Management</h3>
+<div class="scenario-card">
+  <div class="scenario-header">&#128736;&#65039; Settings Page Features</div>
+  <table>
+    <thead><tr><th>Test Scenario</th><th>What It Verifies</th><th>Expected Result</th></tr></thead>
+    <tbody>
+      <tr><td>Plan display — Free/Pro/Enterprise</td><td>Correct plan names, prices, and feature lists</td><td>Matches pricing page exactly</td></tr>
+      <tr><td>Usage bars — scans/AI/PDF/orgs</td><td>Progress bars show used/limit with reset dates</td><td>Visual progress + text labels</td></tr>
+      <tr><td>Limit-reached banner</td><td>Shows upgrade pitch when limit hit</td><td>Banner with reset date + upgrade CTA</td></tr>
+      <tr><td>Connected orgs count</td><td>Shows actual org count vs plan limit</td><td>e.g. &quot;1 of 1 used&quot;</td></tr>
+      <tr><td>Notification emails CRUD</td><td>Add/remove notification email recipients</td><td>List updates, max 5 enforced</td></tr>
+      <tr><td>Save button positioning</td><td>Save button inside card, not floating</td><td>Correct DOM nesting</td></tr>
+    </tbody>
+  </table>
+</div>
+
 <!-- SECTION 3: INTEGRATION SCENARIOS -->
-<h2><span class="icon">&#128279;</span> 3. Integration Test Scenarios &mdash; 42 tests</h2>
+<h2><span class="icon">&#128279;</span> 3. Integration Test Scenarios &mdash; 42 CPQ tests + Billing scenarios</h2>
 
 <div class="scenario-card">
   <div class="scenario-header">&#128994; Scenario 1: Healthy CPQ Org (Negative Testing &mdash; No Issues Expected)</div>
@@ -747,9 +967,61 @@
   </table>
 </div>
 
+<div class="scenario-card">
+  <div class="scenario-header">&#128176; Scenario 6: Healthy Billing Org (No Issues Expected)</div>
+  <table>
+    <thead><tr><th>Test</th><th>What It Verifies</th><th>Result</th></tr></thead>
+    <tbody>
+      <tr><td>Billing Rules score = 100</td><td>No false positives on valid billing rules</td><td><span class="badge badge-pass">PASS</span></td></tr>
+      <tr><td>Finance Books score = 100</td><td>No false positives on properly configured finance books</td><td><span class="badge badge-pass">PASS</span></td></tr>
+      <tr><td>GL Rules score = 100</td><td>No false positives on complete GL rules</td><td><span class="badge badge-pass">PASS</span></td></tr>
+      <tr><td>Legal Entity score = 100</td><td>No false positives on active legal entity with address</td><td><span class="badge badge-pass">PASS</span></td></tr>
+      <tr><td>Product Billing Config score = 100</td><td>No false positives on fully configured products</td><td><span class="badge badge-pass">PASS</span></td></tr>
+      <tr><td>Invoicing score = 100</td><td>No false positives on posted invoices</td><td><span class="badge badge-pass">PASS</span></td></tr>
+      <tr><td>Overall billing score >= 80</td><td>Healthy billing org gets good grade</td><td><span class="badge badge-pass">PASS</span></td></tr>
+      <tr><td>Zero critical issues</td><td>No phantom criticals in billing scan</td><td><span class="badge badge-pass">PASS</span></td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="scenario-card">
+  <div class="scenario-header">&#128308; Scenario 7: Problematic Billing Org (Issues Must Be Detected)</div>
+  <table>
+    <thead><tr><th>Test</th><th>Check ID</th><th>Expected Severity</th><th>Result</th></tr></thead>
+    <tbody>
+      <tr><td>DETECT: Inactive billing rule on product</td><td>BR-001</td><td><span class="badge badge-critical">Critical</span></td><td><span class="badge badge-detect">DETECTED</span></td></tr>
+      <tr><td>DETECT: Billing rule without GL treatment</td><td>BR-002</td><td><span class="badge badge-critical">Critical</span></td><td><span class="badge badge-detect">DETECTED</span></td></tr>
+      <tr><td>DETECT: No open finance period</td><td>FB-001</td><td><span class="badge badge-critical">Critical</span></td><td><span class="badge badge-detect">DETECTED</span></td></tr>
+      <tr><td>DETECT: Finance period gaps</td><td>FB-002</td><td><span class="badge badge-critical">Critical</span></td><td><span class="badge badge-detect">DETECTED</span></td></tr>
+      <tr><td>DETECT: Finance book without periods</td><td>FB-004</td><td><span class="badge badge-critical">Critical</span></td><td><span class="badge badge-detect">DETECTED</span></td></tr>
+      <tr><td>DETECT: GL treatment missing account</td><td>GL-001</td><td><span class="badge badge-critical">Critical</span></td><td><span class="badge badge-detect">DETECTED</span></td></tr>
+      <tr><td>DETECT: No legal entity</td><td>LE-001</td><td><span class="badge badge-critical">Critical</span></td><td><span class="badge badge-detect">DETECTED</span></td></tr>
+      <tr><td>DETECT: Product missing billing rule</td><td>PBC-001</td><td><span class="badge badge-critical">Critical</span></td><td><span class="badge badge-detect">DETECTED</span></td></tr>
+      <tr><td>DETECT: Product missing tax rule</td><td>PBC-003</td><td><span class="badge badge-critical">Critical</span></td><td><span class="badge badge-detect">DETECTED</span></td></tr>
+      <tr><td>DETECT: Invoices stuck in draft</td><td>INV-001</td><td><span class="badge badge-warning">Warning</span></td><td><span class="badge badge-detect">DETECTED</span></td></tr>
+      <tr><td>DETECT: Zero amount invoices</td><td>INV-002</td><td><span class="badge badge-warning">Warning</span></td><td><span class="badge badge-detect">DETECTED</span></td></tr>
+      <tr><td>DETECT: Overdue invoices</td><td>INV-004</td><td><span class="badge badge-info">Info</span></td><td><span class="badge badge-detect">DETECTED</span></td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="scenario-card">
+  <div class="scenario-header">&#128256; Scenario 8: Combined CPQ + Billing Scan</div>
+  <table>
+    <thead><tr><th>Test</th><th>What It Verifies</th><th>Result</th></tr></thead>
+    <tbody>
+      <tr><td>productType = cpq_billing triggers both engines</td><td>Both CPQ and Billing checks run</td><td><span class="badge badge-pass">PASS</span></td></tr>
+      <tr><td>CPQ issues + Billing issues merged</td><td>All issues appear in single result</td><td><span class="badge badge-pass">PASS</span></td></tr>
+      <tr><td>Category scores include billing categories</td><td>billing_rules, finance_books, etc. in scores</td><td><span class="badge badge-pass">PASS</span></td></tr>
+      <tr><td>CPQ-only scan excludes billing</td><td>productType = cpq doesn't run billing checks</td><td><span class="badge badge-pass">PASS</span></td></tr>
+      <tr><td>Billing weights applied correctly</td><td>8 billing categories weighted to sum = 1.0</td><td><span class="badge badge-pass">PASS</span></td></tr>
+    </tbody>
+  </table>
+</div>
+
 <!-- SECTION 4: TEST FILES -->
-<h2><span class="icon">&#128193;</span> 4. Test Files Breakdown (38 files)</h2>
-<p style="color:var(--text-muted);margin-bottom:16px;">Comprehensive test files (17) + API Route tests (9) + Basic test files (10) + Integration (2)</p>
+<h2><span class="icon">&#128193;</span> 4. Test Files Breakdown (38 files + Billing source)</h2>
+<p style="color:var(--text-muted);margin-bottom:16px;">Comprehensive test files (17) + API Route tests (9) + Basic test files (10) + Integration (2) &mdash; Billing engine source files listed separately (tests pending)</p>
 <div class="file-grid">
   <div class="file-item"><span class="fname">product-rules-comprehensive.test.ts</span><span class="fmeta"><span class="fcount">34</span><span class="ftag">Unit</span></span></div>
   <div class="file-item"><span class="fname">performance-comprehensive.test.ts</span><span class="fmeta"><span class="fcount">32</span><span class="ftag">Unit</span></span></div>
@@ -791,6 +1063,20 @@
   <div class="file-item"><span class="fname">usage-analytics.test.ts</span><span class="fmeta"><span class="fcount">7</span><span class="ftag">Basic</span></span></div>
 </div>
 
+<h3 style="margin-top:28px;">Billing Engine Source Files (Tests Pending)</h3>
+<div class="file-grid">
+  <div class="file-item"><span class="fname">billing-checks/billing-rules.ts</span><span class="fmeta"><span class="fcount">4</span><span class="ftag">BR checks</span></span></div>
+  <div class="file-item"><span class="fname">billing-checks/rev-rec-rules.ts</span><span class="fmeta"><span class="fcount">4</span><span class="ftag">RR checks</span></span></div>
+  <div class="file-item"><span class="fname">billing-checks/tax-rules.ts</span><span class="fmeta"><span class="fcount">3</span><span class="ftag">TR checks</span></span></div>
+  <div class="file-item"><span class="fname">billing-checks/finance-books.ts</span><span class="fmeta"><span class="fcount">6</span><span class="ftag">FB checks</span></span></div>
+  <div class="file-item"><span class="fname">billing-checks/gl-rules.ts</span><span class="fmeta"><span class="fcount">4</span><span class="ftag">GL checks</span></span></div>
+  <div class="file-item"><span class="fname">billing-checks/legal-entity.ts</span><span class="fmeta"><span class="fcount">3</span><span class="ftag">LE checks</span></span></div>
+  <div class="file-item"><span class="fname">billing-checks/product-billing-config.ts</span><span class="fmeta"><span class="fcount">6</span><span class="ftag">PBC checks</span></span></div>
+  <div class="file-item"><span class="fname">billing-checks/invoicing.ts</span><span class="fmeta"><span class="fcount">4</span><span class="ftag">INV checks</span></span></div>
+  <div class="file-item"><span class="fname">billing-engine.ts</span><span class="fmeta"><span class="fcount">—</span><span class="ftag">Engine</span></span></div>
+  <div class="file-item"><span class="fname">lib/quota.ts</span><span class="fmeta"><span class="fcount">—</span><span class="ftag">Platform</span></span></div>
+</div>
+
 <!-- SECTION 5: FUTURE SCOPE -->
 <h2><span class="icon">&#128302;</span> 5. Future Scope (Phase 3)</h2>
 <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px 24px;margin:16px 0;">
@@ -799,8 +1085,20 @@
     <div><div class="future-label">API Route Testing</div><div class="future-reason" style="color:var(--green);">&#9989; COMPLETED &mdash; 9 test files, 98 tests covering all API routes with Supabase/auth mocking</div></div>
   </div>
   <div class="future-item">
+    <div class="future-icon">&#128176;</div>
+    <div><div class="future-label">Billing Engine Unit Tests</div><div class="future-reason">34 billing checks need comprehensive test files (positive + negative + edge cases) matching CPQ pattern</div></div>
+  </div>
+  <div class="future-item">
+    <div class="future-icon">&#128274;</div>
+    <div><div class="future-label">Quota Enforcement Tests</div><div class="future-reason">checkQuota utility, plan limits, admin bypass, monthly reset, HTTP 429 responses</div></div>
+  </div>
+  <div class="future-item">
+    <div class="future-icon">&#128231;</div>
+    <div><div class="future-label">Notification Email Tests</div><div class="future-reason">Add/remove recipients, max 5 validation, multi-recipient email delivery</div></div>
+  </div>
+  <div class="future-item">
     <div class="future-icon">&#128421;&#65039;</div>
-    <div><div class="future-label">UI Component Testing</div><div class="future-reason">React Testing Library setup needed</div></div>
+    <div><div class="future-label">UI Component Testing</div><div class="future-reason">React Testing Library: issue cards, category modals, usage bars, settings forms</div></div>
   </div>
   <div class="future-item">
     <div class="future-icon">&#9729;&#65039;</div>
@@ -841,6 +1139,9 @@
 <span class="comment"># Run all comprehensive tests</span>
 <span class="cmd">npx vitest run src/__tests__/*-comprehensive.test.ts</span>
 
+<span class="comment"># Run billing tests (when created)</span>
+<span class="cmd">npx vitest run src/__tests__/billing-*.test.ts</span>
+
 <span class="comment"># Watch mode (re-runs on file change)</span>
 <span class="cmd">npx vitest</span>
 </div>
@@ -848,7 +1149,7 @@
 </div>
 
 <div class="footer">
-  ConfigCheck &copy; 2026 &mdash; Test Coverage Report &mdash; Updated on April 13, 2026 &mdash; 68 Health Checks / 17 Categories / 701 Tests / 38 Files
+  ConfigCheck &copy; 2026 &mdash; Test Coverage Report &mdash; Updated on April 15, 2026 &mdash; 102 Health Checks (68 CPQ + 34 Billing) / 25 Categories / 701 Tests / 38 Files
 </div>
 
 </body>
