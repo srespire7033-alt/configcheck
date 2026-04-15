@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/db/client';
 import { getAuthUser } from '@/lib/auth/get-user';
 import { sendWelcomeEmail } from '@/lib/email/notifications';
+import { rateLimit, rateLimitResponse } from '@/lib/rate-limit';
 
 export const dynamic = 'force-dynamic';
 
@@ -10,6 +11,9 @@ export const dynamic = 'force-dynamic';
  * Get current user profile
  */
 export async function GET(request: NextRequest) {
+  const limiter = rateLimit(request, { maxRequests: 60, windowMs: 60_000 });
+  if (!limiter.success) return rateLimitResponse(limiter);
+
   const user = await getAuthUser(request);
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -34,6 +38,9 @@ export async function GET(request: NextRequest) {
  * Update user profile (company name, branding)
  */
 export async function PUT(request: NextRequest) {
+  const limiter = rateLimit(request, { maxRequests: 60, windowMs: 60_000 });
+  if (!limiter.success) return rateLimitResponse(limiter);
+
   const user = await getAuthUser(request);
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

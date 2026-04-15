@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/db/client';
 import { getAuthUser } from '@/lib/auth/get-user';
+import { rateLimit, rateLimitResponse } from '@/lib/rate-limit';
 
 export const dynamic = 'force-dynamic';
 
@@ -9,6 +10,9 @@ export const dynamic = 'force-dynamic';
  * Permanently delete user account and all associated data (GDPR Right to Erasure)
  */
 export async function POST(request: NextRequest) {
+  const limiter = rateLimit(request, { maxRequests: 10, windowMs: 60_000 });
+  if (!limiter.success) return rateLimitResponse(limiter);
+
   const user = await getAuthUser(request);
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
