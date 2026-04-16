@@ -187,27 +187,31 @@ export function CategoryBreakdown({ scores, issues = [], layout = 'vertical', se
   // Load saved order from localStorage
   const [orderedCategories, setOrderedCategories] = useState<string[]>([]);
 
+  // Re-derive order whenever the set of categories in scores changes
+  const scoreKeys = allEntries.map(([cat]) => cat).sort().join(',');
+
   useEffect(() => {
+    if (!scoreKeys) return; // No scores yet
+    const allCats = scoreKeys.split(',');
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
       try {
         const savedOrder: string[] = JSON.parse(saved);
         // Merge: use saved order, append any new categories at the end
-        const allCats = allEntries.map(([cat]) => cat);
         const merged = [
           ...savedOrder.filter((cat) => allCats.includes(cat)),
           ...allCats.filter((cat) => !savedOrder.includes(cat)),
         ];
         setOrderedCategories(merged);
       } catch {
-        setOrderedCategories(allEntries.sort(([, a], [, b]) => a - b).map(([cat]) => cat));
+        setOrderedCategories([...allEntries].sort(([, a], [, b]) => a - b).map(([cat]) => cat));
       }
     } else {
       // Default: sort by score ascending (worst first)
-      setOrderedCategories(allEntries.sort(([, a], [, b]) => a - b).map(([cat]) => cat));
+      setOrderedCategories([...allEntries].sort(([, a], [, b]) => a - b).map(([cat]) => cat));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [scoreKeys]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {

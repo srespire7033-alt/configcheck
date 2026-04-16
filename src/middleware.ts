@@ -48,7 +48,27 @@ export async function middleware(request: NextRequest) {
 
   // Onboarding redirect: logged-in user who hasn't completed onboarding
   if (user && !request.nextUrl.pathname.startsWith('/onboarding') && !request.nextUrl.pathname.startsWith('/api/')) {
-    const onboardingDone = request.cookies.get('onboarding_completed')?.value === 'true';
+    let onboardingDone = request.cookies.get('onboarding_completed')?.value === 'true';
+
+    // Cookie missing (cleared cache, new device) — check DB as fallback
+    if (!onboardingDone) {
+      const { data: profile } = await supabase
+        .from('users')
+        .select('onboarding_completed')
+        .eq('id', user.id)
+        .single();
+
+      if (profile?.onboarding_completed) {
+        onboardingDone = true;
+        // Restore the cookie so we don't hit DB on every request
+        supabaseResponse.cookies.set('onboarding_completed', 'true', {
+          path: '/',
+          maxAge: 31536000,
+          sameSite: 'lax',
+        });
+      }
+    }
+
     if (!onboardingDone) {
       const url = request.nextUrl.clone();
       url.pathname = '/onboarding';
@@ -58,7 +78,18 @@ export async function middleware(request: NextRequest) {
 
   // Already completed onboarding but visiting /onboarding → redirect to dashboard
   if (user && request.nextUrl.pathname.startsWith('/onboarding')) {
-    const onboardingDone = request.cookies.get('onboarding_completed')?.value === 'true';
+    let onboardingDone = request.cookies.get('onboarding_completed')?.value === 'true';
+
+    if (!onboardingDone) {
+      const { data: profile } = await supabase
+        .from('users')
+        .select('onboarding_completed')
+        .eq('id', user.id)
+        .single();
+
+      onboardingDone = !!profile?.onboarding_completed;
+    }
+
     if (onboardingDone) {
       const url = request.nextUrl.clone();
       url.pathname = '/dashboard';
