@@ -97,8 +97,9 @@ export async function POST(request: NextRequest) {
           error_message: error instanceof Error ? error.message : 'Scan failed unexpectedly',
           completed_at: new Date().toISOString(),
         };
-        await svc.from('scans').update(failUpdate).eq('id', scan.id).eq('status', 'running');
-        await svc.from('scans').update(failUpdate).eq('id', scan.id).eq('status', 'pending');
+        // Update regardless of current status to prevent scans stuck in running/pending
+        const { error: updateErr } = await svc.from('scans').update(failUpdate).eq('id', scan.id);
+        if (updateErr) console.error('[SCAN] Failed to mark scan as failed:', updateErr);
       })
     );
 
@@ -118,7 +119,7 @@ export async function GET(request: NextRequest) {
   const scanId = request.nextUrl.searchParams.get('scanId');
   const orgId = request.nextUrl.searchParams.get('orgId');
 
-  const supabase = createServiceClient({ noCache: true });
+  const supabase = createServiceClient();
 
   if (scanId) {
     const { data: scan, error } = await supabase
@@ -284,7 +285,7 @@ async function runScanInBackground(
       description: issue.description,
       impact: issue.impact,
       recommendation: issue.recommendation,
-      affected_records: issue.affected_records,
+      affected_records: issue.affected_records || [],
       revenue_impact: issue.revenue_impact || null,
       effort_hours: issue.effort_hours || null,
     }));
@@ -294,7 +295,11 @@ async function runScanInBackground(
       const batchSize = 50;
       for (let i = 0; i < issuesToInsert.length; i += batchSize) {
         const batch = issuesToInsert.slice(i, i + batchSize);
-        await supabase.from('issues').insert(batch);
+        const { error: insertErr } = await supabase.from('issues').insert(batch);
+        if (insertErr) {
+          console.error(`[SCAN ${scanId}] Issue batch ${Math.floor(i / batchSize) + 1} insert failed:`, insertErr);
+          throw new Error(`Failed to save issues (batch ${Math.floor(i / batchSize) + 1})`);
+        }
       }
     }
 

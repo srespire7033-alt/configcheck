@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Plus, CheckCircle, AlertCircle, Cloud, GitCompare } from 'lucide-react';
 import { OrgCard } from '@/components/dashboard/org-card';
@@ -18,6 +18,7 @@ function DashboardContent() {
   const [scanningOrg, setScanningOrg] = useState<string | null>(null);
   const [checklistProgress, setChecklistProgress] = useState<ChecklistProgress | null>(null);
   const [checklistDismissed, setChecklistDismissed] = useState(true); // default hidden
+  const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [connectModalOpen, setConnectModalOpen] = useState(false);
 
   const successMsg = searchParams.get('success');
@@ -38,6 +39,10 @@ function DashboardContent() {
     return () => {
       document.removeEventListener('visibilitychange', refetchOnVisible);
       window.removeEventListener('focus', refetchOnFocus);
+      if (pollIntervalRef.current) {
+        clearInterval(pollIntervalRef.current);
+        pollIntervalRef.current = null;
+      }
     };
   }, []);
 
@@ -123,11 +128,13 @@ function DashboardContent() {
       }
       const scanId = data.scanId;
 
-      const interval = setInterval(async () => {
+      if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+      pollIntervalRef.current = setInterval(async () => {
         const statusRes = await fetch(`/api/scans?scanId=${scanId}`);
         const scan = await statusRes.json();
         if (scan.status === 'completed' || scan.status === 'failed') {
-          clearInterval(interval);
+          clearInterval(pollIntervalRef.current!);
+          pollIntervalRef.current = null;
           setScanningOrg(null);
           // Refresh org data first so dashboard has fresh state when user navigates back
           await fetchOrgs();

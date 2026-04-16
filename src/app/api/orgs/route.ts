@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
   }
 
   const orgId = request.nextUrl.searchParams.get('orgId');
-  const supabase = createServiceClient({ noCache: true });
+  const supabase = createServiceClient();
 
 
   if (orgId) {

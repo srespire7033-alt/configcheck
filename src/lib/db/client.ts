@@ -10,8 +10,8 @@ export function createClient() {
 }
 
 // Server client with service role (used in API routes - bypasses RLS)
-// Accepts options to disable PostgREST caching for read-after-write scenarios
-export function createServiceClient(options?: { noCache?: boolean }) {
+// Always sends no-cache headers to prevent PostgREST from returning stale data
+export function createServiceClient() {
   return createSupabaseClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
@@ -20,14 +20,12 @@ export function createServiceClient(options?: { noCache?: boolean }) {
         autoRefreshToken: false,
         persistSession: false,
       },
-      ...(options?.noCache ? {
-        global: {
-          headers: {
-            'Cache-Control': 'no-cache',
-            'Pragma': 'no-cache',
-          },
+      global: {
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache',
         },
-      } : {}),
+      },
     }
   );
 }
