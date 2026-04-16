@@ -10,6 +10,7 @@ import { runBillingAnalysis } from '@/lib/analysis/billing-engine';
 import { generateExecutiveSummary } from '@/lib/ai/gemini';
 import { sendScanNotification } from '@/lib/email/notifications';
 import { checkQuota } from '@/lib/quota';
+import { detectInstalledPackages, packageDetectionToArray } from '@/lib/salesforce/detect-packages';
 import type { ProductType } from '@/types';
 
 // Allow up to 180s for scans (Vercel Pro: 300s max, Hobby: 60s max)
@@ -184,6 +185,16 @@ async function runScanInBackground(
       const connMsg = connErr instanceof Error ? connErr.message : 'Connection failed';
       throw new Error(`Salesforce connection failed: ${connMsg}`);
     }
+
+    // Step 1.5: Refresh installed packages detection
+    console.log(`[SCAN ${scanId}] Detecting installed packages...`);
+    const detected = await detectInstalledPackages(conn);
+    const installedPackages = packageDetectionToArray(detected);
+    await supabase
+      .from('organizations')
+      .update({ installed_packages: installedPackages })
+      .eq('id', org.id as string);
+    console.log(`[SCAN ${scanId}] Packages: ${installedPackages.join(', ') || 'none detected'}`);
 
     // Step 2: Fetch data based on product type
     console.log(`[SCAN ${scanId}] Fetching data (product_type: ${productType})...`);

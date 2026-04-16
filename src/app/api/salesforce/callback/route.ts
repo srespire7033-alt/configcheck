@@ -3,6 +3,7 @@ import { handleOAuthCallback, getCPQPackageVersion, createConnection } from '@/l
 import { createServiceClient } from '@/lib/db/client';
 import { getAuthUser } from '@/lib/auth/get-user';
 import { checkQuota } from '@/lib/quota';
+import { detectInstalledPackages, packageDetectionToArray } from '@/lib/salesforce/detect-packages';
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
@@ -46,6 +47,10 @@ export async function GET(request: NextRequest) {
     const conn = createConnection(instanceUrl, accessToken, refreshToken);
     const cpqVersion = await getCPQPackageVersion(conn);
 
+    // Detect installed packages (CPQ, Billing, ARM)
+    const detected = await detectInstalledPackages(conn);
+    const installedPackages = packageDetectionToArray(detected);
+
     // Get org name
     const orgResult = await conn.query('SELECT Name FROM Organization LIMIT 1');
     const orgName = (orgResult.records[0] as { Name: string }).Name;
@@ -71,11 +76,13 @@ export async function GET(request: NextRequest) {
     if (existingOrg) {
       // Update existing connection (include custom creds if provided)
       const updateData: Record<string, unknown> = {
+        name: orgName,
         access_token: accessToken,
         refresh_token: refreshToken,
         instance_url: instanceUrl,
         connection_status: 'connected',
         cpq_package_version: cpqVersion,
+        installed_packages: installedPackages,
         last_connected_at: new Date().toISOString(),
       };
       if (customCreds) {
@@ -106,6 +113,7 @@ export async function GET(request: NextRequest) {
         is_sandbox: instanceUrl.includes('test.salesforce.com') || instanceUrl.includes('sandbox'),
         connection_status: 'connected',
         cpq_package_version: cpqVersion,
+        installed_packages: installedPackages,
         last_connected_at: new Date().toISOString(),
         ...(customCreds ? {
           sf_client_id: customCreds.clientId,
