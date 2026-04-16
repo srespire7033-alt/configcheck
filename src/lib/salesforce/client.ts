@@ -74,6 +74,7 @@ export function getAuthorizationUrl(state?: string): { url: string; codeVerifier
     state: state || '',
     code_challenge: codeChallenge,
     code_challenge_method: 'S256',
+    prompt: 'login',  // Always show login screen so user can pick which org to connect
   });
 
   return {
