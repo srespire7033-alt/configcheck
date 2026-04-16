@@ -309,8 +309,9 @@ async function runScanInBackground(
     try {
       const nameResult = await conn.query('SELECT Name FROM Organization LIMIT 1');
       currentOrgName = (nameResult.records[0] as { Name: string })?.Name;
-    } catch {
-      // Non-critical — skip name sync if query fails
+      console.log(`[SCAN ${scanId}] SF org name: "${currentOrgName}" (DB name: "${org.name}")`);
+    } catch (nameErr) {
+      console.error(`[SCAN ${scanId}] Name sync query failed:`, nameErr);
     }
 
     await supabase
