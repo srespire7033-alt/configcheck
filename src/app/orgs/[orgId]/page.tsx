@@ -478,7 +478,7 @@ export default function OrgDetailPage() {
                   Your {scan.product_type ? getProductTypeLabel(scan.product_type) : 'CPQ'} Health Score
                 </h2>
                 <p className="text-gray-600 dark:text-gray-400 mb-6 text-center lg:text-left text-sm">
-                  Last scan: {getTimeSince(scan.created_at)} &bull; {issues.length} issues found
+                  Last scan: {getTimeSince(scan.completed_at || scan.created_at)} &bull; {issues.length} issues found
                   {org && ` • ${org.name}`}
                   {org?.is_sandbox === false && ' (Production)'}
                   {org?.is_sandbox === true && ' (Sandbox)'}
