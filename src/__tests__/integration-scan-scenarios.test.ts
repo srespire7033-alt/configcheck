@@ -585,3 +585,108 @@ describe('SCENARIO: Lookup Queries — Positive & Negative', () => {
     expect(result.category_scores.bundles).toBe(100);
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════
+// SCENARIO 8: New Info/Critical/Warning Checks — Severity Coverage
+// ═══════════════════════════════════════════════════════════════════
+describe('SCENARIO: New Severity Coverage Checks', () => {
+  it('QL-004: Excessive discounting flagged as info', async () => {
+    const data = createProblematicData();
+    const result = await runAnalysis(data);
+    const ql004 = result.issues.filter((i) => i.check_id === 'QL-004');
+    expect(ql004.length).toBeGreaterThan(0);
+    expect(ql004[0].severity).toBe('info');
+    expect(ql004[0].category).toBe('quote_lines');
+  });
+
+  it('PRD-005: Inactive product rules flagged as info', async () => {
+    const data = createProblematicData();
+    const result = await runAnalysis(data);
+    const prd005 = result.issues.filter((i) => i.check_id === 'PRD-005');
+    expect(prd005.length).toBeGreaterThan(0);
+    expect(prd005[0].severity).toBe('info');
+  });
+
+  it('SV-006: Inactive summary variables flagged as info', async () => {
+    const data = createProblematicData();
+    const result = await runAnalysis(data);
+    const sv006 = result.issues.filter((i) => i.check_id === 'SV-006');
+    expect(sv006.length).toBeGreaterThan(0);
+    expect(sv006[0].severity).toBe('info');
+  });
+
+  it('AP-005: Multiple pricing methods flagged as info', async () => {
+    const data = createProblematicData();
+    const result = await runAnalysis(data);
+    const ap005 = result.issues.filter((i) => i.check_id === 'AP-005');
+    expect(ap005.length).toBeGreaterThan(0);
+    expect(ap005[0].severity).toBe('info');
+  });
+
+  it('AR-005: Inactive approval rules flagged as info', async () => {
+    const data = createProblematicData();
+    const result = await runAnalysis(data);
+    const ar005 = result.issues.filter((i) => i.check_id === 'AR-005');
+    expect(ar005.length).toBeGreaterThan(0);
+    expect(ar005[0].severity).toBe('info');
+  });
+
+  it('SR-003: Subscriptions without contract flagged as critical', async () => {
+    const data = createProblematicData();
+    const result = await runAnalysis(data);
+    const sr003 = result.issues.filter((i) => i.check_id === 'SR-003');
+    expect(sr003.length).toBeGreaterThan(0);
+    expect(sr003[0].severity).toBe('critical');
+  });
+
+  it('SR-004: High-quantity subscriptions flagged as info', async () => {
+    const data = createProblematicData();
+    const result = await runAnalysis(data);
+    const sr004 = result.issues.filter((i) => i.check_id === 'SR-004');
+    expect(sr004.length).toBeGreaterThan(0);
+    expect(sr004[0].severity).toBe('info');
+  });
+
+  it('CP-002: Contracted prices without dates flagged as critical', async () => {
+    const data = createProblematicData();
+    const result = await runAnalysis(data);
+    const cp002 = result.issues.filter((i) => i.check_id === 'CP-002');
+    expect(cp002.length).toBeGreaterThan(0);
+    expect(cp002[0].severity).toBe('critical');
+  });
+
+  it('CP-003: Contracted prices without source quote line flagged as info', async () => {
+    const data = createProblematicData();
+    const result = await runAnalysis(data);
+    const cp003 = result.issues.filter((i) => i.check_id === 'CP-003');
+    expect(cp003.length).toBeGreaterThan(0);
+    expect(cp003[0].severity).toBe('info');
+  });
+
+  it('GS-004: Low output ratio flagged as warning', async () => {
+    const data = createProblematicData();
+    const result = await runAnalysis(data);
+    const gs004 = result.issues.filter((i) => i.check_id === 'GS-004');
+    expect(gs004.length).toBeGreaterThan(0);
+    expect(gs004[0].severity).toBe('warning');
+  });
+
+  it('IA-006: High configuration complexity flagged as info', async () => {
+    const data = createProblematicData();
+    const result = await runAnalysis(data);
+    const ia006 = result.issues.filter((i) => i.check_id === 'IA-006');
+    expect(ia006.length).toBeGreaterThan(0);
+    expect(ia006[0].severity).toBe('info');
+  });
+
+  it('QT-005: Default template not active flagged as critical (via custom data)', async () => {
+    const data = createCleanData();
+    data.quoteTemplates = [
+      { Id: 'qt_default_draft', Name: 'Default Draft', SBQQ__Default__c: true, SBQQ__Status__c: 'Draft', SBQQ__TemplateSections__r: { records: [{ Id: 'ts1', Name: 'Header', SBQQ__Content__c: 'h' }] } },
+    ];
+    const result = await runAnalysis(data);
+    const qt005 = result.issues.filter((i) => i.check_id === 'QT-005');
+    expect(qt005.length).toBeGreaterThan(0);
+    expect(qt005[0].severity).toBe('critical');
+  });
+});

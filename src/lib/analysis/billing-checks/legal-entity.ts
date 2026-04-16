@@ -95,4 +95,35 @@ export const legalEntityChecks: BillingHealthCheck[] = [
       return issues;
     },
   },
+  {
+    id: 'LE-004',
+    name: 'Multiple Active Legal Entities',
+    category: 'legal_entity',
+    severity: 'info',
+    description: 'Multiple active legal entities — verify each is correctly assigned',
+    run: async (data: BillingData): Promise<Issue[]> => {
+      const issues: Issue[] = [];
+      const active = data.legalEntities.filter(le => le.blng__Active__c);
+
+      if (active.length >= 3) {
+        issues.push({
+          check_id: 'LE-004',
+          category: 'legal_entity',
+          severity: 'info',
+          title: `${active.length} active legal entities`,
+          description: `This org has ${active.length} active legal entities: ${active.slice(0, 5).map(le => `"${le.Name}"`).join(', ')}${active.length > 5 ? ` and ${active.length - 5} more` : ''}. Multiple entities increase complexity.`,
+          impact: 'Invoices must be routed to the correct legal entity. Misconfigured entities can cause compliance issues.',
+          recommendation: 'Verify each legal entity is properly mapped to the correct accounts and products.',
+          affected_records: active.map(le => ({
+            id: le.Id,
+            name: le.Name,
+            type: 'blng__LegalEntity__c',
+          })),
+          effort_hours: active.length * 0.25,
+        });
+      }
+
+      return issues;
+    },
+  },
 ];

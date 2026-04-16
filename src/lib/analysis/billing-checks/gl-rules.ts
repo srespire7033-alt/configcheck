@@ -143,4 +143,35 @@ export const glRuleChecks: BillingHealthCheck[] = [
       return issues;
     },
   },
+  {
+    id: 'GL-005',
+    name: 'Inactive GL Rules Cleanup',
+    category: 'gl_rules',
+    severity: 'info',
+    description: 'Inactive GL rules that add maintenance overhead',
+    run: async (data: BillingData): Promise<Issue[]> => {
+      const issues: Issue[] = [];
+      const inactive = data.glRules.filter(r => !r.blng__Active__c);
+
+      if (inactive.length > 0) {
+        issues.push({
+          check_id: 'GL-005',
+          category: 'gl_rules',
+          severity: 'info',
+          title: `${inactive.length} inactive GL rule(s)`,
+          description: `${inactive.length} GL rule(s) are inactive: ${inactive.slice(0, 5).map(r => `"${r.Name}"`).join(', ')}${inactive.length > 5 ? ` and ${inactive.length - 5} more` : ''}.`,
+          impact: 'Inactive GL rules clutter the org and may confuse admins.',
+          recommendation: 'Delete inactive GL rules that are no longer needed.',
+          affected_records: inactive.slice(0, 10).map(r => ({
+            id: r.Id,
+            name: r.Name,
+            type: 'blng__GLRule__c',
+          })),
+          effort_hours: inactive.length * 0.1,
+        });
+      }
+
+      return issues;
+    },
+  },
 ];

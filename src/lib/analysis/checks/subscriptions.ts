@@ -71,4 +71,70 @@ export const subscriptionChecks: HealthCheck[] = [
       return issues;
     },
   },
+
+  // SR-003: Subscriptions Without Contract Reference
+  {
+    id: 'SR-003',
+    name: 'Subscriptions Without Contract',
+    category: 'subscriptions',
+    severity: 'critical',
+    description: 'Subscription records with no contract reference — orphaned subscriptions',
+    run: async (data: CPQData): Promise<Issue[]> => {
+      const issues: Issue[] = [];
+      const orphaned = data.subscriptions.filter((s) => !s.SBQQ__Contract__c);
+
+      if (orphaned.length > 0) {
+        issues.push({
+          check_id: 'SR-003',
+          category: 'subscriptions',
+          severity: 'critical',
+          title: `${orphaned.length} subscription(s) without contract reference`,
+          description: `Found ${orphaned.length} subscription record(s) where SBQQ__Contract__c is null. These orphaned subscriptions are not linked to any contract and won't appear in renewals.`,
+          impact: 'Renewal quotes will miss these subscriptions entirely. Revenue will be lost at renewal time.',
+          recommendation: 'Investigate how these subscriptions were created. Link them to the correct contract or delete if they are test data.',
+          affected_records: orphaned.slice(0, 20).map((s) => ({
+            id: s.Id,
+            name: s.Name,
+            type: 'SBQQ__Subscription__c',
+          })),
+        });
+      }
+
+      return issues;
+    },
+  },
+
+  // SR-004: High Subscription Quantity Variance
+  {
+    id: 'SR-004',
+    name: 'Subscription Quantity Review',
+    category: 'subscriptions',
+    severity: 'info',
+    description: 'Subscriptions with unusually high quantities that may indicate data entry errors',
+    run: async (data: CPQData): Promise<Issue[]> => {
+      const issues: Issue[] = [];
+      const highQty = data.subscriptions.filter(
+        (s) => s.SBQQ__Quantity__c !== null && s.SBQQ__Quantity__c > 1000
+      );
+
+      if (highQty.length > 0) {
+        issues.push({
+          check_id: 'SR-004',
+          category: 'subscriptions',
+          severity: 'info',
+          title: `${highQty.length} subscription(s) with quantity > 1,000`,
+          description: `Found ${highQty.length} subscription(s) with unusually high quantities. Examples: ${highQty.slice(0, 3).map((s) => `"${s.Name}" (qty: ${s.SBQQ__Quantity__c})`).join(', ')}.`,
+          impact: 'High quantities may be intentional (seat-based licensing) or may indicate data entry errors that affect renewal pricing.',
+          recommendation: 'Review high-quantity subscriptions to confirm they are correct. Check if quantities were entered manually or flowed from quotes.',
+          affected_records: highQty.slice(0, 10).map((s) => ({
+            id: s.Id,
+            name: s.Name,
+            type: 'SBQQ__Subscription__c',
+          })),
+        });
+      }
+
+      return issues;
+    },
+  },
 ];

@@ -210,6 +210,15 @@ export function createProblematicData(): CPQData {
     referencedByPriceRuleCount: i < 5 ? 1 : 0, // SV-001: most are orphaned
     referencedByProductRuleCount: 0,
   }));
+  // Add inactive summary variable (SV-006)
+  summaryVariables.push({
+    Id: 'sv_inactive', Name: 'Old Sum Var', SBQQ__Active__c: false,
+    SBQQ__AggregateField__c: 'SBQQ__NetPrice__c', SBQQ__AggregateFunction__c: 'Sum',
+    SBQQ__TargetObject__c: 'Quote Line', SBQQ__Scope__c: 'Quote',
+    SBQQ__FilterField__c: null, SBQQ__FilterValue__c: null, SBQQ__Operator__c: null,
+    SBQQ__CombineWith__c: null, SBQQ__SecondOperand__c: null, SBQQ__CompositeOperator__c: null,
+    referencedByPriceRuleCount: 0, referencedByProductRuleCount: 0,
+  });
   // Add duplicate summary variables (SV-003)
   summaryVariables.push({
     Id: 'sv_dup1', Name: 'Dup Var 1', SBQQ__Active__c: true,
@@ -227,6 +236,7 @@ export function createProblematicData(): CPQData {
     { Id: 'ar_dup1', Name: 'Dup Order A', SBQQ__Active__c: true, SBQQ__ApprovalStep__c: 1, SBQQ__Approver__c: 'mgr@test.com', SBQQ__ApproverField__c: null, SBQQ__ConditionsMet__c: 'All', SBQQ__EvaluationOrder__c: 5, SBQQ__ApprovalChain__c: null, SBQQ__ApprovalConditions__r: { records: [{ Id: 'ac_2', SBQQ__TestedField__c: 'Amount', SBQQ__Operator__c: 'greater than', SBQQ__Value__c: '10000', SBQQ__TestedVariable__c: null }] } },
     { Id: 'ar_dup2', Name: 'Dup Order B', SBQQ__Active__c: true, SBQQ__ApprovalStep__c: 1, SBQQ__Approver__c: 'mgr2@test.com', SBQQ__ApproverField__c: null, SBQQ__ConditionsMet__c: 'All', SBQQ__EvaluationOrder__c: 5, SBQQ__ApprovalChain__c: null, SBQQ__ApprovalConditions__r: { records: [{ Id: 'ac_3', SBQQ__TestedField__c: 'Amount', SBQQ__Operator__c: 'greater than', SBQQ__Value__c: '50000', SBQQ__TestedVariable__c: null }] } },
     { Id: 'ar_no_logic', Name: 'Missing Logic', SBQQ__Active__c: true, SBQQ__ApprovalStep__c: 3, SBQQ__Approver__c: 'cfo@test.com', SBQQ__ApproverField__c: null, SBQQ__ConditionsMet__c: null, SBQQ__EvaluationOrder__c: 10, SBQQ__ApprovalChain__c: null, SBQQ__ApprovalConditions__r: { records: [{ Id: 'ac_4', SBQQ__TestedField__c: 'SBQQ__NetAmount__c', SBQQ__Operator__c: 'greater than', SBQQ__Value__c: '100000', SBQQ__TestedVariable__c: null }] } },
+    { Id: 'ar_inactive', Name: 'Old Approval Rule', SBQQ__Active__c: false, SBQQ__ApprovalStep__c: 1, SBQQ__Approver__c: 'old@test.com', SBQQ__ApproverField__c: null, SBQQ__ConditionsMet__c: 'All', SBQQ__EvaluationOrder__c: 99, SBQQ__ApprovalChain__c: null, SBQQ__ApprovalConditions__r: { records: [] } },
   ];
 
   // Custom scripts: empty code (QCP-001), missing transpiled (QCP-002), performance issues (QCP-003), multiple QCPs (QCP-004)
@@ -251,21 +261,25 @@ export function createProblematicData(): CPQData {
     { Id: 'ca_req_no_default', Name: 'Req No Default', SBQQ__Product__c: 'p_quoted_3', SBQQ__Product__r: { Name: 'Quoted Product 3' }, SBQQ__TargetField__c: 'Tier__c', SBQQ__Required__c: true, SBQQ__Hidden__c: false, SBQQ__DefaultField__c: null, SBQQ__ColumnOrder__c: 1, SBQQ__DisplayOrder__c: 1, SBQQ__Feature__c: null, SBQQ__AppliedImmediately__c: false },
   ];
 
-  // Guided selling: no inputs (GS-001), no outputs (GS-002), inactive (GS-003)
+  // Guided selling: no inputs (GS-001), no outputs (GS-002), inactive (GS-003), low ratio (GS-004)
   const guidedSelling = [
     { Id: 'gs_no_input', Name: 'No Input Process', SBQQ__Active__c: true, SBQQ__LabelPosition__c: 'Top', SBQQ__Description__c: 'Missing inputs', inputCount: 0, outputCount: 2 },
     { Id: 'gs_no_output', Name: 'No Output Process', SBQQ__Active__c: true, SBQQ__LabelPosition__c: 'Top', SBQQ__Description__c: 'Missing outputs', inputCount: 3, outputCount: 0 },
     { Id: 'gs_inactive', Name: 'Inactive Process', SBQQ__Active__c: false, SBQQ__LabelPosition__c: 'Top', SBQQ__Description__c: 'Old process', inputCount: 2, outputCount: 1 },
+    { Id: 'gs_low_ratio', Name: 'Low Ratio Process', SBQQ__Active__c: true, SBQQ__LabelPosition__c: 'Top', SBQQ__Description__c: 'Many questions, few outputs', inputCount: 7, outputCount: 1 },
   ];
 
   // Quote lines for quoted products only (no discounts for UA-002 trigger)
   const quoteLines = quotedProducts.flatMap((p, i) => [
     { Id: `ql_${i}_1`, SBQQ__Quote__c: 'q1', SBQQ__Product__r: { Name: p.Name }, SBQQ__Quantity__c: 10, SBQQ__NetPrice__c: 500, SBQQ__NetTotal__c: 5000, SBQQ__ListPrice__c: 600, SBQQ__ProrateMultiplier__c: null, SBQQ__SubscriptionPricing__c: null, SBQQ__ChargeType__c: null, SBQQ__Discount__c: null, SBQQ__AdditionalDiscount__c: null, SBQQ__UpliftAmount__c: null, SBQQ__Uplift__c: null },
   ]);
+  // QL-004: Heavily discounted line (>50% off) — Discount__c left null so UA-002 still triggers
+  quoteLines.push({ Id: 'ql_heavy_disc', SBQQ__Quote__c: 'q1', SBQQ__Product__r: { Name: 'Discounted Product' }, SBQQ__Quantity__c: 1, SBQQ__NetPrice__c: 100, SBQQ__NetTotal__c: 100, SBQQ__ListPrice__c: 500, SBQQ__ProrateMultiplier__c: null, SBQQ__SubscriptionPricing__c: null, SBQQ__ChargeType__c: null, SBQQ__Discount__c: null, SBQQ__AdditionalDiscount__c: null, SBQQ__UpliftAmount__c: null, SBQQ__Uplift__c: null });
 
-  // Contracted price for inactive product (IA-004)
+  // Contracted price for inactive product (IA-004), no dates (CP-002), no source quote line (CP-003)
   const contractedPrices = [
     { Id: 'cp_orphan', Name: 'Orphaned CP', SBQQ__Account__c: 'acc1', SBQQ__Account__r: { Name: 'Acme' }, SBQQ__Product__c: 'p_deleted', SBQQ__Product__r: { Name: 'Deleted Product', IsActive: false }, SBQQ__Price__c: 100, SBQQ__EffectiveDate__c: '2025-01-01', SBQQ__ExpirationDate__c: '2027-01-01', SBQQ__OriginalQuoteLine__c: null },
+    { Id: 'cp_no_dates', Name: 'No Dates CP', SBQQ__Account__c: 'acc1', SBQQ__Account__r: { Name: 'Acme' }, SBQQ__Product__c: 'p_quoted_0', SBQQ__Product__r: { Name: 'Quoted Product 0', IsActive: true }, SBQQ__Price__c: 500, SBQQ__EffectiveDate__c: null, SBQQ__ExpirationDate__c: null, SBQQ__OriginalQuoteLine__c: null },
   ];
 
   // ── Bundle Integrity issues ──
@@ -377,7 +391,10 @@ export function createProblematicData(): CPQData {
     quoteTemplates,
     configurationAttributes: configAttributes,
     guidedSellingProcesses: guidedSelling,
-    subscriptions: [],
+    subscriptions: [
+      { Id: 'sub_no_contract', Name: 'SUB-ORPHAN', SBQQ__Contract__c: null, SBQQ__NetPrice__c: 500, SBQQ__Quantity__c: 1, SBQQ__ProrateMultiplier__c: 1.0 },
+      { Id: 'sub_high_qty', Name: 'SUB-HIGHQTY', SBQQ__Contract__c: 'contract1', SBQQ__NetPrice__c: 10, SBQQ__Quantity__c: 5000, SBQQ__ProrateMultiplier__c: 1.0 },
+    ],
     quoteLines,
     quotes: [{ Id: 'q1', Name: 'Q-001', SBQQ__Type__c: 'Quote', SBQQ__Status__c: 'Draft', SBQQ__Primary__c: true }],
     pricebookEntries: quotedProducts.map((p, i) => ({ Id: `pbe_${i}`, Product2Id: p.Id, Product2: { Name: p.Name }, Pricebook2Id: 'std', UnitPrice: 600, IsActive: true })),

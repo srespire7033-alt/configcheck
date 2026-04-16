@@ -137,4 +137,36 @@ export const approvalRuleChecks: HealthCheck[] = [
       return issues;
     },
   },
+
+  // AR-005: Inactive Approval Rules
+  {
+    id: 'AR-005',
+    name: 'Inactive Approval Rules',
+    category: 'approval_rules',
+    severity: 'info',
+    description: 'Deactivated approval rules that may indicate outdated approval processes',
+    run: async (data: CPQData): Promise<Issue[]> => {
+      const issues: Issue[] = [];
+      const inactive = data.approvalRules.filter((r) => !r.SBQQ__Active__c);
+
+      if (inactive.length > 0) {
+        issues.push({
+          check_id: 'AR-005',
+          category: 'approval_rules',
+          severity: 'info',
+          title: `${inactive.length} inactive approval rule(s)`,
+          description: `${inactive.length} approval rule(s) are deactivated: ${inactive.slice(0, 5).map((r) => `"${r.Name}"`).join(', ')}${inactive.length > 5 ? ` and ${inactive.length - 5} more` : ''}.`,
+          impact: 'Inactive rules clutter the approval configuration and may confuse admins.',
+          recommendation: 'Delete inactive approval rules that are no longer needed. If keeping for audit purposes, document the reason.',
+          affected_records: inactive.slice(0, 10).map((r) => ({
+            id: r.Id,
+            name: r.Name,
+            type: 'SBQQ__ApprovalRule__c',
+          })),
+        });
+      }
+
+      return issues;
+    },
+  },
 ];

@@ -131,4 +131,34 @@ export const quoteTemplateChecks: HealthCheck[] = [
       return issues;
     },
   },
+
+  // QT-005: Default Template Without Active Status
+  {
+    id: 'QT-005',
+    name: 'Default Template Not Active',
+    category: 'quote_templates',
+    severity: 'critical',
+    description: 'The default quote template is not in Active status',
+    run: async (data: CPQData): Promise<Issue[]> => {
+      const issues: Issue[] = [];
+      const defaultTemplates = data.quoteTemplates.filter((t) => t.SBQQ__Default__c);
+
+      for (const template of defaultTemplates) {
+        if (template.SBQQ__Status__c && template.SBQQ__Status__c !== 'Active') {
+          issues.push({
+            check_id: 'QT-005',
+            category: 'quote_templates',
+            severity: 'critical',
+            title: `Default template "${template.Name}" is ${template.SBQQ__Status__c}`,
+            description: `"${template.Name}" is marked as the Default template but its status is "${template.SBQQ__Status__c}" instead of "Active". Users will be unable to generate quote documents using the default template.`,
+            impact: 'Quote document generation fails or falls back to no template. Sales reps cannot produce professional proposals.',
+            recommendation: `Set the status of "${template.Name}" to "Active", or choose a different active template as the default.`,
+            affected_records: [{ id: template.Id, name: template.Name, type: 'SBQQ__QuoteTemplate__c' }],
+          });
+        }
+      }
+
+      return issues;
+    },
+  },
 ];

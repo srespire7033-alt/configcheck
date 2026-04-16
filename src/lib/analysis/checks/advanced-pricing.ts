@@ -146,4 +146,36 @@ export const advancedPricingChecks: HealthCheck[] = [
       return issues;
     },
   },
+
+  // AP-005: Multiple Pricing Methods in Use
+  {
+    id: 'AP-005',
+    name: 'Multiple Pricing Methods in Use',
+    category: 'advanced_pricing',
+    severity: 'info',
+    description: 'Org uses 3+ different pricing methods — consider documenting the pricing strategy',
+    run: async (data: CPQData): Promise<Issue[]> => {
+      const issues: Issue[] = [];
+      const methods = new Set(
+        data.products
+          .filter((p) => p.IsActive && p.SBQQ__PricingMethod__c)
+          .map((p) => p.SBQQ__PricingMethod__c!)
+      );
+
+      if (methods.size >= 3) {
+        issues.push({
+          check_id: 'AP-005',
+          category: 'advanced_pricing',
+          severity: 'info',
+          title: `${methods.size} pricing methods in use: ${Array.from(methods).join(', ')}`,
+          description: `Active products use ${methods.size} different pricing methods: ${Array.from(methods).join(', ')}. While valid, multiple pricing methods add complexity to the pricing model and require thorough documentation.`,
+          impact: 'Admins and sales reps must understand how each method works. Increases training burden and audit complexity.',
+          recommendation: 'Document which products use which pricing method and why. Ensure QCP logic handles all methods correctly.',
+          affected_records: [],
+        });
+      }
+
+      return issues;
+    },
+  },
 ];

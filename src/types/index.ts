@@ -575,6 +575,7 @@ export interface SFBillingInvoice {
   blng__Account__c: string | null;
   blng__InvoiceDate__c: string | null;
   blng__DueDate__c: string | null;
+  blng__LegalEntity__c: string | null;
   CreatedDate: string;
 }
 

@@ -111,6 +111,41 @@ export const invoicingChecks: BillingHealthCheck[] = [
     },
   },
   {
+    id: 'INV-005',
+    name: 'Invoices Without Legal Entity',
+    category: 'invoicing',
+    severity: 'critical',
+    description: 'Posted invoices with no legal entity assigned — compliance risk',
+    run: async (data: BillingData): Promise<Issue[]> => {
+      const issues: Issue[] = [];
+
+      const noEntity = data.invoices.filter(
+        inv => inv.blng__InvoiceStatus__c === 'Posted' && !inv.blng__LegalEntity__c
+      );
+
+      if (noEntity.length > 0) {
+        issues.push({
+          check_id: 'INV-005',
+          category: 'invoicing',
+          severity: 'critical',
+          title: `${noEntity.length} posted invoice(s) without legal entity`,
+          description: `${noEntity.length} posted invoice(s) have no legal entity assigned. Invoices without a legal entity lack the company information required for tax compliance.`,
+          impact: 'Invoices may be invalid for tax purposes. Could trigger compliance audit findings.',
+          recommendation: 'Ensure all billing rules and order products are configured to assign a legal entity during invoice generation.',
+          affected_records: noEntity.slice(0, 50).map(inv => ({
+            id: inv.Id,
+            name: inv.Name,
+            type: 'blng__Invoice__c',
+          })),
+          revenue_impact: noEntity.length * 1000,
+          effort_hours: Math.ceil(noEntity.length / 20) + 1,
+        });
+      }
+
+      return issues;
+    },
+  },
+  {
     id: 'INV-004',
     name: 'Overdue Invoices',
     category: 'invoicing',

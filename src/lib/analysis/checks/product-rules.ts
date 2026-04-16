@@ -173,4 +173,36 @@ export const productRuleChecks: HealthCheck[] = [
       return issues;
     },
   },
+
+  // PRD-005: Inactive Product Rules Cleanup
+  {
+    id: 'PRD-005',
+    name: 'Inactive Product Rules',
+    category: 'product_rules',
+    severity: 'info',
+    description: 'Deactivated product rules that add maintenance overhead',
+    run: async (data: CPQData): Promise<Issue[]> => {
+      const issues: Issue[] = [];
+      const inactive = data.productRules.filter((r) => !r.SBQQ__Active__c);
+
+      if (inactive.length > 0) {
+        issues.push({
+          check_id: 'PRD-005',
+          category: 'product_rules',
+          severity: 'info',
+          title: `${inactive.length} inactive product rule(s)`,
+          description: `${inactive.length} product rule(s) are deactivated: ${inactive.slice(0, 5).map((r) => `"${r.Name}"`).join(', ')}${inactive.length > 5 ? ` and ${inactive.length - 5} more` : ''}. Inactive rules clutter the org.`,
+          impact: 'Adds confusion during configuration reviews. Admins may wonder if these rules should be active.',
+          recommendation: 'Delete inactive rules that are no longer needed. If keeping for reference, document the reason in the rule description.',
+          affected_records: inactive.slice(0, 10).map((r) => ({
+            id: r.Id,
+            name: r.Name,
+            type: 'SBQQ__ProductRule__c',
+          })),
+        });
+      }
+
+      return issues;
+    },
+  },
 ];

@@ -277,4 +277,41 @@ export const financeBookChecks: BillingHealthCheck[] = [
       return issues;
     },
   },
+  {
+    id: 'FB-007',
+    name: 'Finance Periods Past End Date Still Open',
+    category: 'finance_books',
+    severity: 'info',
+    description: 'Open finance periods that have ended — should be closed after reconciliation',
+    run: async (data: BillingData): Promise<Issue[]> => {
+      const issues: Issue[] = [];
+      const todayStr = new Date().toISOString().split('T')[0];
+
+      const expired = data.financePeriods.filter(p =>
+        p.blng__PeriodStatus__c === 'Open' &&
+        p.blng__PeriodEndDate__c &&
+        p.blng__PeriodEndDate__c < todayStr
+      );
+
+      if (expired.length > 0) {
+        issues.push({
+          check_id: 'FB-007',
+          category: 'finance_books',
+          severity: 'info',
+          title: `${expired.length} finance period(s) past end date still open`,
+          description: `${expired.length} finance period(s) have ended but remain open. Closing completed periods is a best practice for financial hygiene.`,
+          impact: 'Open past periods allow accidental backdated postings. Closing them protects financial data integrity.',
+          recommendation: 'Review and close finance periods after reconciliation is complete.',
+          affected_records: expired.slice(0, 20).map(p => ({
+            id: p.Id,
+            name: p.Name,
+            type: 'blng__FinancePeriod__c',
+          })),
+          effort_hours: expired.length * 0.1,
+        });
+      }
+
+      return issues;
+    },
+  },
 ];

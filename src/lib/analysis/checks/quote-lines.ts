@@ -128,4 +128,41 @@ export const quoteLineChecks: HealthCheck[] = [
       return issues;
     },
   },
+
+  // QL-004: Excessive Discounting on Quote Lines
+  {
+    id: 'QL-004',
+    name: 'Excessive Discounting on Quote Lines',
+    category: 'quote_lines',
+    severity: 'info',
+    description: 'Quote lines where discounts exceed 50% of list price — may indicate over-discounting patterns',
+    run: async (data: CPQData): Promise<Issue[]> => {
+      const issues: Issue[] = [];
+      const heavyDiscount = data.quoteLines.filter((ql) => {
+        if (!ql.SBQQ__ListPrice__c || ql.SBQQ__ListPrice__c <= 0) return false;
+        if (!ql.SBQQ__NetPrice__c && ql.SBQQ__NetPrice__c !== 0) return false;
+        const discountPct = (1 - ql.SBQQ__NetPrice__c! / ql.SBQQ__ListPrice__c) * 100;
+        return discountPct > 50;
+      });
+
+      if (heavyDiscount.length > 0) {
+        issues.push({
+          check_id: 'QL-004',
+          category: 'quote_lines',
+          severity: 'info',
+          title: `${heavyDiscount.length} quote line(s) with >50% discount`,
+          description: `${heavyDiscount.length} quote line(s) have an effective discount exceeding 50% of list price. Examples: ${heavyDiscount.slice(0, 3).map((l) => `"${l.SBQQ__Product__r?.Name || 'Unknown'}"`).join(', ')}.`,
+          impact: 'Heavy discounting patterns may signal approval process gaps or margin erosion. Worth reviewing for profitability.',
+          recommendation: 'Review discount approval rules. Consider adding guardrails for discounts above a certain threshold.',
+          affected_records: heavyDiscount.slice(0, 10).map((l) => ({
+            id: l.Id,
+            name: l.SBQQ__Product__r?.Name || 'Quote Line',
+            type: 'SBQQ__QuoteLine__c',
+          })),
+        });
+      }
+
+      return issues;
+    },
+  },
 ];

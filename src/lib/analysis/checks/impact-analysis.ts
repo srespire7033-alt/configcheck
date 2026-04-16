@@ -191,4 +191,98 @@ export const impactAnalysisChecks: HealthCheck[] = [
       return issues;
     },
   },
+
+  // IA-005: Circular Rule Dependencies
+  {
+    id: 'IA-005',
+    name: 'Circular Rule Dependencies',
+    category: 'impact_analysis',
+    severity: 'critical',
+    description: 'Price rules where Rule A writes a field that Rule B reads, and Rule B writes a field that Rule A reads',
+    run: async (data: CPQData): Promise<Issue[]> => {
+      const issues: Issue[] = [];
+      const activeRules = data.priceRules.filter((r) => r.SBQQ__Active__c);
+
+      // Build read/write maps per rule
+      const ruleReads: Record<string, Set<string>> = {};
+      const ruleWrites: Record<string, Set<string>> = {};
+
+      for (const rule of activeRules) {
+        ruleReads[rule.Id] = new Set(
+          (rule.SBQQ__PriceConditions__r?.records || [])
+            .map((c) => c.SBQQ__Field__c)
+            .filter((f): f is string => Boolean(f))
+        );
+        ruleWrites[rule.Id] = new Set(
+          (rule.SBQQ__PriceActions__r?.records || [])
+            .map((a) => a.SBQQ__Field__c)
+            .filter((f): f is string => Boolean(f))
+        );
+      }
+
+      // Detect circular: A writes field X that B reads AND B writes field Y that A reads
+      const seen = new Set<string>();
+      for (const ruleA of activeRules) {
+        for (const ruleB of activeRules) {
+          if (ruleA.Id >= ruleB.Id) continue; // Avoid duplicates
+          const pairKey = `${ruleA.Id}|${ruleB.Id}`;
+          if (seen.has(pairKey)) continue;
+
+          const aWritesBReads = Array.from(ruleWrites[ruleA.Id]).some((f) => ruleReads[ruleB.Id].has(f));
+          const bWritesAReads = Array.from(ruleWrites[ruleB.Id]).some((f) => ruleReads[ruleA.Id].has(f));
+
+          if (aWritesBReads && bWritesAReads) {
+            seen.add(pairKey);
+            issues.push({
+              check_id: 'IA-005',
+              category: 'impact_analysis',
+              severity: 'critical',
+              title: `Circular dependency: "${ruleA.Name}" ↔ "${ruleB.Name}"`,
+              description: `"${ruleA.Name}" and "${ruleB.Name}" have a circular dependency — each writes a field the other reads. The final pricing result depends entirely on evaluation order and may be non-deterministic.`,
+              impact: 'Pricing results are unpredictable and may change if evaluation order is modified. Extremely difficult to debug.',
+              recommendation: 'Break the circular dependency by consolidating the rules into one, or by using a QCP to handle the combined logic.',
+              affected_records: [
+                { id: ruleA.Id, name: ruleA.Name, type: 'SBQQ__PriceRule__c' },
+                { id: ruleB.Id, name: ruleB.Name, type: 'SBQQ__PriceRule__c' },
+              ],
+            });
+          }
+        }
+      }
+
+      return issues;
+    },
+  },
+
+  // IA-006: Configuration Complexity Score
+  {
+    id: 'IA-006',
+    name: 'High Configuration Complexity',
+    category: 'impact_analysis',
+    severity: 'info',
+    description: 'The overall configuration has a high number of interacting components',
+    run: async (data: CPQData): Promise<Issue[]> => {
+      const issues: Issue[] = [];
+
+      const activePriceRules = data.priceRules.filter((r) => r.SBQQ__Active__c).length;
+      const activeProductRules = data.productRules.filter((r) => r.SBQQ__Active__c).length;
+      const activeSummaryVars = data.summaryVariables.filter((v) => v.SBQQ__Active__c).length;
+      const totalActive = activePriceRules + activeProductRules + activeSummaryVars;
+
+      if (totalActive >= 20) {
+        issues.push({
+          check_id: 'IA-006',
+          category: 'impact_analysis',
+          severity: 'info',
+          title: `High complexity: ${totalActive} active rules and variables`,
+          description: `This org has ${activePriceRules} active price rules, ${activeProductRules} active product rules, and ${activeSummaryVars} active summary variables (${totalActive} total). High rule counts increase the risk of unintended interactions.`,
+          impact: 'More rules = more potential for conflicts, slower quote calculation, and harder troubleshooting.',
+          recommendation: 'Document the purpose of each rule. Consider consolidating rules that apply to similar scenarios. Run sandbox testing before making changes.',
+          affected_records: [],
+        });
+      }
+
+      return issues;
+    },
+  },
 ];

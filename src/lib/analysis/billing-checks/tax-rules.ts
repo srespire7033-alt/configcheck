@@ -108,4 +108,35 @@ export const taxRuleChecks: BillingHealthCheck[] = [
       return issues;
     },
   },
+  {
+    id: 'TR-004',
+    name: 'Inactive Tax Rules Cleanup',
+    category: 'tax_rules',
+    severity: 'info',
+    description: 'Inactive tax rules that add maintenance overhead to the org',
+    run: async (data: BillingData): Promise<Issue[]> => {
+      const issues: Issue[] = [];
+      const inactive = data.taxRules.filter(r => !r.blng__Active__c);
+
+      if (inactive.length > 0) {
+        issues.push({
+          check_id: 'TR-004',
+          category: 'tax_rules',
+          severity: 'info',
+          title: `${inactive.length} inactive tax rule(s)`,
+          description: `${inactive.length} tax rule(s) are inactive: ${inactive.slice(0, 5).map(r => `"${r.Name}"`).join(', ')}${inactive.length > 5 ? ` and ${inactive.length - 5} more` : ''}.`,
+          impact: 'Inactive tax rules clutter the org and can confuse admins reviewing the billing configuration.',
+          recommendation: 'Delete inactive tax rules that are no longer needed.',
+          affected_records: inactive.slice(0, 10).map(r => ({
+            id: r.Id,
+            name: r.Name,
+            type: 'blng__TaxRule__c',
+          })),
+          effort_hours: inactive.length * 0.1,
+        });
+      }
+
+      return issues;
+    },
+  },
 ];

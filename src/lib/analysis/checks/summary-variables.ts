@@ -209,4 +209,36 @@ export const summaryVariableChecks: HealthCheck[] = [
       return issues;
     },
   },
+
+  // SV-006: Inactive Summary Variables
+  {
+    id: 'SV-006',
+    name: 'Inactive Summary Variables',
+    category: 'summary_variables',
+    severity: 'info',
+    description: 'Deactivated summary variables that add maintenance overhead',
+    run: async (data: CPQData): Promise<Issue[]> => {
+      const issues: Issue[] = [];
+      const inactive = data.summaryVariables.filter((v) => !v.SBQQ__Active__c);
+
+      if (inactive.length > 0) {
+        issues.push({
+          check_id: 'SV-006',
+          category: 'summary_variables',
+          severity: 'info',
+          title: `${inactive.length} inactive summary variable(s)`,
+          description: `${inactive.length} summary variable(s) are deactivated: ${inactive.slice(0, 5).map((v) => `"${v.Name}"`).join(', ')}${inactive.length > 5 ? ` and ${inactive.length - 5} more` : ''}.`,
+          impact: 'Inactive variables add clutter and can confuse admins reviewing the configuration.',
+          recommendation: 'Delete inactive summary variables that are no longer needed to keep the org clean.',
+          affected_records: inactive.slice(0, 10).map((v) => ({
+            id: v.Id,
+            name: v.Name,
+            type: 'SBQQ__SummaryVariable__c',
+          })),
+        });
+      }
+
+      return issues;
+    },
+  },
 ];

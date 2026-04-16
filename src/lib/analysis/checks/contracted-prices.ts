@@ -1,6 +1,40 @@
 import type { HealthCheck, CPQData, Issue } from '@/types';
 
 export const contractedPriceChecks: HealthCheck[] = [
+  // CP-002: Contracted Prices Without Effective Date
+  {
+    id: 'CP-002',
+    name: 'Contracted Prices Missing Effective Date',
+    category: 'contracted_prices',
+    severity: 'critical',
+    description: 'Contracted prices without an effective date — pricing may apply unexpectedly',
+    run: async (data: CPQData): Promise<Issue[]> => {
+      const issues: Issue[] = [];
+      const noDate = data.contractedPrices.filter(
+        (cp) => !cp.SBQQ__EffectiveDate__c && !cp.SBQQ__ExpirationDate__c
+      );
+
+      if (noDate.length > 0) {
+        issues.push({
+          check_id: 'CP-002',
+          category: 'contracted_prices',
+          severity: 'critical',
+          title: `${noDate.length} contracted price(s) without effective or expiration date`,
+          description: `Found ${noDate.length} contracted price record(s) with neither effective date nor expiration date set. These prices apply indefinitely and may override standard pricing unexpectedly.`,
+          impact: 'Contracted prices without date boundaries apply to all quotes for the account forever, even after the agreement has expired.',
+          recommendation: 'Set effective and expiration dates on all contracted prices to match the underlying pricing agreement.',
+          affected_records: noDate.slice(0, 20).map((cp) => ({
+            id: cp.Id,
+            name: `${cp.SBQQ__Account__r?.Name || 'Unknown'} - ${cp.SBQQ__Product__r?.Name || 'Unknown'}`,
+            type: 'SBQQ__ContractedPrice__c',
+          })),
+        });
+      }
+
+      return issues;
+    },
+  },
+
   // CP-001: Expired or Stale Contracted Prices
   {
     id: 'CP-001',
@@ -78,6 +112,38 @@ export const contractedPriceChecks: HealthCheck[] = [
             type: 'SBQQ__ContractedPrice__c',
           })),
           revenue_impact: zeroPrice.length * 200,
+        });
+      }
+
+      return issues;
+    },
+  },
+
+  // CP-003: Contracted Prices Without Original Quote Line
+  {
+    id: 'CP-003',
+    name: 'Contracted Prices Without Source Quote Line',
+    category: 'contracted_prices',
+    severity: 'info',
+    description: 'Contracted prices created manually rather than flowing from a quote — harder to audit',
+    run: async (data: CPQData): Promise<Issue[]> => {
+      const issues: Issue[] = [];
+      const noSource = data.contractedPrices.filter((cp) => !cp.SBQQ__OriginalQuoteLine__c);
+
+      if (noSource.length > 0) {
+        issues.push({
+          check_id: 'CP-003',
+          category: 'contracted_prices',
+          severity: 'info',
+          title: `${noSource.length} contracted price(s) without source quote line`,
+          description: `Found ${noSource.length} contracted price(s) that were not created from a quote line. These were likely created manually or via data load, making them harder to audit and trace.`,
+          impact: 'Manual contracted prices lack the audit trail of quote-originated pricing. Harder to verify the pricing was approved correctly.',
+          recommendation: 'Document the source of manually created contracted prices. Consider using the standard quote-to-contract flow for better traceability.',
+          affected_records: noSource.slice(0, 10).map((cp) => ({
+            id: cp.Id,
+            name: `${cp.SBQQ__Account__r?.Name || 'Unknown'} - ${cp.SBQQ__Product__r?.Name || 'Unknown'}`,
+            type: 'SBQQ__ContractedPrice__c',
+          })),
         });
       }
 

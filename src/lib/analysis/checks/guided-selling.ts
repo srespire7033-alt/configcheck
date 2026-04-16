@@ -94,4 +94,34 @@ export const guidedSellingChecks: HealthCheck[] = [
       return issues;
     },
   },
+
+  // GS-004: Low Input-to-Output Ratio
+  {
+    id: 'GS-004',
+    name: 'Guided Selling Low Output Ratio',
+    category: 'guided_selling',
+    severity: 'warning',
+    description: 'Active guided selling process with many inputs but very few outputs',
+    run: async (data: CPQData): Promise<Issue[]> => {
+      const issues: Issue[] = [];
+
+      for (const proc of data.guidedSellingProcesses) {
+        if (!proc.SBQQ__Active__c) continue;
+        if (proc.inputCount >= 5 && proc.outputCount > 0 && proc.outputCount <= 1) {
+          issues.push({
+            check_id: 'GS-004',
+            category: 'guided_selling',
+            severity: 'warning',
+            title: `Guided selling "${proc.Name}" has ${proc.inputCount} inputs but only ${proc.outputCount} output`,
+            description: `"${proc.Name}" asks ${proc.inputCount} questions but only maps to ${proc.outputCount} product output(s). Users answer many questions to get minimal product suggestions — poor ROI on the guided selling experience.`,
+            impact: 'Users may perceive the guided selling wizard as tedious and skip it, defeating its purpose.',
+            recommendation: `Review "${proc.Name}" — either add more output mappings or reduce the number of input questions to improve the user experience.`,
+            affected_records: [{ id: proc.Id, name: proc.Name, type: 'SBQQ__GuidedSellingProcess__c' }],
+          });
+        }
+      }
+
+      return issues;
+    },
+  },
 ];
