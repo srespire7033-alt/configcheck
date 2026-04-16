@@ -118,7 +118,7 @@ export async function GET(request: NextRequest) {
   const scanId = request.nextUrl.searchParams.get('scanId');
   const orgId = request.nextUrl.searchParams.get('orgId');
 
-  const supabase = createServiceClient();
+  const supabase = createServiceClient({ noCache: true });
 
   if (scanId) {
     const { data: scan, error } = await supabase
