@@ -46,34 +46,40 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Failed to fetch organizations' }, { status: 500 });
   }
 
-  // Fetch latest scan completed_at for each org (single query, bulletproof timestamp source)
+  // Fetch latest scan data for each org from scans table (source of truth)
   const orgIds = (data || []).map((o) => o.id);
-  let latestScanMap: Record<string, string> = {};
+  const latestScanMap: Record<string, { score: number; timestamp: string }> = {};
 
   if (orgIds.length > 0) {
     const { data: scans } = await supabase
       .from('scans')
-      .select('organization_id, completed_at, created_at')
+      .select('organization_id, overall_score, completed_at, created_at')
       .in('organization_id', orgIds)
       .eq('status', 'completed')
       .order('created_at', { ascending: false });
 
     if (scans) {
-      // Keep only the latest scan per org
       for (const scan of scans) {
         if (!latestScanMap[scan.organization_id]) {
-          latestScanMap[scan.organization_id] = scan.completed_at || scan.created_at;
+          latestScanMap[scan.organization_id] = {
+            score: scan.overall_score,
+            timestamp: scan.completed_at || scan.created_at,
+          };
         }
       }
     }
   }
 
-  // Map to OrgCardData format — use scan timestamp as the source of truth
-  const orgs = (data || []).map((org) => ({
-    ...org,
-    last_scan_at: latestScanMap[org.id] || org.last_scan_at,
-    critical_count: 0, // Would need a join/subquery in production
-  }));
+  // Map to OrgCardData format — use scans table as source of truth for score + timestamp
+  const orgs = (data || []).map((org) => {
+    const latestScan = latestScanMap[org.id];
+    return {
+      ...org,
+      last_scan_score: latestScan?.score ?? org.last_scan_score,
+      last_scan_at: latestScan?.timestamp ?? org.last_scan_at,
+      critical_count: 0,
+    };
+  });
 
   return NextResponse.json(orgs, {
     headers: {
