@@ -293,9 +293,19 @@ async function runScanInBackground(
     // Step 6: Update org FIRST (before marking scan completed)
     // This prevents the race condition where the client sees 'completed'
     // but reads stale org data because the org update hasn't happened yet.
+    // Also sync the org name from Salesforce in case it changed.
+    let currentOrgName: string | undefined;
+    try {
+      const nameResult = await conn.query('SELECT Name FROM Organization LIMIT 1');
+      currentOrgName = (nameResult.records[0] as { Name: string })?.Name;
+    } catch {
+      // Non-critical — skip name sync if query fails
+    }
+
     await supabase
       .from('organizations')
       .update({
+        ...(currentOrgName ? { name: currentOrgName } : {}),
         last_scan_score: result.overall_score,
         last_scan_at: new Date().toISOString(),
         total_price_rules: cpqData.priceRules.length,
