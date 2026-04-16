@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { getCategoryLabel } from '@/lib/utils';
-import { DollarSign, Percent, Package, GitBranch, Settings, RefreshCw, FileText, Handshake, Variable, ShieldCheck, Code, FileSpreadsheet, SlidersHorizontal, Compass, Layers, Gauge, Network, ChevronRight, GripVertical, Receipt, BookOpen, Landmark, Building2, CircleDollarSign, Scale, BadgeDollarSign, FileCheck } from 'lucide-react';
+import { DollarSign, Percent, Package, GitBranch, Settings, RefreshCw, FileText, Handshake, Variable, ShieldCheck, Code, FileSpreadsheet, SlidersHorizontal, Compass, Layers, Gauge, Network, ChevronRight, GripVertical, Receipt, BookOpen, Landmark, Building2, CircleDollarSign, Scale, BadgeDollarSign, FileCheck, Boxes, Search } from 'lucide-react';
 import {
   DndContext,
   closestCenter,
@@ -47,6 +47,8 @@ const categoryIcons: Record<string, React.ElementType> = {
   advanced_pricing: Layers,
   performance: Gauge,
   impact_analysis: Network,
+  bundles: Boxes,
+  lookup_queries: Search,
   // Billing categories
   billing_rules: Receipt,
   rev_rec_rules: BookOpen,

@@ -18,9 +18,11 @@ import { advancedPricingChecks } from './advanced-pricing';
 import { performanceChecks } from './performance';
 import { impactAnalysisChecks } from './impact-analysis';
 import { usageAnalyticsChecks } from './usage-analytics';
+import { bundleIntegrityChecks } from './bundle-integrity';
+import { lookupQueryChecks } from './lookup-queries';
 
 /**
- * All registered health checks — 68 total
+ * All registered health checks — 76 total
  * Add new check modules here
  */
 export const allChecks: HealthCheck[] = [
@@ -43,4 +45,6 @@ export const allChecks: HealthCheck[] = [
   ...performanceChecks,             // PERF-001 to PERF-005 (5)
   ...impactAnalysisChecks,          // IA-001 to IA-004 (4)
   ...usageAnalyticsChecks,          // UA-001 to UA-003 (3)
+  ...bundleIntegrityChecks,         // BN-001 to BN-004 (4)
+  ...lookupQueryChecks,             // LQ-001 to LQ-004 (4)
 ];

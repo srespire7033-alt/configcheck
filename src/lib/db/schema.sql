@@ -108,7 +108,7 @@ create table public.issues (
     'cpq_settings', 'subscriptions', 'twin_fields', 'contracted_prices', 'quote_lines',
     'summary_variables', 'approval_rules', 'quote_calculator_plugin',
     'quote_templates', 'configuration_attributes', 'guided_selling', 'advanced_pricing',
-    'performance', 'impact_analysis',
+    'performance', 'impact_analysis', 'bundles', 'lookup_queries',
     'billing_rules', 'rev_rec_rules', 'tax_rules', 'finance_books',
     'gl_rules', 'legal_entity', 'product_billing_config', 'invoicing'
   )),

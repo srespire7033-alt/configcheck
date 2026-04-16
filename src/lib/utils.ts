@@ -76,6 +76,8 @@ export function getCategoryLabel(category: string): string {
     advanced_pricing: 'Advanced Pricing',
     performance: 'Performance',
     impact_analysis: 'Impact Analysis',
+    bundles: 'Bundle Integrity',
+    lookup_queries: 'Lookup Queries',
     // Billing categories
     billing_rules: 'Billing Rules',
     rev_rec_rules: 'Revenue Recognition',

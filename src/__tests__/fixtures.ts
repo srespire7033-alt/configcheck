@@ -13,15 +13,15 @@ export function createCleanData(): CPQData {
       { Id: 'ds1', Name: 'Volume Discount', SBQQ__Type__c: 'Range', SBQQ__DiscountUnit__c: 'Percent', SBQQ__DiscountTiers__r: { records: [{ Id: 'dt1', Name: 'Tier 1', SBQQ__LowerBound__c: 1, SBQQ__UpperBound__c: 100, SBQQ__Discount__c: 5 }, { Id: 'dt2', Name: 'Tier 2', SBQQ__LowerBound__c: 100, SBQQ__UpperBound__c: 500, SBQQ__Discount__c: 10 }] } },
     ],
     products: [
-      { Id: 'p1', Name: 'Product A', ProductCode: 'PROD-A', IsActive: true, SBQQ__SubscriptionType__c: null, SBQQ__SubscriptionPricing__c: null, SBQQ__ChargeType__c: 'One-Time', SBQQ__BillingFrequency__c: null, SBQQ__PricingMethod__c: 'List' },
-      { Id: 'p2', Name: 'Product B', ProductCode: 'PROD-B', IsActive: true, SBQQ__SubscriptionType__c: null, SBQQ__SubscriptionPricing__c: null, SBQQ__ChargeType__c: 'One-Time', SBQQ__BillingFrequency__c: null, SBQQ__PricingMethod__c: 'List' },
-      { Id: 'p3', Name: 'Product C', ProductCode: 'PROD-C', IsActive: true, SBQQ__SubscriptionType__c: 'Renewable', SBQQ__SubscriptionPricing__c: 'Fixed Price', SBQQ__ChargeType__c: 'Recurring', SBQQ__BillingFrequency__c: 'Monthly', SBQQ__PricingMethod__c: 'List' },
+      { Id: 'p1', Name: 'Product A', ProductCode: 'PROD-A', IsActive: true, SBQQ__SubscriptionType__c: null, SBQQ__SubscriptionPricing__c: null, SBQQ__ChargeType__c: 'One-Time', SBQQ__BillingFrequency__c: null, SBQQ__PricingMethod__c: 'List', SBQQ__ConfigurationType__c: 'Allowed' },
+      { Id: 'p2', Name: 'Product B', ProductCode: 'PROD-B', IsActive: true, SBQQ__SubscriptionType__c: null, SBQQ__SubscriptionPricing__c: null, SBQQ__ChargeType__c: 'One-Time', SBQQ__BillingFrequency__c: null, SBQQ__PricingMethod__c: 'List', SBQQ__ConfigurationType__c: null },
+      { Id: 'p3', Name: 'Product C', ProductCode: 'PROD-C', IsActive: true, SBQQ__SubscriptionType__c: 'Renewable', SBQQ__SubscriptionPricing__c: 'Fixed Price', SBQQ__ChargeType__c: 'Recurring', SBQQ__BillingFrequency__c: 'Monthly', SBQQ__PricingMethod__c: 'List', SBQQ__ConfigurationType__c: null },
     ],
     productOptions: [
-      { Id: 'po1', Name: 'Bundle Opt 1', SBQQ__ConfiguredSKU__c: 'p1', SBQQ__OptionalSKU__c: 'p2', SBQQ__ConfiguredSKU__r: { Name: 'Product A', IsActive: true }, SBQQ__OptionalSKU__r: { Name: 'Product B', IsActive: true } },
+      { Id: 'po1', Name: 'Bundle Opt 1', SBQQ__ConfiguredSKU__c: 'p1', SBQQ__OptionalSKU__c: 'p2', SBQQ__ConfiguredSKU__r: { Name: 'Product A', IsActive: true }, SBQQ__OptionalSKU__r: { Name: 'Product B', IsActive: true }, SBQQ__Required__c: false, SBQQ__MinQuantity__c: 1, SBQQ__MaxQuantity__c: 10, SBQQ__Number__c: 1, SBQQ__Feature__c: null, SBQQ__Feature__r: null },
     ],
     productRules: [
-      { Id: 'prd1', Name: 'Validation Rule', SBQQ__Active__c: true, SBQQ__Type__c: 'Validation', SBQQ__EvaluationOrder__c: 10, SBQQ__ConditionsMet__c: 'All', SBQQ__ErrorConditions__r: { records: [{ Id: 'ec1', SBQQ__TestedField__c: 'SBQQ__Quantity__c', SBQQ__Operator__c: 'greater than', SBQQ__FilterValue__c: '0' }] }, SBQQ__Actions__r: { records: [] } },
+      { Id: 'prd1', Name: 'Validation Rule', SBQQ__Active__c: true, SBQQ__Type__c: 'Validation', SBQQ__EvaluationOrder__c: 10, SBQQ__ConditionsMet__c: 'All', SBQQ__LookupObject__c: null, SBQQ__LookupProductField__c: null, SBQQ__ErrorConditions__r: { records: [{ Id: 'ec1', SBQQ__TestedField__c: 'SBQQ__Quantity__c', SBQQ__Operator__c: 'greater than', SBQQ__FilterValue__c: '0' }] }, SBQQ__Actions__r: { records: [] } },
     ],
     summaryVariables: [
       { Id: 'sv1', Name: 'Total Quantity', SBQQ__Active__c: true, SBQQ__AggregateField__c: 'SBQQ__Quantity__c', SBQQ__AggregateFunction__c: 'Sum', SBQQ__TargetObject__c: 'Quote Line', SBQQ__Scope__c: 'Quote', SBQQ__FilterField__c: null, SBQQ__FilterValue__c: null, SBQQ__Operator__c: null, SBQQ__CombineWith__c: null, SBQQ__SecondOperand__c: null, SBQQ__CompositeOperator__c: null, referencedByPriceRuleCount: 1, referencedByProductRuleCount: 0 },
@@ -107,6 +107,8 @@ export function createProblematicData(): CPQData {
     SBQQ__Type__c: 'Validation',
     SBQQ__EvaluationOrder__c: (i + 1) * 10,
     SBQQ__ConditionsMet__c: 'All',
+    SBQQ__LookupObject__c: null,
+    SBQQ__LookupProductField__c: null,
     SBQQ__ErrorConditions__r: { records: [{ Id: `ec_${i}`, SBQQ__TestedField__c: 'SBQQ__Quantity__c', SBQQ__Operator__c: 'greater than', SBQQ__FilterValue__c: '0' }] },
     SBQQ__Actions__r: { records: [] },
   }));
@@ -118,6 +120,8 @@ export function createProblematicData(): CPQData {
     SBQQ__Type__c: 'Validation',
     SBQQ__EvaluationOrder__c: null,
     SBQQ__ConditionsMet__c: null,
+    SBQQ__LookupObject__c: null,
+    SBQQ__LookupProductField__c: null,
     SBQQ__ErrorConditions__r: { records: [] },
     SBQQ__Actions__r: { records: [] },
   }));
@@ -133,6 +137,7 @@ export function createProblematicData(): CPQData {
     SBQQ__ChargeType__c: 'One-Time',
     SBQQ__BillingFrequency__c: null,
     SBQQ__PricingMethod__c: 'List',
+    SBQQ__ConfigurationType__c: null,
   }));
   const unquotedProducts = Array.from({ length: 10 }, (_, i) => ({
     Id: `p_dead_${i}`,
@@ -144,34 +149,35 @@ export function createProblematicData(): CPQData {
     SBQQ__ChargeType__c: 'One-Time',
     SBQQ__BillingFrequency__c: null,
     SBQQ__PricingMethod__c: 'List',
+    SBQQ__ConfigurationType__c: null,
   }));
   // MDQ product missing subscription (AP-001)
   const mdqProduct = {
     Id: 'p_mdq', Name: 'MDQ Product', ProductCode: 'MDQ-1', IsActive: true,
     SBQQ__SubscriptionType__c: null, SBQQ__SubscriptionPricing__c: null,
     SBQQ__ChargeType__c: null, SBQQ__BillingFrequency__c: null,
-    SBQQ__PricingMethod__c: 'Block',
+    SBQQ__PricingMethod__c: 'Block', SBQQ__ConfigurationType__c: null,
   };
   // Percent of Total not in bundle (AP-002)
   const potProduct = {
     Id: 'p_pot', Name: 'PoT Product', ProductCode: 'POT-1', IsActive: true,
     SBQQ__SubscriptionType__c: null, SBQQ__SubscriptionPricing__c: null,
     SBQQ__ChargeType__c: null, SBQQ__BillingFrequency__c: null,
-    SBQQ__PricingMethod__c: 'Percent Of Total',
+    SBQQ__PricingMethod__c: 'Percent Of Total', SBQQ__ConfigurationType__c: null,
   };
   // Cost product without pricebook entry (AP-003)
   const costProduct = {
     Id: 'p_cost', Name: 'Cost Product', ProductCode: 'COST-1', IsActive: true,
     SBQQ__SubscriptionType__c: null, SBQQ__SubscriptionPricing__c: null,
     SBQQ__ChargeType__c: null, SBQQ__BillingFrequency__c: null,
-    SBQQ__PricingMethod__c: 'Cost',
+    SBQQ__PricingMethod__c: 'Cost', SBQQ__ConfigurationType__c: null,
   };
   // Recurring without billing frequency (AP-004)
   const recurringProduct = {
     Id: 'p_recur', Name: 'Recurring No Billing', ProductCode: 'REC-1', IsActive: true,
     SBQQ__SubscriptionType__c: 'Renewable', SBQQ__SubscriptionPricing__c: 'Fixed Price',
     SBQQ__ChargeType__c: 'Recurring', SBQQ__BillingFrequency__c: null,
-    SBQQ__PricingMethod__c: 'List',
+    SBQQ__PricingMethod__c: 'List', SBQQ__ConfigurationType__c: null,
   };
 
   // Discount schedules (5 total, but none utilized in quote lines -> UA-002)

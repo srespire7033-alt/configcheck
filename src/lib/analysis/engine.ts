@@ -21,6 +21,8 @@ const CATEGORY_WEIGHTS: Record<string, number> = {
   contracted_prices: 0.04,
   performance: 0.09,
   impact_analysis: 0.09,
+  bundles: 0.06,
+  lookup_queries: 0.05,
 };
 
 /**
@@ -84,6 +86,8 @@ function calculateCategoryScores(issues: Issue[]): CategoryScores {
     contracted_prices: 100,
     performance: 100,
     impact_analysis: 100,
+    bundles: 100,
+    lookup_queries: 100,
   };
 
   for (const issue of issues) {

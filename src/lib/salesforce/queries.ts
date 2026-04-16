@@ -192,7 +192,7 @@ async function fetchProducts(conn: Connection): Promise<SFProduct[]> {
         Id, Name, ProductCode, IsActive,
         SBQQ__SubscriptionType__c, SBQQ__SubscriptionPricing__c,
         SBQQ__ChargeType__c, SBQQ__BillingFrequency__c,
-        SBQQ__PricingMethod__c
+        SBQQ__PricingMethod__c, SBQQ__ConfigurationType__c
       FROM Product2
       WHERE IsActive = true
       ORDER BY Name ASC
@@ -212,7 +212,9 @@ async function fetchProductOptions(conn: Connection): Promise<SFProductOption[]>
         Id, Name,
         SBQQ__ConfiguredSKU__c, SBQQ__OptionalSKU__c,
         SBQQ__ConfiguredSKU__r.Name, SBQQ__ConfiguredSKU__r.IsActive,
-        SBQQ__OptionalSKU__r.Name, SBQQ__OptionalSKU__r.IsActive
+        SBQQ__OptionalSKU__r.Name, SBQQ__OptionalSKU__r.IsActive,
+        SBQQ__Required__c, SBQQ__MinQuantity__c, SBQQ__MaxQuantity__c,
+        SBQQ__Number__c, SBQQ__Feature__c, SBQQ__Feature__r.Name
       FROM SBQQ__ProductOption__c
       LIMIT 5000
     `);
@@ -229,9 +231,11 @@ async function fetchProductRules(conn: Connection): Promise<SFProductRule[]> {
       SELECT
         Id, Name, SBQQ__Active__c, SBQQ__Type__c,
         SBQQ__EvaluationOrder__c, SBQQ__ConditionsMet__c,
+        SBQQ__LookupObject__c, SBQQ__LookupProductField__c,
         (SELECT Id, SBQQ__TestedField__c, SBQQ__Operator__c, SBQQ__FilterValue__c
          FROM SBQQ__ErrorConditions__r),
-        (SELECT Id, SBQQ__Type__c, SBQQ__Product__c
+        (SELECT Id, SBQQ__Type__c, SBQQ__Product__c,
+                SBQQ__Product__r.Name, SBQQ__Product__r.IsActive
          FROM SBQQ__Actions__r)
       FROM SBQQ__ProductRule__c
       ORDER BY SBQQ__EvaluationOrder__c ASC NULLS LAST

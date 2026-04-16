@@ -117,7 +117,9 @@ export type CPQCategory =
   | 'guided_selling'
   | 'advanced_pricing'
   | 'performance'
-  | 'impact_analysis';
+  | 'impact_analysis'
+  | 'bundles'
+  | 'lookup_queries';
 
 // Billing categories (blng__ namespace)
 export type BillingCategory =
@@ -283,6 +285,7 @@ export interface SFProduct {
   SBQQ__ChargeType__c: string | null;
   SBQQ__BillingFrequency__c: string | null;
   SBQQ__PricingMethod__c: string | null;
+  SBQQ__ConfigurationType__c: string | null;
 }
 
 export interface SFProductOption {
@@ -292,6 +295,12 @@ export interface SFProductOption {
   SBQQ__OptionalSKU__c: string;
   SBQQ__ConfiguredSKU__r?: { Name: string; IsActive: boolean };
   SBQQ__OptionalSKU__r?: { Name: string; IsActive: boolean };
+  SBQQ__Required__c?: boolean;
+  SBQQ__MinQuantity__c?: number | null;
+  SBQQ__MaxQuantity__c?: number | null;
+  SBQQ__Number__c?: number | null;
+  SBQQ__Feature__c?: string | null;
+  SBQQ__Feature__r?: { Name: string } | null;
 }
 
 export interface SFProductRule {
@@ -301,6 +310,8 @@ export interface SFProductRule {
   SBQQ__Type__c: string | null;
   SBQQ__EvaluationOrder__c: number | null;
   SBQQ__ConditionsMet__c: string | null;
+  SBQQ__LookupObject__c?: string | null;
+  SBQQ__LookupProductField__c?: string | null;
   SBQQ__ErrorConditions__r?: { records: SFProductRuleCondition[] };
   SBQQ__Actions__r?: { records: SFProductRuleAction[] };
 }
@@ -316,6 +327,7 @@ export interface SFProductRuleAction {
   Id: string;
   SBQQ__Type__c: string | null;
   SBQQ__Product__c: string | null;
+  SBQQ__Product__r?: { Name: string; IsActive: boolean } | null;
 }
 
 export interface SFSummaryVariable {
