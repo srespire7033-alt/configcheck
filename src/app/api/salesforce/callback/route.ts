@@ -10,8 +10,10 @@ export async function GET(request: NextRequest) {
   const error = searchParams.get('error');
 
   if (error) {
+    const errorDescription = searchParams.get('error_description') || '';
+    const fullError = errorDescription ? `${error}: ${errorDescription}` : error;
     return NextResponse.redirect(
-      new URL(`/dashboard?error=${encodeURIComponent(error)}`, process.env.NEXT_PUBLIC_APP_URL!)
+      new URL(`/dashboard?error=${encodeURIComponent(fullError)}`, process.env.NEXT_PUBLIC_APP_URL!)
     );
   }
 
@@ -25,8 +27,20 @@ export async function GET(request: NextRequest) {
     // Get PKCE code verifier from cookie
     const codeVerifier = request.cookies.get('sf_code_verifier')?.value;
 
+    // Check for custom Connected App credentials
+    const customCredsCookie = request.cookies.get('sf_custom_creds')?.value;
+    let customCreds: { clientId: string; clientSecret: string } | undefined;
+    if (customCredsCookie) {
+      try {
+        const decoded = Buffer.from(customCredsCookie, 'base64').toString('utf-8');
+        customCreds = JSON.parse(decoded);
+      } catch {
+        // Ignore malformed cookie, fall back to defaults
+      }
+    }
+
     // Exchange code for tokens
-    const { accessToken, refreshToken, instanceUrl, orgId } = await handleOAuthCallback(code, codeVerifier);
+    const { accessToken, refreshToken, instanceUrl, orgId } = await handleOAuthCallback(code, codeVerifier, customCreds);
 
     // Detect CPQ version
     const conn = createConnection(instanceUrl, accessToken, refreshToken);
@@ -55,17 +69,22 @@ export async function GET(request: NextRequest) {
       .single();
 
     if (existingOrg) {
-      // Update existing connection
+      // Update existing connection (include custom creds if provided)
+      const updateData: Record<string, unknown> = {
+        access_token: accessToken,
+        refresh_token: refreshToken,
+        instance_url: instanceUrl,
+        connection_status: 'connected',
+        cpq_package_version: cpqVersion,
+        last_connected_at: new Date().toISOString(),
+      };
+      if (customCreds) {
+        updateData.sf_client_id = customCreds.clientId;
+        updateData.sf_client_secret = customCreds.clientSecret;
+      }
       await supabase
         .from('organizations')
-        .update({
-          access_token: accessToken,
-          refresh_token: refreshToken,
-          instance_url: instanceUrl,
-          connection_status: 'connected',
-          cpq_package_version: cpqVersion,
-          last_connected_at: new Date().toISOString(),
-        })
+        .update(updateData)
         .eq('id', existingOrg.id);
     } else {
       // Check org quota before adding a new org
@@ -87,6 +106,10 @@ export async function GET(request: NextRequest) {
         connection_status: 'connected',
         cpq_package_version: cpqVersion,
         last_connected_at: new Date().toISOString(),
+        ...(customCreds ? {
+          sf_client_id: customCreds.clientId,
+          sf_client_secret: customCreds.clientSecret,
+        } : {}),
       });
     }
 
@@ -94,9 +117,13 @@ export async function GET(request: NextRequest) {
     const onboardingDone = request.cookies.get('onboarding_completed')?.value === 'true';
     const redirectPath = onboardingDone ? '/dashboard' : '/onboarding';
 
-    return NextResponse.redirect(
+    // Clear the custom creds cookie
+    const redirectResponse = NextResponse.redirect(
       new URL(`${redirectPath}?success=Connected ${orgName}`, process.env.NEXT_PUBLIC_APP_URL!)
     );
+    redirectResponse.cookies.delete('sf_custom_creds');
+    redirectResponse.cookies.delete('sf_code_verifier');
+    return redirectResponse;
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'OAuth failed';
     console.error('Salesforce OAuth error:', message);

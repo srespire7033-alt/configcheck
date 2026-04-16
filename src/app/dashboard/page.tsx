@@ -6,6 +6,7 @@ import { Plus, CheckCircle, AlertCircle, Cloud, GitCompare } from 'lucide-react'
 import { OrgCard } from '@/components/dashboard/org-card';
 import { OnboardingChecklist } from '@/components/dashboard/onboarding-checklist';
 import type { ChecklistProgress } from '@/components/dashboard/onboarding-checklist';
+import { ConnectOrgModal } from '@/components/dashboard/connect-org-modal';
 import { LoadingScreen } from '@/components/ui/loading-screen';
 import type { OrgCardData } from '@/types';
 
@@ -17,6 +18,7 @@ function DashboardContent() {
   const [scanningOrg, setScanningOrg] = useState<string | null>(null);
   const [checklistProgress, setChecklistProgress] = useState<ChecklistProgress | null>(null);
   const [checklistDismissed, setChecklistDismissed] = useState(true); // default hidden
+  const [connectModalOpen, setConnectModalOpen] = useState(false);
 
   const successMsg = searchParams.get('success');
   const errorMsg = searchParams.get('error');
@@ -87,14 +89,8 @@ function DashboardContent() {
     });
   }
 
-  async function handleConnectOrg() {
-    try {
-      const res = await fetch('/api/salesforce/auth-url');
-      const { url } = await res.json();
-      window.location.href = url;
-    } catch (error) {
-      console.error('Failed to get auth URL:', error);
-    }
+  function handleConnectOrg() {
+    setConnectModalOpen(true);
   }
 
   async function handleScan(orgId: string) {
@@ -146,6 +142,8 @@ function DashboardContent() {
 
   return (
     <div>
+      <ConnectOrgModal isOpen={connectModalOpen} onClose={() => setConnectModalOpen(false)} />
+
       {/* Success/Error Messages */}
       {successMsg && (
         <div className="mb-6 flex items-center gap-3 p-4 bg-green-50 border border-green-200 rounded-xl animate-in fade-in">

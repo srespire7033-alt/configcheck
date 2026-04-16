@@ -41,6 +41,8 @@ export interface DBOrganization {
   last_scan_score: number | null;
   last_scan_at: string | null;
   last_connected_at: string | null;
+  sf_client_id: string | null;
+  sf_client_secret: string | null;
   created_at: string;
   updated_at: string;
 }

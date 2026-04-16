@@ -63,12 +63,12 @@ function generatePKCE(): { codeVerifier: string; codeChallenge: string } {
  * Generate the OAuth authorization URL with PKCE
  * Returns both the URL and the code verifier (to store in cookie)
  */
-export function getAuthorizationUrl(state?: string): { url: string; codeVerifier: string } {
+export function getAuthorizationUrl(state?: string, customClientId?: string): { url: string; codeVerifier: string } {
   const { codeVerifier, codeChallenge } = generatePKCE();
 
   const params = new URLSearchParams({
     response_type: 'code',
-    client_id: SF_CLIENT_ID,
+    client_id: customClientId || SF_CLIENT_ID,
     redirect_uri: SF_REDIRECT_URI,
     scope: 'api refresh_token full',
     state: state || '',
@@ -86,18 +86,25 @@ export function getAuthorizationUrl(state?: string): { url: string; codeVerifier
 /**
  * Exchange the authorization code for access + refresh tokens (with PKCE)
  */
-export async function handleOAuthCallback(code: string, codeVerifier?: string): Promise<{
+export async function handleOAuthCallback(
+  code: string,
+  codeVerifier?: string,
+  customCreds?: { clientId: string; clientSecret: string }
+): Promise<{
   accessToken: string;
   refreshToken: string;
   instanceUrl: string;
   orgId: string;
   userId: string;
 }> {
+  const useClientId = customCreds?.clientId || SF_CLIENT_ID;
+  const useClientSecret = customCreds?.clientSecret || SF_CLIENT_SECRET;
+
   const tokenParams = new URLSearchParams({
     grant_type: 'authorization_code',
     code,
-    client_id: SF_CLIENT_ID,
-    client_secret: SF_CLIENT_SECRET,
+    client_id: useClientId,
+    client_secret: useClientSecret,
     redirect_uri: SF_REDIRECT_URI,
   });
 
@@ -197,7 +204,12 @@ export async function createRefreshableConnection(
     const msg = err?.message || '';
     if (msg.includes('INVALID_SESSION_ID') || msg.includes('Session expired') || msg.includes('401') || msg.includes('timed out')) {
       console.log('Token expired for org', orgId, '— attempting refresh');
-      const newTokens = await refreshAccessToken(org.instance_url, org.refresh_token);
+      const newTokens = await refreshAccessToken(
+        org.instance_url,
+        org.refresh_token,
+        org.sf_client_id || undefined,
+        org.sf_client_secret || undefined
+      );
       if (newTokens) {
         await persistRefreshedToken(orgId, newTokens.accessToken);
         return {
@@ -223,13 +235,15 @@ export async function createRefreshableConnection(
  */
 async function refreshAccessToken(
   instanceUrl: string,
-  refreshToken: string
+  refreshToken: string,
+  customClientId?: string,
+  customClientSecret?: string
 ): Promise<{ accessToken: string } | null> {
   try {
     const params = new URLSearchParams({
       grant_type: 'refresh_token',
-      client_id: SF_CLIENT_ID,
-      client_secret: SF_CLIENT_SECRET,
+      client_id: customClientId || SF_CLIENT_ID,
+      client_secret: customClientSecret || SF_CLIENT_SECRET,
       refresh_token: refreshToken,
     });
 

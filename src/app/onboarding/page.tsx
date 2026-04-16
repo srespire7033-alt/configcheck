@@ -15,6 +15,7 @@ import {
   BarChart3,
 } from 'lucide-react';
 import { Logo } from '@/components/ui/logo';
+import { ConnectOrgModal } from '@/components/dashboard/connect-org-modal';
 import type { OrgCardData } from '@/types';
 
 /* ------------------------------------------------------------------ */
@@ -239,7 +240,7 @@ function OnboardingContent() {
 
   // Step 2
   const [orgs, setOrgs] = useState<OrgCardData[]>([]);
-  const [connecting, setConnecting] = useState(false);
+  const [connectModalOpen, setConnectModalOpen] = useState(false);
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [orgsLoaded, setOrgsLoaded] = useState(false);
 
@@ -298,15 +299,8 @@ function OnboardingContent() {
     setStep(2);
   }
 
-  async function handleConnectOrg() {
-    setConnecting(true);
-    try {
-      const res = await fetch('/api/salesforce/auth-url');
-      const { url } = await res.json();
-      window.location.href = url;
-    } catch {
-      setConnecting(false);
-    }
+  function handleConnectOrg() {
+    setConnectModalOpen(true);
   }
 
   async function handleRunScan() {
@@ -406,6 +400,8 @@ function OnboardingContent() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex flex-col">
+      <ConnectOrgModal isOpen={connectModalOpen} onClose={() => setConnectModalOpen(false)} />
+
       {/* Top bar */}
       <header className="w-full px-6 py-5 flex items-center justify-between">
         <Logo size="md" />
@@ -544,20 +540,10 @@ function OnboardingContent() {
                     {/* Connect button */}
                     <button
                       onClick={handleConnectOrg}
-                      disabled={connecting}
                       className={`${primaryBtnClasses} w-full py-4 text-base`}
                     >
-                      {connecting ? (
-                        <>
-                          <Loader2 className="h-5 w-5 animate-spin" />
-                          Connecting...
-                        </>
-                      ) : (
-                        <>
-                          <Cloud className="h-5 w-5" />
-                          Connect Salesforce Org
-                        </>
-                      )}
+                      <Cloud className="h-5 w-5" />
+                      Connect Salesforce Org
                     </button>
 
                     <p className="text-xs text-center text-gray-400 dark:text-gray-500">
