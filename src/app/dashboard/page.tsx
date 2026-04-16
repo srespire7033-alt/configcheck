@@ -206,6 +206,7 @@ function DashboardContent() {
             org={org}
             onView={() => router.push(`/orgs/${org.id}`)}
             onScan={() => handleScan(org.id)}
+            onDisconnect={() => fetchOrgs()}
             scanning={scanningOrg === org.id}
           />
         ))}

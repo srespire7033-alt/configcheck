@@ -7,6 +7,52 @@ export const dynamic = 'force-dynamic';
 /**
  * GET /api/orgs or /api/orgs?orgId=xxx
  */
+/**
+ * DELETE /api/orgs?orgId=xxx — Disconnect and remove an org + all its data
+ */
+export async function DELETE(request: NextRequest) {
+  const user = await getAuthUser(request);
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const orgId = request.nextUrl.searchParams.get('orgId');
+  if (!orgId) {
+    return NextResponse.json({ error: 'orgId is required' }, { status: 400 });
+  }
+
+  const supabase = createServiceClient();
+
+  // Verify user owns this org
+  const { data: org, error: fetchError } = await supabase
+    .from('organizations')
+    .select('id, name')
+    .eq('id', orgId)
+    .eq('user_id', user.id)
+    .single();
+
+  if (fetchError || !org) {
+    return NextResponse.json({ error: 'Organization not found' }, { status: 404 });
+  }
+
+  // Delete the org — cascade deletes handle scans, issues, schedules
+  const { error: deleteError } = await supabase
+    .from('organizations')
+    .delete()
+    .eq('id', orgId)
+    .eq('user_id', user.id);
+
+  if (deleteError) {
+    console.error('Failed to delete org:', deleteError);
+    return NextResponse.json({ error: 'Failed to disconnect organization' }, { status: 500 });
+  }
+
+  return NextResponse.json({ success: true, name: org.name });
+}
+
+/**
+ * GET /api/orgs or /api/orgs?orgId=xxx
+ */
 export async function GET(request: NextRequest) {
   const user = await getAuthUser(request);
   if (!user) {
