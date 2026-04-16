@@ -36,18 +36,11 @@ export async function GET(request: NextRequest) {
   }
 
   // List all orgs for the authenticated user
-  const { data, error, count } = await supabase
+  const { data, error } = await supabase
     .from('organizations')
-    .select('id, name, is_sandbox, connection_status, last_scan_score, last_scan_at, cpq_package_version, installed_packages', { count: 'exact' })
+    .select('id, name, is_sandbox, connection_status, last_scan_score, last_scan_at, cpq_package_version, installed_packages')
     .eq('user_id', user.id)
     .order('created_at', { ascending: false });
-
-  console.log('Orgs query — user:', user.id, 'count:', count, 'rows:', (data || []).length, 'error:', error);
-  if (data) {
-    for (const o of data) {
-      console.log('  org:', o.id, o.name);
-    }
-  }
 
   if (error) {
     return NextResponse.json({ error: 'Failed to fetch organizations' }, { status: 500 });
