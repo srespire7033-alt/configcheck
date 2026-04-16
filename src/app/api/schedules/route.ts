@@ -1,14 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { createServiceClient } from '@/lib/db/client';
 import { getAuthUser } from '@/lib/auth/get-user';
 import { buildCronExpression, calculateNextRun } from '@/lib/schedule-helpers';
 
 export const dynamic = 'force-dynamic';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
 
 /**
  * GET /api/schedules?orgId=<uuid>
@@ -25,6 +20,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'orgId is required' }, { status: 400 });
   }
 
+  const supabase = createServiceClient();
   const { data, error } = await supabase
     .from('scan_schedules')
     .select('*')
@@ -79,6 +75,7 @@ export async function POST(request: NextRequest) {
   const cronExpression = buildCronExpression(scheduleInput);
   const nextRunAt = calculateNextRun(scheduleInput);
 
+  const supabase = createServiceClient();
   const { data, error } = await supabase
     .from('scan_schedules')
     .insert({
@@ -120,6 +117,8 @@ export async function PUT(request: NextRequest) {
   if (!scheduleId) {
     return NextResponse.json({ error: 'scheduleId is required' }, { status: 400 });
   }
+
+  const supabase = createServiceClient();
 
   // Fetch existing schedule to merge updates
   const { data: existing, error: fetchError } = await supabase
@@ -194,6 +193,7 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ error: 'scheduleId is required' }, { status: 400 });
   }
 
+  const supabase = createServiceClient();
   const { error } = await supabase
     .from('scan_schedules')
     .delete()

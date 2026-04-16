@@ -12,7 +12,7 @@ const mockGetAuthUser = vi.mocked(getAuthUser);
 const mockCreateServiceClient = vi.mocked(createServiceClient);
 
 function createRequest(url = 'http://localhost/api/usage', options?: RequestInit) {
-  return new NextRequest(url, options);
+  return new NextRequest(url, options as unknown as ConstructorParameters<typeof NextRequest>[1]);
 }
 
 function createBuilder(mockResult: { data: unknown; error: unknown; count?: number }) {

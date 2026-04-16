@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, RefreshCw, Sparkles, Download, FileBarChart, CalendarClock, ShieldCheck, FileSpreadsheet, ChevronDown, AlertTriangle, AlertCircle, Info, TrendingUp, History, X } from 'lucide-react';
-import { getCategoryLabel } from '@/lib/utils';
+import { getCategoryLabel, formatTimeAgo } from '@/lib/utils';
 import { HealthScore } from '@/components/scan/health-score';
 import { LoadingScreen } from '@/components/ui/loading-screen';
 import { CategoryBreakdown } from '@/components/scan/category-breakdown';
@@ -281,17 +281,7 @@ export default function OrgDetailPage() {
     }
   }
 
-  // Time since last scan
-  const getTimeSince = (date: string) => {
-    const diff = Date.now() - new Date(date).getTime();
-    const mins = Math.floor(diff / 60000);
-    if (mins < 1) return 'Just now';
-    if (mins < 60) return `${mins} minute${mins > 1 ? 's' : ''} ago`;
-    const hrs = Math.floor(mins / 60);
-    if (hrs < 24) return `${hrs} hour${hrs > 1 ? 's' : ''} ago`;
-    const days = Math.floor(hrs / 24);
-    return `${days} day${days > 1 ? 's' : ''} ago`;
-  };
+  // Use shared formatTimeAgo for consistency with org cards
 
   async function handleIssueStatusChange(issueId: string, status: string) {
     try {
@@ -478,7 +468,7 @@ export default function OrgDetailPage() {
                   Your {scan.product_type ? getProductTypeLabel(scan.product_type) : 'CPQ'} Health Score
                 </h2>
                 <p className="text-gray-600 dark:text-gray-400 mb-6 text-center lg:text-left text-sm">
-                  Last scan: {getTimeSince(scan.completed_at || scan.created_at)} &bull; {issues.length} issues found
+                  Last scan: {formatTimeAgo(scan.completed_at || scan.created_at)} &bull; {issues.length} issues found
                   {org && ` • ${org.name}`}
                   {org?.is_sandbox === false && ' (Production)'}
                   {org?.is_sandbox === true && ' (Sandbox)'}

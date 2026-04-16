@@ -22,7 +22,7 @@ describe('Product Rules — Comprehensive Tests', () => {
     it('should pass when selection rule only adds products', async () => {
       const data = createCleanData();
       data.productRules = [
-        { Id: 'prd1', Name: 'Add Accessories', SBQQ__Active__c: true, SBQQ__Type__c: 'Selection', SBQQ__EvaluationOrder__c: 10, SBQQ__ConditionsMet__c: 'All', SBQQ__ErrorConditions__r: { records: [] }, SBQQ__Actions__r: { records: [{ SBQQ__Product__c: 'prodA', SBQQ__Type__c: 'Add' }, { SBQQ__Product__c: 'prodB', SBQQ__Type__c: 'Add' }] } },
+        { Id: 'prd1', Name: 'Add Accessories', SBQQ__Active__c: true, SBQQ__Type__c: 'Selection', SBQQ__EvaluationOrder__c: 10, SBQQ__ConditionsMet__c: 'All', SBQQ__ErrorConditions__r: { records: [] }, SBQQ__Actions__r: { records: [{ Id: 'act-a', SBQQ__Product__c: 'prodA', SBQQ__Type__c: 'Add' }, { Id: 'act-b', SBQQ__Product__c: 'prodB', SBQQ__Type__c: 'Add' }] } },
       ];
       const issues = await check.run(data);
       expect(issues).toHaveLength(0);
@@ -31,7 +31,7 @@ describe('Product Rules — Comprehensive Tests', () => {
     it('should pass when selection rule only removes products', async () => {
       const data = createCleanData();
       data.productRules = [
-        { Id: 'prd1', Name: 'Remove Old SKUs', SBQQ__Active__c: true, SBQQ__Type__c: 'Selection', SBQQ__EvaluationOrder__c: 10, SBQQ__ConditionsMet__c: 'All', SBQQ__ErrorConditions__r: { records: [] }, SBQQ__Actions__r: { records: [{ SBQQ__Product__c: 'prodA', SBQQ__Type__c: 'Remove' }, { SBQQ__Product__c: 'prodB', SBQQ__Type__c: 'Hide' }] } },
+        { Id: 'prd1', Name: 'Remove Old SKUs', SBQQ__Active__c: true, SBQQ__Type__c: 'Selection', SBQQ__EvaluationOrder__c: 10, SBQQ__ConditionsMet__c: 'All', SBQQ__ErrorConditions__r: { records: [] }, SBQQ__Actions__r: { records: [{ Id: 'act-ar', SBQQ__Product__c: 'prodA', SBQQ__Type__c: 'Remove' }, { Id: 'act-bh', SBQQ__Product__c: 'prodB', SBQQ__Type__c: 'Hide' }] } },
       ];
       const issues = await check.run(data);
       expect(issues).toHaveLength(0);
@@ -49,8 +49,8 @@ describe('Product Rules — Comprehensive Tests', () => {
     it('should pass when add and remove target different products', async () => {
       const data = createCleanData();
       data.productRules = [
-        { Id: 'prd1', Name: 'Add Premium', SBQQ__Active__c: true, SBQQ__Type__c: 'Selection', SBQQ__EvaluationOrder__c: 10, SBQQ__ConditionsMet__c: 'All', SBQQ__ErrorConditions__r: { records: [] }, SBQQ__Actions__r: { records: [{ SBQQ__Product__c: 'prodA', SBQQ__Type__c: 'Add' }] } },
-        { Id: 'prd2', Name: 'Remove Basic', SBQQ__Active__c: true, SBQQ__Type__c: 'Selection', SBQQ__EvaluationOrder__c: 20, SBQQ__ConditionsMet__c: 'All', SBQQ__ErrorConditions__r: { records: [] }, SBQQ__Actions__r: { records: [{ SBQQ__Product__c: 'prodB', SBQQ__Type__c: 'Remove' }] } },
+        { Id: 'prd1', Name: 'Add Premium', SBQQ__Active__c: true, SBQQ__Type__c: 'Selection', SBQQ__EvaluationOrder__c: 10, SBQQ__ConditionsMet__c: 'All', SBQQ__ErrorConditions__r: { records: [] }, SBQQ__Actions__r: { records: [{ Id: 'act-a', SBQQ__Product__c: 'prodA', SBQQ__Type__c: 'Add' }] } },
+        { Id: 'prd2', Name: 'Remove Basic', SBQQ__Active__c: true, SBQQ__Type__c: 'Selection', SBQQ__EvaluationOrder__c: 20, SBQQ__ConditionsMet__c: 'All', SBQQ__ErrorConditions__r: { records: [] }, SBQQ__Actions__r: { records: [{ Id: 'act-br', SBQQ__Product__c: 'prodB', SBQQ__Type__c: 'Remove' }] } },
       ];
       const issues = await check.run(data);
       expect(issues).toHaveLength(0);
@@ -59,8 +59,8 @@ describe('Product Rules — Comprehensive Tests', () => {
     it('should pass when inactive rule has conflicting actions', async () => {
       const data = createCleanData();
       data.productRules = [
-        { Id: 'prd1', Name: 'Inactive Add', SBQQ__Active__c: false, SBQQ__Type__c: 'Selection', SBQQ__EvaluationOrder__c: 10, SBQQ__ConditionsMet__c: 'All', SBQQ__ErrorConditions__r: { records: [] }, SBQQ__Actions__r: { records: [{ SBQQ__Product__c: 'prodA', SBQQ__Type__c: 'Add' }] } },
-        { Id: 'prd2', Name: 'Inactive Remove', SBQQ__Active__c: false, SBQQ__Type__c: 'Selection', SBQQ__EvaluationOrder__c: 20, SBQQ__ConditionsMet__c: 'All', SBQQ__ErrorConditions__r: { records: [] }, SBQQ__Actions__r: { records: [{ SBQQ__Product__c: 'prodA', SBQQ__Type__c: 'Remove' }] } },
+        { Id: 'prd1', Name: 'Inactive Add', SBQQ__Active__c: false, SBQQ__Type__c: 'Selection', SBQQ__EvaluationOrder__c: 10, SBQQ__ConditionsMet__c: 'All', SBQQ__ErrorConditions__r: { records: [] }, SBQQ__Actions__r: { records: [{ Id: 'act-a', SBQQ__Product__c: 'prodA', SBQQ__Type__c: 'Add' }] } },
+        { Id: 'prd2', Name: 'Inactive Remove', SBQQ__Active__c: false, SBQQ__Type__c: 'Selection', SBQQ__EvaluationOrder__c: 20, SBQQ__ConditionsMet__c: 'All', SBQQ__ErrorConditions__r: { records: [] }, SBQQ__Actions__r: { records: [{ Id: 'act-ar', SBQQ__Product__c: 'prodA', SBQQ__Type__c: 'Remove' }] } },
       ];
       const issues = await check.run(data);
       expect(issues).toHaveLength(0);
@@ -77,8 +77,8 @@ describe('Product Rules — Comprehensive Tests', () => {
     it('should flag when same product is added and removed by different rules', async () => {
       const data = createCleanData();
       data.productRules = [
-        { Id: 'prd1', Name: 'Add Warranty', SBQQ__Active__c: true, SBQQ__Type__c: 'Selection', SBQQ__EvaluationOrder__c: 10, SBQQ__ConditionsMet__c: 'All', SBQQ__ErrorConditions__r: { records: [] }, SBQQ__Actions__r: { records: [{ SBQQ__Product__c: 'prodA', SBQQ__Type__c: 'Add' }] } },
-        { Id: 'prd2', Name: 'Remove Warranty', SBQQ__Active__c: true, SBQQ__Type__c: 'Selection', SBQQ__EvaluationOrder__c: 20, SBQQ__ConditionsMet__c: 'All', SBQQ__ErrorConditions__r: { records: [] }, SBQQ__Actions__r: { records: [{ SBQQ__Product__c: 'prodA', SBQQ__Type__c: 'Remove' }] } },
+        { Id: 'prd1', Name: 'Add Warranty', SBQQ__Active__c: true, SBQQ__Type__c: 'Selection', SBQQ__EvaluationOrder__c: 10, SBQQ__ConditionsMet__c: 'All', SBQQ__ErrorConditions__r: { records: [] }, SBQQ__Actions__r: { records: [{ Id: 'act-a', SBQQ__Product__c: 'prodA', SBQQ__Type__c: 'Add' }] } },
+        { Id: 'prd2', Name: 'Remove Warranty', SBQQ__Active__c: true, SBQQ__Type__c: 'Selection', SBQQ__EvaluationOrder__c: 20, SBQQ__ConditionsMet__c: 'All', SBQQ__ErrorConditions__r: { records: [] }, SBQQ__Actions__r: { records: [{ Id: 'act-ar', SBQQ__Product__c: 'prodA', SBQQ__Type__c: 'Remove' }] } },
       ];
       const issues = await check.run(data);
       expect(issues).toHaveLength(1);
@@ -89,8 +89,8 @@ describe('Product Rules — Comprehensive Tests', () => {
     it('should flag when same product is added and hidden', async () => {
       const data = createCleanData();
       data.productRules = [
-        { Id: 'prd1', Name: 'Add Support', SBQQ__Active__c: true, SBQQ__Type__c: 'Selection', SBQQ__EvaluationOrder__c: 10, SBQQ__ConditionsMet__c: 'All', SBQQ__ErrorConditions__r: { records: [] }, SBQQ__Actions__r: { records: [{ SBQQ__Product__c: 'prodX', SBQQ__Type__c: 'Add' }] } },
-        { Id: 'prd2', Name: 'Hide Support', SBQQ__Active__c: true, SBQQ__Type__c: 'Selection', SBQQ__EvaluationOrder__c: 20, SBQQ__ConditionsMet__c: 'All', SBQQ__ErrorConditions__r: { records: [] }, SBQQ__Actions__r: { records: [{ SBQQ__Product__c: 'prodX', SBQQ__Type__c: 'Hide' }] } },
+        { Id: 'prd1', Name: 'Add Support', SBQQ__Active__c: true, SBQQ__Type__c: 'Selection', SBQQ__EvaluationOrder__c: 10, SBQQ__ConditionsMet__c: 'All', SBQQ__ErrorConditions__r: { records: [] }, SBQQ__Actions__r: { records: [{ Id: 'act-xa', SBQQ__Product__c: 'prodX', SBQQ__Type__c: 'Add' }] } },
+        { Id: 'prd2', Name: 'Hide Support', SBQQ__Active__c: true, SBQQ__Type__c: 'Selection', SBQQ__EvaluationOrder__c: 20, SBQQ__ConditionsMet__c: 'All', SBQQ__ErrorConditions__r: { records: [] }, SBQQ__Actions__r: { records: [{ Id: 'act-xh', SBQQ__Product__c: 'prodX', SBQQ__Type__c: 'Hide' }] } },
       ];
       const issues = await check.run(data);
       expect(issues).toHaveLength(1);
@@ -101,8 +101,8 @@ describe('Product Rules — Comprehensive Tests', () => {
     it('should flag multiple conflicting products independently', async () => {
       const data = createCleanData();
       data.productRules = [
-        { Id: 'prd1', Name: 'Add Both', SBQQ__Active__c: true, SBQQ__Type__c: 'Selection', SBQQ__EvaluationOrder__c: 10, SBQQ__ConditionsMet__c: 'All', SBQQ__ErrorConditions__r: { records: [] }, SBQQ__Actions__r: { records: [{ SBQQ__Product__c: 'prodA', SBQQ__Type__c: 'Add' }, { SBQQ__Product__c: 'prodB', SBQQ__Type__c: 'Add' }] } },
-        { Id: 'prd2', Name: 'Remove Both', SBQQ__Active__c: true, SBQQ__Type__c: 'Selection', SBQQ__EvaluationOrder__c: 20, SBQQ__ConditionsMet__c: 'All', SBQQ__ErrorConditions__r: { records: [] }, SBQQ__Actions__r: { records: [{ SBQQ__Product__c: 'prodA', SBQQ__Type__c: 'Remove' }, { SBQQ__Product__c: 'prodB', SBQQ__Type__c: 'Hide' }] } },
+        { Id: 'prd1', Name: 'Add Both', SBQQ__Active__c: true, SBQQ__Type__c: 'Selection', SBQQ__EvaluationOrder__c: 10, SBQQ__ConditionsMet__c: 'All', SBQQ__ErrorConditions__r: { records: [] }, SBQQ__Actions__r: { records: [{ Id: 'act-a', SBQQ__Product__c: 'prodA', SBQQ__Type__c: 'Add' }, { Id: 'act-b', SBQQ__Product__c: 'prodB', SBQQ__Type__c: 'Add' }] } },
+        { Id: 'prd2', Name: 'Remove Both', SBQQ__Active__c: true, SBQQ__Type__c: 'Selection', SBQQ__EvaluationOrder__c: 20, SBQQ__ConditionsMet__c: 'All', SBQQ__ErrorConditions__r: { records: [] }, SBQQ__Actions__r: { records: [{ Id: 'act-ar', SBQQ__Product__c: 'prodA', SBQQ__Type__c: 'Remove' }, { Id: 'act-bh', SBQQ__Product__c: 'prodB', SBQQ__Type__c: 'Hide' }] } },
       ];
       const issues = await check.run(data);
       expect(issues).toHaveLength(2);
@@ -111,7 +111,7 @@ describe('Product Rules — Comprehensive Tests', () => {
     it('should flag conflict within same rule actions', async () => {
       const data = createCleanData();
       data.productRules = [
-        { Id: 'prd1', Name: 'Confused Rule', SBQQ__Active__c: true, SBQQ__Type__c: 'Selection', SBQQ__EvaluationOrder__c: 10, SBQQ__ConditionsMet__c: 'All', SBQQ__ErrorConditions__r: { records: [] }, SBQQ__Actions__r: { records: [{ SBQQ__Product__c: 'prodA', SBQQ__Type__c: 'Add' }, { SBQQ__Product__c: 'prodA', SBQQ__Type__c: 'Remove' }] } },
+        { Id: 'prd1', Name: 'Confused Rule', SBQQ__Active__c: true, SBQQ__Type__c: 'Selection', SBQQ__EvaluationOrder__c: 10, SBQQ__ConditionsMet__c: 'All', SBQQ__ErrorConditions__r: { records: [] }, SBQQ__Actions__r: { records: [{ Id: 'act-a', SBQQ__Product__c: 'prodA', SBQQ__Type__c: 'Add' }, { Id: 'act-ar', SBQQ__Product__c: 'prodA', SBQQ__Type__c: 'Remove' }] } },
       ];
       const issues = await check.run(data);
       expect(issues).toHaveLength(1);
@@ -231,7 +231,7 @@ describe('Product Rules — Comprehensive Tests', () => {
     it('should pass when active rule has actions', async () => {
       const data = createCleanData();
       data.productRules = [
-        { Id: 'prd1', Name: 'Has Actions', SBQQ__Active__c: true, SBQQ__Type__c: 'Selection', SBQQ__EvaluationOrder__c: 10, SBQQ__ConditionsMet__c: 'All', SBQQ__ErrorConditions__r: { records: [] }, SBQQ__Actions__r: { records: [{ SBQQ__Product__c: 'prodA', SBQQ__Type__c: 'Add' }] } },
+        { Id: 'prd1', Name: 'Has Actions', SBQQ__Active__c: true, SBQQ__Type__c: 'Selection', SBQQ__EvaluationOrder__c: 10, SBQQ__ConditionsMet__c: 'All', SBQQ__ErrorConditions__r: { records: [] }, SBQQ__Actions__r: { records: [{ Id: 'act-a', SBQQ__Product__c: 'prodA', SBQQ__Type__c: 'Add' }] } },
       ];
       const issues = await check.run(data);
       expect(issues).toHaveLength(0);
@@ -249,7 +249,7 @@ describe('Product Rules — Comprehensive Tests', () => {
     it('should pass when active rule has both conditions and actions', async () => {
       const data = createCleanData();
       data.productRules = [
-        { Id: 'prd1', Name: 'Complete Rule', SBQQ__Active__c: true, SBQQ__Type__c: 'Selection', SBQQ__EvaluationOrder__c: 10, SBQQ__ConditionsMet__c: 'All', SBQQ__ErrorConditions__r: { records: [{ Id: 'ec1', SBQQ__TestedField__c: 'SBQQ__Quantity__c', SBQQ__Operator__c: 'equals', SBQQ__FilterValue__c: '1' }] }, SBQQ__Actions__r: { records: [{ SBQQ__Product__c: 'prodA', SBQQ__Type__c: 'Add' }] } },
+        { Id: 'prd1', Name: 'Complete Rule', SBQQ__Active__c: true, SBQQ__Type__c: 'Selection', SBQQ__EvaluationOrder__c: 10, SBQQ__ConditionsMet__c: 'All', SBQQ__ErrorConditions__r: { records: [{ Id: 'ec1', SBQQ__TestedField__c: 'SBQQ__Quantity__c', SBQQ__Operator__c: 'equals', SBQQ__FilterValue__c: '1' }] }, SBQQ__Actions__r: { records: [{ Id: 'act-a', SBQQ__Product__c: 'prodA', SBQQ__Type__c: 'Add' }] } },
       ];
       const issues = await check.run(data);
       expect(issues).toHaveLength(0);
@@ -317,7 +317,7 @@ describe('Product Rules — Comprehensive Tests', () => {
     it('should skip Selection type rules even with null ConditionsMet', async () => {
       const data = createCleanData();
       data.productRules = [
-        { Id: 'prd1', Name: 'Selection No Conditions', SBQQ__Active__c: true, SBQQ__Type__c: 'Selection', SBQQ__EvaluationOrder__c: 10, SBQQ__ConditionsMet__c: null, SBQQ__ErrorConditions__r: { records: [] }, SBQQ__Actions__r: { records: [{ SBQQ__Product__c: 'prodA', SBQQ__Type__c: 'Add' }] } },
+        { Id: 'prd1', Name: 'Selection No Conditions', SBQQ__Active__c: true, SBQQ__Type__c: 'Selection', SBQQ__EvaluationOrder__c: 10, SBQQ__ConditionsMet__c: null, SBQQ__ErrorConditions__r: { records: [] }, SBQQ__Actions__r: { records: [{ Id: 'act-a', SBQQ__Product__c: 'prodA', SBQQ__Type__c: 'Add' }] } },
       ];
       const issues = await check.run(data);
       expect(issues).toHaveLength(0);
