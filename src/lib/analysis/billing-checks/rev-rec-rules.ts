@@ -40,32 +40,32 @@ export const revRecRuleChecks: BillingHealthCheck[] = [
   },
   {
     id: 'RR-002',
-    name: 'Rev Rec Rules Without Revenue Schedule Type',
+    name: 'Rev Rec Rules Without Schedule Creation Config',
     category: 'rev_rec_rules',
     severity: 'warning',
-    description: 'Finds active revenue recognition rules with no schedule type configured',
+    description: 'Finds active revenue recognition rules with no schedule creation configured',
     run: async (data: BillingData): Promise<Issue[]> => {
       const issues: Issue[] = [];
 
-      const rulesWithoutType = data.revRecRules.filter(
-        r => r.blng__Active__c && !r.blng__RevenueScheduleType__c
+      const rulesWithoutConfig = data.revRecRules.filter(
+        r => r.blng__Active__c && !r.blng__CreateRevenueSchedule__c
       );
 
-      if (rulesWithoutType.length > 0) {
+      if (rulesWithoutConfig.length > 0) {
         issues.push({
           check_id: 'RR-002',
           category: 'rev_rec_rules',
           severity: 'warning',
-          title: 'Revenue recognition rules missing schedule type',
-          description: `${rulesWithoutType.length} active revenue recognition rule(s) have no revenue schedule type configured.`,
-          impact: 'Revenue may not be recognized in the expected pattern (over time vs point in time), leading to inaccurate financial reporting.',
-          recommendation: 'Set the Revenue Schedule Type field on each rule to define how revenue should be distributed.',
-          affected_records: rulesWithoutType.slice(0, 50).map(r => ({
+          title: 'Revenue recognition rules missing schedule creation config',
+          description: `${rulesWithoutConfig.length} active revenue recognition rule(s) have no Create Revenue Schedule value configured.`,
+          impact: 'Revenue may not be recognized correctly, leading to inaccurate financial reporting.',
+          recommendation: 'Set the Create Revenue Schedule field on each rule to "Yes" or "No" explicitly.',
+          affected_records: rulesWithoutConfig.slice(0, 50).map(r => ({
             id: r.Id,
             name: r.Name,
             type: 'blng__RevenueRecognitionRule__c',
           })),
-          effort_hours: rulesWithoutType.length * 0.25,
+          effort_hours: rulesWithoutConfig.length * 0.25,
         });
       }
 

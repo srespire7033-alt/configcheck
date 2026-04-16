@@ -84,142 +84,196 @@ export async function isBillingPackageInstalled(conn: Connection): Promise<boole
 // ============================================
 
 async function fetchBillingRules(conn: Connection): Promise<SFBillingRule[]> {
-  const result = await safeQuery(conn, `
-    SELECT Id, Name, blng__Active__c,
-      blng__InitialBillingTrigger__c, blng__PartialPeriodTreatment__c,
-      blng__GenerateInvoices__c
-    FROM blng__BillingRule__c
-    ORDER BY Name
-    LIMIT 2000
-  `);
-  return result.records as SFBillingRule[];
+  try {
+    const result = await safeQuery(conn, `
+      SELECT Id, Name, blng__Active__c,
+        blng__InitialBillingTrigger__c, blng__PartialPeriodTreatment__c,
+        blng__GenerateInvoices__c
+      FROM blng__BillingRule__c
+      ORDER BY Name
+      LIMIT 2000
+    `);
+    return result.records as SFBillingRule[];
+  } catch (error) {
+    console.error('Error fetching billing rules:', error);
+    return [];
+  }
 }
 
 async function fetchRevRecRules(conn: Connection): Promise<SFRevRecRule[]> {
-  const result = await safeQuery(conn, `
-    SELECT Id, Name, blng__Active__c,
-      blng__RevenueRecognitionTreatment__c, blng__RevenueScheduleType__c,
-      blng__RevenueRecognitionType__c, blng__CreateRevenueSchedule__c
-    FROM blng__RevenueRecognitionRule__c
-    ORDER BY Name
-    LIMIT 2000
-  `);
-  return result.records as SFRevRecRule[];
+  try {
+    const result = await safeQuery(conn, `
+      SELECT Id, Name, blng__Active__c,
+        blng__CreateRevenueSchedule__c
+      FROM blng__RevenueRecognitionRule__c
+      ORDER BY Name
+      LIMIT 2000
+    `);
+    return result.records as SFRevRecRule[];
+  } catch (error) {
+    console.error('Error fetching rev rec rules:', error);
+    return [];
+  }
 }
 
 async function fetchTaxRules(conn: Connection): Promise<SFTaxRule[]> {
-  const result = await safeQuery(conn, `
-    SELECT Id, Name, blng__Active__c,
-      blng__TaxableYN__c, blng__TaxPercentage__c, blng__TaxIntegration__c
-    FROM blng__TaxRule__c
-    ORDER BY Name
-    LIMIT 2000
-  `);
-  return result.records as SFTaxRule[];
+  try {
+    const result = await safeQuery(conn, `
+      SELECT Id, Name, blng__Active__c,
+        blng__TaxableYesNo__c
+      FROM blng__TaxRule__c
+      ORDER BY Name
+      LIMIT 2000
+    `);
+    return result.records as SFTaxRule[];
+  } catch (error) {
+    console.error('Error fetching tax rules:', error);
+    return [];
+  }
 }
 
 async function fetchFinanceBooks(conn: Connection): Promise<SFFinanceBook[]> {
-  const result = await safeQuery(conn, `
-    SELECT Id, Name, blng__Active__c, blng__PeriodType__c,
-      (SELECT Id, Name, blng__PeriodStartDate__c, blng__PeriodEndDate__c,
-        blng__PeriodStatus__c, blng__PeriodType__c
-       FROM blng__FinancePeriods__r
-       ORDER BY blng__PeriodStartDate__c
-       LIMIT 200)
-    FROM blng__FinanceBook__c
-    ORDER BY Name
-    LIMIT 500
-  `);
-  return result.records as SFFinanceBook[];
+  try {
+    const result = await safeQuery(conn, `
+      SELECT Id, Name, blng__Active__c, blng__PeriodType__c,
+        (SELECT Id, Name, blng__PeriodStartDate__c, blng__PeriodEndDate__c,
+          blng__PeriodStatus__c, blng__PeriodType__c
+         FROM blng__FinancePeriods__r
+         ORDER BY blng__PeriodStartDate__c
+         LIMIT 200)
+      FROM blng__FinanceBook__c
+      ORDER BY Name
+      LIMIT 500
+    `);
+    return result.records as SFFinanceBook[];
+  } catch (error) {
+    console.error('Error fetching finance books:', error);
+    return [];
+  }
 }
 
 async function fetchFinancePeriods(conn: Connection): Promise<SFFinancePeriod[]> {
-  const result = await safeQuery(conn, `
-    SELECT Id, Name, blng__FinanceBook__c,
-      blng__PeriodStartDate__c, blng__PeriodEndDate__c,
-      blng__PeriodStatus__c, blng__PeriodType__c
-    FROM blng__FinancePeriod__c
-    ORDER BY blng__PeriodStartDate__c
-    LIMIT 5000
-  `);
-  return result.records as SFFinancePeriod[];
+  try {
+    const result = await safeQuery(conn, `
+      SELECT Id, Name, blng__FinanceBook__c,
+        blng__PeriodStartDate__c, blng__PeriodEndDate__c,
+        blng__PeriodStatus__c, blng__PeriodType__c
+      FROM blng__FinancePeriod__c
+      ORDER BY blng__PeriodStartDate__c
+      LIMIT 5000
+    `);
+    return result.records as SFFinancePeriod[];
+  } catch (error) {
+    console.error('Error fetching finance periods:', error);
+    return [];
+  }
 }
 
 async function fetchGLRules(conn: Connection): Promise<SFGLRule[]> {
-  const result = await safeQuery(conn, `
-    SELECT Id, Name, blng__Active__c,
-      (SELECT Id, Name, blng__Active__c,
-        blng__CreditGLAccount__c, blng__DebitGLAccount__c, blng__GLRule__c,
-        blng__CreditGLAccount__r.Name, blng__DebitGLAccount__r.Name
-       FROM blng__GLTreatments__r
-       LIMIT 200)
-    FROM blng__GLRule__c
-    ORDER BY Name
-    LIMIT 1000
-  `);
-  return result.records as SFGLRule[];
+  try {
+    const result = await safeQuery(conn, `
+      SELECT Id, Name, blng__Active__c,
+        (SELECT Id, Name, blng__Active__c,
+          blng__CreditGLAccount__c, blng__DebitGLAccount__c, blng__GLRule__c,
+          blng__CreditGLAccount__r.Name, blng__DebitGLAccount__r.Name
+         FROM blng__GLTreatments__r
+         LIMIT 200)
+      FROM blng__GLRule__c
+      ORDER BY Name
+      LIMIT 1000
+    `);
+    return result.records as SFGLRule[];
+  } catch (error) {
+    console.error('Error fetching GL rules:', error);
+    return [];
+  }
 }
 
 async function fetchGLTreatments(conn: Connection): Promise<SFGLTreatment[]> {
-  const result = await safeQuery(conn, `
-    SELECT Id, Name, blng__Active__c,
-      blng__CreditGLAccount__c, blng__DebitGLAccount__c, blng__GLRule__c,
-      blng__CreditGLAccount__r.Name, blng__DebitGLAccount__r.Name
-    FROM blng__GLTreatment__c
-    ORDER BY Name
-    LIMIT 2000
-  `);
-  return result.records as SFGLTreatment[];
+  try {
+    const result = await safeQuery(conn, `
+      SELECT Id, Name, blng__Active__c,
+        blng__CreditGLAccount__c, blng__DebitGLAccount__c, blng__GLRule__c,
+        blng__CreditGLAccount__r.Name, blng__DebitGLAccount__r.Name
+      FROM blng__GLTreatment__c
+      ORDER BY Name
+      LIMIT 2000
+    `);
+    return result.records as SFGLTreatment[];
+  } catch (error) {
+    console.error('Error fetching GL treatments:', error);
+    return [];
+  }
 }
 
 async function fetchLegalEntities(conn: Connection): Promise<SFLegalEntity[]> {
-  const result = await safeQuery(conn, `
-    SELECT Id, Name, blng__Active__c,
-      blng__Street__c, blng__City__c, blng__State__c,
-      blng__PostalCode__c, blng__Country__c
-    FROM blng__LegalEntity__c
-    ORDER BY Name
-    LIMIT 500
-  `);
-  return result.records as SFLegalEntity[];
+  try {
+    const result = await safeQuery(conn, `
+      SELECT Id, Name, blng__Active__c,
+        blng__Street__c, blng__City__c, blng__State__c,
+        blng__PostalCode__c, blng__Country__c
+      FROM blng__LegalEntity__c
+      ORDER BY Name
+      LIMIT 500
+    `);
+    return result.records as SFLegalEntity[];
+  } catch (error) {
+    console.error('Error fetching legal entities:', error);
+    return [];
+  }
 }
 
 async function fetchInvoices(conn: Connection): Promise<SFBillingInvoice[]> {
-  const result = await safeQuery(conn, `
-    SELECT Id, Name, blng__InvoiceStatus__c, blng__TotalAmount__c,
-      blng__Account__c, blng__InvoiceDate__c, blng__DueDate__c, CreatedDate
-    FROM blng__Invoice__c
-    ORDER BY CreatedDate DESC
-    LIMIT 5000
-  `);
-  return result.records as SFBillingInvoice[];
+  try {
+    const result = await safeQuery(conn, `
+      SELECT Id, Name, blng__InvoiceStatus__c, blng__TotalAmount__c,
+        blng__Account__c, blng__InvoiceDate__c, blng__DueDate__c, CreatedDate
+      FROM blng__Invoice__c
+      ORDER BY CreatedDate DESC
+      LIMIT 5000
+    `);
+    return result.records as SFBillingInvoice[];
+  } catch (error) {
+    console.error('Error fetching invoices:', error);
+    return [];
+  }
 }
 
 async function fetchCreditNotes(conn: Connection): Promise<SFCreditNote[]> {
-  const result = await safeQuery(conn, `
-    SELECT Id, Name, blng__Status__c, blng__TotalAmount__c,
-      blng__Balance__c, blng__CreditNoteDate__c
-    FROM blng__CreditNote__c
-    ORDER BY blng__CreditNoteDate__c DESC
-    LIMIT 2000
-  `);
-  return result.records as SFCreditNote[];
+  try {
+    const result = await safeQuery(conn, `
+      SELECT Id, Name, blng__Status__c, blng__TotalAmount__c,
+        blng__Balance__c, blng__CreditNoteDate__c
+      FROM blng__CreditNote__c
+      ORDER BY blng__CreditNoteDate__c DESC
+      LIMIT 2000
+    `);
+    return result.records as SFCreditNote[];
+  } catch (error) {
+    console.error('Error fetching credit notes:', error);
+    return [];
+  }
 }
 
 async function fetchProductBillingConfigs(conn: Connection): Promise<SFProductBillingFields[]> {
-  const result = await safeQuery(conn, `
-    SELECT Id, Name, IsActive,
-      blng__BillingRule__c, blng__RevenueRecognitionRule__c, blng__TaxRule__c,
-      SBQQ__ChargeType__c, SBQQ__BillingType__c, SBQQ__BillingFrequency__c,
-      blng__BillingRule__r.Name, blng__BillingRule__r.blng__Active__c,
-      blng__RevenueRecognitionRule__r.Name, blng__RevenueRecognitionRule__r.blng__Active__c,
-      blng__TaxRule__r.Name, blng__TaxRule__r.blng__Active__c
-    FROM Product2
-    WHERE IsActive = true
-    ORDER BY Name
-    LIMIT 5000
-  `);
-  return result.records as SFProductBillingFields[];
+  try {
+    const result = await safeQuery(conn, `
+      SELECT Id, Name, IsActive,
+        blng__BillingRule__c, blng__RevenueRecognitionRule__c, blng__TaxRule__c,
+        SBQQ__ChargeType__c, SBQQ__BillingType__c, SBQQ__BillingFrequency__c,
+        blng__BillingRule__r.Name, blng__BillingRule__r.blng__Active__c,
+        blng__RevenueRecognitionRule__r.Name, blng__RevenueRecognitionRule__r.blng__Active__c,
+        blng__TaxRule__r.Name, blng__TaxRule__r.blng__Active__c
+      FROM Product2
+      WHERE IsActive = true
+      ORDER BY Name
+      LIMIT 5000
+    `);
+    return result.records as SFProductBillingFields[];
+  } catch (error) {
+    console.error('Error fetching product billing configs:', error);
+    return [];
+  }
 }
 
 // ============================================

@@ -33,7 +33,7 @@ export function createCleanData(): CPQData {
       { Id: 'cs1', Name: 'QCP Main', SBQQ__Code__c: 'export function onAfterCalculate(quote, lines) { return lines; }', SBQQ__Type__c: 'Quote Calculator Plugin', SBQQ__GroupFields__c: null, SBQQ__QuoteFields__c: 'SBQQ__NetAmount__c', SBQQ__QuoteLineFields__c: 'SBQQ__NetPrice__c', SBQQ__TranspiledCode__c: 'compiled code here' },
     ],
     quoteTemplates: [
-      { Id: 'qt1', Name: 'Standard Template', SBQQ__Default__c: true, SBQQ__Status__c: 'Active', SBQQ__TemplateSections__r: { records: [{ Id: 'ts1', Name: 'Header', SBQQ__Content__c: '<h1>Quote</h1>' }] } },
+      { Id: 'qt1', Name: 'Standard Template', SBQQ__Default__c: true, SBQQ__DeploymentStatus__c: 'Deployed', SBQQ__TemplateSections__r: { records: [{ Id: 'ts1', Name: 'Header', SBQQ__Content__c: '<h1>Quote</h1>' }] } },
     ],
     configurationAttributes: [
       { Id: 'ca1', Name: 'Color', SBQQ__Product__c: 'p1', SBQQ__Product__r: { Name: 'Product A' }, SBQQ__TargetField__c: 'Color__c', SBQQ__Required__c: false, SBQQ__Hidden__c: false, SBQQ__DefaultField__c: null, SBQQ__ColumnOrder__c: 1, SBQQ__DisplayOrder__c: 1, SBQQ__Feature__c: null, SBQQ__AppliedImmediately__c: false },
@@ -248,8 +248,8 @@ export function createProblematicData(): CPQData {
 
   // Quote templates: no default (QT-001), non-active (QT-002), empty (QT-003)
   const quoteTemplates = [
-    { Id: 'qt_1', Name: 'Template A', SBQQ__Default__c: false, SBQQ__Status__c: 'Draft', SBQQ__TemplateSections__r: { records: [] } },
-    { Id: 'qt_2', Name: 'Template B', SBQQ__Default__c: false, SBQQ__Status__c: 'Active', SBQQ__TemplateSections__r: { records: [{ Id: 'ts1', Name: 'Body', SBQQ__Content__c: 'content' }] } },
+    { Id: 'qt_1', Name: 'Template A', SBQQ__Default__c: false, SBQQ__DeploymentStatus__c: 'Draft', SBQQ__TemplateSections__r: { records: [] } },
+    { Id: 'qt_2', Name: 'Template B', SBQQ__Default__c: false, SBQQ__DeploymentStatus__c: 'Deployed', SBQQ__TemplateSections__r: { records: [{ Id: 'ts1', Name: 'Body', SBQQ__Content__c: 'content' }] } },
   ];
 
   // Config attributes: hidden+required (CA-001), no target field (CA-002), duplicates (CA-003), required no default (CA-004)

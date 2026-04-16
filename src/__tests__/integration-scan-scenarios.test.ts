@@ -682,7 +682,7 @@ describe('SCENARIO: New Severity Coverage Checks', () => {
   it('QT-005: Default template not active flagged as critical (via custom data)', async () => {
     const data = createCleanData();
     data.quoteTemplates = [
-      { Id: 'qt_default_draft', Name: 'Default Draft', SBQQ__Default__c: true, SBQQ__Status__c: 'Draft', SBQQ__TemplateSections__r: { records: [{ Id: 'ts1', Name: 'Header', SBQQ__Content__c: 'h' }] } },
+      { Id: 'qt_default_draft', Name: 'Default Draft', SBQQ__Default__c: true, SBQQ__DeploymentStatus__c: 'Draft', SBQQ__TemplateSections__r: { records: [{ Id: 'ts1', Name: 'Header', SBQQ__Content__c: 'h' }] } },
     ];
     const result = await runAnalysis(data);
     const qt005 = result.issues.filter((i) => i.check_id === 'QT-005');

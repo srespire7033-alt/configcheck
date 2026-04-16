@@ -45,7 +45,7 @@ export const quoteTemplateChecks: HealthCheck[] = [
     run: async (data: CPQData): Promise<Issue[]> => {
       const issues: Issue[] = [];
       const nonActive = data.quoteTemplates.filter(
-        (t) => t.SBQQ__Status__c && t.SBQQ__Status__c !== 'Active'
+        (t) => t.SBQQ__DeploymentStatus__c && t.SBQQ__DeploymentStatus__c !== 'Deployed'
       );
 
       if (nonActive.length > 0) {
@@ -54,7 +54,7 @@ export const quoteTemplateChecks: HealthCheck[] = [
           category: 'quote_templates',
           severity: 'info',
           title: `${nonActive.length} non-active quote template(s)`,
-          description: `${nonActive.map((t) => `"${t.Name}" (${t.SBQQ__Status__c})`).join(', ')} ${nonActive.length === 1 ? 'is' : 'are'} not in Active status.`,
+          description: `${nonActive.map((t) => `"${t.Name}" (${t.SBQQ__DeploymentStatus__c})`).join(', ')} ${nonActive.length === 1 ? 'is' : 'are'} not in Active status.`,
           impact: 'Non-active templates add clutter. If important templates are accidentally left in Draft, they cannot be used.',
           recommendation: 'Either activate templates that are ready for use, or delete draft templates that are no longer needed.',
           affected_records: nonActive.map((t) => ({
@@ -144,13 +144,13 @@ export const quoteTemplateChecks: HealthCheck[] = [
       const defaultTemplates = data.quoteTemplates.filter((t) => t.SBQQ__Default__c);
 
       for (const template of defaultTemplates) {
-        if (template.SBQQ__Status__c && template.SBQQ__Status__c !== 'Active') {
+        if (template.SBQQ__DeploymentStatus__c && template.SBQQ__DeploymentStatus__c !== 'Deployed') {
           issues.push({
             check_id: 'QT-005',
             category: 'quote_templates',
             severity: 'critical',
-            title: `Default template "${template.Name}" is ${template.SBQQ__Status__c}`,
-            description: `"${template.Name}" is marked as the Default template but its status is "${template.SBQQ__Status__c}" instead of "Active". Users will be unable to generate quote documents using the default template.`,
+            title: `Default template "${template.Name}" is ${template.SBQQ__DeploymentStatus__c}`,
+            description: `"${template.Name}" is marked as the Default template but its status is "${template.SBQQ__DeploymentStatus__c}" instead of "Active". Users will be unable to generate quote documents using the default template.`,
             impact: 'Quote document generation fails or falls back to no template. Sales reps cannot produce professional proposals.',
             recommendation: `Set the status of "${template.Name}" to "Active", or choose a different active template as the default.`,
             affected_records: [{ id: template.Id, name: template.Name, type: 'SBQQ__QuoteTemplate__c' }],

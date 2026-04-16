@@ -89,8 +89,8 @@ describe('Tax Rules — Comprehensive Tests', () => {
     it('should pass when inactive tax rules are not referenced by active products', async () => {
       const data = createCleanBillingData();
       data.taxRules = [
-        { Id: 'tr1', Name: 'Active Rule', blng__Active__c: true, blng__TaxableYN__c: 'Yes', blng__TaxPercentage__c: 10, blng__TaxIntegration__c: null },
-        { Id: 'tr-dead', Name: 'Inactive Orphan', blng__Active__c: false, blng__TaxableYN__c: 'Yes', blng__TaxPercentage__c: 5, blng__TaxIntegration__c: null },
+        { Id: 'tr1', Name: 'Active Rule', blng__Active__c: true, blng__TaxableYesNo__c: 'Yes' },
+        { Id: 'tr-dead', Name: 'Inactive Orphan', blng__Active__c: false, blng__TaxableYesNo__c: 'Yes' },
       ];
       const issues = await check.run(data);
       expect(issues).toHaveLength(0);
@@ -99,7 +99,7 @@ describe('Tax Rules — Comprehensive Tests', () => {
     it('should pass when inactive tax rules are only referenced by inactive products', async () => {
       const data = createCleanBillingData();
       data.taxRules = [
-        { Id: 'tr-inactive', Name: 'Inactive Rule', blng__Active__c: false, blng__TaxableYN__c: 'Yes', blng__TaxPercentage__c: 10, blng__TaxIntegration__c: null },
+        { Id: 'tr-inactive', Name: 'Inactive Rule', blng__Active__c: false, blng__TaxableYesNo__c: 'Yes' },
       ];
       data.productBillingConfigs = [
         { Id: 'pbc1', Name: 'Inactive Product', IsActive: false, blng__BillingRule__c: 'br1', blng__RevenueRecognitionRule__c: 'rr1', blng__TaxRule__c: 'tr-inactive', SBQQ__ChargeType__c: 'Recurring', SBQQ__BillingType__c: 'Advance', SBQQ__BillingFrequency__c: 'Monthly' },
@@ -119,7 +119,7 @@ describe('Tax Rules — Comprehensive Tests', () => {
     it('should pass when active product has null tax rule reference', async () => {
       const data = createCleanBillingData();
       data.taxRules = [
-        { Id: 'tr-inactive', Name: 'Inactive Rule', blng__Active__c: false, blng__TaxableYN__c: 'Yes', blng__TaxPercentage__c: 10, blng__TaxIntegration__c: null },
+        { Id: 'tr-inactive', Name: 'Inactive Rule', blng__Active__c: false, blng__TaxableYesNo__c: 'Yes' },
       ];
       data.productBillingConfigs = [
         { Id: 'pbc1', Name: 'No Tax Ref', IsActive: true, blng__BillingRule__c: 'br1', blng__RevenueRecognitionRule__c: 'rr1', blng__TaxRule__c: null, SBQQ__ChargeType__c: 'One-Time', SBQQ__BillingType__c: null, SBQQ__BillingFrequency__c: null },
@@ -132,7 +132,7 @@ describe('Tax Rules — Comprehensive Tests', () => {
     it('should flag active product referencing an inactive tax rule', async () => {
       const data = createCleanBillingData();
       data.taxRules = [
-        { Id: 'tr-dead', Name: 'Deactivated Tax', blng__Active__c: false, blng__TaxableYN__c: 'Yes', blng__TaxPercentage__c: 10, blng__TaxIntegration__c: null },
+        { Id: 'tr-dead', Name: 'Deactivated Tax', blng__Active__c: false, blng__TaxableYesNo__c: 'Yes' },
       ];
       data.productBillingConfigs = [
         { Id: 'pbc1', Name: 'Active Product', IsActive: true, blng__BillingRule__c: 'br1', blng__RevenueRecognitionRule__c: 'rr1', blng__TaxRule__c: 'tr-dead', SBQQ__ChargeType__c: 'Recurring', SBQQ__BillingType__c: 'Advance', SBQQ__BillingFrequency__c: 'Monthly' },
@@ -147,8 +147,8 @@ describe('Tax Rules — Comprehensive Tests', () => {
     it('should flag multiple active products referencing inactive tax rules', async () => {
       const data = createCleanBillingData();
       data.taxRules = [
-        { Id: 'tr-dead1', Name: 'Dead Tax 1', blng__Active__c: false, blng__TaxableYN__c: 'Yes', blng__TaxPercentage__c: 5, blng__TaxIntegration__c: null },
-        { Id: 'tr-dead2', Name: 'Dead Tax 2', blng__Active__c: false, blng__TaxableYN__c: 'Yes', blng__TaxPercentage__c: 8, blng__TaxIntegration__c: null },
+        { Id: 'tr-dead1', Name: 'Dead Tax 1', blng__Active__c: false, blng__TaxableYesNo__c: 'Yes' },
+        { Id: 'tr-dead2', Name: 'Dead Tax 2', blng__Active__c: false, blng__TaxableYesNo__c: 'Yes' },
       ];
       data.productBillingConfigs = [
         { Id: 'pbc1', Name: 'Product X', IsActive: true, blng__BillingRule__c: 'br1', blng__RevenueRecognitionRule__c: 'rr1', blng__TaxRule__c: 'tr-dead1', SBQQ__ChargeType__c: 'Recurring', SBQQ__BillingType__c: 'Advance', SBQQ__BillingFrequency__c: 'Monthly' },
@@ -163,40 +163,22 @@ describe('Tax Rules — Comprehensive Tests', () => {
   });
 
   // ═══════════════════════════════════════════════
-  // TR-003: Tax Rules With Zero Percent Tax
+  // TR-003: Tax Rules Not Marked as Taxable
   // ═══════════════════════════════════════════════
-  describe('TR-003: Tax Rules With Zero Percent Tax and No Integration', () => {
+  describe('TR-003: Tax Rules Not Marked as Taxable', () => {
     const check = getCheck('TR-003');
 
     // ── Negative tests (should NOT trigger) ──
-    it('should pass when active rules have non-zero tax percentage', async () => {
+    it('should pass when all active rules are marked taxable', async () => {
       const data = createCleanBillingData();
       const issues = await check.run(data);
       expect(issues).toHaveLength(0);
     });
 
-    it('should pass when inactive rule has zero tax and no integration', async () => {
+    it('should pass when inactive rule is not marked taxable', async () => {
       const data = createCleanBillingData();
       data.taxRules = [
-        { Id: 'tr1', Name: 'Inactive Zero Tax', blng__Active__c: false, blng__TaxableYN__c: 'Yes', blng__TaxPercentage__c: 0, blng__TaxIntegration__c: null },
-      ];
-      const issues = await check.run(data);
-      expect(issues).toHaveLength(0);
-    });
-
-    it('should pass when active rule has zero tax BUT has tax integration', async () => {
-      const data = createCleanBillingData();
-      data.taxRules = [
-        { Id: 'tr1', Name: 'Avalara Integrated', blng__Active__c: true, blng__TaxableYN__c: 'Yes', blng__TaxPercentage__c: 0, blng__TaxIntegration__c: 'Avalara' },
-      ];
-      const issues = await check.run(data);
-      expect(issues).toHaveLength(0);
-    });
-
-    it('should pass when active rule has null tax percentage BUT has integration', async () => {
-      const data = createCleanBillingData();
-      data.taxRules = [
-        { Id: 'tr1', Name: 'Vertex Integrated', blng__Active__c: true, blng__TaxableYN__c: 'Yes', blng__TaxPercentage__c: null, blng__TaxIntegration__c: 'Vertex' },
+        { Id: 'tr1', Name: 'Inactive Non-Taxable', blng__Active__c: false, blng__TaxableYesNo__c: 'No' },
       ];
       const issues = await check.run(data);
       expect(issues).toHaveLength(0);
@@ -209,20 +191,11 @@ describe('Tax Rules — Comprehensive Tests', () => {
       expect(issues).toHaveLength(0);
     });
 
-    it('should pass when active rule has positive tax percentage and no integration', async () => {
-      const data = createCleanBillingData();
-      data.taxRules = [
-        { Id: 'tr1', Name: 'Has Tax', blng__Active__c: true, blng__TaxableYN__c: 'Yes', blng__TaxPercentage__c: 8.5, blng__TaxIntegration__c: null },
-      ];
-      const issues = await check.run(data);
-      expect(issues).toHaveLength(0);
-    });
-
     // ── Positive tests (should trigger) ──
-    it('should flag active rule with 0 tax percentage and no integration', async () => {
+    it('should flag active rule with TaxableYesNo = No', async () => {
       const data = createCleanBillingData();
       data.taxRules = [
-        { Id: 'tr1', Name: 'Zero Tax', blng__Active__c: true, blng__TaxableYN__c: 'Yes', blng__TaxPercentage__c: 0, blng__TaxIntegration__c: null },
+        { Id: 'tr1', Name: 'Not Taxable', blng__Active__c: true, blng__TaxableYesNo__c: 'No' },
       ];
       const issues = await check.run(data);
       expect(issues).toHaveLength(1);
@@ -231,42 +204,38 @@ describe('Tax Rules — Comprehensive Tests', () => {
       expect(issues[0].affected_records![0].id).toBe('tr1');
     });
 
-    it('should flag active rule with null tax percentage and no integration', async () => {
+    it('should flag active rule with null TaxableYesNo', async () => {
       const data = createCleanBillingData();
       data.taxRules = [
-        { Id: 'tr1', Name: 'Null Tax', blng__Active__c: true, blng__TaxableYN__c: 'Yes', blng__TaxPercentage__c: null, blng__TaxIntegration__c: null },
+        { Id: 'tr1', Name: 'Null Taxable', blng__Active__c: true, blng__TaxableYesNo__c: null },
       ];
       const issues = await check.run(data);
       expect(issues).toHaveLength(1);
       expect(issues[0].severity).toBe('warning');
-      expect(issues[0].affected_records).toHaveLength(1);
     });
 
-    it('should flag multiple active rules with zero/null tax and no integration', async () => {
+    it('should flag multiple non-taxable active rules', async () => {
       const data = createCleanBillingData();
       data.taxRules = [
-        { Id: 'tr1', Name: 'Zero Tax', blng__Active__c: true, blng__TaxableYN__c: 'Yes', blng__TaxPercentage__c: 0, blng__TaxIntegration__c: null },
-        { Id: 'tr2', Name: 'Null Tax', blng__Active__c: true, blng__TaxableYN__c: 'Yes', blng__TaxPercentage__c: null, blng__TaxIntegration__c: null },
-        { Id: 'tr3', Name: 'Good Tax', blng__Active__c: true, blng__TaxableYN__c: 'Yes', blng__TaxPercentage__c: 15, blng__TaxIntegration__c: null },
+        { Id: 'tr1', Name: 'Not Taxable', blng__Active__c: true, blng__TaxableYesNo__c: 'No' },
+        { Id: 'tr2', Name: 'Null Taxable', blng__Active__c: true, blng__TaxableYesNo__c: null },
+        { Id: 'tr3', Name: 'Taxable', blng__Active__c: true, blng__TaxableYesNo__c: 'Yes' },
       ];
       const issues = await check.run(data);
       expect(issues).toHaveLength(1);
       expect(issues[0].affected_records).toHaveLength(2);
-      const ids = issues[0].affected_records!.map(r => r.id);
-      expect(ids).toContain('tr1');
-      expect(ids).toContain('tr2');
     });
 
-    it('should not flag rule with zero tax when integration is set', async () => {
+    it('should only flag active rules, not inactive ones', async () => {
       const data = createCleanBillingData();
       data.taxRules = [
-        { Id: 'tr1', Name: 'Integrated Zero', blng__Active__c: true, blng__TaxableYN__c: 'Yes', blng__TaxPercentage__c: 0, blng__TaxIntegration__c: 'Avalara' },
-        { Id: 'tr2', Name: 'No Integration Zero', blng__Active__c: true, blng__TaxableYN__c: 'Yes', blng__TaxPercentage__c: 0, blng__TaxIntegration__c: null },
+        { Id: 'tr1', Name: 'Active Non-Taxable', blng__Active__c: true, blng__TaxableYesNo__c: 'No' },
+        { Id: 'tr2', Name: 'Inactive Non-Taxable', blng__Active__c: false, blng__TaxableYesNo__c: 'No' },
       ];
       const issues = await check.run(data);
       expect(issues).toHaveLength(1);
       expect(issues[0].affected_records).toHaveLength(1);
-      expect(issues[0].affected_records![0].id).toBe('tr2');
+      expect(issues[0].affected_records![0].id).toBe('tr1');
     });
   });
 });

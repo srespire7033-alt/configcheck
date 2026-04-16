@@ -292,7 +292,7 @@ async function fetchQuoteTemplates(conn: Connection): Promise<SFQuoteTemplate[]>
   try {
     const result = await safeQuery(conn, `
       SELECT
-        Id, Name, SBQQ__Default__c, SBQQ__Status__c,
+        Id, Name, SBQQ__Default__c, SBQQ__DeploymentStatus__c,
         (SELECT Id, Name, SBQQ__Content__c
          FROM SBQQ__TemplateSections__r)
       FROM SBQQ__QuoteTemplate__c

@@ -24,10 +24,10 @@ export function createCleanBillingData(): BillingData {
       { Id: 'br2', Name: 'Usage Billing Rule', blng__Active__c: true, blng__InitialBillingTrigger__c: 'Order Activation Date', blng__PartialPeriodTreatment__c: 'Combined', blng__GenerateInvoices__c: 'Yes' },
     ],
     revRecRules: [
-      { Id: 'rr1', Name: 'Standard Rev Rec', blng__Active__c: true, blng__RevenueRecognitionTreatment__c: 'Recognize on Invoice Posting', blng__RevenueScheduleType__c: 'Full Recognition', blng__RevenueRecognitionType__c: 'Standard', blng__CreateRevenueSchedule__c: 'Yes' },
+      { Id: 'rr1', Name: 'Standard Rev Rec', blng__Active__c: true, blng__CreateRevenueSchedule__c: 'Yes' },
     ],
     taxRules: [
-      { Id: 'tr1', Name: 'Standard Tax Rule', blng__Active__c: true, blng__TaxableYN__c: 'Yes', blng__TaxPercentage__c: 18, blng__TaxIntegration__c: null },
+      { Id: 'tr1', Name: 'Standard Tax Rule', blng__Active__c: true, blng__TaxableYesNo__c: 'Yes' },
     ],
     financeBooks: [
       {

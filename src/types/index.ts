@@ -385,7 +385,7 @@ export interface SFQuoteTemplate {
   Id: string;
   Name: string;
   SBQQ__Default__c: boolean;
-  SBQQ__Status__c?: string | null;
+  SBQQ__DeploymentStatus__c?: string | null;
   SBQQ__TemplateSections__r?: { records: SFTemplateSection[] };
 }
 
@@ -505,9 +505,6 @@ export interface SFRevRecRule {
   Id: string;
   Name: string;
   blng__Active__c: boolean;
-  blng__RevenueRecognitionTreatment__c: string | null;
-  blng__RevenueScheduleType__c: string | null;
-  blng__RevenueRecognitionType__c: string | null;
   blng__CreateRevenueSchedule__c: string | null;
 }
 
@@ -515,9 +512,7 @@ export interface SFTaxRule {
   Id: string;
   Name: string;
   blng__Active__c: boolean;
-  blng__TaxableYN__c: string | null;
-  blng__TaxPercentage__c: number | null;
-  blng__TaxIntegration__c: string | null;
+  blng__TaxableYesNo__c: string | null;
 }
 
 export interface SFFinanceBook {

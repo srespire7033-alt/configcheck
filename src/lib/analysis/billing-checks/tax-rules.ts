@@ -74,34 +74,32 @@ export const taxRuleChecks: BillingHealthCheck[] = [
   },
   {
     id: 'TR-003',
-    name: 'Tax Rules With Zero Percent Tax',
+    name: 'Tax Rules Not Marked as Taxable',
     category: 'tax_rules',
     severity: 'warning',
-    description: 'Finds active tax rules with 0% tax rate (may be misconfigured)',
+    description: 'Finds active tax rules where Taxable is not set to Yes',
     run: async (data: BillingData): Promise<Issue[]> => {
       const issues: Issue[] = [];
 
-      const zeroTaxRules = data.taxRules.filter(
-        r => r.blng__Active__c &&
-          !r.blng__TaxIntegration__c &&
-          (r.blng__TaxPercentage__c === 0 || r.blng__TaxPercentage__c === null)
+      const nonTaxableRules = data.taxRules.filter(
+        r => r.blng__Active__c && r.blng__TaxableYesNo__c !== 'Yes'
       );
 
-      if (zeroTaxRules.length > 0) {
+      if (nonTaxableRules.length > 0) {
         issues.push({
           check_id: 'TR-003',
           category: 'tax_rules',
           severity: 'warning',
-          title: 'Tax rules with zero percent tax and no integration',
-          description: `${zeroTaxRules.length} active tax rule(s) have 0% tax rate and no tax integration configured. This may indicate misconfiguration unless these are intentionally tax-exempt.`,
-          impact: 'If these rules are assigned to taxable products, tax will not be collected.',
-          recommendation: 'Verify whether 0% tax is intentional. If not, configure the correct tax percentage or enable a tax integration (Avalara, Vertex, etc.).',
-          affected_records: zeroTaxRules.slice(0, 50).map(r => ({
+          title: 'Active tax rules not marked as taxable',
+          description: `${nonTaxableRules.length} active tax rule(s) do not have Taxable set to "Yes". Products using these rules will not have tax applied.`,
+          impact: 'If assigned to taxable products, tax will not be collected — potential compliance risk.',
+          recommendation: 'Set the Taxable field to "Yes" on rules that should calculate tax, or verify these are intentionally tax-exempt.',
+          affected_records: nonTaxableRules.slice(0, 50).map(r => ({
             id: r.Id,
             name: r.Name,
             type: 'blng__TaxRule__c',
           })),
-          effort_hours: zeroTaxRules.length * 0.25,
+          effort_hours: nonTaxableRules.length * 0.25,
         });
       }
 
