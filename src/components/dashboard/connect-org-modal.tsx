@@ -16,6 +16,7 @@ export function ConnectOrgModal({ isOpen, onClose }: ConnectOrgModalProps) {
   const [mode, setMode] = useState<'choose' | 'custom'>('choose');
   const [clientId, setClientId] = useState('');
   const [clientSecret, setClientSecret] = useState('');
+  const [loginUrl, setLoginUrl] = useState('');
   const [connecting, setConnecting] = useState(false);
   const [error, setError] = useState('');
   const [copied, setCopied] = useState(false);
@@ -44,6 +45,10 @@ export function ConnectOrgModal({ isOpen, onClose }: ConnectOrgModalProps) {
       setError('Please enter a Consumer Secret');
       return;
     }
+    if (!loginUrl.trim()) {
+      setError('Please enter your Salesforce login URL');
+      return;
+    }
 
     setConnecting(true);
     setError('');
@@ -54,6 +59,7 @@ export function ConnectOrgModal({ isOpen, onClose }: ConnectOrgModalProps) {
         body: JSON.stringify({
           clientId: clientId.trim(),
           clientSecret: clientSecret.trim(),
+          loginUrl: loginUrl.trim().replace(/\/+$/, ''),
         }),
       });
       const data = await res.json();
@@ -211,6 +217,23 @@ export function ConnectOrgModal({ isOpen, onClose }: ConnectOrgModalProps) {
                   placeholder="Enter consumer secret"
                   className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
                 />
+              </div>
+
+              {/* Login URL */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                  Salesforce Login URL <span className="text-gray-400 font-normal">(My Domain)</span>
+                </label>
+                <input
+                  type="url"
+                  value={loginUrl}
+                  onChange={(e) => { setLoginUrl(e.target.value); setError(''); }}
+                  placeholder="https://yourcompany.my.salesforce.com"
+                  className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                />
+                <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-1">
+                  Find this in Setup → My Domain. Example: https://yourcompany.my.salesforce.com
+                </p>
               </div>
 
               <p className="flex items-start gap-1.5 text-[11px] text-gray-400 dark:text-gray-500">

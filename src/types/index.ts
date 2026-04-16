@@ -43,6 +43,7 @@ export interface DBOrganization {
   last_connected_at: string | null;
   sf_client_id: string | null;
   sf_client_secret: string | null;
+  sf_login_url: string | null;
   created_at: string;
   updated_at: string;
 }

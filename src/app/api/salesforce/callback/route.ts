@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
 
     // Check for custom Connected App credentials
     const customCredsCookie = request.cookies.get('sf_custom_creds')?.value;
-    let customCreds: { clientId: string; clientSecret: string } | undefined;
+    let customCreds: { clientId: string; clientSecret: string; loginUrl?: string } | undefined;
     if (customCredsCookie) {
       try {
         const decoded = Buffer.from(customCredsCookie, 'base64').toString('utf-8');
@@ -81,6 +81,7 @@ export async function GET(request: NextRequest) {
       if (customCreds) {
         updateData.sf_client_id = customCreds.clientId;
         updateData.sf_client_secret = customCreds.clientSecret;
+        updateData.sf_login_url = customCreds.loginUrl || null;
       }
       await supabase
         .from('organizations')
@@ -109,6 +110,7 @@ export async function GET(request: NextRequest) {
         ...(customCreds ? {
           sf_client_id: customCreds.clientId,
           sf_client_secret: customCreds.clientSecret,
+          sf_login_url: customCreds.loginUrl || null,
         } : {}),
       });
     }

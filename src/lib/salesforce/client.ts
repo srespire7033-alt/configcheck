@@ -63,8 +63,9 @@ function generatePKCE(): { codeVerifier: string; codeChallenge: string } {
  * Generate the OAuth authorization URL with PKCE
  * Returns both the URL and the code verifier (to store in cookie)
  */
-export function getAuthorizationUrl(state?: string, customClientId?: string): { url: string; codeVerifier: string } {
+export function getAuthorizationUrl(state?: string, customClientId?: string, customLoginUrl?: string): { url: string; codeVerifier: string } {
   const { codeVerifier, codeChallenge } = generatePKCE();
+  const baseUrl = customLoginUrl || SF_LOGIN_URL;
 
   const params = new URLSearchParams({
     response_type: 'code',
@@ -78,7 +79,7 @@ export function getAuthorizationUrl(state?: string, customClientId?: string): { 
   });
 
   return {
-    url: `${SF_LOGIN_URL}/services/oauth2/authorize?${params.toString()}`,
+    url: `${baseUrl}/services/oauth2/authorize?${params.toString()}`,
     codeVerifier,
   };
 }
@@ -89,7 +90,7 @@ export function getAuthorizationUrl(state?: string, customClientId?: string): { 
 export async function handleOAuthCallback(
   code: string,
   codeVerifier?: string,
-  customCreds?: { clientId: string; clientSecret: string }
+  customCreds?: { clientId: string; clientSecret: string; loginUrl?: string }
 ): Promise<{
   accessToken: string;
   refreshToken: string;
@@ -99,6 +100,7 @@ export async function handleOAuthCallback(
 }> {
   const useClientId = customCreds?.clientId || SF_CLIENT_ID;
   const useClientSecret = customCreds?.clientSecret || SF_CLIENT_SECRET;
+  const useLoginUrl = customCreds?.loginUrl || SF_LOGIN_URL;
 
   const tokenParams = new URLSearchParams({
     grant_type: 'authorization_code',
@@ -113,7 +115,7 @@ export async function handleOAuthCallback(
     tokenParams.set('code_verifier', codeVerifier);
   }
 
-  const tokenResponse = await fetch(`${SF_LOGIN_URL}/services/oauth2/token`, {
+  const tokenResponse = await fetch(`${useLoginUrl}/services/oauth2/token`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: tokenParams.toString(),
@@ -205,10 +207,10 @@ export async function createRefreshableConnection(
     if (msg.includes('INVALID_SESSION_ID') || msg.includes('Session expired') || msg.includes('401') || msg.includes('timed out')) {
       console.log('Token expired for org', orgId, '— attempting refresh');
       const newTokens = await refreshAccessToken(
-        org.instance_url,
         org.refresh_token,
         org.sf_client_id || undefined,
-        org.sf_client_secret || undefined
+        org.sf_client_secret || undefined,
+        org.sf_login_url || undefined
       );
       if (newTokens) {
         await persistRefreshedToken(orgId, newTokens.accessToken);
@@ -234,10 +236,10 @@ export async function createRefreshableConnection(
  * Manually refresh the Salesforce access token using the refresh token
  */
 async function refreshAccessToken(
-  instanceUrl: string,
   refreshToken: string,
   customClientId?: string,
-  customClientSecret?: string
+  customClientSecret?: string,
+  customLoginUrl?: string
 ): Promise<{ accessToken: string } | null> {
   try {
     const params = new URLSearchParams({
@@ -247,8 +249,9 @@ async function refreshAccessToken(
       refresh_token: refreshToken,
     });
 
+    const tokenUrl = customLoginUrl || SF_LOGIN_URL;
     const res = await withTimeout(
-      fetch(`${SF_LOGIN_URL}/services/oauth2/token`, {
+      fetch(`${tokenUrl}/services/oauth2/token`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: params.toString(),

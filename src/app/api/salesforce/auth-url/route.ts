@@ -28,7 +28,7 @@ export async function GET() {
 // Custom credentials flow — user provides their own Connected App client_id/secret
 export async function POST(request: NextRequest) {
   try {
-    const { clientId, clientSecret } = await request.json();
+    const { clientId, clientSecret, loginUrl } = await request.json();
 
     if (!clientId || !clientSecret) {
       return NextResponse.json(
@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { url, codeVerifier } = getAuthorizationUrl(undefined, clientId);
+    const { url, codeVerifier } = getAuthorizationUrl(undefined, clientId, loginUrl);
 
     const response = NextResponse.json({ url });
     response.cookies.set('sf_code_verifier', codeVerifier, {
@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
       path: '/',
     });
     // Store custom credentials in an encrypted cookie for the callback
-    const credsPayload = JSON.stringify({ clientId, clientSecret });
+    const credsPayload = JSON.stringify({ clientId, clientSecret, loginUrl });
     const encoded = Buffer.from(credsPayload).toString('base64');
     response.cookies.set('sf_custom_creds', encoded, {
       httpOnly: true,
