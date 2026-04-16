@@ -451,7 +451,7 @@ export default function SettingsPage() {
               </SectionCard>
 
               {/* Danger Zone */}
-              <SectionCard title="Danger Zone" description="These actions are irreversible. Please proceed with caution.">
+              <SectionCard title="Data & Account" description="Manage your data export and account deletion.">
                 <div className="space-y-4">
                   {/* Export Data */}
                   <div className="flex items-center justify-between p-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
