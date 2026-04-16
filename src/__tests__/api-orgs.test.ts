@@ -20,6 +20,7 @@ function createBuilder(mockResult: { data: unknown; error: unknown; count?: numb
     select: vi.fn().mockReturnThis(),
     insert: vi.fn().mockReturnThis(),
     eq: vi.fn().mockReturnThis(),
+    in: vi.fn().mockReturnThis(),
     gte: vi.fn().mockReturnThis(),
     order: vi.fn().mockReturnThis(),
     limit: vi.fn().mockReturnThis(),
@@ -90,10 +91,16 @@ describe('GET /api/orgs', () => {
       { id: 'org-2', name: 'Beta Inc', is_sandbox: false, connection_status: 'connected', last_scan_score: 85, last_scan_at: '2026-04-12', cpq_package_version: '240.1' },
       { id: 'org-1', name: 'Alpha LLC', is_sandbox: true, connection_status: 'connected', last_scan_score: 72, last_scan_at: '2026-04-10', cpq_package_version: '238.5' },
     ];
+    const scansData = [
+      { organization_id: 'org-2', completed_at: '2026-04-12T10:00:00Z', created_at: '2026-04-12T09:55:00Z' },
+      { organization_id: 'org-1', completed_at: '2026-04-10T10:00:00Z', created_at: '2026-04-10T09:55:00Z' },
+    ];
     mockGetAuthUser.mockResolvedValue({ id: 'user-1' } as any);
 
-    const builder = createBuilder({ data: orgsData, error: null });
-    mockCreateServiceClient.mockReturnValue({ from: vi.fn().mockReturnValue(builder) } as any);
+    const orgsBuilder = createBuilder({ data: orgsData, error: null });
+    const scansBuilder = createBuilder({ data: scansData, error: null });
+    const fromMock = vi.fn((table: string) => table === 'scans' ? scansBuilder : orgsBuilder);
+    mockCreateServiceClient.mockReturnValue({ from: fromMock } as any);
 
     const res = await GET(createRequest());
     expect(res.status).toBe(200);
@@ -102,14 +109,15 @@ describe('GET /api/orgs', () => {
     expect(body).toHaveLength(2);
     expect(body[0].id).toBe('org-2');
     expect(body[0].critical_count).toBe(0);
+    expect(body[0].last_scan_at).toBe('2026-04-12T10:00:00Z');
     expect(body[1].critical_count).toBe(0);
   });
 
   it('returns empty array when user has no orgs', async () => {
     mockGetAuthUser.mockResolvedValue({ id: 'user-1' } as any);
 
-    const builder = createBuilder({ data: [], error: null });
-    mockCreateServiceClient.mockReturnValue({ from: vi.fn().mockReturnValue(builder) } as any);
+    const orgsBuilder = createBuilder({ data: [], error: null });
+    mockCreateServiceClient.mockReturnValue({ from: vi.fn().mockReturnValue(orgsBuilder) } as any);
 
     const res = await GET(createRequest());
     expect(res.status).toBe(200);
