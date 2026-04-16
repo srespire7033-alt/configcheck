@@ -36,17 +36,22 @@ export async function GET(request: NextRequest) {
   }
 
   // List all orgs for the authenticated user
-  const { data, error } = await supabase
+  const { data, error, count } = await supabase
     .from('organizations')
-    .select('id, name, is_sandbox, connection_status, last_scan_score, last_scan_at, cpq_package_version, installed_packages')
+    .select('id, name, is_sandbox, connection_status, last_scan_score, last_scan_at, cpq_package_version, installed_packages', { count: 'exact' })
     .eq('user_id', user.id)
     .order('created_at', { ascending: false });
 
+  console.log('Orgs query — user:', user.id, 'count:', count, 'rows:', (data || []).length, 'error:', error);
+  if (data) {
+    for (const o of data) {
+      console.log('  org:', o.id, o.name);
+    }
+  }
+
   if (error) {
-    console.error('Orgs fetch error:', error);
     return NextResponse.json({ error: 'Failed to fetch organizations' }, { status: 500 });
   }
-  console.log('Orgs fetched for user', user.id, ':', (data || []).map(o => ({ id: o.id, name: o.name })));
 
   // Fetch latest scan completed_at for each org (single query, bulletproof timestamp source)
   const orgIds = (data || []).map((o) => o.id);
