@@ -277,12 +277,6 @@ export function CategoryBreakdown({ scores, issues = [], layout = 'vertical', se
     const cpqCategories = orderedCategories.filter((c) => !BILLING_CATEGORIES.has(c) && scoresMap[c] !== undefined);
     const billingCategories = orderedCategories.filter((c) => BILLING_CATEGORIES.has(c) && scoresMap[c] !== undefined);
 
-    // DEBUG: remove after fixing missing cards
-    console.log('[CategoryBreakdown] scores keys:', Object.keys(scoresMap));
-    console.log('[CategoryBreakdown] orderedCategories:', orderedCategories);
-    console.log('[CategoryBreakdown] cpqCategories:', cpqCategories);
-    console.log('[CategoryBreakdown] has bundles?', orderedCategories.includes('bundles'), 'score:', scoresMap['bundles']);
-    console.log('[CategoryBreakdown] has lookup_queries?', orderedCategories.includes('lookup_queries'), 'score:', scoresMap['lookup_queries']);
     const hasBilling = billingCategories.length > 0;
 
     return (
