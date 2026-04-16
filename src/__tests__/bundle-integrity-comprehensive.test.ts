@@ -310,4 +310,83 @@ describe('Bundle Integrity — Comprehensive Tests', () => {
       expect(issues.every((i) => i.check_id === 'BN-004')).toBe(true);
     });
   });
+
+  // ═══════════════════════════════════════════════
+  // BN-005: Bundle Options Without Feature Grouping
+  // ═══════════════════════════════════════════════
+  describe('BN-005: Bundle Options Without Feature Grouping', () => {
+    const check = getCheck('BN-005');
+
+    // ── Negative tests (should NOT trigger) ──
+    it('should pass when bundle has fewer than 5 options', async () => {
+      const data = createCleanData();
+      // Clean data has p1 with 1 option — well under threshold
+      const issues = await check.run(data);
+      expect(issues).toHaveLength(0);
+    });
+
+    it('should pass when bundle has 5+ options all grouped into features', async () => {
+      const data = createCleanData();
+      data.productOptions = Array.from({ length: 6 }, (_, i) => ({
+        Id: `po_${i}`, Name: `Opt ${i}`, SBQQ__ConfiguredSKU__c: 'p1',
+        SBQQ__OptionalSKU__c: `child_${i}`,
+        SBQQ__ConfiguredSKU__r: { Name: 'Product A', IsActive: true },
+        SBQQ__OptionalSKU__r: { Name: `Child ${i}`, IsActive: true },
+        SBQQ__Required__c: false, SBQQ__MinQuantity__c: 1, SBQQ__MaxQuantity__c: 10,
+        SBQQ__Number__c: i + 1, SBQQ__Feature__c: 'feat1', SBQQ__Feature__r: { Name: 'Feature 1' },
+      }));
+      const issues = await check.run(data);
+      expect(issues).toHaveLength(0);
+    });
+
+    it('should pass when some options are ungrouped but not all', async () => {
+      const data = createCleanData();
+      data.productOptions = Array.from({ length: 6 }, (_, i) => ({
+        Id: `po_${i}`, Name: `Opt ${i}`, SBQQ__ConfiguredSKU__c: 'p1',
+        SBQQ__OptionalSKU__c: `child_${i}`,
+        SBQQ__ConfiguredSKU__r: { Name: 'Product A', IsActive: true },
+        SBQQ__OptionalSKU__r: { Name: `Child ${i}`, IsActive: true },
+        SBQQ__Required__c: false, SBQQ__MinQuantity__c: 1, SBQQ__MaxQuantity__c: 10,
+        SBQQ__Number__c: i + 1,
+        SBQQ__Feature__c: i === 0 ? 'feat1' : null,
+        SBQQ__Feature__r: i === 0 ? { Name: 'Feature 1' } : null,
+      }));
+      const issues = await check.run(data);
+      // Not ALL ungrouped, so should not trigger
+      expect(issues).toHaveLength(0);
+    });
+
+    // ── Positive tests (should trigger) ──
+    it('DETECT: should flag bundle with 5+ options and none grouped', async () => {
+      const data = createCleanData();
+      data.productOptions = Array.from({ length: 6 }, (_, i) => ({
+        Id: `po_${i}`, Name: `Opt ${i}`, SBQQ__ConfiguredSKU__c: 'p1',
+        SBQQ__OptionalSKU__c: `child_${i}`,
+        SBQQ__ConfiguredSKU__r: { Name: 'Product A', IsActive: true },
+        SBQQ__OptionalSKU__r: { Name: `Child ${i}`, IsActive: true },
+        SBQQ__Required__c: false, SBQQ__MinQuantity__c: 1, SBQQ__MaxQuantity__c: 10,
+        SBQQ__Number__c: i + 1, SBQQ__Feature__c: null, SBQQ__Feature__r: null,
+      }));
+      const issues = await check.run(data);
+      expect(issues).toHaveLength(1);
+      expect(issues[0].check_id).toBe('BN-005');
+      expect(issues[0].severity).toBe('info');
+      expect(issues[0].description).toContain('6 product options');
+    });
+
+    it('DETECT: should flag exactly at threshold (5 ungrouped options)', async () => {
+      const data = createCleanData();
+      data.productOptions = Array.from({ length: 5 }, (_, i) => ({
+        Id: `po_${i}`, Name: `Opt ${i}`, SBQQ__ConfiguredSKU__c: 'p1',
+        SBQQ__OptionalSKU__c: `child_${i}`,
+        SBQQ__ConfiguredSKU__r: { Name: 'Product A', IsActive: true },
+        SBQQ__OptionalSKU__r: { Name: `Child ${i}`, IsActive: true },
+        SBQQ__Required__c: false, SBQQ__MinQuantity__c: 1, SBQQ__MaxQuantity__c: 10,
+        SBQQ__Number__c: i + 1, SBQQ__Feature__c: null, SBQQ__Feature__r: null,
+      }));
+      const issues = await check.run(data);
+      expect(issues).toHaveLength(1);
+      expect(issues[0].check_id).toBe('BN-005');
+    });
+  });
 });

@@ -401,3 +401,187 @@ describe('SCENARIO: Edge Cases & Boundaries', () => {
     expect(result.duration_ms).toBeGreaterThanOrEqual(0);
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════
+// SCENARIO 6: Bundle Integrity (BN-001 to BN-004)
+// ═══════════════════════════════════════════════════════════════════
+describe('SCENARIO: Bundle Integrity — Positive & Negative', () => {
+  // ── Negative: Healthy bundles score 100 ──
+  it('Healthy bundles with proper options should score 100', async () => {
+    const data = createCleanData();
+    const result = await runAnalysis(data);
+    const bnIssues = result.issues.filter((i) => i.category === 'bundles');
+    expect(bnIssues).toHaveLength(0);
+    expect(result.category_scores.bundles).toBe(100);
+  });
+
+  it('No bundle issues when no products exist', async () => {
+    const data = createCleanData();
+    data.products = [];
+    data.productOptions = [];
+    const result = await runAnalysis(data);
+    expect(result.category_scores.bundles).toBe(100);
+  });
+
+  // ── Positive: Problematic bundles drop score ──
+  it('BN-001: Empty bundles are flagged as critical', async () => {
+    const data = createProblematicData();
+    const result = await runAnalysis(data);
+    const bn001 = result.issues.filter((i) => i.check_id === 'BN-001');
+    expect(bn001.length).toBeGreaterThan(0);
+    expect(bn001[0].severity).toBe('critical');
+    expect(bn001[0].category).toBe('bundles');
+  });
+
+  it('BN-002: Option with min > max quantity is flagged', async () => {
+    const data = createProblematicData();
+    const result = await runAnalysis(data);
+    const bn002 = result.issues.filter((i) => i.check_id === 'BN-002');
+    expect(bn002.length).toBeGreaterThan(0);
+    expect(bn002[0].severity).toBe('warning');
+  });
+
+  it('BN-004: Required option without PBE is flagged', async () => {
+    const data = createProblematicData();
+    const result = await runAnalysis(data);
+    const bn004 = result.issues.filter((i) => i.check_id === 'BN-004');
+    expect(bn004.length).toBeGreaterThan(0);
+    expect(bn004[0].severity).toBe('critical');
+  });
+
+  it('Bundle score drops below 100 with problematic data', async () => {
+    const data = createProblematicData();
+    const result = await runAnalysis(data);
+    expect(result.category_scores.bundles).toBeLessThan(100);
+  });
+
+  it('BN-005: Bundle with 5+ ungrouped options is flagged as info', async () => {
+    const data = createProblematicData();
+    const result = await runAnalysis(data);
+    const bn005 = result.issues.filter((i) => i.check_id === 'BN-005');
+    expect(bn005.length).toBeGreaterThan(0);
+    expect(bn005[0].severity).toBe('info');
+    expect(bn005[0].category).toBe('bundles');
+  });
+
+  // ── Mixed: Only bundles broken, other categories unaffected ──
+  it('Breaking only bundles does not affect lookup_queries score', async () => {
+    const data = createCleanData();
+    // Add empty bundle
+    data.products.push({
+      Id: 'p_broken', Name: 'Broken Bundle', ProductCode: 'BB', IsActive: true,
+      SBQQ__SubscriptionType__c: null, SBQQ__SubscriptionPricing__c: null,
+      SBQQ__ChargeType__c: 'One-Time', SBQQ__BillingFrequency__c: null,
+      SBQQ__PricingMethod__c: 'List', SBQQ__ConfigurationType__c: 'Allowed',
+    });
+    // Remove options for this bundle
+    data.productOptions = data.productOptions.filter((o) => o.SBQQ__ConfiguredSKU__c !== 'p_broken');
+    const result = await runAnalysis(data);
+    expect(result.category_scores.bundles).toBeLessThan(100);
+    expect(result.category_scores.lookup_queries).toBe(100);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════
+// SCENARIO 7: Lookup Queries (LQ-001 to LQ-004)
+// ═══════════════════════════════════════════════════════════════════
+describe('SCENARIO: Lookup Queries — Positive & Negative', () => {
+  // ── Negative: Clean lookup config scores 100 ──
+  it('Clean price rules with no lookups should score 100', async () => {
+    const data = createCleanData();
+    const result = await runAnalysis(data);
+    const lqIssues = result.issues.filter((i) => i.category === 'lookup_queries');
+    expect(lqIssues).toHaveLength(0);
+    expect(result.category_scores.lookup_queries).toBe(100);
+  });
+
+  it('No lookup issues when no price rules exist', async () => {
+    const data = createCleanData();
+    data.priceRules = [];
+    data.productRules = [];
+    const result = await runAnalysis(data);
+    expect(result.category_scores.lookup_queries).toBe(100);
+  });
+
+  it('Properly configured lookup (object + source field) scores 100', async () => {
+    const data = createCleanData();
+    data.priceRules = [
+      {
+        Id: 'pr_good_lookup', Name: 'Good Lookup', SBQQ__Active__c: true,
+        SBQQ__EvaluationOrder__c: 10, SBQQ__TargetObject__c: 'Quote Line',
+        SBQQ__LookupObject__c: 'Custom_Rate__c',
+        SBQQ__PriceConditions__r: { records: [{ Id: 'pc1', SBQQ__Field__c: 'SBQQ__ProductCode__c', SBQQ__Operator__c: 'equals', SBQQ__Value__c: 'X', SBQQ__Object__c: 'Quote Line' }] },
+        SBQQ__PriceActions__r: { records: [{ Id: 'pa1', SBQQ__Field__c: 'SBQQ__UnitPrice__c', SBQQ__Value__c: null, SBQQ__Formula__c: null, SBQQ__SourceLookupField__c: 'Rate__c' }] },
+      },
+    ];
+    const result = await runAnalysis(data);
+    const lqIssues = result.issues.filter((i) => i.category === 'lookup_queries');
+    expect(lqIssues).toHaveLength(0);
+    expect(result.category_scores.lookup_queries).toBe(100);
+  });
+
+  // ── Positive: Problematic lookups drop score ──
+  it('LQ-001: Incomplete lookup (object but no source field) is flagged', async () => {
+    const data = createProblematicData();
+    const result = await runAnalysis(data);
+    const lq001 = result.issues.filter((i) => i.check_id === 'LQ-001');
+    expect(lq001.length).toBeGreaterThan(0);
+    expect(lq001[0].severity).toBe('critical');
+    expect(lq001[0].category).toBe('lookup_queries');
+  });
+
+  it('LQ-002: Orphaned lookup reference is flagged', async () => {
+    const data = createProblematicData();
+    const result = await runAnalysis(data);
+    const lq002 = result.issues.filter((i) => i.check_id === 'LQ-002');
+    expect(lq002.length).toBeGreaterThan(0);
+    expect(lq002[0].severity).toBe('critical');
+  });
+
+  it('LQ-003: Selection rule missing target product is flagged', async () => {
+    const data = createProblematicData();
+    const result = await runAnalysis(data);
+    const lq003 = result.issues.filter((i) => i.check_id === 'LQ-003');
+    expect(lq003.length).toBeGreaterThan(0);
+    expect(lq003[0].severity).toBe('warning');
+  });
+
+  it('LQ-004: Selection rule targeting inactive product is flagged', async () => {
+    const data = createProblematicData();
+    const result = await runAnalysis(data);
+    const lq004 = result.issues.filter((i) => i.check_id === 'LQ-004');
+    expect(lq004.length).toBeGreaterThan(0);
+    expect(lq004[0].severity).toBe('warning');
+  });
+
+  it('LQ-005: Selection rules without evaluation order flagged as info', async () => {
+    const data = createProblematicData();
+    const result = await runAnalysis(data);
+    const lq005 = result.issues.filter((i) => i.check_id === 'LQ-005');
+    expect(lq005.length).toBeGreaterThan(0);
+    expect(lq005[0].severity).toBe('info');
+    expect(lq005[0].category).toBe('lookup_queries');
+  });
+
+  it('Lookup queries score drops below 100 with problematic data', async () => {
+    const data = createProblematicData();
+    const result = await runAnalysis(data);
+    expect(result.category_scores.lookup_queries).toBeLessThan(100);
+  });
+
+  // ── Mixed: Only lookups broken, bundles unaffected ──
+  it('Breaking only lookups does not affect bundles score', async () => {
+    const data = createCleanData();
+    // Add broken lookup rule
+    data.priceRules.push({
+      Id: 'pr_broken', Name: 'Broken Lookup', SBQQ__Active__c: true,
+      SBQQ__EvaluationOrder__c: 50, SBQQ__TargetObject__c: 'Quote Line',
+      SBQQ__LookupObject__c: 'Custom_Obj__c',
+      SBQQ__PriceConditions__r: { records: [{ Id: 'pc_b', SBQQ__Field__c: 'SBQQ__Quantity__c', SBQQ__Operator__c: 'equals', SBQQ__Value__c: '1', SBQQ__Object__c: 'Quote Line' }] },
+      SBQQ__PriceActions__r: { records: [{ Id: 'pa_b', SBQQ__Field__c: 'SBQQ__UnitPrice__c', SBQQ__Value__c: '50', SBQQ__Formula__c: null, SBQQ__SourceLookupField__c: null }] },
+    });
+    const result = await runAnalysis(data);
+    expect(result.category_scores.lookup_queries).toBeLessThan(100);
+    expect(result.category_scores.bundles).toBe(100);
+  });
+});

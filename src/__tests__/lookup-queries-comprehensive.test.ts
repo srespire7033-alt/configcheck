@@ -323,4 +323,77 @@ describe('Lookup Queries — Comprehensive Tests', () => {
       expect(issues.every((i) => i.check_id === 'LQ-004')).toBe(true);
     });
   });
+
+  // ═══════════════════════════════════════════════
+  // LQ-005: Selection Rules Without Evaluation Order
+  // ═══════════════════════════════════════════════
+  describe('LQ-005: Selection Rules Without Evaluation Order', () => {
+    const check = getCheck('LQ-005');
+
+    // ── Negative tests (should NOT trigger) ──
+    it('should pass when only 1 selection rule exists (ordering irrelevant)', async () => {
+      const data = createCleanData();
+      data.productRules = [
+        { Id: 'prd1', Name: 'Solo Selection', SBQQ__Active__c: true, SBQQ__Type__c: 'Selection', SBQQ__EvaluationOrder__c: null as unknown as number, SBQQ__ConditionsMet__c: 'All', SBQQ__LookupObject__c: null, SBQQ__LookupProductField__c: null,
+          SBQQ__ErrorConditions__r: { records: [] }, SBQQ__Actions__r: { records: [] } },
+      ];
+      const issues = await check.run(data);
+      expect(issues).toHaveLength(0);
+    });
+
+    it('should pass when all selection rules have evaluation order', async () => {
+      const data = createCleanData();
+      data.productRules = [
+        { Id: 'prd1', Name: 'Sel A', SBQQ__Active__c: true, SBQQ__Type__c: 'Selection', SBQQ__EvaluationOrder__c: 10, SBQQ__ConditionsMet__c: 'All', SBQQ__LookupObject__c: null, SBQQ__LookupProductField__c: null,
+          SBQQ__ErrorConditions__r: { records: [] }, SBQQ__Actions__r: { records: [] } },
+        { Id: 'prd2', Name: 'Sel B', SBQQ__Active__c: true, SBQQ__Type__c: 'Selection', SBQQ__EvaluationOrder__c: 20, SBQQ__ConditionsMet__c: 'All', SBQQ__LookupObject__c: null, SBQQ__LookupProductField__c: null,
+          SBQQ__ErrorConditions__r: { records: [] }, SBQQ__Actions__r: { records: [] } },
+      ];
+      const issues = await check.run(data);
+      expect(issues).toHaveLength(0);
+    });
+
+    it('should pass when non-Selection rules lack evaluation order', async () => {
+      const data = createCleanData();
+      data.productRules = [
+        { Id: 'prd1', Name: 'Validation', SBQQ__Active__c: true, SBQQ__Type__c: 'Validation', SBQQ__EvaluationOrder__c: null as unknown as number, SBQQ__ConditionsMet__c: 'All', SBQQ__LookupObject__c: null, SBQQ__LookupProductField__c: null,
+          SBQQ__ErrorConditions__r: { records: [] }, SBQQ__Actions__r: { records: [] } },
+        { Id: 'prd2', Name: 'Alert', SBQQ__Active__c: true, SBQQ__Type__c: 'Alert', SBQQ__EvaluationOrder__c: null as unknown as number, SBQQ__ConditionsMet__c: 'All', SBQQ__LookupObject__c: null, SBQQ__LookupProductField__c: null,
+          SBQQ__ErrorConditions__r: { records: [] }, SBQQ__Actions__r: { records: [] } },
+      ];
+      const issues = await check.run(data);
+      expect(issues).toHaveLength(0);
+    });
+
+    // ── Positive tests (should trigger) ──
+    it('DETECT: should flag selection rule without eval order when 2+ exist', async () => {
+      const data = createCleanData();
+      data.productRules = [
+        { Id: 'prd1', Name: 'Sel Ordered', SBQQ__Active__c: true, SBQQ__Type__c: 'Selection', SBQQ__EvaluationOrder__c: 10, SBQQ__ConditionsMet__c: 'All', SBQQ__LookupObject__c: null, SBQQ__LookupProductField__c: null,
+          SBQQ__ErrorConditions__r: { records: [] }, SBQQ__Actions__r: { records: [] } },
+        { Id: 'prd2', Name: 'Sel Unordered', SBQQ__Active__c: true, SBQQ__Type__c: 'Selection', SBQQ__EvaluationOrder__c: null as unknown as number, SBQQ__ConditionsMet__c: 'All', SBQQ__LookupObject__c: null, SBQQ__LookupProductField__c: null,
+          SBQQ__ErrorConditions__r: { records: [] }, SBQQ__Actions__r: { records: [] } },
+      ];
+      const issues = await check.run(data);
+      expect(issues).toHaveLength(1);
+      expect(issues[0].check_id).toBe('LQ-005');
+      expect(issues[0].severity).toBe('info');
+      expect(issues[0].description).toContain('Sel Unordered');
+    });
+
+    it('DETECT: should flag all unordered selection rules when multiple exist', async () => {
+      const data = createCleanData();
+      data.productRules = [
+        { Id: 'prd1', Name: 'Sel A', SBQQ__Active__c: true, SBQQ__Type__c: 'Selection', SBQQ__EvaluationOrder__c: null as unknown as number, SBQQ__ConditionsMet__c: 'All', SBQQ__LookupObject__c: null, SBQQ__LookupProductField__c: null,
+          SBQQ__ErrorConditions__r: { records: [] }, SBQQ__Actions__r: { records: [] } },
+        { Id: 'prd2', Name: 'Sel B', SBQQ__Active__c: true, SBQQ__Type__c: 'Selection', SBQQ__EvaluationOrder__c: null as unknown as number, SBQQ__ConditionsMet__c: 'All', SBQQ__LookupObject__c: null, SBQQ__LookupProductField__c: null,
+          SBQQ__ErrorConditions__r: { records: [] }, SBQQ__Actions__r: { records: [] } },
+        { Id: 'prd3', Name: 'Sel C', SBQQ__Active__c: true, SBQQ__Type__c: 'Selection', SBQQ__EvaluationOrder__c: 10, SBQQ__ConditionsMet__c: 'All', SBQQ__LookupObject__c: null, SBQQ__LookupProductField__c: null,
+          SBQQ__ErrorConditions__r: { records: [] }, SBQQ__Actions__r: { records: [] } },
+      ];
+      const issues = await check.run(data);
+      expect(issues).toHaveLength(2);
+      expect(issues.every((i) => i.check_id === 'LQ-005')).toBe(true);
+    });
+  });
 });

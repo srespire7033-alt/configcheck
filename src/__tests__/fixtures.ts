@@ -268,12 +268,109 @@ export function createProblematicData(): CPQData {
     { Id: 'cp_orphan', Name: 'Orphaned CP', SBQQ__Account__c: 'acc1', SBQQ__Account__r: { Name: 'Acme' }, SBQQ__Product__c: 'p_deleted', SBQQ__Product__r: { Name: 'Deleted Product', IsActive: false }, SBQQ__Price__c: 100, SBQQ__EffectiveDate__c: '2025-01-01', SBQQ__ExpirationDate__c: '2027-01-01', SBQQ__OriginalQuoteLine__c: null },
   ];
 
+  // ── Bundle Integrity issues ──
+  // BN-001: Empty bundle (ConfigurationType set but no product options)
+  const emptyBundle = {
+    Id: 'p_empty_bundle', Name: 'Empty Bundle', ProductCode: 'EB-1', IsActive: true,
+    SBQQ__SubscriptionType__c: null, SBQQ__SubscriptionPricing__c: null,
+    SBQQ__ChargeType__c: 'One-Time', SBQQ__BillingFrequency__c: null,
+    SBQQ__PricingMethod__c: 'List', SBQQ__ConfigurationType__c: 'Allowed',
+  };
+  // BN-002: Option with min > max quantity
+  const bundleParent = {
+    Id: 'p_bundle_parent', Name: 'Bundle Parent', ProductCode: 'BP-1', IsActive: true,
+    SBQQ__SubscriptionType__c: null, SBQQ__SubscriptionPricing__c: null,
+    SBQQ__ChargeType__c: 'One-Time', SBQQ__BillingFrequency__c: null,
+    SBQQ__PricingMethod__c: 'List', SBQQ__ConfigurationType__c: 'Allowed',
+  };
+  const badMinMaxOption = {
+    Id: 'po_bad_minmax', Name: 'Bad MinMax Option', SBQQ__ConfiguredSKU__c: 'p_bundle_parent',
+    SBQQ__OptionalSKU__c: 'p_quoted_0',
+    SBQQ__ConfiguredSKU__r: { Name: 'Bundle Parent', IsActive: true },
+    SBQQ__OptionalSKU__r: { Name: 'Quoted Product 0', IsActive: true },
+    SBQQ__Required__c: false, SBQQ__MinQuantity__c: 10, SBQQ__MaxQuantity__c: 5,
+    SBQQ__Number__c: 1, SBQQ__Feature__c: null, SBQQ__Feature__r: null,
+  };
+  // BN-004: Required option pointing to product without PBE
+  const noPbeProduct = {
+    Id: 'p_no_pbe', Name: 'No PBE Product', ProductCode: 'NOPBE-1', IsActive: true,
+    SBQQ__SubscriptionType__c: null, SBQQ__SubscriptionPricing__c: null,
+    SBQQ__ChargeType__c: 'One-Time', SBQQ__BillingFrequency__c: null,
+    SBQQ__PricingMethod__c: 'List', SBQQ__ConfigurationType__c: null,
+  };
+  const requiredOptionNoPbe = {
+    Id: 'po_req_nopbe', Name: 'Required No PBE', SBQQ__ConfiguredSKU__c: 'p_bundle_parent',
+    SBQQ__OptionalSKU__c: 'p_no_pbe',
+    SBQQ__ConfiguredSKU__r: { Name: 'Bundle Parent', IsActive: true },
+    SBQQ__OptionalSKU__r: { Name: 'No PBE Product', IsActive: true },
+    SBQQ__Required__c: true, SBQQ__MinQuantity__c: 1, SBQQ__MaxQuantity__c: 5,
+    SBQQ__Number__c: 2, SBQQ__Feature__c: null, SBQQ__Feature__r: null,
+  };
+
+  // ── Lookup Query issues ──
+  // LQ-001: Price rule with LookupObject but no SourceLookupField on actions
+  const incompleteLookupRule = {
+    Id: 'pr_lookup_incomplete', Name: 'Incomplete Lookup Rule',
+    SBQQ__Active__c: true, SBQQ__EvaluationOrder__c: 999,
+    SBQQ__TargetObject__c: 'Quote Line', SBQQ__LookupObject__c: 'Custom_Rate__c',
+    SBQQ__PriceConditions__r: { records: [{ Id: 'pc_lq1', SBQQ__Field__c: 'SBQQ__ProductCode__c', SBQQ__Operator__c: 'equals', SBQQ__Value__c: 'X', SBQQ__Object__c: 'Quote Line' }] },
+    SBQQ__PriceActions__r: { records: [{ Id: 'pa_lq1', SBQQ__Field__c: 'SBQQ__UnitPrice__c', SBQQ__Value__c: '100', SBQQ__Formula__c: null, SBQQ__SourceLookupField__c: null }] },
+  };
+  // LQ-002: Action has SourceLookupField but rule has no LookupObject
+  const orphanedLookupRule = {
+    Id: 'pr_lookup_orphan', Name: 'Orphaned Lookup Ref',
+    SBQQ__Active__c: true, SBQQ__EvaluationOrder__c: 998,
+    SBQQ__TargetObject__c: 'Quote Line', SBQQ__LookupObject__c: null,
+    SBQQ__PriceConditions__r: { records: [{ Id: 'pc_lq2', SBQQ__Field__c: 'SBQQ__Quantity__c', SBQQ__Operator__c: 'greater than', SBQQ__Value__c: '1', SBQQ__Object__c: 'Quote Line' }] },
+    SBQQ__PriceActions__r: { records: [{ Id: 'pa_lq2', SBQQ__Field__c: 'SBQQ__UnitPrice__c', SBQQ__Value__c: null, SBQQ__Formula__c: null, SBQQ__SourceLookupField__c: 'Rate__c' }] },
+  };
+  // BN-005: Bundle with 5+ options, none grouped into features
+  const bigBundle = {
+    Id: 'p_big_bundle', Name: 'Big Bundle', ProductCode: 'BB-1', IsActive: true,
+    SBQQ__SubscriptionType__c: null, SBQQ__SubscriptionPricing__c: null,
+    SBQQ__ChargeType__c: 'One-Time', SBQQ__BillingFrequency__c: null,
+    SBQQ__PricingMethod__c: 'List', SBQQ__ConfigurationType__c: 'Allowed',
+  };
+  const bigBundleOptions = Array.from({ length: 6 }, (_, i) => ({
+    Id: `po_big_${i}`, Name: `Big Opt ${i}`, SBQQ__ConfiguredSKU__c: 'p_big_bundle',
+    SBQQ__OptionalSKU__c: `p_quoted_${i}`,
+    SBQQ__ConfiguredSKU__r: { Name: 'Big Bundle', IsActive: true },
+    SBQQ__OptionalSKU__r: { Name: `Quoted Product ${i}`, IsActive: true },
+    SBQQ__Required__c: false, SBQQ__MinQuantity__c: 1, SBQQ__MaxQuantity__c: 10,
+    SBQQ__Number__c: i + 1, SBQQ__Feature__c: null, SBQQ__Feature__r: null,
+  }));
+
+  // LQ-003: Selection rule with Add action but no product and no lookup
+  const selectionRuleMissingProduct = {
+    Id: 'prd_sel_missing', Name: 'Selection No Product',
+    SBQQ__Active__c: true, SBQQ__Type__c: 'Selection', SBQQ__EvaluationOrder__c: 999,
+    SBQQ__ConditionsMet__c: 'All', SBQQ__LookupObject__c: null, SBQQ__LookupProductField__c: null,
+    SBQQ__ErrorConditions__r: { records: [{ Id: 'ec_sel1', SBQQ__TestedField__c: 'SBQQ__Quantity__c', SBQQ__Operator__c: 'greater than', SBQQ__FilterValue__c: '0' }] },
+    SBQQ__Actions__r: { records: [{ Id: 'act_sel1', SBQQ__Type__c: 'Add', SBQQ__Product__r: null }] },
+  };
+  // LQ-004: Selection rule targeting inactive product
+  const selectionRuleInactiveProduct = {
+    Id: 'prd_sel_inactive', Name: 'Selection Inactive Product',
+    SBQQ__Active__c: true, SBQQ__Type__c: 'Selection', SBQQ__EvaluationOrder__c: 998,
+    SBQQ__ConditionsMet__c: 'All', SBQQ__LookupObject__c: null, SBQQ__LookupProductField__c: null,
+    SBQQ__ErrorConditions__r: { records: [{ Id: 'ec_sel2', SBQQ__TestedField__c: 'SBQQ__Quantity__c', SBQQ__Operator__c: 'greater than', SBQQ__FilterValue__c: '0' }] },
+    SBQQ__Actions__r: { records: [{ Id: 'act_sel2', SBQQ__Type__c: 'Add', SBQQ__Product__c: 'p_inactive_target', SBQQ__Product__r: { Name: 'Dead Product', IsActive: false } }] },
+  };
+  // LQ-005: Selection rule without evaluation order (needs 2+ selection rules to trigger)
+  const selectionRuleNoOrder = {
+    Id: 'prd_sel_no_order', Name: 'Selection No Order',
+    SBQQ__Active__c: true, SBQQ__Type__c: 'Selection', SBQQ__EvaluationOrder__c: null as unknown as number,
+    SBQQ__ConditionsMet__c: 'All', SBQQ__LookupObject__c: null, SBQQ__LookupProductField__c: null,
+    SBQQ__ErrorConditions__r: { records: [{ Id: 'ec_sel3', SBQQ__TestedField__c: 'SBQQ__Quantity__c', SBQQ__Operator__c: 'greater than', SBQQ__FilterValue__c: '0' }] },
+    SBQQ__Actions__r: { records: [{ Id: 'act_sel3', SBQQ__Type__c: 'Add', SBQQ__Product__c: 'p_quoted_0', SBQQ__Product__r: { Name: 'Quoted Product 0', IsActive: true } }] },
+  };
+
   return {
-    priceRules: [...manyPriceRules, ...inactivePriceRules],
+    priceRules: [...manyPriceRules, ...inactivePriceRules, incompleteLookupRule, orphanedLookupRule],
     discountSchedules,
-    products: [...quotedProducts, ...unquotedProducts, mdqProduct, potProduct, costProduct, recurringProduct],
-    productOptions: [],
-    productRules: [...manyProductRules, ...inactiveProductRules],
+    products: [...quotedProducts, ...unquotedProducts, mdqProduct, potProduct, costProduct, recurringProduct, emptyBundle, bundleParent, noPbeProduct, bigBundle],
+    productOptions: [badMinMaxOption, requiredOptionNoPbe, ...bigBundleOptions],
+    productRules: [...manyProductRules, ...inactiveProductRules, selectionRuleMissingProduct, selectionRuleInactiveProduct, selectionRuleNoOrder],
     summaryVariables,
     approvalRules,
     customScripts,

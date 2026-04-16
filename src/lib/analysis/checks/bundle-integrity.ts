@@ -189,4 +189,45 @@ export const bundleIntegrityChecks: HealthCheck[] = [
       return issues;
     },
   },
+
+  // BN-005: Bundle Options Without Feature Grouping
+  {
+    id: 'BN-005',
+    name: 'Bundle Options Without Feature Grouping',
+    category: 'bundles',
+    severity: 'info',
+    description: 'Bundles with 5+ options that lack feature grouping for better UX',
+    run: async (data: CPQData): Promise<Issue[]> => {
+      const issues: Issue[] = [];
+
+      // Group options by parent bundle
+      const optionsByBundle: Record<string, typeof data.productOptions> = {};
+      for (const opt of data.productOptions) {
+        const parentId = opt.SBQQ__ConfiguredSKU__c;
+        if (!optionsByBundle[parentId]) optionsByBundle[parentId] = [];
+        optionsByBundle[parentId].push(opt);
+      }
+
+      for (const [bundleId, options] of Object.entries(optionsByBundle)) {
+        if (options.length < 5) continue;
+
+        const ungrouped = options.filter((o) => !o.SBQQ__Feature__c);
+        if (ungrouped.length === options.length) {
+          const parentName = options[0]?.SBQQ__ConfiguredSKU__r?.Name || bundleId;
+          issues.push({
+            check_id: 'BN-005',
+            category: 'bundles',
+            severity: 'info',
+            title: `Bundle "${parentName}" has ${options.length} options without feature grouping`,
+            description: `"${parentName}" has ${options.length} product options but none are organized into features. Feature grouping improves the configurator UX by organizing options into collapsible sections.`,
+            impact: 'Sales reps see a flat list of options which makes large bundles hard to navigate.',
+            recommendation: `Create Features on the product "${parentName}" and assign each option to a feature for better organization.`,
+            affected_records: [{ id: bundleId, name: parentName, type: 'Product2' }],
+          });
+        }
+      }
+
+      return issues;
+    },
+  },
 ];

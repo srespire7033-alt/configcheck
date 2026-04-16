@@ -167,4 +167,40 @@ export const lookupQueryChecks: HealthCheck[] = [
       return issues;
     },
   },
+
+  // LQ-005: Selection Rules Without Evaluation Order
+  {
+    id: 'LQ-005',
+    name: 'Selection Rules Without Evaluation Order',
+    category: 'lookup_queries',
+    severity: 'info',
+    description: 'Active selection rules without an explicit evaluation order — may execute unpredictably',
+    run: async (data: CPQData): Promise<Issue[]> => {
+      const issues: Issue[] = [];
+
+      const selectionRules = data.productRules.filter(
+        (r) => r.SBQQ__Active__c && r.SBQQ__Type__c === 'Selection'
+      );
+
+      // Only flag if there are 2+ selection rules (ordering doesn't matter with 1)
+      if (selectionRules.length < 2) return issues;
+
+      for (const rule of selectionRules) {
+        if (rule.SBQQ__EvaluationOrder__c == null) {
+          issues.push({
+            check_id: 'LQ-005',
+            category: 'lookup_queries',
+            severity: 'info',
+            title: `Selection rule "${rule.Name}" has no evaluation order`,
+            description: `"${rule.Name}" is an active selection rule without an explicit evaluation order. When multiple selection rules exist, the execution order becomes unpredictable without explicit ordering.`,
+            impact: 'Selection rules may fire in unexpected order, causing inconsistent product auto-selection behavior.',
+            recommendation: `Set an Evaluation Order on "${rule.Name}" to control when it fires relative to other selection rules.`,
+            affected_records: [{ id: rule.Id, name: rule.Name, type: 'SBQQ__ProductRule__c' }],
+          });
+        }
+      }
+
+      return issues;
+    },
+  },
 ];
