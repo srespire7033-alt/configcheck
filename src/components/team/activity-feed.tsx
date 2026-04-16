@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Users, Scan, Cloud, FileText, Shield, UserPlus, UserMinus, LogOut } from 'lucide-react';
+import { formatTimeAgo } from '@/lib/utils';
 
 interface ActivityItem {
   id: string;
@@ -48,21 +49,6 @@ function formatActionText(action: string, details: Record<string, string> | null
     default:
       return action.replace(/_/g, ' ');
   }
-}
-
-function relativeTime(dateStr: string): string {
-  const date = new Date(dateStr);
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffMins = Math.floor(diffMs / 60000);
-  if (diffMins < 1) return 'Just now';
-  if (diffMins < 60) return `${diffMins}m ago`;
-  const diffHours = Math.floor(diffMins / 60);
-  if (diffHours < 24) return `${diffHours}h ago`;
-  const diffDays = Math.floor(diffHours / 24);
-  if (diffDays < 7) return `${diffDays}d ago`;
-  if (diffDays < 30) return `${Math.floor(diffDays / 7)}w ago`;
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -143,7 +129,7 @@ export function ActivityFeed({ teamId }: ActivityFeedProps) {
                   {formatActionText(activity.action, activity.details)}
                 </p>
                 <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-                  {relativeTime(activity.created_at)}
+                  {formatTimeAgo(activity.created_at)}
                 </p>
               </div>
             </div>

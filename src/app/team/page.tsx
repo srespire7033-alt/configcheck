@@ -85,6 +85,10 @@ export default function TeamPage() {
 
   useEffect(() => {
     loadData();
+
+    const refetchOnFocus = () => loadData();
+    window.addEventListener('focus', refetchOnFocus);
+    return () => window.removeEventListener('focus', refetchOnFocus);
   }, []);
 
   async function revokeInvitation(invitationId: string) {

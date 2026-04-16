@@ -67,6 +67,10 @@ export default function CompareOrgsPage() {
       }
     }
     fetchOrgs();
+
+    const refetchOnFocus = () => { fetchOrgs(); };
+    window.addEventListener('focus', refetchOnFocus);
+    return () => window.removeEventListener('focus', refetchOnFocus);
   }, []);
 
   async function handleCompare() {

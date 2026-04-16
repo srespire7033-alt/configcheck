@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { formatTimeAgo } from '@/lib/utils';
 import {
   Users,
   Building2,
@@ -61,18 +62,6 @@ const PLAN_STYLES: Record<string, string> = {
   practice: 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400',
   partner: 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-400',
 };
-
-function timeAgo(dateStr: string): string {
-  const now = Date.now();
-  const then = new Date(dateStr).getTime();
-  const diff = Math.floor((now - then) / 1000);
-
-  if (diff < 60) return 'just now';
-  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-  if (diff < 604800) return `${Math.floor(diff / 86400)}d ago`;
-  return new Date(dateStr).toLocaleDateString();
-}
 
 export default function AdminPage() {
   const router = useRouter();
@@ -240,7 +229,7 @@ export default function AdminPage() {
                       <span className="text-gray-400 mx-2">by</span>
                       <span className="text-sm text-gray-700 dark:text-gray-300">{event.user_email}</span>
                     </div>
-                    <span className="text-xs text-gray-400 whitespace-nowrap">{timeAgo(event.created_at)}</span>
+                    <span className="text-xs text-gray-400 whitespace-nowrap">{formatTimeAgo(event.created_at)}</span>
                   </div>
                 );
               })}

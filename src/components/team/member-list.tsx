@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Shield, ShieldCheck, Eye, MoreVertical, UserMinus, ArrowUpDown } from 'lucide-react';
+import { formatTimeAgo } from '@/lib/utils';
 
 interface Member {
   id: string;
@@ -32,19 +33,6 @@ function getInitials(name: string): string {
     .join('')
     .toUpperCase()
     .slice(0, 2);
-}
-
-function timeAgo(dateStr: string): string {
-  const date = new Date(dateStr);
-  const now = new Date();
-  const diff = now.getTime() - date.getTime();
-  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-  if (days === 0) return 'Today';
-  if (days === 1) return 'Yesterday';
-  if (days < 30) return `${days}d ago`;
-  const months = Math.floor(days / 30);
-  if (months < 12) return `${months}mo ago`;
-  return `${Math.floor(months / 12)}y ago`;
 }
 
 export function MemberList({ members, currentUserId, currentUserRole, teamId, onMemberUpdated }: MemberListProps) {
@@ -173,7 +161,7 @@ export function MemberList({ members, currentUserId, currentUserRole, teamId, on
 
             {/* Joined */}
             <span className="text-xs text-gray-400 dark:text-gray-500 hidden sm:block w-16 text-right">
-              {timeAgo(member.joined_at)}
+              {formatTimeAgo(member.joined_at)}
             </span>
 
             {/* Action menu */}

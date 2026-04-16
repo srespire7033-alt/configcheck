@@ -250,8 +250,9 @@ export default function SettingsPage() {
       });
       setSavedAccount(true);
       setTimeout(() => setSavedAccount(false), 3000);
-    } catch { /* ignore */ }
-    finally { setSavingAccount(false); }
+    } catch {
+      alert('Failed to save account settings. Please try again.');
+    } finally { setSavingAccount(false); }
   }
 
   async function saveBranding() {
@@ -264,8 +265,9 @@ export default function SettingsPage() {
       });
       setSavedBranding(true);
       setTimeout(() => setSavedBranding(false), 3000);
-    } catch { /* ignore */ }
-    finally { setSavingBranding(false); }
+    } catch {
+      alert('Failed to save branding settings. Please try again.');
+    } finally { setSavingBranding(false); }
   }
 
   async function handleExportData() {

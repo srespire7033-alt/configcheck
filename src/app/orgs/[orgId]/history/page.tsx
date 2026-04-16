@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, TrendingUp, TrendingDown, Minus, Trophy, AlertTriangle, BarChart3, Clock, CheckCircle2, XCircle, GitCompare, ChevronUp, ChevronDown } from 'lucide-react';
 import { ResponsiveContainer, AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
-import { getCategoryLabel, getScoreColor, getProductTypeLabel } from '@/lib/utils';
+import { getCategoryLabel, getScoreColor, getProductTypeLabel, formatTimeAgo } from '@/lib/utils';
 import { LoadingScreen } from '@/components/ui/loading-screen';
 import { Badge } from '@/components/ui/badge';
 import type { DBScan, DBOrganization } from '@/types';
@@ -17,20 +17,6 @@ function formatDuration(ms: number | null): string {
   const mins = Math.floor(ms / 60000);
   const secs = Math.round((ms % 60000) / 1000);
   return `${mins}m ${secs}s`;
-}
-
-function timeAgo(dateStr: string): string {
-  const now = new Date();
-  const date = new Date(dateStr);
-  const diffMs = now.getTime() - date.getTime();
-  const diffMins = Math.floor(diffMs / 60000);
-  if (diffMins < 1) return 'just now';
-  if (diffMins < 60) return `${diffMins}m ago`;
-  const diffHours = Math.floor(diffMins / 60);
-  if (diffHours < 24) return `${diffHours}h ago`;
-  const diffDays = Math.floor(diffHours / 24);
-  if (diffDays < 30) return `${diffDays}d ago`;
-  return date.toLocaleDateString();
 }
 
 function formatDate(dateStr: string): string {
@@ -605,7 +591,7 @@ export default function ScanHistoryPage() {
                               {scan.completed_at ? formatFullDate(scan.completed_at) : formatFullDate(scan.created_at)}
                             </p>
                             <p className="text-xs text-gray-400 mt-0.5">
-                              {scan.completed_at ? timeAgo(scan.completed_at) : timeAgo(scan.created_at)}
+                              {scan.completed_at ? formatTimeAgo(scan.completed_at) : formatTimeAgo(scan.created_at)}
                             </p>
                           </div>
                         </td>
