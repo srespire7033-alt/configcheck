@@ -23,17 +23,22 @@ function DashboardContent() {
   const successMsg = searchParams.get('success');
   const errorMsg = searchParams.get('error');
 
-  // Refetch orgs on mount AND when page becomes visible again
+  // Refetch orgs on mount AND when page becomes visible/focused again
   // (Next.js client-side router cache can serve stale data on back-navigation)
   useEffect(() => {
     fetchOrgs();
     fetchUserData();
 
-    const refetch = () => {
+    const refetchOnVisible = () => {
       if (document.visibilityState === 'visible') fetchOrgs();
     };
-    document.addEventListener('visibilitychange', refetch);
-    return () => document.removeEventListener('visibilitychange', refetch);
+    const refetchOnFocus = () => fetchOrgs();
+    document.addEventListener('visibilitychange', refetchOnVisible);
+    window.addEventListener('focus', refetchOnFocus);
+    return () => {
+      document.removeEventListener('visibilitychange', refetchOnVisible);
+      window.removeEventListener('focus', refetchOnFocus);
+    };
   }, []);
 
   async function fetchUserData() {
@@ -124,10 +129,11 @@ function DashboardContent() {
         if (scan.status === 'completed' || scan.status === 'failed') {
           clearInterval(interval);
           setScanningOrg(null);
+          // Refresh org data first so dashboard has fresh state when user navigates back
+          await fetchOrgs();
           if (scan.status === 'completed') {
             router.push(`/orgs/${orgId}`);
           }
-          fetchOrgs();
         }
       }, 3000);
     } catch (error) {
