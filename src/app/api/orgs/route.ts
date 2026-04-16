@@ -43,8 +43,10 @@ export async function GET(request: NextRequest) {
     .order('created_at', { ascending: false });
 
   if (error) {
+    console.error('Orgs fetch error:', error);
     return NextResponse.json({ error: 'Failed to fetch organizations' }, { status: 500 });
   }
+  console.log('Orgs fetched for user', user.id, ':', (data || []).map(o => ({ id: o.id, name: o.name })));
 
   // Fetch latest scan completed_at for each org (single query, bulletproof timestamp source)
   const orgIds = (data || []).map((o) => o.id);
