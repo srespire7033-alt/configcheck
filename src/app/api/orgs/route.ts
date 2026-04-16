@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
   // List all orgs for the authenticated user
   const { data, error } = await supabase
     .from('organizations')
-    .select('id, name, is_sandbox, connection_status, last_scan_score, last_scan_at, cpq_package_version, installed_packages')
+    .select('id, name, is_sandbox, connection_status, last_scan_score, last_scan_at, cpq_package_version, installed_packages', { count: 'exact' })
     .eq('user_id', user.id)
     .order('created_at', { ascending: false });
 
