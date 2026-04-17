@@ -3,7 +3,11 @@ import { NextResponse, type NextRequest } from 'next/server';
 
 export async function middleware(request: NextRequest) {
   // Skip auth check for public routes
-  if (request.nextUrl.pathname === '/' || request.nextUrl.pathname.startsWith('/api/salesforce/callback')) {
+  if (
+    request.nextUrl.pathname === '/' ||
+    request.nextUrl.pathname.startsWith('/api/salesforce/callback') ||
+    request.nextUrl.pathname.startsWith('/auth/callback')
+  ) {
     return NextResponse.next({ request });
   }
 

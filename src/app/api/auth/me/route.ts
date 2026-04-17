@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/db/client';
 import { getAuthUser } from '@/lib/auth/get-user';
-import { sendWelcomeEmail } from '@/lib/email/notifications';
 import { rateLimit, rateLimitResponse } from '@/lib/rate-limit';
 
 export const dynamic = 'force-dynamic';
@@ -89,13 +88,6 @@ export async function PUT(request: NextRequest) {
 
     if (error) {
       return NextResponse.json({ error: 'Failed to update profile' }, { status: 500 });
-    }
-
-    // Send welcome email when onboarding is completed
-    if (updates.onboarding_completed === true) {
-      sendWelcomeEmail(user.id).catch((err) =>
-        console.error('[AUTH] Welcome email error:', err)
-      );
     }
 
     return NextResponse.json({ success: true });
