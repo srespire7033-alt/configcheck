@@ -239,8 +239,8 @@ export default function LandingPage() {
               },
               {
                 icon: Zap,
-                title: '102 Automated Health Checks',
-                desc: 'Price rules, discount schedules, products, approval rules, QCP scripts, billing rules, and 20 more categories scanned automatically.',
+                title: '176 Automated Health Checks',
+                desc: 'Price rules, discount schedules, products, approval rules, QCP scripts, billing rules, ARM selling models, bundles, rate cards, contracts &mdash; 41 categories scanned automatically.',
                 color: 'amber',
               },
               {
@@ -562,7 +562,7 @@ export default function LandingPage() {
                 href="/login"
                 className="block text-center w-full py-2.5 text-sm font-semibold rounded-xl border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
               >
-                Get Started
+                Connect a sandbox
               </Link>
             </div>
 
@@ -586,7 +586,7 @@ export default function LandingPage() {
                 href="/login"
                 className="block text-center w-full py-2.5 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition-colors shadow-sm shadow-blue-600/30"
               >
-                Start Free Trial
+                Connect a sandbox
               </Link>
             </div>
 
@@ -617,7 +617,73 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ═══ CTA ═══ */}
+      {/* ═══ FAQ (Task #9) ═══
+          Accordion-style FAQ addresses common buyer objections that
+          weren't handled anywhere on the page. Uses native
+          <details>/<summary> for accessibility and zero-JS expansion. */}
+      <section id="faq" className="py-24 bg-gray-50/50 dark:bg-gray-900/30">
+        <div className="max-w-3xl mx-auto px-6">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">Frequently asked questions</h2>
+            <p className="text-gray-600 dark:text-gray-400">
+              Common questions from consultants evaluating ConfigCheck.
+            </p>
+          </div>
+          <div className="space-y-3">
+            {[
+              {
+                q: 'Is my Salesforce data stored?',
+                a: 'No. ConfigCheck reads metadata via OAuth at scan time only. Scan results (issue summaries, severity, affected record IDs) are stored encrypted in our database. We don\'t replicate your Salesforce records.',
+              },
+              {
+                q: 'Do I need to install a managed package?',
+                a: 'No. ConfigCheck connects via standard OAuth and runs entirely against the Salesforce REST/SOAP APIs. Nothing is installed in your org.',
+              },
+              {
+                q: 'Which Salesforce editions are supported?',
+                a: 'Enterprise, Unlimited, and Developer editions with CPQ (SBQQ), Salesforce Billing (blng), and/or Revenue Cloud (RLM) features enabled.',
+              },
+              {
+                q: 'Can I run this on a client\'s org?',
+                a: 'Yes. The client grants OAuth access from their org — no admin elevation needed beyond the standard "Allow access" prompt. Read-only scope.',
+              },
+              {
+                q: 'What happens when the OAuth token expires?',
+                a: 'ConfigCheck auto-refreshes tokens for you. If the user revokes access, we mark the org\'s connection as expired and the next scan will prompt re-authentication.',
+              },
+              {
+                q: 'How is the AI fix suggestion generated?',
+                a: 'We send anonymised configuration patterns (no record-level data, no field values) to Google Gemini and use the response to draft a remediation suggestion. The raw record data never leaves your tenant.',
+              },
+              {
+                q: 'Can I export findings to Jira / Asana / CSV?',
+                a: 'PDF and CSV export are available today. Jira and Asana integrations are on the roadmap — not shipped yet.',
+              },
+              {
+                q: 'What\'s the cancellation policy?',
+                a: 'Cancel any time from your account settings. Charges are prorated to the day of cancellation.',
+              },
+            ].map((item, i) => (
+              <details
+                key={i}
+                className="group bg-white dark:bg-gray-900/50 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden"
+              >
+                <summary className="flex items-center justify-between gap-4 px-6 py-4 cursor-pointer list-none font-semibold text-gray-900 dark:text-white">
+                  <span>{item.q}</span>
+                  <span className="text-gray-400 group-open:rotate-180 transition-transform">&#x25BE;</span>
+                </summary>
+                <div className="px-6 pb-5 text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+                  {item.a}
+                </div>
+              </details>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ═══ FINAL CTA (Task #11) ═══
+          CTAs standardized to "Connect a sandbox" + "View sample report"
+          across every position on the page. */}
       <section className="py-24">
         <div className="max-w-4xl mx-auto px-6">
           <div className="bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 rounded-3xl p-12 md:p-16 text-center text-white relative overflow-hidden">
@@ -626,39 +692,98 @@ export default function LandingPage() {
               <div className="absolute bottom-10 right-10 w-80 h-80 bg-blue-300 rounded-full blur-3xl" />
             </div>
             <div className="relative z-10">
-              <h2 className="text-3xl md:text-4xl font-bold mb-4">Ready to Audit Your First Revenue Cloud Org?</h2>
+              <h2 className="text-3xl md:text-4xl font-bold mb-4">Ready to audit your first Revenue Cloud org?</h2>
               <p className="text-blue-100 text-lg mb-8 max-w-xl mx-auto">
-                Join Revenue Cloud consultants who deliver faster, more thorough audits with ConfigCheck.
+                Connect a sandbox in 60 seconds. 176 health checks. AI fix suggestions. White-label reports.
               </p>
-              <Link
-                href="/login"
-                className="inline-flex items-center gap-2 px-8 py-4 text-base font-semibold text-blue-700 bg-white hover:bg-blue-50 rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl hover:-translate-y-0.5"
-              >
-                Start Free Audit
-                <ArrowRight className="h-5 w-5" />
-              </Link>
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+                <Link
+                  href="/login"
+                  className="inline-flex items-center gap-2 px-8 py-4 text-base font-semibold text-blue-700 bg-white hover:bg-blue-50 rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl hover:-translate-y-0.5 w-full sm:w-auto justify-center"
+                >
+                  Connect a sandbox
+                  <ArrowRight className="h-5 w-5" />
+                </Link>
+                {/* TODO: replace with real PDF — generate one anonymized sample report and host at /sample-report.pdf */}
+                <a
+                  href="/sample-report.pdf"
+                  className="inline-flex items-center gap-2 px-8 py-4 text-base font-semibold text-white bg-white/10 hover:bg-white/20 rounded-xl transition-all duration-200 border border-white/20 w-full sm:w-auto justify-center"
+                >
+                  View sample report
+                </a>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* ═══ FOOTER ═══ */}
-      <footer className="border-t border-gray-200 dark:border-gray-800 py-12">
+      {/* ═══ FOOTER (Task #13) ═══
+          Expanded from 3 inline links to a 4-column information architecture.
+          Every link below routes to a page that resolves (TODO comments
+          mark stubs we still need to build). Copyright reframed per
+          Task #18 to remove the boilerplate-y "© 2026 ConfigCheck" line. */}
+      <footer className="border-t border-gray-200 dark:border-gray-800 py-16">
         <div className="max-w-7xl mx-auto px-6">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: '#5B9BF3' }}>
-                <ShieldCheck className="h-4 w-4 text-white" />
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-8 mb-12">
+            <div className="col-span-2 md:col-span-1">
+              <div className="flex items-center gap-2.5 mb-4">
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: '#5B9BF3' }}>
+                  <ShieldCheck className="h-4 w-4 text-white" />
+                </div>
+                <span className="text-base font-bold">ConfigCheck</span>
               </div>
-              <span className="text-base font-bold">ConfigCheck</span>
+              <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
+                AI-driven config audits for Salesforce Revenue Cloud.
+              </p>
             </div>
-            <div className="flex items-center gap-6 text-sm text-gray-500 dark:text-gray-400">
-              <a href="#features" className="hover:text-gray-900 dark:hover:text-white transition-colors">Features</a>
-              <a href="#pricing" className="hover:text-gray-900 dark:hover:text-white transition-colors">Pricing</a>
-              <Link href="/login" className="hover:text-gray-900 dark:hover:text-white transition-colors">Sign In</Link>
+            <div>
+              <div className="text-sm font-semibold mb-3">Product</div>
+              <ul className="space-y-2 text-sm text-gray-500 dark:text-gray-400">
+                <li><a href="#features" className="hover:text-gray-900 dark:hover:text-white transition-colors">Features</a></li>
+                <li><a href="#pricing" className="hover:text-gray-900 dark:hover:text-white transition-colors">Pricing</a></li>
+                {/* TODO: host real anonymised PDF */}
+                <li><a href="/sample-report.pdf" className="hover:text-gray-900 dark:hover:text-white transition-colors">Sample report</a></li>
+                {/* TODO: build /changelog page */}
+                <li><Link href="/changelog" className="hover:text-gray-900 dark:hover:text-white transition-colors">Changelog</Link></li>
+              </ul>
             </div>
+            <div>
+              <div className="text-sm font-semibold mb-3">Company</div>
+              <ul className="space-y-2 text-sm text-gray-500 dark:text-gray-400">
+                {/* TODO: build /about page */}
+                <li><Link href="/about" className="hover:text-gray-900 dark:hover:text-white transition-colors">About</Link></li>
+                {/* TODO: replace with real domain once configcheck.io is wired up */}
+                <li><a href="mailto:hello@configcheck.io" className="hover:text-gray-900 dark:hover:text-white transition-colors">Contact</a></li>
+                <li><a href="#faq" className="hover:text-gray-900 dark:hover:text-white transition-colors">FAQ</a></li>
+              </ul>
+            </div>
+            <div>
+              <div className="text-sm font-semibold mb-3">Legal</div>
+              <ul className="space-y-2 text-sm text-gray-500 dark:text-gray-400">
+                {/* TODO: build /privacy /terms /security /dpa pages — required for Salesforce OAuth review */}
+                <li><Link href="/privacy" className="hover:text-gray-900 dark:hover:text-white transition-colors">Privacy</Link></li>
+                <li><Link href="/terms" className="hover:text-gray-900 dark:hover:text-white transition-colors">Terms</Link></li>
+                <li><Link href="/security" className="hover:text-gray-900 dark:hover:text-white transition-colors">Security</Link></li>
+                <li><Link href="/dpa" className="hover:text-gray-900 dark:hover:text-white transition-colors">DPA</Link></li>
+              </ul>
+            </div>
+            <div>
+              <div className="text-sm font-semibold mb-3">Resources</div>
+              <ul className="space-y-2 text-sm text-gray-500 dark:text-gray-400">
+                {/* TODO: build /docs page */}
+                <li><Link href="/docs" className="hover:text-gray-900 dark:hover:text-white transition-colors">Documentation</Link></li>
+                {/* TODO: stand up real status page (UptimeRobot or similar) */}
+                <li><Link href="/status" className="hover:text-gray-900 dark:hover:text-white transition-colors">Status</Link></li>
+                <li><Link href="/login" className="hover:text-gray-900 dark:hover:text-white transition-colors">Sign in</Link></li>
+              </ul>
+            </div>
+          </div>
+          <div className="pt-8 border-t border-gray-200 dark:border-gray-800 flex flex-col md:flex-row items-center justify-between gap-4">
             <p className="text-sm text-gray-400 dark:text-gray-500">
-              &copy; 2026 ConfigCheck. Built for Salesforce Revenue Cloud consultants.
+              &copy; ConfigCheck. All rights reserved.
+            </p>
+            <p className="text-sm text-gray-400 dark:text-gray-500">
+              Launched 2026 in Vadodara, India.
             </p>
           </div>
         </div>
