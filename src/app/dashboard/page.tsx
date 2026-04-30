@@ -73,8 +73,24 @@ function DashboardContent() {
     try {
       const res = await fetch('/api/orgs', { cache: 'no-store' });
       if (res.ok) {
-        const data = await res.json();
+        const data: OrgCardData[] = await res.json();
         setOrgs(data);
+
+        // Backfill: any connected org with no detected packages gets a
+        // background detection run, so the next "Run Scan" click picks the
+        // right product type. Fire-and-forget — we don't block render on it.
+        for (const o of data) {
+          if (
+            (!o.installed_packages || o.installed_packages.length === 0) &&
+            (o.connection_status === 'connected' || !o.connection_status)
+          ) {
+            fetch('/api/orgs/detect-packages', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ organizationId: o.id }),
+            }).catch((err) => console.error('Background detection failed:', err));
+          }
+        }
         // After orgs are loaded, update org_connected and first_scan_run
         setChecklistProgress((prev) => {
           if (!prev || data.length === 0) return prev;
@@ -106,12 +122,39 @@ function DashboardContent() {
   async function handleScan(orgId: string) {
     setScanningOrg(orgId);
     try {
-      // Determine the best scan type from installed packages
+      // Determine the best scan type from installed packages.
+      // If packages haven't been detected yet (e.g. org connected before detection
+      // was wired in, or detection failed), trigger detection once now and use
+      // the fresh result.
       const org = orgs.find((o) => o.id === orgId);
-      const packages = org?.installed_packages || [];
+      let packages = org?.installed_packages || [];
+      if (packages.length === 0) {
+        try {
+          const detectRes = await fetch('/api/orgs/detect-packages', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ organizationId: orgId }),
+          });
+          if (detectRes.ok) {
+            const detectData = await detectRes.json();
+            packages = detectData.packages || [];
+          }
+        } catch (err) {
+          console.error('Package detection failed before scan:', err);
+        }
+      }
       const hasCPQ = packages.includes('cpq');
       const hasBilling = packages.includes('billing');
-      const productType = hasCPQ && hasBilling ? 'cpq_billing' : hasCPQ ? 'cpq' : 'cpq';
+      const hasARM = packages.includes('arm');
+      // Priority: CPQ+Billing > CPQ-only > ARM > fallback CPQ
+      // (ARM is lower priority because if both CPQ and ARM are present we
+      // assume CPQ is the primary configured product. Users wanting an ARM
+      // scan can pick it explicitly from the org detail page.)
+      let productType: 'cpq' | 'cpq_billing' | 'arm';
+      if (hasCPQ && hasBilling) productType = 'cpq_billing';
+      else if (hasCPQ) productType = 'cpq';
+      else if (hasARM) productType = 'arm';
+      else productType = 'cpq';
 
       const res = await fetch('/api/scans', {
         method: 'POST',

@@ -197,6 +197,34 @@ async function runScanInBackground(
       .eq('id', org.id as string);
     console.log(`[SCAN ${scanId}] Packages: ${installedPackages.join(', ') || 'none detected'}`);
 
+    // Guard: ARM scan support is not yet implemented. If the user explicitly
+    // requested an ARM scan, fail fast with a clear message rather than
+    // silently running CPQ checks (which would produce empty/misleading
+    // results on a Revenue Cloud org).
+    if (productType === 'arm') {
+      throw new Error(
+        'ARM (Revenue Cloud) scan support is coming soon. Your org has been detected; ' +
+        'please reach out at hello@configcheck.app if you want early access.'
+      );
+    }
+
+    // If the org has CPQ installed, ensure we still proceed with CPQ analysis
+    // even when ARM is also detected (the user's primary product is CPQ).
+    // If ONLY ARM is installed (no CPQ), fail with a clear message — running
+    // CPQ analysis would query SBQQ objects that don't exist.
+    if (!detected.cpq && detected.arm) {
+      throw new Error(
+        'This org has Revenue Cloud (ARM) but not Salesforce CPQ installed. ' +
+        'ARM scan support is coming soon — please reach out at hello@configcheck.app for early access.'
+      );
+    }
+    if (!detected.cpq && !detected.arm) {
+      throw new Error(
+        'No supported package detected in this org. ConfigCheck currently scans Salesforce CPQ ' +
+        '(SBQQ) and Salesforce Billing (blng). Please verify the package is installed and try reconnecting.'
+      );
+    }
+
     // Step 2: Fetch data based on product type
     console.log(`[SCAN ${scanId}] Fetching data (product_type: ${productType})...`);
     const fetchStart = Date.now();
