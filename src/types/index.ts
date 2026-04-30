@@ -145,7 +145,12 @@ export type ARMCategory =
   | 'arm_decision_tables'
   | 'arm_context_service'
   | 'arm_rate_cards'
-  | 'arm_attributes';
+  | 'arm_attributes'
+  | 'arm_assets'
+  | 'arm_contracts'
+  | 'arm_usage_management'
+  | 'arm_orchestration'
+  | 'arm_cost_books';
 
 export type IssueCategory = CPQCategory | BillingCategory | ARMCategory;
 
@@ -791,6 +796,125 @@ export interface RLMAttributePicklistValue {
   IsActive?: boolean | null;
 }
 
+// ─── v4: Assets ────────────────────────────────────────────────
+export interface RLMAsset {
+  Id: string;
+  Name: string;
+  Status?: string | null;
+  AccountId?: string | null;
+  Product2Id?: string | null;
+  Quantity?: number | null;
+  UsageEndDate?: string | null;
+  CurrentLifecycleEndDate?: string | null;
+}
+
+export interface RLMAssetStatePeriod {
+  Id: string;
+  AssetId: string;
+  StartDate?: string | null;
+  EndDate?: string | null;
+  Quantity?: number | null;
+  IsCurrent?: boolean | null;
+}
+
+export interface RLMAssetRelationship {
+  Id: string;
+  AssetId: string;
+  RelatedAssetId?: string | null;
+  RelationshipType?: string | null;
+}
+
+// ─── v4: Contracts ─────────────────────────────────────────────
+export interface RLMContract {
+  Id: string;
+  Status?: string | null;
+  StartDate?: string | null;
+  EndDate?: string | null;
+  AccountId?: string | null;
+}
+
+export interface RLMContractItemPrice {
+  Id: string;
+  ContractId?: string | null;
+  Product2Id?: string | null;
+  Price?: number | null;
+  EffectiveStartDate?: string | null;
+  EffectiveEndDate?: string | null;
+}
+
+// ─── v4: Usage Management ──────────────────────────────────────
+export interface RLMUnitOfMeasureClass {
+  Id: string;
+  Name?: string | null;
+  IsActive?: boolean | null;
+  DefaultUomId?: string | null;
+}
+
+export interface RLMUsageResource {
+  Id: string;
+  Name?: string | null;
+  Status?: string | null; // 'Draft' | 'Active' | 'Inactive'
+  UnitOfMeasureClassId?: string | null;
+  Product2Id?: string | null;
+  EffectiveEndDate?: string | null;
+}
+
+export interface RLMProductUsageGrant {
+  Id: string;
+  Name?: string | null;
+  Status?: string | null;
+  Product2Id?: string | null;
+  UsageResourceId?: string | null;
+  EffectiveStartDate?: string | null;
+  EffectiveEndDate?: string | null;
+}
+
+// ─── v4: Orchestration (DRO) ───────────────────────────────────
+export interface RLMFulfillmentStepDefinition {
+  Id: string;
+  Name?: string | null;
+  Status?: string | null;
+  FulfillmentStepDefinitionGroupId?: string | null;
+}
+
+export interface RLMFulfillmentStepDefinitionGroup {
+  Id: string;
+  Name?: string | null;
+  Status?: string | null;
+}
+
+export interface RLMProductFulfillmentScenario {
+  Id: string;
+  Name?: string | null;
+  Status?: string | null;
+}
+
+export interface RLMFulfillmentTaskAssignmentRule {
+  Id: string;
+  Name?: string | null;
+  Status?: string | null;
+  // Owner can be a User or a Queue (depends on the rule); we capture the raw lookup
+  AssignedToId?: string | null;
+  AssignedToType?: string | null;
+}
+
+// ─── v4: Cost Books ────────────────────────────────────────────
+export interface RLMCostBook {
+  Id: string;
+  Name: string;
+  IsActive?: boolean | null;
+  CurrencyIsoCode?: string | null;
+  IsStandard?: boolean | null;
+}
+
+export interface RLMCostBookEntry {
+  Id: string;
+  CostBookId: string;
+  Product2Id?: string | null;
+  Cost?: number | null;
+  CurrencyIsoCode?: string | null;
+}
+
 export interface ARMData {
   products: RLMProduct[];
   sellingModels: RLMProductSellingModel[];
@@ -811,6 +935,21 @@ export interface ARMData {
   attributeDefinitions: RLMAttributeDefinition[];
   attributeCategories: RLMAttributeCategory[];
   attributePicklistValues: RLMAttributePicklistValue[];
+  // v4 additions
+  assets: RLMAsset[];
+  assetStatePeriods: RLMAssetStatePeriod[];
+  assetRelationships: RLMAssetRelationship[];
+  contracts: RLMContract[];
+  contractItemPrices: RLMContractItemPrice[];
+  unitOfMeasureClasses: RLMUnitOfMeasureClass[];
+  usageResources: RLMUsageResource[];
+  productUsageGrants: RLMProductUsageGrant[];
+  fulfillmentStepDefinitions: RLMFulfillmentStepDefinition[];
+  fulfillmentStepDefinitionGroups: RLMFulfillmentStepDefinitionGroup[];
+  productFulfillmentScenarios: RLMProductFulfillmentScenario[];
+  fulfillmentTaskAssignmentRules: RLMFulfillmentTaskAssignmentRule[];
+  costBooks: RLMCostBook[];
+  costBookEntries: RLMCostBookEntry[];
 }
 
 // ============================================

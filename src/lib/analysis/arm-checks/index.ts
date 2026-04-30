@@ -1278,4 +1278,789 @@ export const armChecks: ARMHealthCheck[] = [
       ];
     },
   },
+
+  // ═════════════════════════════════════════════════════════════════
+  // ASSETS  (arm_assets) — 5 checks
+  // ═════════════════════════════════════════════════════════════════
+
+  // ARM-031: Active asset without any state period
+  {
+    id: 'ARM-031',
+    name: 'Active Asset Without State Period',
+    category: 'arm_assets',
+    severity: 'warning',
+    description:
+      'Assets in an active status but with no AssetStatePeriod history',
+    run: async (data: ARMData): Promise<Issue[]> => {
+      const periodsByAsset = new Set(data.assetStatePeriods.map((p) => p.AssetId));
+      const offenders = data.assets.filter((a) => {
+        const status = (a.Status || '').toLowerCase();
+        if (status !== 'active' && status !== 'shipped' && status !== 'installed') {
+          return false;
+        }
+        return !periodsByAsset.has(a.Id);
+      });
+      if (offenders.length === 0) return [];
+      return [
+        {
+          check_id: 'ARM-031',
+          category: 'arm_assets',
+          severity: 'warning',
+          title: `${offenders.length} active asset(s) without state period history`,
+          description: `${offenders.length} active Asset record(s) have no AssetStatePeriod row. Without state history the lifecycle dashboard, MRR, and current quantity fields will show zero or empty values.`,
+          impact:
+            'Reporting and renewals on these assets will be inaccurate.',
+          recommendation:
+            'Generate the missing AssetStatePeriod records via the standard asset action flow, or via the Customer Asset Lifecycle Management API.',
+          affected_records: offenders.slice(0, 25).map((a) => ({
+            id: a.Id,
+            name: a.Name,
+            type: 'Asset',
+          })),
+        },
+      ];
+    },
+  },
+
+  // ARM-032: Asset with end date in the past but still active
+  {
+    id: 'ARM-032',
+    name: 'Asset Past End Date Still Active',
+    category: 'arm_assets',
+    severity: 'info',
+    description:
+      'Asset with CurrentLifecycleEndDate in the past but Status=Active',
+    run: async (data: ARMData): Promise<Issue[]> => {
+      const todayIso = new Date().toISOString().slice(0, 10);
+      const offenders = data.assets.filter((a) => {
+        const status = (a.Status || '').toLowerCase();
+        if (status !== 'active') return false;
+        if (!a.CurrentLifecycleEndDate) return false;
+        return a.CurrentLifecycleEndDate < todayIso;
+      });
+      if (offenders.length === 0) return [];
+      return [
+        {
+          check_id: 'ARM-032',
+          category: 'arm_assets',
+          severity: 'info',
+          title: `${offenders.length} asset(s) past their end date`,
+          description: `${offenders.length} active Asset record(s) have a CurrentLifecycleEndDate in the past. They should typically have transitioned to Cancelled, Expired, or similar.`,
+          impact:
+            'MRR and active counts may be inflated. Renewal opportunities may be missed if the asset is silently abandoned.',
+          recommendation:
+            'Run an asset action to transition them to the correct end-of-life state, or extend the end date if they are still in use.',
+          affected_records: offenders.slice(0, 25).map((a) => ({
+            id: a.Id,
+            name: `${a.Name} (ended ${a.CurrentLifecycleEndDate})`,
+            type: 'Asset',
+          })),
+        },
+      ];
+    },
+  },
+
+  // ARM-033: Asset relationship pointing to a missing/inactive related asset
+  {
+    id: 'ARM-033',
+    name: 'Orphan Asset Relationship',
+    category: 'arm_assets',
+    severity: 'warning',
+    description:
+      'AssetRelationship rows whose RelatedAssetId points to an asset that is missing or inactive',
+    run: async (data: ARMData): Promise<Issue[]> => {
+      const assetById: Record<string, RLMAsset | undefined> = {};
+      for (const a of data.assets) assetById[a.Id] = a;
+      const offenders = data.assetRelationships.filter((r) => {
+        if (!r.RelatedAssetId) return true; // null pointer
+        const target = assetById[r.RelatedAssetId];
+        if (!target) return true; // related asset not in result set
+        const status = (target.Status || '').toLowerCase();
+        return status === 'cancelled' || status === 'expired';
+      });
+      if (offenders.length === 0) return [];
+      return [
+        {
+          check_id: 'ARM-033',
+          category: 'arm_assets',
+          severity: 'warning',
+          title: `${offenders.length} asset relationship(s) point at missing or expired assets`,
+          description: `${offenders.length} AssetRelationship record(s) reference a related asset that is missing, cancelled, or expired. Hierarchy reports and amendment flows that walk the relationship tree will hit dead ends.`,
+          impact:
+            'Lifecycle queries and amendment flows produce incomplete data; some renewals may be hidden.',
+          recommendation:
+            'Either delete the stale AssetRelationship row, or repoint it at the active replacement asset.',
+          affected_records: offenders.slice(0, 25).map((r) => ({
+            id: r.Id,
+            name: `${r.AssetId} → ${r.RelatedAssetId || 'NULL'} (${r.RelationshipType || 'Unknown'})`,
+            type: 'AssetRelationship',
+          })),
+        },
+      ];
+    },
+  },
+
+  // ARM-034: Multiple "current" state periods on same asset (data integrity)
+  {
+    id: 'ARM-034',
+    name: 'Multiple Current Asset State Periods',
+    category: 'arm_assets',
+    severity: 'critical',
+    description:
+      'Asset has more than one AssetStatePeriod flagged IsCurrent=true (only one should be current)',
+    run: async (data: ARMData): Promise<Issue[]> => {
+      const currentByAsset: Record<string, number> = {};
+      for (const p of data.assetStatePeriods) {
+        if (!p.IsCurrent) continue;
+        currentByAsset[p.AssetId] = (currentByAsset[p.AssetId] || 0) + 1;
+      }
+      const offenderAssetIds = Object.entries(currentByAsset)
+        .filter(([, count]) => count > 1)
+        .map(([id]) => id);
+      if (offenderAssetIds.length === 0) return [];
+      const assetName: Record<string, string> = {};
+      for (const a of data.assets) assetName[a.Id] = a.Name;
+      return [
+        {
+          check_id: 'ARM-034',
+          category: 'arm_assets',
+          severity: 'critical',
+          title: `${offenderAssetIds.length} asset(s) with multiple current state periods`,
+          description: `${offenderAssetIds.length} Asset(s) have more than one AssetStatePeriod marked IsCurrent=true. The asset record's MRR and Quantity fields are derived from "the" current period — having multiple breaks that derivation.`,
+          impact:
+            'MRR, current quantity, and lifecycle dashboards will report unstable values for these assets.',
+          recommendation:
+            'Investigate the asset action history. Set IsCurrent=false on all but the single most recent period.',
+          affected_records: offenderAssetIds.slice(0, 25).map((id) => ({
+            id,
+            name: `${assetName[id] || id} (${currentByAsset[id]} current periods)`,
+            type: 'Asset',
+          })),
+        },
+      ];
+    },
+  },
+
+  // ARM-035: Asset state period with zero / null quantity
+  {
+    id: 'ARM-035',
+    name: 'Asset State Period With Zero Quantity',
+    category: 'arm_assets',
+    severity: 'info',
+    description:
+      'Current AssetStatePeriod with Quantity null or zero — likely incomplete data',
+    run: async (data: ARMData): Promise<Issue[]> => {
+      const offenders = data.assetStatePeriods.filter(
+        (p) => p.IsCurrent && (p.Quantity == null || p.Quantity === 0)
+      );
+      if (offenders.length === 0) return [];
+      return [
+        {
+          check_id: 'ARM-035',
+          category: 'arm_assets',
+          severity: 'info',
+          title: `${offenders.length} current state period(s) with zero/null quantity`,
+          description: `${offenders.length} current AssetStatePeriod(s) have Quantity null or zero. Usage, MRR, and renewal projections derived from the period will report zero.`,
+          impact:
+            'Skews aggregate revenue/usage numbers downward.',
+          recommendation:
+            'Backfill the quantity from the source order, or generate a corrective asset action.',
+          affected_records: offenders.slice(0, 25).map((p) => ({
+            id: p.Id,
+            name: `Asset ${p.AssetId} (${p.StartDate || '?'} → ${p.EndDate || '?'})`,
+            type: 'AssetStatePeriod',
+          })),
+        },
+      ];
+    },
+  },
+
+  // ═════════════════════════════════════════════════════════════════
+  // CONTRACTS  (arm_contracts) — 4 checks
+  // ═════════════════════════════════════════════════════════════════
+
+  // ARM-036: ContractItemPrice without effective dates
+  {
+    id: 'ARM-036',
+    name: 'Contract Item Price Without Effective Dates',
+    category: 'arm_contracts',
+    severity: 'warning',
+    description:
+      'ContractItemPrice records missing both EffectiveStartDate and EffectiveEndDate',
+    run: async (data: ARMData): Promise<Issue[]> => {
+      const offenders = data.contractItemPrices.filter(
+        (p) => !p.EffectiveStartDate && !p.EffectiveEndDate
+      );
+      if (offenders.length === 0) return [];
+      return [
+        {
+          check_id: 'ARM-036',
+          category: 'arm_contracts',
+          severity: 'warning',
+          title: `${offenders.length} contract price(s) without effective dates`,
+          description: `${offenders.length} ContractItemPrice record(s) have neither an EffectiveStartDate nor an EffectiveEndDate. Without dating, the price applies indefinitely — including to amendments and renewals where it shouldn't.`,
+          impact:
+            'Amendments may pull stale contract prices into new quotes silently.',
+          recommendation:
+            'Add at least an EffectiveStartDate to every ContractItemPrice, plus an EffectiveEndDate aligned with the contract end where applicable.',
+          affected_records: offenders.slice(0, 25).map((p) => ({
+            id: p.Id,
+            name: `Product ${p.Product2Id || '?'} on Contract ${p.ContractId || '?'}`,
+            type: 'ContractItemPrice',
+          })),
+        },
+      ];
+    },
+  },
+
+  // ARM-037: Active contract with end date in past
+  {
+    id: 'ARM-037',
+    name: 'Active Contract Past End Date',
+    category: 'arm_contracts',
+    severity: 'info',
+    description:
+      'Contract in Activated status with EndDate before today',
+    run: async (data: ARMData): Promise<Issue[]> => {
+      const todayIso = new Date().toISOString().slice(0, 10);
+      const offenders = data.contracts.filter((c) => {
+        const status = (c.Status || '').toLowerCase();
+        if (status !== 'activated' && status !== 'active') return false;
+        if (!c.EndDate) return false;
+        return c.EndDate < todayIso;
+      });
+      if (offenders.length === 0) return [];
+      return [
+        {
+          check_id: 'ARM-037',
+          category: 'arm_contracts',
+          severity: 'info',
+          title: `${offenders.length} contract(s) past end date but still active`,
+          description: `${offenders.length} Contract record(s) are in Activated status with an EndDate before today. They should typically have moved to Expired.`,
+          impact:
+            'Renewal pipelines often filter on Status — expired-but-active contracts get missed.',
+          recommendation:
+            'Run a Contract Status batch to transition past-due contracts to Expired, or extend the EndDate if they were renewed offline.',
+          affected_records: offenders.slice(0, 25).map((c) => ({
+            id: c.Id,
+            name: `Contract ${c.Id} (ended ${c.EndDate})`,
+            type: 'Contract',
+          })),
+        },
+      ];
+    },
+  },
+
+  // ARM-038: ContractItemPrice with negative or zero price
+  {
+    id: 'ARM-038',
+    name: 'Contract Item Price Is Zero Or Negative',
+    category: 'arm_contracts',
+    severity: 'warning',
+    description:
+      'ContractItemPrice rows where Price is null, zero, or negative',
+    run: async (data: ARMData): Promise<Issue[]> => {
+      const offenders = data.contractItemPrices.filter(
+        (p) => p.Price == null || p.Price <= 0
+      );
+      if (offenders.length === 0) return [];
+      return [
+        {
+          check_id: 'ARM-038',
+          category: 'arm_contracts',
+          severity: 'warning',
+          title: `${offenders.length} contract price(s) at zero or negative`,
+          description: `${offenders.length} ContractItemPrice record(s) have Price null, zero, or negative. When amendments pull contract pricing, these will lock in giveaway pricing.`,
+          impact:
+            'Revenue leakage on amendments — products effectively given away or refunded.',
+          recommendation:
+            'Audit each row. Some may be intentional (free trial conversions, credit lines) but most are likely data errors that need correction.',
+          affected_records: offenders.slice(0, 25).map((p) => ({
+            id: p.Id,
+            name: `Product ${p.Product2Id || '?'} @ ${p.Price ?? 'null'}`,
+            type: 'ContractItemPrice',
+          })),
+        },
+      ];
+    },
+  },
+
+  // ARM-039: Contract with reversed dates (start > end)
+  {
+    id: 'ARM-039',
+    name: 'Contract With Reversed Dates',
+    category: 'arm_contracts',
+    severity: 'critical',
+    description:
+      'Contract where StartDate is later than EndDate',
+    run: async (data: ARMData): Promise<Issue[]> => {
+      const offenders = data.contracts.filter(
+        (c) => c.StartDate && c.EndDate && c.StartDate > c.EndDate
+      );
+      if (offenders.length === 0) return [];
+      return [
+        {
+          check_id: 'ARM-039',
+          category: 'arm_contracts',
+          severity: 'critical',
+          title: `${offenders.length} contract(s) with start date after end date`,
+          description: `${offenders.length} Contract record(s) have StartDate later than EndDate. This is a hard data integrity error — the contract has a negative duration.`,
+          impact:
+            'Subscription quantity calculations, renewals, and asset state period generation will all behave unpredictably.',
+          recommendation:
+            'Identify the correct dates and fix them. If the contract was misentered, re-create it from the source order.',
+          affected_records: offenders.slice(0, 25).map((c) => ({
+            id: c.Id,
+            name: `Contract ${c.Id} (${c.StartDate} → ${c.EndDate})`,
+            type: 'Contract',
+          })),
+        },
+      ];
+    },
+  },
+
+  // ═════════════════════════════════════════════════════════════════
+  // USAGE MANAGEMENT  (arm_usage_management) — 5 checks
+  // ═════════════════════════════════════════════════════════════════
+
+  // ARM-040: UnitOfMeasureClass without default UoM
+  {
+    id: 'ARM-040',
+    name: 'Unit Of Measure Class Without Default UoM',
+    category: 'arm_usage_management',
+    severity: 'warning',
+    description:
+      'UnitOfMeasureClass record missing DefaultUomId',
+    run: async (data: ARMData): Promise<Issue[]> => {
+      const offenders = data.unitOfMeasureClasses.filter(
+        (c) => c.IsActive !== false && !c.DefaultUomId
+      );
+      if (offenders.length === 0) return [];
+      return [
+        {
+          check_id: 'ARM-040',
+          category: 'arm_usage_management',
+          severity: 'warning',
+          title: `${offenders.length} UoM class(es) without a default unit`,
+          description: `${offenders.length} active UnitOfMeasureClass record(s) have no DefaultUomId. Conversions between units in the class will fail without a reference unit.`,
+          impact:
+            'Usage rating may compute zero or error out when converting between units.',
+          recommendation:
+            'Set a DefaultUomId on each class — typically the smallest unit in the class.',
+          affected_records: offenders.slice(0, 25).map((c) => ({
+            id: c.Id,
+            name: c.Name || c.Id,
+            type: 'UnitOfMeasureClass',
+          })),
+        },
+      ];
+    },
+  },
+
+  // ARM-041: UsageResource not in Active status
+  {
+    id: 'ARM-041',
+    name: 'Usage Resource Not Active',
+    category: 'arm_usage_management',
+    severity: 'warning',
+    description:
+      'UsageResource records that are Draft or Inactive — RLM doc requires Active status before use',
+    run: async (data: ARMData): Promise<Issue[]> => {
+      const offenders = data.usageResources.filter(
+        (r) => (r.Status || '').toLowerCase() !== 'active'
+      );
+      if (offenders.length === 0) return [];
+      return [
+        {
+          check_id: 'ARM-041',
+          category: 'arm_usage_management',
+          severity: 'warning',
+          title: `${offenders.length} usage resource(s) not active`,
+          description: `${offenders.length} UsageResource record(s) are not in Active status. Per the RLM dev guide: "selling and consumption-related object records such as UnitOfMeasureClass, UsageResource, RateCardEntry must be active before you use it."`,
+          impact:
+            'Products tied to these resources will not rate usage events correctly.',
+          recommendation:
+            'Activate the resources you intend to use, and delete drafts that are no longer needed.',
+          affected_records: offenders.slice(0, 25).map((r) => ({
+            id: r.Id,
+            name: `${r.Name || r.Id} (${r.Status})`,
+            type: 'UsageResource',
+          })),
+        },
+      ];
+    },
+  },
+
+  // ARM-042: ProductUsageGrant past end date but still active
+  {
+    id: 'ARM-042',
+    name: 'Expired Product Usage Grant Still Active',
+    category: 'arm_usage_management',
+    severity: 'info',
+    description:
+      'ProductUsageGrant with EffectiveEndDate in the past but Status=Active',
+    run: async (data: ARMData): Promise<Issue[]> => {
+      const todayIso = new Date().toISOString().slice(0, 10);
+      const offenders = data.productUsageGrants.filter((g) => {
+        if ((g.Status || '').toLowerCase() !== 'active') return false;
+        if (!g.EffectiveEndDate) return false;
+        return g.EffectiveEndDate < todayIso;
+      });
+      if (offenders.length === 0) return [];
+      return [
+        {
+          check_id: 'ARM-042',
+          category: 'arm_usage_management',
+          severity: 'info',
+          title: `${offenders.length} usage grant(s) past end date but active`,
+          description: `${offenders.length} ProductUsageGrant record(s) are still flagged Active despite having an EffectiveEndDate before today.`,
+          impact:
+            'Cleanup task — grants no longer apply, but the active list grows over time.',
+          recommendation:
+            'Per the RLM dev guide, you can extend EffectiveEndDate on Active grants but you cannot edit other fields. Either extend, or transition them to Inactive via the supported status path.',
+          affected_records: offenders.slice(0, 25).map((g) => ({
+            id: g.Id,
+            name: `${g.Name || g.Id} (ended ${g.EffectiveEndDate})`,
+            type: 'ProductUsageGrant',
+          })),
+        },
+      ];
+    },
+  },
+
+  // ARM-043: ProductUsageGrant with reversed dates
+  {
+    id: 'ARM-043',
+    name: 'Usage Grant With Reversed Dates',
+    category: 'arm_usage_management',
+    severity: 'critical',
+    description:
+      'ProductUsageGrant with EffectiveStartDate after EffectiveEndDate',
+    run: async (data: ARMData): Promise<Issue[]> => {
+      const offenders = data.productUsageGrants.filter(
+        (g) =>
+          g.EffectiveStartDate &&
+          g.EffectiveEndDate &&
+          g.EffectiveStartDate > g.EffectiveEndDate
+      );
+      if (offenders.length === 0) return [];
+      return [
+        {
+          check_id: 'ARM-043',
+          category: 'arm_usage_management',
+          severity: 'critical',
+          title: `${offenders.length} usage grant(s) with reversed dates`,
+          description: `${offenders.length} ProductUsageGrant record(s) have EffectiveStartDate later than EffectiveEndDate. The grant covers a negative period and effectively never applies.`,
+          impact:
+            'Customers entitled to these grants will not actually receive coverage during what should be the entitlement window.',
+          recommendation:
+            'Fix the date ordering or recreate the grant with correct values. Note: Active grants can only have their end date extended, so you may need to deactivate first.',
+          affected_records: offenders.slice(0, 25).map((g) => ({
+            id: g.Id,
+            name: `${g.Name || g.Id} (${g.EffectiveStartDate} → ${g.EffectiveEndDate})`,
+            type: 'ProductUsageGrant',
+          })),
+        },
+      ];
+    },
+  },
+
+  // ARM-044: UsageResource without UnitOfMeasureClass
+  {
+    id: 'ARM-044',
+    name: 'Usage Resource Missing Unit Of Measure Class',
+    category: 'arm_usage_management',
+    severity: 'warning',
+    description:
+      'UsageResource records with no UnitOfMeasureClassId',
+    run: async (data: ARMData): Promise<Issue[]> => {
+      const offenders = data.usageResources.filter(
+        (r) => !r.UnitOfMeasureClassId && (r.Status || '').toLowerCase() === 'active'
+      );
+      if (offenders.length === 0) return [];
+      return [
+        {
+          check_id: 'ARM-044',
+          category: 'arm_usage_management',
+          severity: 'warning',
+          title: `${offenders.length} active usage resource(s) without a UoM class`,
+          description: `${offenders.length} active UsageResource record(s) have no UnitOfMeasureClassId. Without a UoM class, the engine cannot validate or convert incoming usage events.`,
+          impact:
+            'Usage events will be rejected or misrated.',
+          recommendation:
+            'Assign each UsageResource to the appropriate UnitOfMeasureClass.',
+          affected_records: offenders.slice(0, 25).map((r) => ({
+            id: r.Id,
+            name: r.Name || r.Id,
+            type: 'UsageResource',
+          })),
+        },
+      ];
+    },
+  },
+
+  // ═════════════════════════════════════════════════════════════════
+  // ORCHESTRATION (DRO)  (arm_orchestration) — 4 checks
+  // ═════════════════════════════════════════════════════════════════
+
+  // ARM-045: FulfillmentStepDefinition without group
+  {
+    id: 'ARM-045',
+    name: 'Fulfillment Step Without Group',
+    category: 'arm_orchestration',
+    severity: 'warning',
+    description:
+      'FulfillmentStepDefinition records not assigned to a FulfillmentStepDefinitionGroup',
+    run: async (data: ARMData): Promise<Issue[]> => {
+      const offenders = data.fulfillmentStepDefinitions.filter(
+        (s) => !s.FulfillmentStepDefinitionGroupId
+      );
+      if (offenders.length === 0) return [];
+      return [
+        {
+          check_id: 'ARM-045',
+          category: 'arm_orchestration',
+          severity: 'warning',
+          title: `${offenders.length} fulfillment step(s) not assigned to a group`,
+          description: `${offenders.length} FulfillmentStepDefinition record(s) have no FulfillmentStepDefinitionGroupId. The step won't participate in any scenario evaluation.`,
+          impact:
+            'Orchestrated processes silently skip these steps — fulfillment may proceed without them.',
+          recommendation:
+            'Assign each step to the appropriate FulfillmentStepDefinitionGroup, or remove orphan steps that are no longer needed.',
+          affected_records: offenders.slice(0, 25).map((s) => ({
+            id: s.Id,
+            name: s.Name || s.Id,
+            type: 'FulfillmentStepDefinition',
+          })),
+        },
+      ];
+    },
+  },
+
+  // ARM-046: FulfillmentStepDefinitionGroup with no steps
+  {
+    id: 'ARM-046',
+    name: 'Empty Fulfillment Step Group',
+    category: 'arm_orchestration',
+    severity: 'info',
+    description:
+      'FulfillmentStepDefinitionGroup records that have no steps assigned',
+    run: async (data: ARMData): Promise<Issue[]> => {
+      const stepsByGroup: Record<string, number> = {};
+      for (const s of data.fulfillmentStepDefinitions) {
+        if (!s.FulfillmentStepDefinitionGroupId) continue;
+        stepsByGroup[s.FulfillmentStepDefinitionGroupId] =
+          (stepsByGroup[s.FulfillmentStepDefinitionGroupId] || 0) + 1;
+      }
+      const empties = data.fulfillmentStepDefinitionGroups.filter(
+        (g) => !stepsByGroup[g.Id]
+      );
+      if (empties.length === 0) return [];
+      return [
+        {
+          check_id: 'ARM-046',
+          category: 'arm_orchestration',
+          severity: 'info',
+          title: `${empties.length} empty fulfillment step group(s)`,
+          description: `${empties.length} FulfillmentStepDefinitionGroup record(s) have zero steps assigned. The group is dead configuration.`,
+          impact:
+            'No runtime impact, but adds noise during audit.',
+          recommendation:
+            'Either populate the group with steps, or delete the obsolete group.',
+          affected_records: empties.slice(0, 25).map((g) => ({
+            id: g.Id,
+            name: g.Name || g.Id,
+            type: 'FulfillmentStepDefinitionGroup',
+          })),
+        },
+      ];
+    },
+  },
+
+  // ARM-047: FulfillmentTaskAssignmentRule without owner
+  {
+    id: 'ARM-047',
+    name: 'Fulfillment Task Rule Without Assignee',
+    category: 'arm_orchestration',
+    severity: 'warning',
+    description:
+      'FulfillmentTaskAssignmentRule records that have no AssignedToId set',
+    run: async (data: ARMData): Promise<Issue[]> => {
+      const offenders = data.fulfillmentTaskAssignmentRules.filter(
+        (r) => (r.Status || '').toLowerCase() === 'active' && !r.AssignedToId
+      );
+      if (offenders.length === 0) return [];
+      return [
+        {
+          check_id: 'ARM-047',
+          category: 'arm_orchestration',
+          severity: 'warning',
+          title: `${offenders.length} task assignment rule(s) with no assignee`,
+          description: `${offenders.length} active FulfillmentTaskAssignmentRule record(s) have no AssignedToId. Generated tasks will have no owner and may sit unhandled.`,
+          impact:
+            'Orchestrated tasks pile up without an owner — fulfillment SLAs slip.',
+          recommendation:
+            'Assign each active rule to a User or Queue.',
+          affected_records: offenders.slice(0, 25).map((r) => ({
+            id: r.Id,
+            name: r.Name || r.Id,
+            type: 'FulfillmentTaskAssignmentRule',
+          })),
+        },
+      ];
+    },
+  },
+
+  // ARM-048: ProductFulfillmentScenario not Active
+  {
+    id: 'ARM-048',
+    name: 'Inactive Product Fulfillment Scenario',
+    category: 'arm_orchestration',
+    severity: 'warning',
+    description:
+      'ProductFulfillmentScenario records that are not in Active status',
+    run: async (data: ARMData): Promise<Issue[]> => {
+      const offenders = data.productFulfillmentScenarios.filter(
+        (s) => (s.Status || '').toLowerCase() !== 'active'
+      );
+      if (offenders.length === 0) return [];
+      return [
+        {
+          check_id: 'ARM-048',
+          category: 'arm_orchestration',
+          severity: 'warning',
+          title: `${offenders.length} fulfillment scenario(s) not active`,
+          description: `${offenders.length} ProductFulfillmentScenario record(s) are not in Active status. Orders matching these scenarios won't trigger orchestration.`,
+          impact:
+            'Order fulfillment may complete without the intended steps running.',
+          recommendation:
+            'Activate scenarios you intend to use, or delete drafts that are no longer needed.',
+          affected_records: offenders.slice(0, 25).map((s) => ({
+            id: s.Id,
+            name: `${s.Name || s.Id} (${s.Status})`,
+            type: 'ProductFulfillmentScenario',
+          })),
+        },
+      ];
+    },
+  },
+
+  // ═════════════════════════════════════════════════════════════════
+  // COST BOOKS  (arm_cost_books) — 3 checks
+  // ═════════════════════════════════════════════════════════════════
+
+  // ARM-049: Active CostBook with no entries
+  {
+    id: 'ARM-049',
+    name: 'Active Cost Book With No Entries',
+    category: 'arm_cost_books',
+    severity: 'warning',
+    description:
+      'CostBook is active but has no CostBookEntry rows',
+    run: async (data: ARMData): Promise<Issue[]> => {
+      const entriesByBook: Record<string, number> = {};
+      for (const e of data.costBookEntries) {
+        entriesByBook[e.CostBookId] = (entriesByBook[e.CostBookId] || 0) + 1;
+      }
+      const empties = data.costBooks.filter(
+        (cb) => cb.IsActive !== false && !entriesByBook[cb.Id]
+      );
+      if (empties.length === 0) return [];
+      return [
+        {
+          check_id: 'ARM-049',
+          category: 'arm_cost_books',
+          severity: 'warning',
+          title: `${empties.length} active cost book(s) with no entries`,
+          description: `${empties.length} active CostBook(s) have zero CostBookEntry rows. Margin and profitability calculations referencing them will fall back to defaults.`,
+          impact:
+            'Margin reports show zero or default values for products tied to these cost books.',
+          recommendation:
+            'Populate each CostBook with entries, or deactivate the empty book.',
+          affected_records: empties.slice(0, 25).map((cb) => ({
+            id: cb.Id,
+            name: cb.Name,
+            type: 'CostBook',
+          })),
+        },
+      ];
+    },
+  },
+
+  // ARM-050: CostBookEntry with zero or null cost
+  {
+    id: 'ARM-050',
+    name: 'Cost Book Entry With No Cost',
+    category: 'arm_cost_books',
+    severity: 'info',
+    description:
+      'CostBookEntry rows with Cost null or zero',
+    run: async (data: ARMData): Promise<Issue[]> => {
+      const offenders = data.costBookEntries.filter(
+        (e) => e.Cost == null || e.Cost === 0
+      );
+      if (offenders.length === 0) return [];
+      const bookNames: Record<string, string> = {};
+      for (const cb of data.costBooks) bookNames[cb.Id] = cb.Name;
+      return [
+        {
+          check_id: 'ARM-050',
+          category: 'arm_cost_books',
+          severity: 'info',
+          title: `${offenders.length} cost book entries with zero / null cost`,
+          description: `${offenders.length} CostBookEntry record(s) have Cost null or zero. Margin will show 100% on the associated products — accurate only if those are genuinely zero-cost items.`,
+          impact:
+            'Margin reports may overstate profitability.',
+          recommendation:
+            'Backfill the actual cost for each entry, or document which products are intentionally zero-cost.',
+          affected_records: offenders.slice(0, 25).map((e) => ({
+            id: e.Id,
+            name: `${bookNames[e.CostBookId] || e.CostBookId} → product ${e.Product2Id || '?'}`,
+            type: 'CostBookEntry',
+          })),
+        },
+      ];
+    },
+  },
+
+  // ARM-051: Multiple active non-standard cost books per currency
+  {
+    id: 'ARM-051',
+    name: 'Multiple Active Cost Books Per Currency',
+    category: 'arm_cost_books',
+    severity: 'info',
+    description:
+      'More than one active non-standard CostBook for the same currency',
+    run: async (data: ARMData): Promise<Issue[]> => {
+      const byCurrency: Record<string, RLMCostBook[]> = {};
+      for (const cb of data.costBooks) {
+        if (cb.IsActive === false) continue;
+        if (cb.IsStandard) continue;
+        const cur = cb.CurrencyIsoCode || 'NONE';
+        if (!byCurrency[cur]) byCurrency[cur] = [];
+        byCurrency[cur].push(cb);
+      }
+      const conflicts = Object.entries(byCurrency).filter(([, list]) => list.length > 1);
+      if (conflicts.length === 0) return [];
+      const all = conflicts.flatMap(([, list]) => list);
+      return [
+        {
+          check_id: 'ARM-051',
+          category: 'arm_cost_books',
+          severity: 'info',
+          title: `${conflicts.length} currenc${conflicts.length === 1 ? 'y' : 'ies'} with multiple active cost books`,
+          description: `${conflicts.length} currenc${conflicts.length === 1 ? 'y has' : 'ies have'} more than one active non-standard CostBook. ${conflicts.map(([cur, list]) => `${cur}: ${list.map((cb) => `"${cb.Name}"`).join(', ')}`).slice(0, 3).join('; ')}.`,
+          impact:
+            'Without segmentation logic, margin calculations may pick whichever cost book the engine encounters first.',
+          recommendation:
+            'Document which cost book applies to which segment, or consolidate.',
+          affected_records: all.slice(0, 25).map((cb) => ({
+            id: cb.Id,
+            name: cb.Name,
+            type: 'CostBook',
+          })),
+        },
+      ];
+    },
+  },
 ];

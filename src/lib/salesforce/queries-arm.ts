@@ -20,6 +20,20 @@ import type {
   RLMAttributeDefinition,
   RLMAttributeCategory,
   RLMAttributePicklistValue,
+  RLMAsset,
+  RLMAssetStatePeriod,
+  RLMAssetRelationship,
+  RLMContract,
+  RLMContractItemPrice,
+  RLMUnitOfMeasureClass,
+  RLMUsageResource,
+  RLMProductUsageGrant,
+  RLMFulfillmentStepDefinition,
+  RLMFulfillmentStepDefinitionGroup,
+  RLMProductFulfillmentScenario,
+  RLMFulfillmentTaskAssignmentRule,
+  RLMCostBook,
+  RLMCostBookEntry,
 } from '@/types';
 
 /**
@@ -100,6 +114,20 @@ export async function fetchAllARMData(conn: Connection): Promise<ARMData> {
     attributeDefinitionsRes,
     attributeCategoriesRes,
     attributePicklistValuesRes,
+    assetsRes,
+    assetStatePeriodsRes,
+    assetRelationshipsRes,
+    contractsRes,
+    contractItemPricesRes,
+    unitOfMeasureClassesRes,
+    usageResourcesRes,
+    productUsageGrantsRes,
+    fulfillmentStepDefinitionsRes,
+    fulfillmentStepDefinitionGroupsRes,
+    productFulfillmentScenariosRes,
+    fulfillmentTaskAssignmentRulesRes,
+    costBooksRes,
+    costBookEntriesRes,
   ] = await Promise.all([
     // Products are standard Product2 — but for ARM we want active ones with
     // selling model coverage. Pull a reasonable cap to keep payload bounded.
@@ -212,6 +240,91 @@ export async function fetchAllARMData(conn: Connection): Promise<ARMData> {
        FROM AttributePicklistValue
        LIMIT 5000`
     ),
+    // ── v4 queries ────────────────────────────────────────────────
+    safeARMQuery(
+      conn,
+      `SELECT Id, Name, Status, AccountId, Product2Id, Quantity, UsageEndDate, CurrentLifecycleEndDate
+       FROM Asset
+       LIMIT 2000`
+    ),
+    safeARMQuery(
+      conn,
+      `SELECT Id, AssetId, StartDate, EndDate, Quantity, IsCurrent
+       FROM AssetStatePeriod
+       LIMIT 5000`
+    ),
+    safeARMQuery(
+      conn,
+      `SELECT Id, AssetId, RelatedAssetId, RelationshipType
+       FROM AssetRelationship
+       LIMIT 2000`
+    ),
+    safeARMQuery(
+      conn,
+      `SELECT Id, Status, StartDate, EndDate, AccountId
+       FROM Contract
+       LIMIT 1000`
+    ),
+    safeARMQuery(
+      conn,
+      `SELECT Id, ContractId, Product2Id, Price, EffectiveStartDate, EffectiveEndDate
+       FROM ContractItemPrice
+       LIMIT 5000`
+    ),
+    safeARMQuery(
+      conn,
+      `SELECT Id, Name, IsActive, DefaultUomId
+       FROM UnitOfMeasureClass
+       LIMIT 200`
+    ),
+    safeARMQuery(
+      conn,
+      `SELECT Id, Name, Status, UnitOfMeasureClassId, Product2Id, EffectiveEndDate
+       FROM UsageResource
+       LIMIT 500`
+    ),
+    safeARMQuery(
+      conn,
+      `SELECT Id, Name, Status, Product2Id, UsageResourceId, EffectiveStartDate, EffectiveEndDate
+       FROM ProductUsageGrant
+       LIMIT 1000`
+    ),
+    safeARMQuery(
+      conn,
+      `SELECT Id, Name, Status, FulfillmentStepDefinitionGroupId
+       FROM FulfillmentStepDefinition
+       LIMIT 500`
+    ),
+    safeARMQuery(
+      conn,
+      `SELECT Id, Name, Status
+       FROM FulfillmentStepDefinitionGroup
+       LIMIT 200`
+    ),
+    safeARMQuery(
+      conn,
+      `SELECT Id, Name, Status
+       FROM ProductFulfillmentScenario
+       LIMIT 200`
+    ),
+    safeARMQuery(
+      conn,
+      `SELECT Id, Name, Status, AssignedToId, AssignedToType
+       FROM FulfillmentTaskAssignmentRule
+       LIMIT 500`
+    ),
+    safeARMQuery(
+      conn,
+      `SELECT Id, Name, IsActive, CurrencyIsoCode, IsStandard
+       FROM CostBook
+       LIMIT 200`
+    ),
+    safeARMQuery(
+      conn,
+      `SELECT Id, CostBookId, Product2Id, Cost, CurrencyIsoCode
+       FROM CostBookEntry
+       LIMIT 5000`
+    ),
   ]);
 
   return {
@@ -239,5 +352,25 @@ export async function fetchAllARMData(conn: Connection): Promise<ARMData> {
     attributeCategories: (attributeCategoriesRes.records as RLMAttributeCategory[]) || [],
     attributePicklistValues:
       (attributePicklistValuesRes.records as RLMAttributePicklistValue[]) || [],
+    // v4
+    assets: (assetsRes.records as RLMAsset[]) || [],
+    assetStatePeriods: (assetStatePeriodsRes.records as RLMAssetStatePeriod[]) || [],
+    assetRelationships: (assetRelationshipsRes.records as RLMAssetRelationship[]) || [],
+    contracts: (contractsRes.records as RLMContract[]) || [],
+    contractItemPrices: (contractItemPricesRes.records as RLMContractItemPrice[]) || [],
+    unitOfMeasureClasses:
+      (unitOfMeasureClassesRes.records as RLMUnitOfMeasureClass[]) || [],
+    usageResources: (usageResourcesRes.records as RLMUsageResource[]) || [],
+    productUsageGrants: (productUsageGrantsRes.records as RLMProductUsageGrant[]) || [],
+    fulfillmentStepDefinitions:
+      (fulfillmentStepDefinitionsRes.records as RLMFulfillmentStepDefinition[]) || [],
+    fulfillmentStepDefinitionGroups:
+      (fulfillmentStepDefinitionGroupsRes.records as RLMFulfillmentStepDefinitionGroup[]) || [],
+    productFulfillmentScenarios:
+      (productFulfillmentScenariosRes.records as RLMProductFulfillmentScenario[]) || [],
+    fulfillmentTaskAssignmentRules:
+      (fulfillmentTaskAssignmentRulesRes.records as RLMFulfillmentTaskAssignmentRule[]) || [],
+    costBooks: (costBooksRes.records as RLMCostBook[]) || [],
+    costBookEntries: (costBookEntriesRes.records as RLMCostBookEntry[]) || [],
   };
 }

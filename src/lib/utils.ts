@@ -99,6 +99,11 @@ export function getCategoryLabel(category: string): string {
     arm_context_service: 'Context Service (ARM)',
     arm_rate_cards: 'Rate Cards (ARM)',
     arm_attributes: 'Attributes (ARM)',
+    arm_assets: 'Assets (ARM)',
+    arm_contracts: 'Contracts (ARM)',
+    arm_usage_management: 'Usage Management (ARM)',
+    arm_orchestration: 'Orchestration (ARM)',
+    arm_cost_books: 'Cost Books (ARM)',
   };
   return labels[category] || category;
 }

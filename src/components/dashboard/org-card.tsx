@@ -62,14 +62,51 @@ export function OrgCard({ org, onView, onScan, onDisconnect, scanning = false }:
               </div>
               <div>
                 <h3 className="font-semibold text-gray-900 dark:text-white">{org.name}</h3>
-                <span className={`inline-flex items-center gap-1.5 text-xs font-medium mt-0.5 ${
-                  org.is_sandbox ? 'text-amber-600' : 'text-emerald-600'
-                }`}>
-                  <span className={`w-1.5 h-1.5 rounded-full ${
-                    org.is_sandbox ? 'bg-amber-500' : 'bg-emerald-500'
-                  }`} />
-                  {org.is_sandbox ? 'Sandbox' : 'Production'}
-                </span>
+                <div className="flex items-center gap-2 flex-wrap mt-0.5">
+                  <span className={`inline-flex items-center gap-1.5 text-xs font-medium ${
+                    org.is_sandbox ? 'text-amber-600' : 'text-emerald-600'
+                  }`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${
+                      org.is_sandbox ? 'bg-amber-500' : 'bg-emerald-500'
+                    }`} />
+                    {org.is_sandbox ? 'Sandbox' : 'Production'}
+                  </span>
+                  {(() => {
+                    const pkgs = org.installed_packages || [];
+                    const hasCPQ = pkgs.includes('cpq');
+                    const hasBilling = pkgs.includes('billing');
+                    const hasARM = pkgs.includes('arm');
+                    let label: string | null = null;
+                    let cls = '';
+                    if (hasCPQ && hasBilling && hasARM) {
+                      label = 'CPQ + Billing + ARM';
+                      cls = 'bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300';
+                    } else if (hasCPQ && hasBilling) {
+                      label = 'CPQ + Billing';
+                      cls = 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300';
+                    } else if (hasCPQ && hasARM) {
+                      label = 'CPQ + ARM';
+                      cls = 'bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300';
+                    } else if (hasCPQ) {
+                      label = 'CPQ';
+                      cls = 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300';
+                    } else if (hasARM) {
+                      label = 'ARM';
+                      cls = 'bg-teal-50 text-teal-700 dark:bg-teal-900/30 dark:text-teal-300';
+                    } else if (hasBilling) {
+                      label = 'Billing';
+                      cls = 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300';
+                    } else if (org.connection_status === 'connected') {
+                      label = 'Detecting…';
+                      cls = 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400';
+                    }
+                    return label ? (
+                      <span className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full ${cls}`}>
+                        {label}
+                      </span>
+                    ) : null;
+                  })()}
+                </div>
               </div>
             </div>
 

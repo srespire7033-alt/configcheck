@@ -2,20 +2,28 @@ import type { ARMData, Issue, CategoryScores } from '@/types';
 import { armChecks } from './arm-checks';
 
 // Category weights for ARM overall score (must sum to 1.0).
-// Tuned for the v1+v2+v3 spread. Catalog, selling models, and bundles
+// Tuned for the v1-v4 spread. Catalog, selling models, and bundles
 // dominate because misconfigurations there block quoting outright.
+// Assets, contracts, and usage carry meaningful weight because they
+// govern post-quote revenue accuracy.
 const ARM_CATEGORY_WEIGHTS: Record<string, number> = {
-  arm_product_catalog: 0.14,
-  arm_selling_models: 0.16,
-  arm_price_adjustments: 0.12,
-  arm_attribute_pricing: 0.07,
-  arm_bundles: 0.14,
-  arm_pricing_procedures: 0.07,
-  arm_price_books: 0.04,
-  arm_decision_tables: 0.07,
-  arm_context_service: 0.07,
-  arm_rate_cards: 0.06,
-  arm_attributes: 0.06,
+  arm_product_catalog: 0.10,
+  arm_selling_models: 0.11,
+  arm_price_adjustments: 0.08,
+  arm_attribute_pricing: 0.05,
+  arm_bundles: 0.10,
+  arm_pricing_procedures: 0.05,
+  arm_price_books: 0.03,
+  arm_decision_tables: 0.05,
+  arm_context_service: 0.05,
+  arm_rate_cards: 0.05,
+  arm_attributes: 0.05,
+  // v4
+  arm_assets: 0.09,
+  arm_contracts: 0.08,
+  arm_usage_management: 0.06,
+  arm_orchestration: 0.03,
+  arm_cost_books: 0.02,
 };
 
 export interface ARMScanResult {
@@ -74,6 +82,11 @@ function calculateCategoryScores(issues: Issue[]): CategoryScores {
     arm_context_service: 100,
     arm_rate_cards: 100,
     arm_attributes: 100,
+    arm_assets: 100,
+    arm_contracts: 100,
+    arm_usage_management: 100,
+    arm_orchestration: 100,
+    arm_cost_books: 100,
   };
 
   for (const issue of issues) {
