@@ -77,7 +77,7 @@ export default function LandingPage() {
         </div>
 
         <div className="relative max-w-7xl mx-auto px-6 text-center">
-          {/* Eyebrow */}
+          {/* Eyebrow tag — names the wedge in 5 words */}
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 text-blue-700 dark:text-blue-400 text-sm font-medium mb-8">
             <Sparkles className="h-4 w-4" />
             Beta &middot; 176 checks &middot; OAuth read-only
@@ -108,12 +108,16 @@ export default function LandingPage() {
               href="/sample-report.pdf"
               className="inline-flex items-center gap-2 px-7 py-3.5 text-base font-semibold text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-xl border border-gray-200 dark:border-gray-700 transition-all duration-200 w-full sm:w-auto justify-center"
             >
-              View sample report
+              View sample report &rarr;
             </a>
           </div>
 
           {/* Hero product visual — placeholder mockup of the post-scan dashboard.
-              TODO: replace with a real screenshot or short looping screencap once polished. */}
+              For a SaaS audit tool, visitors want to see the dashboard, a sample
+              finding, and the AI fix UI before signing up. Pure-text heroes
+              underperform.
+              TODO: replace with a real screenshot or short looping screencap once
+              the production UI is polished enough to feature. */}
           <div className="relative max-w-4xl mx-auto mb-16">
             <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 via-indigo-500/20 to-purple-500/20 blur-3xl" />
             <div className="relative bg-white dark:bg-gray-900/80 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-2xl p-6 md:p-8 backdrop-blur">
@@ -197,17 +201,20 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ═══ TRUST BADGES ═══ */}
+      {/* ═══ SECURITY STRIP ═══
+          Replaces the previous trust-badge row. Per content-v2: removed the
+          vague "Enterprise-Grade Security" claim and replaced with four
+          factually defensible points that a technical buyer can verify. */}
       <section className="py-6 border-t border-gray-200/60 dark:border-gray-800/60">
         <div className="max-w-5xl mx-auto px-6">
-          <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-sm text-gray-500 dark:text-gray-400">
-            <span className="flex items-center gap-1.5">&#128274; OAuth Only &mdash; No Passwords Stored</span>
-            <span className="hidden sm:inline text-gray-300 dark:text-gray-700">|</span>
-            <span className="flex items-center gap-1.5">&#128202; Read-Only Access to Your Salesforce Data</span>
-            <span className="hidden sm:inline text-gray-300 dark:text-gray-700">|</span>
-            <span className="flex items-center gap-1.5">&#128737; Enterprise-Grade Security</span>
-            <span className="hidden sm:inline text-gray-300 dark:text-gray-700">|</span>
-            <span className="flex items-center gap-1.5">&#127760; Works with Production &amp; Sandbox</span>
+          <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-3 text-sm text-gray-500 dark:text-gray-400">
+            <span className="flex items-center gap-1.5">&#128274; Read-only OAuth</span>
+            <span className="hidden sm:inline text-gray-300 dark:text-gray-700">&middot;</span>
+            <span className="flex items-center gap-1.5">&#128202; Metadata only, never customer records</span>
+            <span className="hidden sm:inline text-gray-300 dark:text-gray-700">&middot;</span>
+            <span className="flex items-center gap-1.5">&#128230; No managed package</span>
+            <span className="hidden sm:inline text-gray-300 dark:text-gray-700">&middot;</span>
+            <span className="flex items-center gap-1.5">&#10060; Disconnect anytime</span>
           </div>
         </div>
       </section>
@@ -456,54 +463,73 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ═══ BUILT BY (replaces fabricated testimonials) ═══ */}
+      {/* ═══ FOUNDER NOTE (replaces fabricated testimonials) ═══
+          Three first-name+last-initial testimonials at major consulting
+          firms with no photos, no LinkedIn links, and no firm logos read
+          as fabricated to anyone with consulting experience — actively
+          harming trust on a page about trust. Replaced with an honest
+          first-person founder note. Copy is content-v2 Variant A (the
+          renewal opp bug war story). Bring back proper testimonials
+          only once we have real ones with full name, photo, company,
+          role, and a LinkedIn link per testimonial.
+      ═══ */}
       <section className="py-24">
-        <div className="max-w-3xl mx-auto px-6">
+        <div className="max-w-2xl mx-auto px-6">
           <div className="text-center mb-10">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">Built for Salesforce CPQ teams</h2>
-            <p className="text-gray-600 dark:text-gray-400">
-              Why a CPQ practitioner built this.
-            </p>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">Why I built ConfigCheck</h2>
           </div>
 
-          <div className="bg-white dark:bg-gray-900/50 rounded-2xl border border-gray-200 dark:border-gray-800 p-8 md:p-10">
-            <div className="flex items-start gap-5 mb-6">
-              {/* TODO: replace with real founder photo at /maulik.jpg or similar */}
-              <div className="w-16 h-16 rounded-full flex items-center justify-center flex-shrink-0 text-white font-bold text-xl" style={{ background: 'linear-gradient(135deg, #5B9BF3 0%, #2563eb 100%)' }}>
-                M
-              </div>
-              <div>
-                <div className="font-semibold text-lg">Maulik</div>
-                <div className="text-sm text-gray-500 dark:text-gray-400">
-                  Salesforce CPQ practitioner &middot; Vadodara, India
+          <div className="bg-gray-50/50 dark:bg-gray-900/30 rounded-2xl border border-gray-200 dark:border-gray-800 p-7 md:p-9">
+            {/* Desktop: avatar left, copy right. Mobile: stacked. */}
+            <div className="flex flex-col md:flex-row items-start gap-6 md:gap-7">
+              <div className="flex md:flex-col items-center md:items-start gap-4 md:gap-3 md:flex-shrink-0 md:w-32">
+                {/* TODO: replace with real founder photo at /maulik.jpg or similar */}
+                <div className="w-16 h-16 md:w-20 md:h-20 rounded-full flex items-center justify-center flex-shrink-0 text-white font-bold text-xl md:text-2xl" style={{ background: 'linear-gradient(135deg, #5B9BF3 0%, #2563eb 100%)' }}>
+                  M
+                </div>
+                <div className="md:mt-1">
+                  <div className="font-semibold">Maulik</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
+                    Salesforce CPQ practitioner
+                    <br className="hidden md:inline" />
+                    {' '}Vadodara, India
+                  </div>
                   {/* TODO: add real LinkedIn URL */}
-                  {' '}&middot;{' '}
                   <a
                     href="#"
-                    className="text-blue-600 dark:text-blue-400 hover:underline"
+                    className="inline-block mt-1.5 text-xs text-blue-600 dark:text-blue-400 hover:underline"
                   >
-                    LinkedIn
+                    LinkedIn &rarr;
                   </a>
                 </div>
               </div>
+
+              <div className="flex-1 text-gray-700 dark:text-gray-300 leading-relaxed text-[15px] space-y-4">
+                <p>
+                  A few months ago I was three days deep into a renewal opportunity bug. The customer&rsquo;s contracts had renewal forecast checked, the batch jobs were running, and yet no renewal opps were being created. I ran SOQL queries, checked CPQ batch configurations, traced through the standard objects, and still couldn&rsquo;t pin it down.
+                </p>
+                <p>
+                  What struck me wasn&rsquo;t the bug itself &mdash; every CPQ implementer has lived through one of these. It was that I&rsquo;d seen variations of the same problem across three different orgs in the past year. The misconfiguration patterns were predictable. The detection should have been automated.
+                </p>
+                <p>
+                  ConfigCheck started as a weekend project to catch the configuration patterns I kept tripping over. Today it runs 176 checks across CPQ, Billing, and ARM in under 30 seconds &mdash; the audit I wish I&rsquo;d had the morning that bug ticket landed.
+                </p>
+                <p>
+                  If you&rsquo;ve spent a week chasing a CPQ misconfiguration that turned out to be obvious in hindsight, this is for you.{' '}
+                  {/* TODO: replace once configcheck.io is wired up — site is
+                      currently served from configcheck.vercel.app while this
+                      email points at a domain we don't control yet. */}
+                  Reply directly to{' '}
+                  <a
+                    href="mailto:hello@configcheck.io"
+                    className="text-blue-600 dark:text-blue-400 hover:underline"
+                  >
+                    hello@configcheck.io
+                  </a>
+                  {' '}&mdash; comes straight to my inbox.
+                </p>
+              </div>
             </div>
-            <p className="text-gray-700 dark:text-gray-300 leading-relaxed mb-4">
-              I&rsquo;ve worked on dozens of CPQ implementations &mdash; production go-lives, post-launch tune-ups, audits handed over from previous consultants. The pattern was always the same: long checklists in spreadsheets, a week of manual work to surface what was actually wrong, and findings that got stale before they hit the client.
-            </p>
-            <p className="text-gray-700 dark:text-gray-300 leading-relaxed mb-4">
-              ConfigCheck started as my own audit checklist. Then I added scanners. Then AI fix suggestions. Then ARM. Today it runs 176 health checks against any Salesforce org in under 30 seconds &mdash; the same audit I&rsquo;d run by hand, automated end to end.
-            </p>
-            <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
-              If you&rsquo;re reading this, you probably do this work too. I&rsquo;d love your feedback &mdash;{' '}
-              {/* TODO: replace once real domain is live (configcheck.io is referenced elsewhere on the page but not yet active) */}
-              <a
-                href="mailto:hello@configcheck.io"
-                className="text-blue-600 dark:text-blue-400 hover:underline"
-              >
-                hello@configcheck.io
-              </a>{' '}
-              comes straight to my inbox.
-            </p>
           </div>
         </div>
       </section>
@@ -577,6 +603,9 @@ export default function LandingPage() {
                   </li>
                 ))}
               </ul>
+              {/* TODO: replace once configcheck.io is wired up — site is
+                  currently served from configcheck.vercel.app while this
+                  email points at a domain we don't control yet. */}
               <a
                 href="mailto:hello@configcheck.io"
                 className="block text-center w-full py-2.5 text-sm font-semibold rounded-xl border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
@@ -588,7 +617,10 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ═══ FAQ ═══ */}
+      {/* ═══ FAQ (Task #9) ═══
+          Accordion-style FAQ addresses common buyer objections that
+          weren't handled anywhere on the page. Uses native
+          <details>/<summary> for accessibility and zero-JS expansion. */}
       <section id="faq" className="py-24 bg-gray-50/50 dark:bg-gray-900/30">
         <div className="max-w-3xl mx-auto px-6">
           <div className="text-center mb-12">
@@ -649,7 +681,9 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ═══ FINAL CTA ═══ */}
+      {/* ═══ FINAL CTA (Task #11) ═══
+          CTAs standardized to "Connect a sandbox" + "View sample report"
+          across every position on the page. */}
       <section className="py-24">
         <div className="max-w-4xl mx-auto px-6">
           <div className="bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 rounded-3xl p-12 md:p-16 text-center text-white relative overflow-hidden">
@@ -683,7 +717,11 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ═══ FOOTER ═══ */}
+      {/* ═══ FOOTER (Task #13) ═══
+          Expanded from 3 inline links to a 4-column information architecture.
+          Every link below routes to a page that resolves (TODO comments
+          mark stubs we still need to build). Copyright reframed per
+          Task #18 to remove the boilerplate-y "© 2026 ConfigCheck" line. */}
       <footer className="border-t border-gray-200 dark:border-gray-800 py-16">
         <div className="max-w-7xl mx-auto px-6">
           <div className="grid grid-cols-2 md:grid-cols-5 gap-8 mb-12">
