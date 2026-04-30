@@ -499,3 +499,158 @@ Manage email preferences: ${appUrl}/settings
 Open dashboard: ${appUrl}/dashboard
 `;
 }
+
+interface InvitationEmailData {
+  recipientEmail: string;
+  inviterName: string;
+  teamName: string;
+  role: string;
+  inviteToken: string;
+}
+
+/**
+ * Send team invitation email with link to /invite/{token}.
+ * Falls back to console log if RESEND_API_KEY is not set.
+ */
+export async function sendInvitationEmail(data: InvitationEmailData) {
+  const resendKey = process.env.RESEND_API_KEY;
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+  const fromAddress = process.env.EMAIL_FROM || 'ConfigCheck <onboarding@resend.dev>';
+  const inviteUrl = `${appUrl}/invite/${data.inviteToken}`;
+  const subject = `${data.inviterName} invited you to join ${data.teamName} on ConfigCheck`;
+  const html = buildInvitationEmail(data, inviteUrl);
+  const text = buildInvitationEmailText(data, inviteUrl);
+
+  if (!resendKey) {
+    console.log(`[EMAIL] ⚠️ RESEND_API_KEY not set — invitation email would be sent to: ${data.recipientEmail}`);
+    console.log(`[EMAIL] Subject: ${subject}`);
+    console.log(`[EMAIL] Invite URL: ${inviteUrl}`);
+    return;
+  }
+
+  try {
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${resendKey}`,
+      },
+      body: JSON.stringify({
+        from: fromAddress,
+        to: [data.recipientEmail],
+        subject,
+        html,
+        text,
+      }),
+    });
+
+    if (!res.ok) {
+      const body = await res.text();
+      console.error(`[EMAIL] ❌ Invitation email failed (${res.status}):`, body);
+    } else {
+      console.log(`[EMAIL] ✅ Invitation email sent to ${data.recipientEmail}`);
+    }
+  } catch (err) {
+    console.error('[EMAIL] ❌ Invitation email error:', err);
+  }
+}
+
+function buildInvitationEmail(data: InvitationEmailData, inviteUrl: string): string {
+  const roleLabel = data.role.charAt(0).toUpperCase() + data.role.slice(1);
+  return `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>You're invited to ${data.teamName}</title>
+</head>
+<body style="margin:0; padding:0; background:#f4f5f7; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; -webkit-font-smoothing:antialiased;">
+  <div style="display:none; font-size:1px; color:#f4f5f7; line-height:1px; max-height:0; max-width:0; opacity:0; overflow:hidden;">
+    Join ${data.teamName} on ConfigCheck as a ${roleLabel}.
+  </div>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f5f7; padding:32px 16px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px; background:#ffffff; border-radius:14px; overflow:hidden; box-shadow:0 1px 3px rgba(16,24,40,0.06), 0 1px 2px rgba(16,24,40,0.04);">
+          <tr>
+            <td style="padding:24px 32px 0;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td style="vertical-align:middle;">
+                    <table role="presentation" cellpadding="0" cellspacing="0">
+                      <tr>
+                        <td style="background:#5B9BF3; width:32px; height:32px; border-radius:8px; text-align:center; color:#ffffff; font-weight:700; font-size:16px; line-height:32px;">C</td>
+                        <td style="padding-left:10px; vertical-align:middle; font-size:15px; font-weight:600; color:#0f172a; letter-spacing:-0.01em;">ConfigCheck</td>
+                      </tr>
+                    </table>
+                  </td>
+                  <td align="right" style="font-size:12px; color:#64748b;">Team invitation</td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:32px 32px 8px;">
+              <h1 style="margin:0 0 12px; font-size:24px; line-height:1.25; font-weight:700; color:#0f172a; letter-spacing:-0.02em;">
+                You've been invited to ${data.teamName}.
+              </h1>
+              <p style="margin:0 0 8px; font-size:15px; line-height:1.6; color:#475569;">
+                <strong style="color:#0f172a;">${data.inviterName}</strong> has invited you to join the <strong style="color:#0f172a;">${data.teamName}</strong> team on ConfigCheck as a <strong style="color:#0f172a;">${roleLabel}</strong>.
+              </p>
+              <p style="margin:0; font-size:15px; line-height:1.6; color:#475569;">
+                You'll be able to view scans, share audit reports, and collaborate on remediation work for connected Salesforce orgs.
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:24px 32px 8px;">
+              <table role="presentation" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td style="background:#0f172a; border-radius:8px;">
+                    <a href="${inviteUrl}" style="display:inline-block; padding:12px 22px; font-size:14px; font-weight:600; color:#ffffff; text-decoration:none; line-height:1;">
+                      Accept invitation →
+                    </a>
+                  </td>
+                </tr>
+              </table>
+              <p style="margin:10px 0 0; font-size:12px; color:#94a3b8;">If you don't have a ConfigCheck account, you can create one in seconds.</p>
+            </td>
+          </tr>
+          <tr><td style="padding:28px 32px 0;"><div style="height:1px; background:#e2e8f0; line-height:1px; font-size:0;">&nbsp;</div></td></tr>
+          <tr>
+            <td style="padding:24px 32px 32px;">
+              <p style="margin:0 0 8px; font-size:12px; font-weight:600; color:#64748b; text-transform:uppercase; letter-spacing:0.08em;">If the button doesn't work</p>
+              <p style="margin:0; font-size:13px; line-height:1.55; color:#475569; word-break:break-all;">
+                Copy and paste this link into your browser: <a href="${inviteUrl}" style="color:#2563eb; text-decoration:underline;">${inviteUrl}</a>
+              </p>
+            </td>
+          </tr>
+        </table>
+        <p style="margin:16px 0 0; font-size:12px; color:#94a3b8;">If you didn't expect this invitation, you can safely ignore this email.</p>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+  `;
+}
+
+function buildInvitationEmailText(data: InvitationEmailData, inviteUrl: string): string {
+  const roleLabel = data.role.charAt(0).toUpperCase() + data.role.slice(1);
+  return `You've been invited to ${data.teamName}.
+
+${data.inviterName} has invited you to join the ${data.teamName} team on ConfigCheck as a ${roleLabel}.
+
+You'll be able to view scans, share audit reports, and collaborate on remediation work for connected Salesforce orgs.
+
+Accept the invitation: ${inviteUrl}
+
+If you don't have a ConfigCheck account, you can create one in seconds.
+
+If you didn't expect this invitation, you can safely ignore this email.
+
+— ConfigCheck
+`;
+}

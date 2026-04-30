@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/db/client';
 import { getAuthUser } from '@/lib/auth/get-user';
 import { assertTeamAccess, logTeamActivity } from '@/lib/team/helpers';
+import { sendInvitationEmail } from '@/lib/email/notifications';
 
 export const dynamic = 'force-dynamic';
 
@@ -103,9 +104,24 @@ export async function POST(request: NextRequest, { params }: { params: { teamId:
       return NextResponse.json({ error: 'Failed to create invitation' }, { status: 500 });
     }
 
-    // TODO: Send invitation email with link to /invite/{token}
-    // For now, log the token for manual testing
-    console.log(`[INVITE] Team invitation created: ${process.env.NEXT_PUBLIC_APP_URL}/invite/${invitation.token}`);
+    // Look up team name + inviter name for the email
+    const [{ data: team }, { data: inviterUser }] = await Promise.all([
+      supabase.from('teams').select('name').eq('id', params.teamId).single(),
+      supabase.from('users').select('full_name, email').eq('id', user.id).single(),
+    ]);
+
+    // Send invitation email (non-blocking — log on failure but don't fail the request)
+    try {
+      await sendInvitationEmail({
+        recipientEmail: email.toLowerCase(),
+        inviterName: inviterUser?.full_name || inviterUser?.email || 'A teammate',
+        teamName: team?.name || 'a ConfigCheck team',
+        role,
+        inviteToken: invitation.token,
+      });
+    } catch (emailErr) {
+      console.error('[INVITE] Email send failed (invitation still created):', emailErr);
+    }
 
     await logTeamActivity(params.teamId, user.id, 'member_invited', 'invitation', invitation.id, { email, role });
 
