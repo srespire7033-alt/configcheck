@@ -17,7 +17,41 @@ export function OrgCard({ org, onView, onScan, onDisconnect, scanning = false }:
   const [menuOpen, setMenuOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
+  // Phase index for scan-in-progress UI. Time-based estimate, advances
+  // through five phases over ~30 seconds. Resets when the scan ends.
+  const [scanPhase, setScanPhase] = useState(0);
   const menuRef = useRef<HTMLDivElement>(null);
+
+  // Drive the scan progress phases while scanning is active.
+  useEffect(() => {
+    if (!scanning) {
+      setScanPhase(0);
+      return;
+    }
+    setScanPhase(0);
+    // Step through phases 0→1→2→3→4 over ~30 seconds. Last phase is
+    // "Generating AI summary…" which is the slowest, so we leave it as
+    // the resting state if the scan runs long.
+    const stepMs = [2500, 4500, 6000, 8000];
+    const timeouts: ReturnType<typeof setTimeout>[] = [];
+    let elapsed = 0;
+    for (let i = 0; i < stepMs.length; i++) {
+      elapsed += stepMs[i];
+      timeouts.push(setTimeout(() => setScanPhase(i + 1), elapsed));
+    }
+    return () => {
+      for (const t of timeouts) clearTimeout(t);
+    };
+  }, [scanning]);
+
+  // Friendly phase labels — time-based heuristic only, no backend signal.
+  const SCAN_PHASES = [
+    'Connecting to Salesforce…',
+    'Detecting installed packages…',
+    'Fetching configuration data…',
+    'Running 176 health checks…',
+    'Generating AI summary…',
+  ];
 
   // Close menu on click outside
   useEffect(() => {
@@ -144,8 +178,21 @@ export function OrgCard({ org, onView, onScan, onDisconnect, scanning = false }:
             </div>
           </div>
 
-          {/* Stats */}
-          {org.last_scan_at ? (
+          {/* Scan progress / Stats */}
+          {scanning ? (
+            <div className="mb-4">
+              <div className="flex items-center gap-2 mb-2 text-xs text-blue-600 dark:text-blue-400 font-medium">
+                <RefreshCw className="h-3 w-3 animate-spin flex-shrink-0" />
+                <span>{SCAN_PHASES[scanPhase] || SCAN_PHASES[SCAN_PHASES.length - 1]}</span>
+              </div>
+              <div className="h-1.5 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full transition-all duration-700 ease-out"
+                  style={{ width: `${Math.min(((scanPhase + 1) / SCAN_PHASES.length) * 100, 95)}%` }}
+                />
+              </div>
+            </div>
+          ) : org.last_scan_at ? (
             <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400 mb-4">
               <span>Last scan: {formatTimeAgo(org.last_scan_at)}</span>
               {org.critical_count > 0 && (
@@ -165,10 +212,10 @@ export function OrgCard({ org, onView, onScan, onDisconnect, scanning = false }:
           <button
             onClick={(e) => { e.stopPropagation(); onScan(); }}
             disabled={scanning}
-            className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition-all disabled:opacity-50 shadow-sm shadow-blue-600/20"
+            className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition-all disabled:opacity-60 shadow-sm shadow-blue-600/20"
           >
             <RefreshCw className={`h-3.5 w-3.5 ${scanning ? 'animate-spin' : ''}`} />
-            {scanning ? 'Scanning...' : 'Run Scan'}
+            {scanning ? 'Scanning…' : 'Run Scan'}
           </button>
           {org.last_scan_score !== null && (
             <button
