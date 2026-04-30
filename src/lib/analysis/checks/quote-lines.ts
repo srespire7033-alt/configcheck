@@ -20,30 +20,41 @@ export const quoteLineChecks: HealthCheck[] = [
       );
 
       if (zeroPrice.length > 0) {
-        // Group by quote to avoid noise
+        // Group by quote for the breakdown text only — emit ONE aggregated issue
         const byQuote: Record<string, typeof zeroPrice> = {};
         for (const ql of zeroPrice) {
           const quoteId = ql.SBQQ__Quote__c;
           if (!byQuote[quoteId]) byQuote[quoteId] = [];
           byQuote[quoteId].push(ql);
         }
+        const quoteCount = Object.keys(byQuote).length;
+        const breakdown = Object.entries(byQuote)
+          .slice(0, 5)
+          .map(([quoteId, lines]) => {
+            const products = lines
+              .slice(0, 3)
+              .map((l) => l.SBQQ__Product__r?.Name || 'Unknown')
+              .join(', ');
+            const more = lines.length > 3 ? ` and ${lines.length - 3} more` : '';
+            return `Quote ${quoteId}: ${lines.length} line(s) — ${products}${more}`;
+          })
+          .join('; ');
+        const remainingQuotes = quoteCount > 5 ? ` (+${quoteCount - 5} more quote${quoteCount - 5 > 1 ? 's' : ''})` : '';
 
-        for (const [quoteId, lines] of Object.entries(byQuote)) {
-          issues.push({
-            check_id: 'QL-001',
-            category: 'quote_lines',
-            severity: 'critical',
-            title: `${lines.length} quote line(s) with zero NetPrice`,
-            description: `Quote ${quoteId} has ${lines.length} line(s) where Quantity > 0 and ListPrice > 0 but NetPrice = $0. Products: ${lines.slice(0, 3).map((l) => l.SBQQ__Product__r?.Name || 'Unknown').join(', ')}${lines.length > 3 ? ` and ${lines.length - 3} more` : ''}.`,
-            impact: 'Revenue leakage - products are being given away for free. Check price rules, discount schedules, and subscription pricing configuration.',
-            recommendation: 'Investigate the pricing waterfall: List Price → Price Rules → Discount Schedules → NetPrice. A Price Rule may be zeroing out the price, or Subscription Pricing may not be set correctly.',
-            affected_records: lines.map((l) => ({
-              id: l.Id,
-              name: l.SBQQ__Product__r?.Name || 'Quote Line',
-              type: 'SBQQ__QuoteLine__c',
-            })),
-          });
-        }
+        issues.push({
+          check_id: 'QL-001',
+          category: 'quote_lines',
+          severity: 'critical',
+          title: `${zeroPrice.length} quote line(s) with zero NetPrice`,
+          description: `${zeroPrice.length} quote line(s) across ${quoteCount} quote(s) have Quantity > 0 and ListPrice > 0 but NetPrice = $0. ${breakdown}${remainingQuotes}.`,
+          impact: 'Revenue leakage - products are being given away for free. Check price rules, discount schedules, and subscription pricing configuration.',
+          recommendation: 'Investigate the pricing waterfall: List Price → Price Rules → Discount Schedules → NetPrice. A Price Rule may be zeroing out the price, or Subscription Pricing may not be set correctly.',
+          affected_records: zeroPrice.map((l) => ({
+            id: l.Id,
+            name: l.SBQQ__Product__r?.Name || 'Quote Line',
+            type: 'SBQQ__QuoteLine__c',
+          })),
+        });
       }
 
       return issues;
