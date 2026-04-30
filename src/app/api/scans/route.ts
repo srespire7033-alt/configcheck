@@ -5,8 +5,10 @@ import { getAuthUser } from '@/lib/auth/get-user';
 import { createRefreshableConnection } from '@/lib/salesforce/client';
 import { fetchAllCPQData } from '@/lib/salesforce/queries';
 import { fetchAllBillingData, isBillingPackageInstalled } from '@/lib/salesforce/queries-billing';
+import { fetchAllARMData } from '@/lib/salesforce/queries-arm';
 import { runAnalysis } from '@/lib/analysis/engine';
 import { runBillingAnalysis } from '@/lib/analysis/billing-engine';
+import { runARMAnalysis } from '@/lib/analysis/arm-engine';
 import { generateExecutiveSummary } from '@/lib/ai/gemini';
 import { sendScanNotification } from '@/lib/email/notifications';
 import { checkQuota } from '@/lib/quota';
@@ -197,61 +199,28 @@ async function runScanInBackground(
       .eq('id', org.id as string);
     console.log(`[SCAN ${scanId}] Packages: ${installedPackages.join(', ') || 'none detected'}`);
 
-    // Guard: ARM scan support is not yet implemented. If the user explicitly
-    // requested an ARM scan, fail fast with a clear message rather than
-    // silently running CPQ checks (which would produce empty/misleading
-    // results on a Revenue Cloud org).
-    if (productType === 'arm') {
+    // Validate the chosen product type against what was detected.
+    if (productType === 'arm' && !detected.arm) {
       throw new Error(
-        'ARM (Revenue Cloud) scan support is coming soon. Your org has been detected; ' +
-        'please reach out at hello@configcheck.app if you want early access.'
+        'You requested an ARM scan but Revenue Cloud objects (ProductSellingModel + BillingSchedule) ' +
+        'were not found in this org. Please verify Revenue Cloud is licensed and enabled.'
       );
     }
-
-    // If the org has CPQ installed, ensure we still proceed with CPQ analysis
-    // even when ARM is also detected (the user's primary product is CPQ).
-    // If ONLY ARM is installed (no CPQ), fail with a clear message — running
-    // CPQ analysis would query SBQQ objects that don't exist.
-    if (!detected.cpq && detected.arm) {
+    if (productType !== 'arm' && !detected.cpq && !detected.arm) {
+      throw new Error(
+        'No supported product detected in this org. ConfigCheck currently scans Salesforce CPQ ' +
+        '(SBQQ), Salesforce Billing (blng), and Revenue Cloud (ARM). Please verify the relevant ' +
+        'package is installed or feature enabled, and try reconnecting.'
+      );
+    }
+    if (productType !== 'arm' && !detected.cpq && detected.arm) {
       throw new Error(
         'This org has Revenue Cloud (ARM) but not Salesforce CPQ installed. ' +
-        'ARM scan support is coming soon — please reach out at hello@configcheck.app for early access.'
-      );
-    }
-    if (!detected.cpq && !detected.arm) {
-      throw new Error(
-        'No supported package detected in this org. ConfigCheck currently scans Salesforce CPQ ' +
-        '(SBQQ) and Salesforce Billing (blng). Please verify the package is installed and try reconnecting.'
+        'Please request an ARM scan instead from the org detail page.'
       );
     }
 
-    // Step 2: Fetch data based on product type
-    console.log(`[SCAN ${scanId}] Fetching data (product_type: ${productType})...`);
-    const fetchStart = Date.now();
-    const cpqData = await fetchAllCPQData(conn);
-    console.log(`[SCAN ${scanId}] CPQ data fetched in ${Date.now() - fetchStart}ms — ` +
-      `${cpqData.priceRules.length} price rules, ${cpqData.products.length} products, ` +
-      `${cpqData.productRules.length} product rules, ${cpqData.quoteLines.length} quote lines, ` +
-      `${cpqData.productOptions.length} product options`);
-
-    // Fetch billing data if product type includes billing
-    let billingData = null;
-    if (productType === 'cpq_billing') {
-      console.log(`[SCAN ${scanId}] Checking for Salesforce Billing package...`);
-      const hasBilling = await isBillingPackageInstalled(conn);
-      if (hasBilling) {
-        console.log(`[SCAN ${scanId}] Billing package detected, fetching billing data...`);
-        const billingFetchStart = Date.now();
-        billingData = await fetchAllBillingData(conn);
-        console.log(`[SCAN ${scanId}] Billing data fetched in ${Date.now() - billingFetchStart}ms`);
-      } else {
-        console.log(`[SCAN ${scanId}] ⚠️ Billing package not installed — skipping billing checks`);
-      }
-    }
-
-    // Step 3: Run analysis (skipping any checks the user has suppressed for this org)
-    console.log(`[SCAN ${scanId}] Running CPQ analysis...`);
-    const analysisStart = Date.now();
+    // Fetch suppressions once — same list used by every analysis branch.
     const { data: suppressions } = await supabase
       .from('check_suppressions')
       .select('check_id')
@@ -260,34 +229,132 @@ async function runScanInBackground(
     if (suppressedCheckIds.length > 0) {
       console.log(`[SCAN ${scanId}] Skipping ${suppressedCheckIds.length} suppressed check(s): ${suppressedCheckIds.join(', ')}`);
     }
-    const result = await runAnalysis(cpqData, suppressedCheckIds);
-    console.log(`[SCAN ${scanId}] CPQ analysis done in ${Date.now() - analysisStart}ms — ` +
-      `Score: ${result.overall_score}/100, ${result.issues.length} issues`);
 
-    // Run billing analysis if data was fetched
-    let billingResult = null;
-    if (billingData) {
-      console.log(`[SCAN ${scanId}] Running billing analysis...`);
-      const billingAnalysisStart = Date.now();
-      billingResult = await runBillingAnalysis(billingData);
-      console.log(`[SCAN ${scanId}] Billing analysis done in ${Date.now() - billingAnalysisStart}ms — ` +
-        `Score: ${billingResult.overall_score}/100, ${billingResult.issues.length} issues`);
+    // Step 2 + 3: Branch by product type — fetch data, run the matching analysis.
+    // The downstream code (save issues, update org, complete scan, email) is
+    // shared. We populate `result`, `cpqDataTotals`, and `dataFetchedMeta` to
+    // keep that shared block product-agnostic.
+    let result: import('@/types').ScanResult;
+    let cpqDataTotals = { priceRules: 0, products: 0, quoteLines: 0 };
+    let dataFetchedMeta: Record<string, number> = {};
 
-      // Merge billing issues into result
-      result.issues.push(...billingResult.issues);
+    if (productType === 'arm') {
+      console.log(`[SCAN ${scanId}] Fetching ARM (Revenue Cloud) data...`);
+      const fetchStart = Date.now();
+      const armData = await fetchAllARMData(conn);
+      console.log(`[SCAN ${scanId}] ARM data fetched in ${Date.now() - fetchStart}ms — ` +
+        `${armData.products.length} products, ${armData.sellingModels.length} selling models, ` +
+        `${armData.priceAdjustmentSchedules.length} price adjustments, ` +
+        `${armData.productRelatedComponents.length} bundle components`);
 
-      // Merge category scores
-      result.category_scores = {
-        ...result.category_scores,
-        ...billingResult.category_scores,
-      } as typeof result.category_scores;
+      console.log(`[SCAN ${scanId}] Running ARM analysis...`);
+      const analysisStart = Date.now();
+      const armResult = await runARMAnalysis(armData, suppressedCheckIds);
+      console.log(`[SCAN ${scanId}] ARM analysis done in ${Date.now() - analysisStart}ms — ` +
+        `Score: ${armResult.overall_score}/100, ${armResult.issues.length} issues`);
 
-      // Recalculate combined overall score (weighted average of CPQ and Billing)
-      const cpqWeight = 0.6;
-      const billingWeight = 0.4;
-      result.overall_score = Math.round(
-        result.overall_score * cpqWeight + billingResult.overall_score * billingWeight
-      );
+      result = {
+        overall_score: armResult.overall_score,
+        category_scores: armResult.category_scores,
+        issues: armResult.issues,
+        summary: '',
+        duration_ms: armResult.duration_ms,
+      };
+      cpqDataTotals = {
+        priceRules: 0,
+        products: armData.products.length,
+        quoteLines: 0,
+      };
+      dataFetchedMeta = {
+        products: armData.products.length,
+        sellingModels: armData.sellingModels.length,
+        sellingModelOptions: armData.sellingModelOptions.length,
+        priceAdjustmentSchedules: armData.priceAdjustmentSchedules.length,
+        priceAdjustmentTiers: armData.priceAdjustmentTiers.length,
+        attributeBasedAdjRules: armData.attributeBasedAdjRules.length,
+        productRelatedComponents: armData.productRelatedComponents.length,
+        priceBooks: armData.priceBooks.length,
+        productCategories: armData.productCategories.length,
+        pricingProcedures: armData.pricingProcedures.length,
+        decisionTables: armData.decisionTables.length,
+        contextDefinitions: armData.contextDefinitions.length,
+      };
+    } else {
+      // CPQ or CPQ + Billing branch
+      console.log(`[SCAN ${scanId}] Fetching CPQ data...`);
+      const fetchStart = Date.now();
+      const cpqData = await fetchAllCPQData(conn);
+      console.log(`[SCAN ${scanId}] CPQ data fetched in ${Date.now() - fetchStart}ms — ` +
+        `${cpqData.priceRules.length} price rules, ${cpqData.products.length} products, ` +
+        `${cpqData.productRules.length} product rules, ${cpqData.quoteLines.length} quote lines, ` +
+        `${cpqData.productOptions.length} product options`);
+
+      // Fetch billing data if product type includes billing
+      let billingData = null;
+      if (productType === 'cpq_billing') {
+        console.log(`[SCAN ${scanId}] Checking for Salesforce Billing package...`);
+        const hasBilling = await isBillingPackageInstalled(conn);
+        if (hasBilling) {
+          console.log(`[SCAN ${scanId}] Billing package detected, fetching billing data...`);
+          const billingFetchStart = Date.now();
+          billingData = await fetchAllBillingData(conn);
+          console.log(`[SCAN ${scanId}] Billing data fetched in ${Date.now() - billingFetchStart}ms`);
+        } else {
+          console.log(`[SCAN ${scanId}] ⚠️ Billing package not installed — skipping billing checks`);
+        }
+      }
+
+      console.log(`[SCAN ${scanId}] Running CPQ analysis...`);
+      const analysisStart = Date.now();
+      result = await runAnalysis(cpqData, suppressedCheckIds);
+      console.log(`[SCAN ${scanId}] CPQ analysis done in ${Date.now() - analysisStart}ms — ` +
+        `Score: ${result.overall_score}/100, ${result.issues.length} issues`);
+
+      // Run billing analysis if data was fetched
+      if (billingData) {
+        console.log(`[SCAN ${scanId}] Running billing analysis...`);
+        const billingAnalysisStart = Date.now();
+        const billingResult = await runBillingAnalysis(billingData);
+        console.log(`[SCAN ${scanId}] Billing analysis done in ${Date.now() - billingAnalysisStart}ms — ` +
+          `Score: ${billingResult.overall_score}/100, ${billingResult.issues.length} issues`);
+
+        result.issues.push(...billingResult.issues);
+        result.category_scores = {
+          ...result.category_scores,
+          ...billingResult.category_scores,
+        } as typeof result.category_scores;
+        const cpqWeight = 0.6;
+        const billingWeight = 0.4;
+        result.overall_score = Math.round(
+          result.overall_score * cpqWeight + billingResult.overall_score * billingWeight
+        );
+      }
+
+      cpqDataTotals = {
+        priceRules: cpqData.priceRules.length,
+        products: cpqData.products.length,
+        quoteLines: cpqData.quoteLines.length,
+      };
+      dataFetchedMeta = {
+        priceRules: cpqData.priceRules.length,
+        products: cpqData.products.length,
+        productRules: cpqData.productRules.length,
+        productOptions: cpqData.productOptions.length,
+        quoteLines: cpqData.quoteLines.length,
+        discountSchedules: cpqData.discountSchedules.length,
+        summaryVariables: cpqData.summaryVariables.length,
+        approvalRules: cpqData.approvalRules.length,
+        ...(billingData ? {
+          billingRules: billingData.billingRules.length,
+          revRecRules: billingData.revRecRules.length,
+          taxRules: billingData.taxRules.length,
+          financeBooks: billingData.financeBooks.length,
+          financePeriods: billingData.financePeriods.length,
+          glRules: billingData.glRules.length,
+          legalEntities: billingData.legalEntities.length,
+          invoices: billingData.invoices.length,
+        } : {}),
+      };
     }
 
     // Step 4: Generate AI summary
@@ -299,9 +366,9 @@ async function runScanInBackground(
         result.category_scores,
         result.overall_score,
         {
-          totalPriceRules: cpqData.priceRules.length,
-          totalProducts: cpqData.products.length,
-          totalQuoteLines: cpqData.quoteLines.length,
+          totalPriceRules: cpqDataTotals.priceRules,
+          totalProducts: cpqDataTotals.products,
+          totalQuoteLines: cpqDataTotals.quoteLines,
         }
       );
       console.log(`[SCAN ${scanId}] AI summary generated in ${Date.now() - aiStart}ms`);
@@ -361,9 +428,9 @@ async function runScanInBackground(
         ...(currentOrgName ? { name: currentOrgName } : {}),
         last_scan_score: result.overall_score,
         last_scan_at: new Date().toISOString(),
-        total_price_rules: cpqData.priceRules.length,
-        total_products: cpqData.products.length,
-        total_quote_lines: cpqData.quoteLines.length,
+        total_price_rules: cpqDataTotals.priceRules,
+        total_products: cpqDataTotals.products,
+        total_quote_lines: cpqDataTotals.quoteLines,
       })
       .eq('id', org.id as string);
 
@@ -384,26 +451,7 @@ async function runScanInBackground(
           revenue_summary: result.revenue_summary || null,
           complexity: result.complexity || null,
           product_type: productType,
-          data_fetched: {
-            priceRules: cpqData.priceRules.length,
-            products: cpqData.products.length,
-            productRules: cpqData.productRules.length,
-            productOptions: cpqData.productOptions.length,
-            quoteLines: cpqData.quoteLines.length,
-            discountSchedules: cpqData.discountSchedules.length,
-            summaryVariables: cpqData.summaryVariables.length,
-            approvalRules: cpqData.approvalRules.length,
-            ...(billingData ? {
-              billingRules: billingData.billingRules.length,
-              revRecRules: billingData.revRecRules.length,
-              taxRules: billingData.taxRules.length,
-              financeBooks: billingData.financeBooks.length,
-              financePeriods: billingData.financePeriods.length,
-              glRules: billingData.glRules.length,
-              legalEntities: billingData.legalEntities.length,
-              invoices: billingData.invoices.length,
-            } : {}),
-          },
+          data_fetched: dataFetchedMeta,
         },
         completed_at: new Date().toISOString(),
       })

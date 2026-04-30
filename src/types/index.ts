@@ -132,7 +132,20 @@ export type BillingCategory =
   | 'product_billing_config'
   | 'invoicing';
 
-export type IssueCategory = CPQCategory | BillingCategory;
+// ARM (Revenue Cloud / RLM) categories — these target Salesforce
+// standard objects, not a managed package
+export type ARMCategory =
+  | 'arm_product_catalog'
+  | 'arm_selling_models'
+  | 'arm_price_adjustments'
+  | 'arm_attribute_pricing'
+  | 'arm_bundles'
+  | 'arm_pricing_procedures'
+  | 'arm_price_books'
+  | 'arm_decision_tables'
+  | 'arm_context_service';
+
+export type IssueCategory = CPQCategory | BillingCategory | ARMCategory;
 
 // Category scores are stored as a dynamic record since scans can include
 // CPQ categories, Billing categories, or both (for cpq_billing scans).
@@ -164,6 +177,15 @@ export interface BillingHealthCheck {
   severity: IssueSeverity;
   description: string;
   run: (data: BillingData) => Promise<Issue[]>;
+}
+
+export interface ARMHealthCheck {
+  id: string;
+  name: string;
+  category: ARMCategory;
+  severity: IssueSeverity;
+  description: string;
+  run: (data: ARMData) => Promise<Issue[]>;
 }
 
 export interface Issue {
@@ -610,6 +632,134 @@ export interface BillingData {
   invoices: SFBillingInvoice[];
   creditNotes: SFCreditNote[];
   productBillingConfigs: SFProductBillingFields[];
+}
+
+// ============================================
+// ARM (REVENUE CLOUD / RLM) TYPES
+// These map to Salesforce *standard* objects, not a managed package.
+// Object names per Revenue Cloud Developer Guide (Spring '26).
+// ============================================
+
+export interface RLMProduct {
+  Id: string;
+  Name: string;
+  IsActive: boolean;
+  ProductCode?: string | null;
+  Family?: string | null;
+}
+
+export interface RLMProductSellingModel {
+  Id: string;
+  Name: string;
+  IsActive: boolean;
+  // OneTime | TermDefined | Evergreen — surfaced via the SellingModelType field
+  SellingModelType: string;
+  PricingTermUnit?: string | null;
+  PricingTerm?: number | null;
+  // Optional billing-frequency relationship (where used)
+  SellingFrequencyId?: string | null;
+}
+
+export interface RLMProductSellingModelOption {
+  Id: string;
+  Product2Id: string;
+  ProductSellingModelId: string;
+  IsActive: boolean;
+}
+
+export interface RLMPriceAdjustmentSchedule {
+  Id: string;
+  Name: string;
+  IsActive: boolean;
+  AdjustmentMethod?: string | null; // 'Slab', 'Range', 'Stairstep', 'Direct'
+  AdjustmentType?: string | null;   // 'Percent', 'Amount'
+}
+
+export interface RLMPriceAdjustmentTier {
+  Id: string;
+  PriceAdjustmentScheduleId: string;
+  LowerBound?: number | null;
+  UpperBound?: number | null;
+  TierUnitPrice?: number | null;
+  AdjustmentValue?: number | null;
+}
+
+export interface RLMAttributeBasedAdjRule {
+  Id: string;
+  Name: string;
+  IsActive: boolean;
+  EffectiveStartDate?: string | null;
+  EffectiveEndDate?: string | null;
+}
+
+export interface RLMProductRelatedComponent {
+  Id: string;
+  ParentProductId: string;
+  ChildProductId: string;
+  IsComponentRequired?: boolean | null;
+  Quantity?: number | null;
+  MinQuantity?: number | null;
+  MaxQuantity?: number | null;
+}
+
+export interface RLMPriceBook {
+  Id: string;
+  Name: string;
+  IsActive: boolean;
+  IsStandard: boolean;
+  CurrencyIsoCode?: string | null;
+}
+
+export interface RLMProductCategory {
+  Id: string;
+  Name: string;
+  IsActive?: boolean | null;
+  ParentCategoryId?: string | null;
+}
+
+export interface RLMProductCategoryProduct {
+  Id: string;
+  ProductId: string;
+  ProductCategoryId: string;
+}
+
+// PricingProcedure has a related Resolution Policy. Empty resolution policy
+// means lookups won't return a deterministic result.
+export interface RLMPricingProcedure {
+  Id: string;
+  Name: string;
+  IsActive: boolean;
+  ResolutionPolicy?: string | null;
+}
+
+// Decision tables / expression sets — Business Rules Engine surfaces
+export interface RLMDecisionTable {
+  Id: string;
+  MasterLabel: string;
+  Status: string; // 'Active' | 'Draft' | etc.
+  RowCount?: number | null;
+}
+
+export interface RLMContextDefinition {
+  Id: string;
+  DeveloperName: string;
+  IsActive: boolean;
+}
+
+export interface ARMData {
+  products: RLMProduct[];
+  sellingModels: RLMProductSellingModel[];
+  sellingModelOptions: RLMProductSellingModelOption[];
+  priceAdjustmentSchedules: RLMPriceAdjustmentSchedule[];
+  priceAdjustmentTiers: RLMPriceAdjustmentTier[];
+  attributeBasedAdjRules: RLMAttributeBasedAdjRule[];
+  productRelatedComponents: RLMProductRelatedComponent[];
+  priceBooks: RLMPriceBook[];
+  productCategories: RLMProductCategory[];
+  productCategoryProducts: RLMProductCategoryProduct[];
+  pricingProcedures: RLMPricingProcedure[];
+  decisionTables: RLMDecisionTable[];
+  contextDefinitions: RLMContextDefinition[];
 }
 
 // ============================================

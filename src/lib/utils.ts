@@ -87,6 +87,16 @@ export function getCategoryLabel(category: string): string {
     legal_entity: 'Legal Entity',
     product_billing_config: 'Product Billing Config',
     invoicing: 'Invoicing',
+    // ARM (Revenue Cloud / RLM) categories
+    arm_product_catalog: 'Product Catalog (ARM)',
+    arm_selling_models: 'Selling Models (ARM)',
+    arm_price_adjustments: 'Price Adjustments (ARM)',
+    arm_attribute_pricing: 'Attribute Pricing (ARM)',
+    arm_bundles: 'Bundles (ARM)',
+    arm_pricing_procedures: 'Pricing Procedures (ARM)',
+    arm_price_books: 'Price Books (ARM)',
+    arm_decision_tables: 'Decision Tables (ARM)',
+    arm_context_service: 'Context Service (ARM)',
   };
   return labels[category] || category;
 }
