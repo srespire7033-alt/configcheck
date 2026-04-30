@@ -360,12 +360,12 @@
     <div class="stats-row">
       <div class="stat-card">
         <div class="label">Total Tests</div>
-        <div class="value blue">701</div>
+        <div class="value blue">1,118</div>
         <div class="progress-bar"><div class="progress-fill green" style="width:100%"></div></div>
       </div>
       <div class="stat-card">
         <div class="label">Passed</div>
-        <div class="value green">701</div>
+        <div class="value green">1,118</div>
       </div>
       <div class="stat-card">
         <div class="label">Failed</div>
@@ -373,19 +373,19 @@
       </div>
       <div class="stat-card">
         <div class="label">Test Files</div>
-        <div class="value purple">38</div>
+        <div class="value purple">51</div>
       </div>
       <div class="stat-card">
         <div class="label">Health Checks</div>
-        <div class="value amber">102</div>
+        <div class="value amber">176</div>
       </div>
       <div class="stat-card">
         <div class="label">Products</div>
-        <div class="value purple">CPQ + Billing</div>
+        <div class="value purple">CPQ + Billing + ARM</div>
       </div>
       <div class="stat-card">
         <div class="label">Execution Time</div>
-        <div class="value amber">~8.1s</div>
+        <div class="value amber">~17s</div>
       </div>
     </div>
   </div>
@@ -771,8 +771,179 @@
   </tbody>
 </table>
 
+<!-- SECTION 2D: ARM (REVENUE CLOUD / RLM) CHECKS -->
+<h2><span class="icon">&#127757;</span> 2c. ARM (Revenue Cloud / RLM) Categories &amp; Checks (51 Checks / 16 Categories)</h2>
+<p style="color:var(--text-muted);margin-bottom:20px;">Salesforce Revenue Cloud (also called RLM or ARM) health checks. Unlike CPQ and Billing, ARM is <strong>not</strong> a managed package &mdash; it&rsquo;s a license-gated feature on the core Salesforce platform, so all checks target standard objects. 51 checks span the full revenue lifecycle: catalog &rarr; pricing &rarr; configuration &rarr; selling &rarr; orchestration &rarr; assets &rarr; contracts &rarr; usage.</p>
+
+<h3>Product Catalog (ARM-001, ARM-010, ARM-018)</h3>
+<table>
+  <thead><tr><th>Check ID</th><th>Check Name</th><th>Severity</th><th>Positive Tests (Issues Detected)</th><th>Negative Tests (No False Positives)</th></tr></thead>
+  <tbody>
+    <tr><td><strong>ARM-001</strong></td><td>Active Product Without Selling Model</td><td><span class="badge badge-critical">Critical</span></td><td class="col-positive">Active product not linked to any ProductSellingModelOption (when org has at least one ProductSellingModel)</td><td class="col-negative">Product linked to active option; Org has no ProductSellingModel records at all (skips to avoid partial-RLM false positive)</td></tr>
+    <tr><td><strong>ARM-010</strong></td><td>Inactive Product Category With Active Products</td><td><span class="badge badge-info">Info</span></td><td class="col-positive">Active product assigned to inactive category</td><td class="col-negative">All assignments are to active categories; No assignments at all</td></tr>
+    <tr><td><strong>ARM-018</strong></td><td>Active Product Without Category Assignment</td><td><span class="badge badge-info">Info</span></td><td class="col-positive">Active product with no ProductCategoryProduct (when org uses categories elsewhere)</td><td class="col-negative">Product is in a category; Org has no ProductCategory records at all</td></tr>
+  </tbody>
+</table>
+
+<h3>Selling Models (ARM-002, ARM-011, ARM-012, ARM-019)</h3>
+<table>
+  <thead><tr><th>Check ID</th><th>Check Name</th><th>Severity</th><th>Positive Tests</th><th>Negative Tests</th></tr></thead>
+  <tbody>
+    <tr><td><strong>ARM-002</strong></td><td>Recurring Selling Model Without Billing Frequency</td><td><span class="badge badge-critical">Critical</span></td><td class="col-positive">TermDefined or Evergreen model with null SellingFrequencyId</td><td class="col-negative">OneTime model (frequency irrelevant); SellingFrequencyId set; Model inactive</td></tr>
+    <tr><td><strong>ARM-011</strong></td><td>Term Selling Model Without Pricing Term</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">TermDefined with null/zero PricingTerm</td><td class="col-negative">PricingTerm = 12; OneTime model; Inactive</td></tr>
+    <tr><td><strong>ARM-012</strong></td><td>Active Option Pointing at Inactive Selling Model</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">IsActive option but parent ProductSellingModel.IsActive=false</td><td class="col-negative">Both active; Both inactive; Option inactive</td></tr>
+    <tr><td><strong>ARM-019</strong></td><td>Duplicate Selling Model Options</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">Same Product+Model has 2+ active option rows</td><td class="col-negative">Unique pairs; One active + others inactive</td></tr>
+  </tbody>
+</table>
+
+<h3>Bundles (ARM-005, ARM-013, ARM-014, ARM-015)</h3>
+<table>
+  <thead><tr><th>Check ID</th><th>Check Name</th><th>Severity</th><th>Positive Tests</th><th>Negative Tests</th></tr></thead>
+  <tbody>
+    <tr><td><strong>ARM-005</strong></td><td>Empty Bundle (No Related Components)</td><td><span class="badge badge-critical">Critical</span></td><td class="col-positive">Product named/categorised as bundle has no ProductRelatedComponent rows (when org uses the concept)</td><td class="col-negative">Bundle has children; Org has no ProductRelatedComponent records at all</td></tr>
+    <tr><td><strong>ARM-013</strong></td><td>Bundle Component Min/Max Quantity Mismatch</td><td><span class="badge badge-critical">Critical</span></td><td class="col-positive">MinQuantity 5, MaxQuantity 2 (impossible range)</td><td class="col-negative">Min &le; Max; Both null; Single bound only</td></tr>
+    <tr><td><strong>ARM-014</strong></td><td>Bundle Component Points to Inactive Child</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">ChildProductId references Product2 with IsActive=false</td><td class="col-negative">Child active; Child not in scan result (skipped silently)</td></tr>
+    <tr><td><strong>ARM-015</strong></td><td>Inactive Bundle Parent Still Has Components</td><td><span class="badge badge-info">Info</span></td><td class="col-positive">ParentProductId is inactive but components remain</td><td class="col-negative">Parent active; No components defined</td></tr>
+  </tbody>
+</table>
+
+<h3>Price Adjustments (ARM-003, ARM-016, ARM-017)</h3>
+<table>
+  <thead><tr><th>Check ID</th><th>Check Name</th><th>Severity</th><th>Positive Tests</th><th>Negative Tests</th></tr></thead>
+  <tbody>
+    <tr><td><strong>ARM-003</strong></td><td>Overlapping Price Adjustment Tiers</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">Tier1: 0-100, Tier2: 50-200 (overlap)</td><td class="col-negative">Contiguous tiers (0-100, 100-200); Single tier; No tiers</td></tr>
+    <tr><td><strong>ARM-016</strong></td><td>Active Schedule With No Tiers</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">PriceAdjustmentSchedule.IsActive=true with zero tier rows</td><td class="col-negative">Schedule has tiers; Schedule inactive</td></tr>
+    <tr><td><strong>ARM-017</strong></td><td>Tier With Reversed Bounds</td><td><span class="badge badge-critical">Critical</span></td><td class="col-positive">LowerBound 200, UpperBound 100</td><td class="col-negative">Lower &le; Upper; One bound null</td></tr>
+  </tbody>
+</table>
+
+<h3>Attribute Pricing (ARM-004, ARM-020)</h3>
+<table>
+  <thead><tr><th>Check ID</th><th>Check Name</th><th>Severity</th><th>Positive Tests</th><th>Negative Tests</th></tr></thead>
+  <tbody>
+    <tr><td><strong>ARM-004</strong></td><td>Attribute Rule Without Effective Dates</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">Active rule with both dates null</td><td class="col-negative">Start date set; End date set; Rule inactive</td></tr>
+    <tr><td><strong>ARM-020</strong></td><td>Expired Attribute Rule Still Active</td><td><span class="badge badge-info">Info</span></td><td class="col-positive">EffectiveEndDate &lt; today and IsActive=true</td><td class="col-negative">EndDate in future; Rule inactive; No end date</td></tr>
+  </tbody>
+</table>
+
+<h3>Pricing Procedures (ARM-006, ARM-027)</h3>
+<table>
+  <thead><tr><th>Check ID</th><th>Check Name</th><th>Severity</th><th>Positive Tests</th><th>Negative Tests</th></tr></thead>
+  <tbody>
+    <tr><td><strong>ARM-006</strong></td><td>Pricing Procedure Without Resolution Policy</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">Active procedure with null ResolutionPolicy</td><td class="col-negative">ResolutionPolicy set; Procedure inactive</td></tr>
+    <tr><td><strong>ARM-027</strong></td><td>Multiple Active Pricing Procedures</td><td><span class="badge badge-info">Info</span></td><td class="col-positive">2+ active procedures (drift signal)</td><td class="col-negative">Single active; Zero active</td></tr>
+  </tbody>
+</table>
+
+<h3>Price Books (ARM-007, ARM-028)</h3>
+<table>
+  <thead><tr><th>Check ID</th><th>Check Name</th><th>Severity</th><th>Positive Tests</th><th>Negative Tests</th></tr></thead>
+  <tbody>
+    <tr><td><strong>ARM-007</strong></td><td>Multiple Active Price Books Per Currency</td><td><span class="badge badge-info">Info</span></td><td class="col-positive">2+ non-standard books for same CurrencyIsoCode</td><td class="col-negative">One per currency; All standard; Zero non-standard</td></tr>
+    <tr><td><strong>ARM-028</strong></td><td>Standard Pricebook Is Inactive</td><td><span class="badge badge-critical">Critical</span></td><td class="col-positive">IsStandard=true with IsActive=false</td><td class="col-negative">Standard active; No standard book</td></tr>
+  </tbody>
+</table>
+
+<h3>Decision Tables (ARM-008, ARM-029) &amp; Context Service (ARM-009, ARM-030)</h3>
+<table>
+  <thead><tr><th>Check ID</th><th>Check Name</th><th>Severity</th><th>Positive Tests</th><th>Negative Tests</th></tr></thead>
+  <tbody>
+    <tr><td><strong>ARM-008</strong></td><td>Inactive/Draft Decision Tables</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">DecisionTable in Draft status</td><td class="col-negative">All Active; No tables defined</td></tr>
+    <tr><td><strong>ARM-029</strong></td><td>All Decision Tables Are Draft</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">Tables exist but zero are Active</td><td class="col-negative">At least one Active</td></tr>
+    <tr><td><strong>ARM-009</strong></td><td>Inactive Context Definitions</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">ContextDefinition.IsActive=false</td><td class="col-negative">All active; No definitions</td></tr>
+    <tr><td><strong>ARM-030</strong></td><td>No Active Context Definitions</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">Definitions exist but zero active</td><td class="col-negative">At least one active</td></tr>
+  </tbody>
+</table>
+
+<h3>Rate Cards (ARM-021, ARM-022, ARM-023)</h3>
+<table>
+  <thead><tr><th>Check ID</th><th>Check Name</th><th>Severity</th><th>Positive Tests</th><th>Negative Tests</th></tr></thead>
+  <tbody>
+    <tr><td><strong>ARM-021</strong></td><td>Active Rate Card With No Entries</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">RateCard.IsActive=true, zero RateCardEntry</td><td class="col-negative">Has entries; Card inactive</td></tr>
+    <tr><td><strong>ARM-022</strong></td><td>Rate Card Entry With No Price</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">RateCardEntry.Price null or zero</td><td class="col-negative">Positive price</td></tr>
+    <tr><td><strong>ARM-023</strong></td><td>Expired Rate Card Still Active</td><td><span class="badge badge-info">Info</span></td><td class="col-positive">EffectiveEndDate in past, IsActive=true</td><td class="col-negative">Future end date; Inactive</td></tr>
+  </tbody>
+</table>
+
+<h3>Attributes (ARM-024, ARM-025, ARM-026)</h3>
+<table>
+  <thead><tr><th>Check ID</th><th>Check Name</th><th>Severity</th><th>Positive Tests</th><th>Negative Tests</th></tr></thead>
+  <tbody>
+    <tr><td><strong>ARM-024</strong></td><td>Picklist Attribute With No Values</td><td><span class="badge badge-critical">Critical</span></td><td class="col-positive">DataType=Picklist, zero AttributePicklistValue rows</td><td class="col-negative">Has values; DataType=Text (irrelevant); Inactive</td></tr>
+    <tr><td><strong>ARM-025</strong></td><td>Required Attribute Without Default</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">IsRequired=true, DefaultValue null</td><td class="col-negative">Has default; Not required</td></tr>
+    <tr><td><strong>ARM-026</strong></td><td>Active Attribute In Inactive Category</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">AttributeDefinition active, AttributeCategory inactive</td><td class="col-negative">Both active; No category assigned</td></tr>
+  </tbody>
+</table>
+
+<h3>Assets (ARM-031, ARM-032, ARM-033, ARM-034, ARM-035)</h3>
+<table>
+  <thead><tr><th>Check ID</th><th>Check Name</th><th>Severity</th><th>Positive Tests</th><th>Negative Tests</th></tr></thead>
+  <tbody>
+    <tr><td><strong>ARM-031</strong></td><td>Active Asset Without State Period</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">Active asset, zero AssetStatePeriod</td><td class="col-negative">Has state period; Asset cancelled</td></tr>
+    <tr><td><strong>ARM-032</strong></td><td>Asset Past End Date Still Active</td><td><span class="badge badge-info">Info</span></td><td class="col-positive">CurrentLifecycleEndDate in past, Status=Active</td><td class="col-negative">Future end date; Status=Cancelled</td></tr>
+    <tr><td><strong>ARM-033</strong></td><td>Orphan Asset Relationship</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">RelatedAssetId null/missing/cancelled</td><td class="col-negative">Related asset is active</td></tr>
+    <tr><td><strong>ARM-034</strong></td><td>Multiple Current Asset State Periods</td><td><span class="badge badge-critical">Critical</span></td><td class="col-positive">2+ periods on same asset with IsCurrent=true</td><td class="col-negative">Single current period; No current</td></tr>
+    <tr><td><strong>ARM-035</strong></td><td>Asset State Period With Zero Quantity</td><td><span class="badge badge-info">Info</span></td><td class="col-positive">IsCurrent=true, Quantity null/zero</td><td class="col-negative">Positive quantity; Not current</td></tr>
+  </tbody>
+</table>
+
+<h3>Contracts (ARM-036, ARM-037, ARM-038, ARM-039)</h3>
+<table>
+  <thead><tr><th>Check ID</th><th>Check Name</th><th>Severity</th><th>Positive Tests</th><th>Negative Tests</th></tr></thead>
+  <tbody>
+    <tr><td><strong>ARM-036</strong></td><td>Contract Item Price Without Effective Dates</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">Both EffectiveStartDate and EffectiveEndDate null</td><td class="col-negative">At least one date set</td></tr>
+    <tr><td><strong>ARM-037</strong></td><td>Active Contract Past End Date</td><td><span class="badge badge-info">Info</span></td><td class="col-positive">Status=Activated, EndDate &lt; today</td><td class="col-negative">Future end date; Status=Expired</td></tr>
+    <tr><td><strong>ARM-038</strong></td><td>Contract Item Price Zero or Negative</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">Price = 0, null, or negative</td><td class="col-negative">Positive price</td></tr>
+    <tr><td><strong>ARM-039</strong></td><td>Contract With Reversed Dates</td><td><span class="badge badge-critical">Critical</span></td><td class="col-positive">StartDate &gt; EndDate</td><td class="col-negative">Chronological dates</td></tr>
+  </tbody>
+</table>
+
+<h3>Usage Management (ARM-040 to ARM-044)</h3>
+<table>
+  <thead><tr><th>Check ID</th><th>Check Name</th><th>Severity</th><th>Positive Tests</th><th>Negative Tests</th></tr></thead>
+  <tbody>
+    <tr><td><strong>ARM-040</strong></td><td>Unit Of Measure Class Without Default UoM</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">Active UnitOfMeasureClass with null DefaultUomId</td><td class="col-negative">DefaultUomId set; Inactive</td></tr>
+    <tr><td><strong>ARM-041</strong></td><td>Usage Resource Not Active</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">Status = Draft or Inactive</td><td class="col-negative">Status = Active</td></tr>
+    <tr><td><strong>ARM-042</strong></td><td>Expired Product Usage Grant Still Active</td><td><span class="badge badge-info">Info</span></td><td class="col-positive">EffectiveEndDate &lt; today, Status=Active</td><td class="col-negative">Future end date; Status=Inactive</td></tr>
+    <tr><td><strong>ARM-043</strong></td><td>Usage Grant With Reversed Dates</td><td><span class="badge badge-critical">Critical</span></td><td class="col-positive">EffectiveStartDate &gt; EffectiveEndDate</td><td class="col-negative">Chronological dates</td></tr>
+    <tr><td><strong>ARM-044</strong></td><td>Active Usage Resource Missing UoM Class</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">Status=Active, UnitOfMeasureClassId null</td><td class="col-negative">UoM class set; Inactive</td></tr>
+  </tbody>
+</table>
+
+<h3>Orchestration (DRO) (ARM-045, ARM-046, ARM-047, ARM-048)</h3>
+<table>
+  <thead><tr><th>Check ID</th><th>Check Name</th><th>Severity</th><th>Positive Tests</th><th>Negative Tests</th></tr></thead>
+  <tbody>
+    <tr><td><strong>ARM-045</strong></td><td>Fulfillment Step Without Group</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">FulfillmentStepDefinition with null group ID</td><td class="col-negative">Group ID set</td></tr>
+    <tr><td><strong>ARM-046</strong></td><td>Empty Fulfillment Step Group</td><td><span class="badge badge-info">Info</span></td><td class="col-positive">FulfillmentStepDefinitionGroup with zero step assignments</td><td class="col-negative">Group has steps</td></tr>
+    <tr><td><strong>ARM-047</strong></td><td>Active Task Rule Without Assignee</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">FulfillmentTaskAssignmentRule active, AssignedToId null</td><td class="col-negative">Assignee set; Rule inactive</td></tr>
+    <tr><td><strong>ARM-048</strong></td><td>Inactive Product Fulfillment Scenario</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">ProductFulfillmentScenario.Status &ne; Active</td><td class="col-negative">Active scenario</td></tr>
+  </tbody>
+</table>
+
+<h3>Cost Books (ARM-049, ARM-050, ARM-051)</h3>
+<table>
+  <thead><tr><th>Check ID</th><th>Check Name</th><th>Severity</th><th>Positive Tests</th><th>Negative Tests</th></tr></thead>
+  <tbody>
+    <tr><td><strong>ARM-049</strong></td><td>Active Cost Book With No Entries</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">CostBook active, zero CostBookEntry</td><td class="col-negative">Has entries; Cost book inactive</td></tr>
+    <tr><td><strong>ARM-050</strong></td><td>Cost Book Entry With No Cost</td><td><span class="badge badge-info">Info</span></td><td class="col-positive">CostBookEntry.Cost null or zero</td><td class="col-negative">Positive cost</td></tr>
+    <tr><td><strong>ARM-051</strong></td><td>Multiple Active Cost Books Per Currency</td><td><span class="badge badge-info">Info</span></td><td class="col-positive">2+ non-standard active books for same currency</td><td class="col-negative">Single book per currency; All standard</td></tr>
+  </tbody>
+</table>
+
+<h3>Live ARM scan validated against a real Revenue Cloud org (Ksolves &mdash; Sanjeev, dev-edition)</h3>
+<table>
+  <thead><tr><th>Test Step</th><th>What It Verifies</th><th>Expected Result</th></tr></thead>
+  <tbody>
+    <tr><td>POST /api/orgs/seed-arm-test-data</td><td>Creates a deliberate mix of POSITIVE (clean) + NEGATIVE (broken) records prefixed CC_Test_</td><td>HTTP 200 with summary { created, errors, skipped }</td></tr>
+    <tr><td>POST /api/scans (productType=arm)</td><td>End-to-end scan against real Revenue Cloud objects</td><td>Scan transitions pending &rarr; running &rarr; completed</td></tr>
+    <tr><td>Issue table inspection</td><td>Verifies seeded negative cases produce issues with correct check_id, severity, and category</td><td>Each seeded negative produces one matching issue</td></tr>
+    <tr><td>Partial-RLM resilience</td><td>If the org doesn&rsquo;t expose every standard ARM object (different rollouts ship different subsets), checks no-op rather than fire false positives</td><td>ARM-001/005/018 stay silent when their underlying objects aren&rsquo;t present</td></tr>
+  </tbody>
+</table>
+
 <!-- SECTION 2C: PLATFORM FEATURE TESTS -->
-<h2><span class="icon">&#9881;&#65039;</span> 2c. Platform Feature Test Scenarios</h2>
+<h2><span class="icon">&#9881;&#65039;</span> 2d. Platform Feature Test Scenarios</h2>
 <p style="color:var(--text-muted);margin-bottom:20px;">Test coverage for quota enforcement, notification emails, scan execution, authentication, and UI features.</p>
 
 <h3>Quota & Plan Enforcement</h3>
@@ -1149,7 +1320,7 @@
 </div>
 
 <div class="footer">
-  ConfigCheck &copy; 2026 &mdash; Test Coverage Report &mdash; Updated on April 15, 2026 &mdash; 102 Health Checks (68 CPQ + 34 Billing) / 25 Categories / 701 Tests / 38 Files
+  ConfigCheck &copy; 2026 &mdash; Test Coverage Report &mdash; Updated on April 30, 2026 &mdash; 176 Health Checks (95 CPQ + 30 Billing + 51 ARM) / 41 Categories / 1,118 Tests / 51 Files
 </div>
 
 </body>

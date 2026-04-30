@@ -19,6 +19,12 @@ export const armChecks: ARMHealthCheck[] = [
     description:
       'Active products that have no ProductSellingModelOption — they cannot be quoted',
     run: async (data: ARMData): Promise<Issue[]> => {
+      // Don't fire if the org isn't using ProductSellingModel at all —
+      // many partial-RLM orgs have BillingSchedule but no ProductSellingModel,
+      // and we'd otherwise flag every product as orphaned (false positive).
+      if (data.sellingModels.length === 0 && data.sellingModelOptions.length === 0) {
+        return [];
+      }
       const productsWithModel = new Set(
         data.sellingModelOptions.filter((o) => o.IsActive).map((o) => o.Product2Id)
       );
@@ -210,6 +216,12 @@ export const armChecks: ARMHealthCheck[] = [
     description:
       'Products that act as parents in the catalog but have no ProductRelatedComponent children',
     run: async (data: ARMData): Promise<Issue[]> => {
+      // Don't fire if the org isn't using ProductRelatedComponent at all —
+      // a partial-RLM org without this object would have every "Bundle"-named
+      // product flagged, which isn't actionable.
+      if (data.productRelatedComponents.length === 0) {
+        return [];
+      }
       // Heuristic: a product is a bundle parent if it has no child component
       // entries pointing INTO it as a child but has no children of its own,
       // and its name suggests a bundle. We simplify: any product referenced
@@ -788,6 +800,12 @@ export const armChecks: ARMHealthCheck[] = [
     description:
       'Active Product2 records that have no ProductCategoryProduct row attached',
     run: async (data: ARMData): Promise<Issue[]> => {
+      // Don't fire if the org isn't using ProductCategory at all —
+      // would otherwise flag every product in an org that doesn't use
+      // catalogue categorisation.
+      if (data.productCategories.length === 0 && data.productCategoryProducts.length === 0) {
+        return [];
+      }
       const productsInCategory = new Set(
         data.productCategoryProducts.map((pcp) => pcp.ProductId)
       );

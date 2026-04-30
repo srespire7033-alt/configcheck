@@ -59,11 +59,20 @@ describe('ARM check simulation — positive (clean) + negative (broken) scenario
   // ─── ARM-001 Active product without selling model ────────────────
   describe('ARM-001 Active product without selling model', () => {
     const c = getCheck('ARM-001');
-    it('FIRES on active product with no option', async () => {
+    it('FIRES on active product with no option (when org uses selling models)', async () => {
+      const d = empty();
+      d.products = [{ Id: 'p1', Name: 'Widget', IsActive: true }];
+      // The org HAS the ProductSellingModel concept (a model exists), but
+      // this particular product isn't linked to one.
+      d.sellingModels = [{ Id: 'sm1', Name: 'Annual', IsActive: true, SellingModelType: 'TermDefined', PricingTerm: 12 }];
+      const r = await c.run(d);
+      expect(r).toHaveLength(1);
+    });
+    it('STAYS SILENT when org has no selling models at all (avoids partial-RLM false positive)', async () => {
       const d = empty();
       d.products = [{ Id: 'p1', Name: 'Widget', IsActive: true }];
       const r = await c.run(d);
-      expect(r).toHaveLength(1);
+      expect(r).toHaveLength(0);
     });
     it('PASSES when product has active selling model option', async () => {
       const d = empty();
@@ -139,10 +148,23 @@ describe('ARM check simulation — positive (clean) + negative (broken) scenario
   // ─── ARM-005 Empty bundle (no related components) ────────────────
   describe('ARM-005 Empty bundle', () => {
     const c = getCheck('ARM-005');
-    it('FIRES on bundle-named product with no components', async () => {
+    it('FIRES on bundle-named product with no components (when org uses ProductRelatedComponent)', async () => {
+      const d = empty();
+      d.products = [
+        { Id: 'p1', Name: 'Server Bundle', IsActive: true },
+        { Id: 'p2', Name: 'Other Bundle', IsActive: true },
+        { Id: 'p3', Name: 'CPU', IsActive: true },
+      ];
+      // Other bundles in the org DO have components, so the concept is in use
+      d.productRelatedComponents = [{ Id: 'prc1', ParentProductId: 'p2', ChildProductId: 'p3' }];
+      const r = await c.run(d);
+      // p1 is bundle-named but no component refers to it
+      expect(r.length).toBeGreaterThanOrEqual(1);
+    });
+    it('STAYS SILENT when org has no ProductRelatedComponent records at all', async () => {
       const d = empty();
       d.products = [{ Id: 'p1', Name: 'Server Bundle', IsActive: true }];
-      expect(await c.run(d)).toHaveLength(1);
+      expect(await c.run(d)).toHaveLength(0);
     });
     it('PASSES when bundle has components', async () => {
       const d = empty();
@@ -348,14 +370,26 @@ describe('ARM check simulation — positive (clean) + negative (broken) scenario
   // ─── ARM-018 Active product without category ─────────────────────
   describe('ARM-018 Active product without category', () => {
     const c = getCheck('ARM-018');
-    it('FIRES when no category assignment', async () => {
+    it('FIRES when no category assignment (when org uses ProductCategory)', async () => {
+      const d = empty();
+      d.products = [
+        { Id: 'p1', Name: 'Lonely', IsActive: true },
+        { Id: 'p2', Name: 'Sociable', IsActive: true },
+      ];
+      // Org IS using ProductCategory (one product is in a category) but p1 isn't
+      d.productCategories = [{ Id: 'cat1', Name: 'Hardware', IsActive: true }];
+      d.productCategoryProducts = [{ Id: 'pcp1', ProductId: 'p2', ProductCategoryId: 'cat1' }];
+      expect(await c.run(d)).toHaveLength(1);
+    });
+    it('STAYS SILENT when org has no ProductCategory records at all', async () => {
       const d = empty();
       d.products = [{ Id: 'p1', Name: 'Lonely', IsActive: true }];
-      expect(await c.run(d)).toHaveLength(1);
+      expect(await c.run(d)).toHaveLength(0);
     });
     it('PASSES when product is in a category', async () => {
       const d = empty();
       d.products = [{ Id: 'p1', Name: 'Sociable', IsActive: true }];
+      d.productCategories = [{ Id: 'cat1', Name: 'Hardware', IsActive: true }];
       d.productCategoryProducts = [{ Id: 'pcp1', ProductId: 'p1', ProductCategoryId: 'cat1' }];
       expect(await c.run(d)).toHaveLength(0);
     });
