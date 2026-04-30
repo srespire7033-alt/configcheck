@@ -79,7 +79,7 @@ describe('Quote Lines — Comprehensive Tests', () => {
       expect(issues[0].severity).toBe('critical');
     });
 
-    it('should group flagged lines by quote', async () => {
+    it('should aggregate all flagged lines into a single issue with per-quote breakdown', async () => {
       const data = createCleanData();
       data.quoteLines = [
         { Id: 'ql1', SBQQ__Quote__c: 'q1', SBQQ__Product__r: { Name: 'Product A' }, SBQQ__Quantity__c: 2, SBQQ__NetPrice__c: 0, SBQQ__NetTotal__c: 0, SBQQ__ListPrice__c: 100, SBQQ__ProrateMultiplier__c: null, SBQQ__SubscriptionPricing__c: null, SBQQ__ChargeType__c: null, SBQQ__Discount__c: null, SBQQ__AdditionalDiscount__c: null, SBQQ__UpliftAmount__c: null, SBQQ__Uplift__c: null },
@@ -87,10 +87,14 @@ describe('Quote Lines — Comprehensive Tests', () => {
         { Id: 'ql3', SBQQ__Quote__c: 'q2', SBQQ__Product__r: { Name: 'Product C' }, SBQQ__Quantity__c: 1, SBQQ__NetPrice__c: 0, SBQQ__NetTotal__c: 0, SBQQ__ListPrice__c: 300, SBQQ__ProrateMultiplier__c: null, SBQQ__SubscriptionPricing__c: null, SBQQ__ChargeType__c: null, SBQQ__Discount__c: null, SBQQ__AdditionalDiscount__c: null, SBQQ__UpliftAmount__c: null, SBQQ__Uplift__c: null },
       ];
       const issues = await check.run(data);
-      // Should be grouped into 2 issues (one per quote)
-      expect(issues).toHaveLength(2);
-      const q1Issue = issues.find((i) => i.affected_records.some((r) => r.id === 'ql1'));
-      expect(q1Issue!.affected_records).toHaveLength(2);
+      // All flagged lines aggregated into a single issue
+      expect(issues).toHaveLength(1);
+      expect(issues[0].affected_records).toHaveLength(3);
+      const ids = issues[0].affected_records.map((r) => r.id).sort();
+      expect(ids).toEqual(['ql1', 'ql2', 'ql3']);
+      // Description mentions both quotes
+      expect(issues[0].description).toContain('q1');
+      expect(issues[0].description).toContain('q2');
     });
 
     it('should include product names in description', async () => {
