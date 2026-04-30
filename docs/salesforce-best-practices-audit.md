@@ -9,13 +9,39 @@ Last updated: 2026-04-30
 
 ## Executive Summary
 
-| Product Area | Existing Checks | Coverage Estimate | Notable Gaps |
+| Product Area | Existing Checks | Coverage Estimate | Notable Remaining Gaps |
 |---|---|---|---|
-| **Salesforce CPQ (SBQQ)** | 94 | ~75% of documented best practices | Large Quote Threshold, Apply Immediately Context, Bundle pricing scheme consistency, Evergreen+regular bundle mixing |
+| **Salesforce CPQ (SBQQ)** | 95 | ~78% of documented best practices | Large Quote Threshold, Apply Immediately Context, Bundle pricing scheme consistency |
 | **Salesforce Billing (blng)** | 30+ | ~70% of documented best practices | Cancel-and-rebill workflow, Billing day-of-month consistency, Consumption schedule + amendment rules |
-| **Revenue Cloud / ARM (RLM)** | **0** | **0%** | Entire product line — see ARM section |
+| **Revenue Cloud / ARM (RLM)** | **51** ✨ | **~60% of documented best practices** | Asset attributes, Constraint Modeling Language (CML), Sharing & search index, Decision-table conditions |
 
-The CPQ and Billing coverage is broadly solid for the most common consulting issues. The biggest known gap is **ARM (Revenue Cloud)** — zero coverage today. Within CPQ/Billing, the gaps below are the highest-value additions identified from the docs.
+ARM coverage went from **0 → 51 checks across 16 categories** (delivered 2026-04-30). ConfigCheck now covers all three Salesforce revenue product lines: CPQ, Billing, and Revenue Cloud (ARM/RLM).
+
+**ARM check inventory (51 checks across 16 categories):**
+
+| Category | Count | Check IDs |
+|---|---|---|
+| Product Catalog | 3 | ARM-001, ARM-010, ARM-018 |
+| Selling Models | 4 | ARM-002, ARM-011, ARM-012, ARM-019 |
+| Bundles | 4 | ARM-005, ARM-013, ARM-014, ARM-015 |
+| Price Adjustments | 3 | ARM-003, ARM-016, ARM-017 |
+| Attribute Pricing | 2 | ARM-004, ARM-020 |
+| Pricing Procedures | 2 | ARM-006, ARM-027 |
+| Price Books | 2 | ARM-007, ARM-028 |
+| Decision Tables | 2 | ARM-008, ARM-029 |
+| Context Service | 2 | ARM-009, ARM-030 |
+| Rate Cards | 3 | ARM-021, ARM-022, ARM-023 |
+| Attributes | 3 | ARM-024, ARM-025, ARM-026 |
+| Assets | 5 | ARM-031, ARM-032, ARM-033, ARM-034, ARM-035 |
+| Contracts | 4 | ARM-036, ARM-037, ARM-038, ARM-039 |
+| Usage Management | 5 | ARM-040, ARM-041, ARM-042, ARM-043, ARM-044 |
+| Orchestration (DRO) | 4 | ARM-045, ARM-046, ARM-047, ARM-048 |
+| Cost Books | 3 | ARM-049, ARM-050, ARM-051 |
+
+**Recently shipped CPQ gap closures** (from this audit):
+- ✅ **BN-006** Bundle Mixes Evergreen and Renewable Subscriptions (was CPQ-NEW-3)
+
+**Total checks across the platform: 176** (95 CPQ + 30 Billing + 51 ARM).
 
 ---
 

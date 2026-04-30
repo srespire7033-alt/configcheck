@@ -230,4 +230,77 @@ export const bundleIntegrityChecks: HealthCheck[] = [
       return issues;
     },
   },
+
+  // BN-006: Bundle mixes Evergreen and Renewable subscriptions
+  // CPQ doc Spring '26 (line 3753): "Bundles can't contain both products
+  // with a subscription type of Evergreen and products with a subscription
+  // type of [renewable]." Mixed bundles cause CPQ runtime errors and
+  // broken renewals. Critical severity since this is a hard incompatibility.
+  {
+    id: 'BN-006',
+    name: 'Bundle Mixes Evergreen and Renewable Subscriptions',
+    category: 'bundles',
+    severity: 'critical',
+    description:
+      'Bundle products whose options include both an Evergreen-type and a Renewable-type subscription product',
+    run: async (data: CPQData): Promise<Issue[]> => {
+      const issues: Issue[] = [];
+
+      // Index product subscription types by ID for fast lookup
+      const subTypeByProduct: Record<string, string | null> = {};
+      const productNameById: Record<string, string> = {};
+      for (const p of data.products) {
+        subTypeByProduct[p.Id] = p.SBQQ__SubscriptionType__c;
+        productNameById[p.Id] = p.Name;
+      }
+
+      // Group options per bundle (parent ConfiguredSKU)
+      const optionsByBundle: Record<string, typeof data.productOptions> = {};
+      for (const opt of data.productOptions) {
+        const parentId = opt.SBQQ__ConfiguredSKU__c;
+        if (!optionsByBundle[parentId]) optionsByBundle[parentId] = [];
+        optionsByBundle[parentId].push(opt);
+      }
+
+      for (const [bundleId, options] of Object.entries(optionsByBundle)) {
+        // Distinct subscription types across this bundle's option products
+        const types = new Set<string>();
+        const evergreenChildren: string[] = [];
+        const renewableChildren: string[] = [];
+        for (const opt of options) {
+          const childId = opt.SBQQ__OptionalSKU__c;
+          const t = subTypeByProduct[childId];
+          if (!t) continue;
+          types.add(t);
+          if (t.toLowerCase() === 'evergreen') {
+            evergreenChildren.push(productNameById[childId] || childId);
+          } else if (t.toLowerCase() === 'renewable') {
+            renewableChildren.push(productNameById[childId] || childId);
+          }
+        }
+        if (evergreenChildren.length > 0 && renewableChildren.length > 0) {
+          const parentName = options[0]?.SBQQ__ConfiguredSKU__r?.Name || bundleId;
+          issues.push({
+            check_id: 'BN-006',
+            category: 'bundles',
+            severity: 'critical',
+            title: `Bundle "${parentName}" mixes Evergreen and Renewable subscriptions`,
+            description:
+              `Bundle "${parentName}" contains options with both Evergreen subscription type ` +
+              `(${evergreenChildren.slice(0, 3).join(', ')}${evergreenChildren.length > 3 ? `, +${evergreenChildren.length - 3} more` : ''}) ` +
+              `and Renewable subscription type ` +
+              `(${renewableChildren.slice(0, 3).join(', ')}${renewableChildren.length > 3 ? `, +${renewableChildren.length - 3} more` : ''}). ` +
+              `Salesforce CPQ does not support this combination — bundles must be all-Evergreen or all-Renewable.`,
+            impact:
+              'CPQ raises runtime errors when configuring or renewing this bundle. Renewals will fail outright.',
+            recommendation:
+              'Split the bundle: move Evergreen products to a dedicated Evergreen bundle, and keep Renewable products in their own bundle. Update sales playbooks so reps know which bundle to add when.',
+            affected_records: [{ id: bundleId, name: parentName, type: 'Product2' }],
+          });
+        }
+      }
+
+      return issues;
+    },
+  },
 ];

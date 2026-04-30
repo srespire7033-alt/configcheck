@@ -45,6 +45,6 @@ export const allChecks: HealthCheck[] = [
   ...performanceChecks,             // PERF-001 to PERF-005 (5)
   ...impactAnalysisChecks,          // IA-001 to IA-006 (6)
   ...usageAnalyticsChecks,          // UA-001 to UA-003 (3)
-  ...bundleIntegrityChecks,         // BN-001 to BN-005 (5)
+  ...bundleIntegrityChecks,         // BN-001 to BN-006 (6)
   ...lookupQueryChecks,             // LQ-001 to LQ-005 (5)
 ];
