@@ -143,7 +143,9 @@ export type ARMCategory =
   | 'arm_pricing_procedures'
   | 'arm_price_books'
   | 'arm_decision_tables'
-  | 'arm_context_service';
+  | 'arm_context_service'
+  | 'arm_rate_cards'
+  | 'arm_attributes';
 
 export type IssueCategory = CPQCategory | BillingCategory | ARMCategory;
 
@@ -746,6 +748,49 @@ export interface RLMContextDefinition {
   IsActive: boolean;
 }
 
+// Rate cards — usage-based pricing primitive in Revenue Cloud
+export interface RLMRateCard {
+  Id: string;
+  Name: string;
+  IsActive: boolean;
+  CurrencyIsoCode?: string | null;
+  EffectiveStartDate?: string | null;
+  EffectiveEndDate?: string | null;
+}
+
+export interface RLMRateCardEntry {
+  Id: string;
+  RateCardId: string;
+  Product2Id?: string | null;
+  Price?: number | null;
+  CurrencyIsoCode?: string | null;
+}
+
+// Attributes — Product Catalog Management primitive
+export interface RLMAttributeDefinition {
+  Id: string;
+  Name: string;
+  Code: string;
+  DataType: string; // 'Picklist', 'Text', 'Number', 'Boolean', 'Date'
+  IsActive?: boolean | null;
+  IsRequired?: boolean | null;
+  DefaultValue?: string | null;
+  AttributeCategoryId?: string | null;
+}
+
+export interface RLMAttributeCategory {
+  Id: string;
+  Name: string;
+  IsActive?: boolean | null;
+}
+
+export interface RLMAttributePicklistValue {
+  Id: string;
+  AttributeDefinitionId?: string | null;
+  Value?: string | null;
+  IsActive?: boolean | null;
+}
+
 export interface ARMData {
   products: RLMProduct[];
   sellingModels: RLMProductSellingModel[];
@@ -760,6 +805,12 @@ export interface ARMData {
   pricingProcedures: RLMPricingProcedure[];
   decisionTables: RLMDecisionTable[];
   contextDefinitions: RLMContextDefinition[];
+  // v3 additions
+  rateCards: RLMRateCard[];
+  rateCardEntries: RLMRateCardEntry[];
+  attributeDefinitions: RLMAttributeDefinition[];
+  attributeCategories: RLMAttributeCategory[];
+  attributePicklistValues: RLMAttributePicklistValue[];
 }
 
 // ============================================

@@ -900,4 +900,382 @@ export const armChecks: ARMHealthCheck[] = [
       ];
     },
   },
+
+  // ═════════════════════════════════════════════════════════════════
+  // RATE CARDS  (arm_rate_cards) — 3 checks
+  // ═════════════════════════════════════════════════════════════════
+
+  // ARM-021: Active RateCard with no entries
+  {
+    id: 'ARM-021',
+    name: 'Active Rate Card With No Entries',
+    category: 'arm_rate_cards',
+    severity: 'warning',
+    description:
+      'RateCard is active but has no RateCardEntry rows configured',
+    run: async (data: ARMData): Promise<Issue[]> => {
+      const entriesByCard: Record<string, number> = {};
+      for (const e of data.rateCardEntries) {
+        entriesByCard[e.RateCardId] = (entriesByCard[e.RateCardId] || 0) + 1;
+      }
+      const empties = data.rateCards.filter(
+        (rc) => rc.IsActive && !entriesByCard[rc.Id]
+      );
+      if (empties.length === 0) return [];
+      return [
+        {
+          check_id: 'ARM-021',
+          category: 'arm_rate_cards',
+          severity: 'warning',
+          title: `${empties.length} active rate card(s) with no entries`,
+          description: `${empties.length} active RateCard(s) have zero RateCardEntry records. The rate card has no effect on usage pricing — quotes referencing it will fall back to default pricing or fail. Examples: ${empties.slice(0, 3).map((rc) => `"${rc.Name}"`).join(', ')}.`,
+          impact:
+            'Usage-based products tied to these rate cards will not be priced correctly.',
+          recommendation:
+            'Add RateCardEntry rows for each product/usage tier, or deactivate the rate card if it is no longer needed.',
+          affected_records: empties.slice(0, 25).map((rc) => ({
+            id: rc.Id,
+            name: rc.Name,
+            type: 'RateCard',
+          })),
+        },
+      ];
+    },
+  },
+
+  // ARM-022: RateCardEntry with null/zero price
+  {
+    id: 'ARM-022',
+    name: 'Rate Card Entry With No Price',
+    category: 'arm_rate_cards',
+    severity: 'warning',
+    description: 'RateCardEntry rows where Price is null or zero',
+    run: async (data: ARMData): Promise<Issue[]> => {
+      const offenders = data.rateCardEntries.filter(
+        (e) => e.Price == null || e.Price === 0
+      );
+      if (offenders.length === 0) return [];
+      const cardNames: Record<string, string> = {};
+      for (const rc of data.rateCards) cardNames[rc.Id] = rc.Name;
+      return [
+        {
+          check_id: 'ARM-022',
+          category: 'arm_rate_cards',
+          severity: 'warning',
+          title: `${offenders.length} rate card entrie(s) with no price`,
+          description: `${offenders.length} RateCardEntry record(s) have null or zero Price. Either the entry was abandoned mid-setup, or it was intentional for a free tier — both deserve review.`,
+          impact:
+            'Usage events matching these entries will price at $0, leading to silent revenue leakage.',
+          recommendation:
+            'Set a positive Price on each entry, or document why $0 is intentional (e.g. free tier).',
+          affected_records: offenders.slice(0, 25).map((e) => ({
+            id: e.Id,
+            name: cardNames[e.RateCardId] || e.RateCardId,
+            type: 'RateCardEntry',
+          })),
+        },
+      ];
+    },
+  },
+
+  // ARM-023: Expired rate card still active
+  {
+    id: 'ARM-023',
+    name: 'Expired Rate Card Still Active',
+    category: 'arm_rate_cards',
+    severity: 'info',
+    description: 'RateCard with EffectiveEndDate in the past but IsActive=true',
+    run: async (data: ARMData): Promise<Issue[]> => {
+      const todayIso = new Date().toISOString().slice(0, 10);
+      const offenders = data.rateCards.filter((rc) => {
+        if (!rc.IsActive) return false;
+        if (!rc.EffectiveEndDate) return false;
+        return rc.EffectiveEndDate < todayIso;
+      });
+      if (offenders.length === 0) return [];
+      return [
+        {
+          check_id: 'ARM-023',
+          category: 'arm_rate_cards',
+          severity: 'info',
+          title: `${offenders.length} rate card(s) past end date but active`,
+          description: `${offenders.length} active RateCard(s) have an EffectiveEndDate before today. They remain in the org but won't apply to new transactions.`,
+          impact:
+            'Low — pricing flows respect the date filter, but the active list grows over time.',
+          recommendation:
+            'Mark expired rate cards inactive, or extend their EffectiveEndDate if they should still apply.',
+          affected_records: offenders.slice(0, 25).map((rc) => ({
+            id: rc.Id,
+            name: `${rc.Name} (ended ${rc.EffectiveEndDate})`,
+            type: 'RateCard',
+          })),
+        },
+      ];
+    },
+  },
+
+  // ═════════════════════════════════════════════════════════════════
+  // ATTRIBUTES  (arm_attributes) — 3 checks
+  // ═════════════════════════════════════════════════════════════════
+
+  // ARM-024: Picklist AttributeDefinition with no values
+  {
+    id: 'ARM-024',
+    name: 'Picklist Attribute Without Values',
+    category: 'arm_attributes',
+    severity: 'critical',
+    description:
+      'AttributeDefinition with DataType=Picklist but no AttributePicklistValue rows',
+    run: async (data: ARMData): Promise<Issue[]> => {
+      const valuesByAttr: Record<string, number> = {};
+      for (const v of data.attributePicklistValues) {
+        if (!v.AttributeDefinitionId) continue;
+        valuesByAttr[v.AttributeDefinitionId] =
+          (valuesByAttr[v.AttributeDefinitionId] || 0) + 1;
+      }
+      const offenders = data.attributeDefinitions.filter((ad) => {
+        if (ad.IsActive === false) return false;
+        const dt = (ad.DataType || '').toLowerCase();
+        if (!dt.includes('picklist')) return false;
+        return !valuesByAttr[ad.Id];
+      });
+      if (offenders.length === 0) return [];
+      return [
+        {
+          check_id: 'ARM-024',
+          category: 'arm_attributes',
+          severity: 'critical',
+          title: `${offenders.length} picklist attribute(s) with no values`,
+          description: `${offenders.length} AttributeDefinition record(s) of type Picklist have no AttributePicklistValue rows. Sales reps will see an empty dropdown — they cannot complete configuration. Examples: ${offenders.slice(0, 3).map((ad) => `"${ad.Name}"`).join(', ')}.`,
+          impact:
+            'Configurator hard-blocks on these attributes — quotes referencing them cannot be saved.',
+          recommendation:
+            'Add at least one AttributePicklistValue row per picklist attribute, or change the DataType.',
+          affected_records: offenders.slice(0, 25).map((ad) => ({
+            id: ad.Id,
+            name: `${ad.Name} (${ad.Code})`,
+            type: 'AttributeDefinition',
+          })),
+        },
+      ];
+    },
+  },
+
+  // ARM-025: Required AttributeDefinition without default value
+  {
+    id: 'ARM-025',
+    name: 'Required Attribute Without Default Value',
+    category: 'arm_attributes',
+    severity: 'warning',
+    description:
+      'AttributeDefinition flagged required but with no DefaultValue',
+    run: async (data: ARMData): Promise<Issue[]> => {
+      const offenders = data.attributeDefinitions.filter((ad) => {
+        if (ad.IsActive === false) return false;
+        if (!ad.IsRequired) return false;
+        return !ad.DefaultValue;
+      });
+      if (offenders.length === 0) return [];
+      return [
+        {
+          check_id: 'ARM-025',
+          category: 'arm_attributes',
+          severity: 'warning',
+          title: `${offenders.length} required attribute(s) without a default`,
+          description: `${offenders.length} required AttributeDefinition record(s) have no DefaultValue. Sales reps must fill these in for every quote, slowing configuration. Examples: ${offenders.slice(0, 3).map((ad) => `"${ad.Name}"`).join(', ')}.`,
+          impact:
+            'UX friction during configuration, and quote save errors when the attribute is overlooked.',
+          recommendation:
+            'Set a sensible DefaultValue for each required attribute. If there is no sensible default, consider whether the attribute really needs to be required.',
+          affected_records: offenders.slice(0, 25).map((ad) => ({
+            id: ad.Id,
+            name: `${ad.Name} (${ad.Code})`,
+            type: 'AttributeDefinition',
+          })),
+        },
+      ];
+    },
+  },
+
+  // ARM-026: Inactive AttributeCategory with active AttributeDefinitions
+  {
+    id: 'ARM-026',
+    name: 'Active Attributes In Inactive Category',
+    category: 'arm_attributes',
+    severity: 'warning',
+    description:
+      'AttributeDefinition records that point to an inactive AttributeCategory',
+    run: async (data: ARMData): Promise<Issue[]> => {
+      const inactiveCategoryIds = new Set(
+        data.attributeCategories
+          .filter((c) => c.IsActive === false)
+          .map((c) => c.Id)
+      );
+      if (inactiveCategoryIds.size === 0) return [];
+      const offenders = data.attributeDefinitions.filter(
+        (ad) =>
+          ad.IsActive !== false &&
+          ad.AttributeCategoryId &&
+          inactiveCategoryIds.has(ad.AttributeCategoryId)
+      );
+      if (offenders.length === 0) return [];
+      const categoryNames: Record<string, string> = {};
+      for (const c of data.attributeCategories) categoryNames[c.Id] = c.Name;
+      return [
+        {
+          check_id: 'ARM-026',
+          category: 'arm_attributes',
+          severity: 'warning',
+          title: `${offenders.length} active attribute(s) in inactive categor${offenders.length === 1 ? 'y' : 'ies'}`,
+          description: `${offenders.length} active AttributeDefinition record(s) belong to an inactive AttributeCategory. Catalog UIs that group attributes by category will hide these.`,
+          impact:
+            'Attributes still apply at runtime but are invisible in admin views grouped by category — easy to lose track of.',
+          recommendation:
+            'Either reactivate the parent category, or move these attributes to an active category.',
+          affected_records: offenders.slice(0, 25).map((ad) => ({
+            id: ad.Id,
+            name: `${ad.Name} → ${categoryNames[ad.AttributeCategoryId!] || 'inactive category'}`,
+            type: 'AttributeDefinition',
+          })),
+        },
+      ];
+    },
+  },
+
+  // ═════════════════════════════════════════════════════════════════
+  // FILL-INS for sparse existing categories
+  // ═════════════════════════════════════════════════════════════════
+
+  // ARM-027: Multiple active pricing procedures (only one should typically be primary)
+  {
+    id: 'ARM-027',
+    name: 'Multiple Active Pricing Procedures',
+    category: 'arm_pricing_procedures',
+    severity: 'info',
+    description:
+      'More than one active PricingProcedure exists — usually only one is primary',
+    run: async (data: ARMData): Promise<Issue[]> => {
+      const active = data.pricingProcedures.filter((p) => p.IsActive);
+      if (active.length <= 1) return [];
+      return [
+        {
+          check_id: 'ARM-027',
+          category: 'arm_pricing_procedures',
+          severity: 'info',
+          title: `${active.length} pricing procedures are active`,
+          description: `${active.length} PricingProcedure records are active simultaneously: ${active.slice(0, 5).map((p) => `"${p.Name}"`).join(', ')}${active.length > 5 ? `, +${active.length - 5} more` : ''}. Most orgs operate with a single primary procedure plus a small number of overrides — having many active suggests configuration drift.`,
+          impact:
+            'Pricing rule resolution becomes harder to reason about, especially when multiple procedures could match the same quote line.',
+          recommendation:
+            'Audit each active procedure. Deactivate any that are no longer needed, or document why each one needs to stay active.',
+          affected_records: active.slice(0, 25).map((p) => ({
+            id: p.Id,
+            name: p.Name,
+            type: 'PricingProcedure',
+          })),
+        },
+      ];
+    },
+  },
+
+  // ARM-028: Standard pricebook is inactive
+  {
+    id: 'ARM-028',
+    name: 'Standard Pricebook Is Inactive',
+    category: 'arm_price_books',
+    severity: 'critical',
+    description: 'The standard Pricebook2 is flagged inactive',
+    run: async (data: ARMData): Promise<Issue[]> => {
+      const std = data.priceBooks.find((pb) => pb.IsStandard);
+      if (!std || std.IsActive) return [];
+      return [
+        {
+          check_id: 'ARM-028',
+          category: 'arm_price_books',
+          severity: 'critical',
+          title: 'Standard pricebook is inactive',
+          description: `The standard Pricebook2 ("${std.Name}") is marked inactive. Salesforce relies on this object for many baseline pricing flows.`,
+          impact:
+            'Several Revenue Cloud and CPQ flows assume the standard pricebook is active — disabling it can cause unpredictable failures.',
+          recommendation:
+            'Reactivate the standard pricebook unless you have a strong, documented reason to keep it disabled.',
+          affected_records: [
+            {
+              id: std.Id,
+              name: std.Name,
+              type: 'Pricebook2',
+            },
+          ],
+        },
+      ];
+    },
+  },
+
+  // ARM-029: All decision tables are in Draft
+  {
+    id: 'ARM-029',
+    name: 'All Decision Tables Are Draft',
+    category: 'arm_decision_tables',
+    severity: 'warning',
+    description:
+      'No active decision tables — Business Rules Engine evaluation will be a no-op',
+    run: async (data: ARMData): Promise<Issue[]> => {
+      if (data.decisionTables.length === 0) return [];
+      const active = data.decisionTables.filter(
+        (d) => (d.Status || '').toLowerCase() === 'active'
+      );
+      if (active.length > 0) return [];
+      return [
+        {
+          check_id: 'ARM-029',
+          category: 'arm_decision_tables',
+          severity: 'warning',
+          title: `${data.decisionTables.length} decision table(s) — none active`,
+          description: `${data.decisionTables.length} DecisionTable record(s) exist but none are in Active status. Any flow that depends on them will silently produce no result.`,
+          impact:
+            'Pricing/qualification rules driven by these tables will not run. Quotes look "clean" but business logic is bypassed.',
+          recommendation:
+            'Activate at least one decision table per logical use case, or remove the abandoned ones.',
+          affected_records: data.decisionTables.slice(0, 25).map((d) => ({
+            id: d.Id,
+            name: `${d.MasterLabel} (${d.Status})`,
+            type: 'DecisionTable',
+          })),
+        },
+      ];
+    },
+  },
+
+  // ARM-030: All context definitions inactive
+  {
+    id: 'ARM-030',
+    name: 'No Active Context Definitions',
+    category: 'arm_context_service',
+    severity: 'warning',
+    description:
+      'Context Service has zero active definitions — qualification rules cannot resolve context',
+    run: async (data: ARMData): Promise<Issue[]> => {
+      if (data.contextDefinitions.length === 0) return [];
+      const active = data.contextDefinitions.filter((c) => c.IsActive);
+      if (active.length > 0) return [];
+      return [
+        {
+          check_id: 'ARM-030',
+          category: 'arm_context_service',
+          severity: 'warning',
+          title: `${data.contextDefinitions.length} context definition(s) — none active`,
+          description: `Your org has ${data.contextDefinitions.length} ContextDefinition record(s), but none are active. Qualification rules and expression sets that read context (e.g. customer tier, region, channel) will fail to resolve any value.`,
+          impact:
+            'Decision tables and expression sets depending on context attributes cannot evaluate correctly.',
+          recommendation:
+            'Activate the relevant context definition for each consumer, or build/import one if your org has not been initialised with one.',
+          affected_records: data.contextDefinitions.slice(0, 25).map((c) => ({
+            id: c.Id,
+            name: c.DeveloperName,
+            type: 'ContextDefinition',
+          })),
+        },
+      ];
+    },
+  },
 ];

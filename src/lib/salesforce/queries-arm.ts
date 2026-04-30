@@ -15,6 +15,11 @@ import type {
   RLMPricingProcedure,
   RLMDecisionTable,
   RLMContextDefinition,
+  RLMRateCard,
+  RLMRateCardEntry,
+  RLMAttributeDefinition,
+  RLMAttributeCategory,
+  RLMAttributePicklistValue,
 } from '@/types';
 
 /**
@@ -90,6 +95,11 @@ export async function fetchAllARMData(conn: Connection): Promise<ARMData> {
     pricingProceduresRes,
     decisionTablesRes,
     contextDefinitionsRes,
+    rateCardsRes,
+    rateCardEntriesRes,
+    attributeDefinitionsRes,
+    attributeCategoriesRes,
+    attributePicklistValuesRes,
   ] = await Promise.all([
     // Products are standard Product2 — but for ARM we want active ones with
     // selling model coverage. Pull a reasonable cap to keep payload bounded.
@@ -172,6 +182,36 @@ export async function fetchAllARMData(conn: Connection): Promise<ARMData> {
        FROM ContextDefinition
        LIMIT 200`
     ),
+    safeARMQuery(
+      conn,
+      `SELECT Id, Name, IsActive, CurrencyIsoCode, EffectiveStartDate, EffectiveEndDate
+       FROM RateCard
+       LIMIT 500`
+    ),
+    safeARMQuery(
+      conn,
+      `SELECT Id, RateCardId, Product2Id, Price, CurrencyIsoCode
+       FROM RateCardEntry
+       LIMIT 5000`
+    ),
+    safeARMQuery(
+      conn,
+      `SELECT Id, Name, Code, DataType, IsActive, IsRequired, DefaultValue, AttributeCategoryId
+       FROM AttributeDefinition
+       LIMIT 1000`
+    ),
+    safeARMQuery(
+      conn,
+      `SELECT Id, Name, IsActive
+       FROM AttributeCategory
+       LIMIT 200`
+    ),
+    safeARMQuery(
+      conn,
+      `SELECT Id, AttributeDefinitionId, Value, IsActive
+       FROM AttributePicklistValue
+       LIMIT 5000`
+    ),
   ]);
 
   return {
@@ -192,5 +232,12 @@ export async function fetchAllARMData(conn: Connection): Promise<ARMData> {
     pricingProcedures: (pricingProceduresRes.records as RLMPricingProcedure[]) || [],
     decisionTables: (decisionTablesRes.records as RLMDecisionTable[]) || [],
     contextDefinitions: (contextDefinitionsRes.records as RLMContextDefinition[]) || [],
+    rateCards: (rateCardsRes.records as RLMRateCard[]) || [],
+    rateCardEntries: (rateCardEntriesRes.records as RLMRateCardEntry[]) || [],
+    attributeDefinitions:
+      (attributeDefinitionsRes.records as RLMAttributeDefinition[]) || [],
+    attributeCategories: (attributeCategoriesRes.records as RLMAttributeCategory[]) || [],
+    attributePicklistValues:
+      (attributePicklistValuesRes.records as RLMAttributePicklistValue[]) || [],
   };
 }

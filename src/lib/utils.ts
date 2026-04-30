@@ -97,6 +97,8 @@ export function getCategoryLabel(category: string): string {
     arm_price_books: 'Price Books (ARM)',
     arm_decision_tables: 'Decision Tables (ARM)',
     arm_context_service: 'Context Service (ARM)',
+    arm_rate_cards: 'Rate Cards (ARM)',
+    arm_attributes: 'Attributes (ARM)',
   };
   return labels[category] || category;
 }
