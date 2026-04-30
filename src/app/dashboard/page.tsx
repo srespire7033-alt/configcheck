@@ -242,45 +242,99 @@ function DashboardContent() {
         )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {orgs.map((org) => (
-          <OrgCard
-            key={org.id}
-            org={org}
-            onView={() => router.push(`/orgs/${org.id}`)}
-            onScan={() => handleScan(org.id)}
-            onDisconnect={() => fetchOrgs()}
-            scanning={scanningOrg === org.id}
-          />
-        ))}
-
-        {/* Connect New Org Card */}
-        <button
-          onClick={handleConnectOrg}
-          className="group relative border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-blue-400 dark:hover:border-blue-500 rounded-2xl flex flex-col items-center justify-center min-h-[220px] transition-all duration-300 hover:bg-blue-50/50 dark:hover:bg-blue-900/20 hover:shadow-lg hover:shadow-blue-100/50 cursor-pointer"
-        >
-          <div className="p-3 bg-gray-100 dark:bg-gray-800 group-hover:bg-blue-100 dark:group-hover:bg-blue-900/40 rounded-xl transition-colors duration-300 mb-3">
-            <Plus className="h-6 w-6 text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors" />
+      {orgs.length === 0 ? (
+        // First-time empty state — educational, not just an empty canvas.
+        // Per content-v2 dashboard audit: empty state should teach users
+        // what's about to happen, not present them with a blank screen.
+        <div className="bg-gradient-to-br from-blue-50 via-white to-indigo-50/50 dark:from-blue-950/30 dark:via-gray-900/40 dark:to-indigo-950/20 rounded-3xl border border-blue-100 dark:border-blue-900/40 p-8 md:p-12 text-center">
+          <div className="inline-flex p-4 bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 mb-5">
+            <Cloud className="h-9 w-9 text-blue-500 dark:text-blue-400" />
           </div>
-          <p className="text-sm font-semibold text-gray-600 dark:text-gray-300 group-hover:text-blue-700 dark:group-hover:text-blue-400 transition-colors">
-            Connect Salesforce Org
+          <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">
+            Connect your first Salesforce org
+          </h3>
+          <p className="text-gray-600 dark:text-gray-400 max-w-lg mx-auto mb-8 leading-relaxed">
+            Get a complete CPQ + Billing + ARM health audit in under 30 seconds. Read-only OAuth — your data stays in Salesforce.
           </p>
-          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1 flex items-center gap-1">
-            <Cloud className="h-3 w-3" />
-            OAuth login required
-          </p>
-        </button>
-      </div>
 
-      {orgs.length === 0 && (
-        <div className="text-center mt-12">
-          <div className="inline-flex p-4 bg-blue-50 rounded-2xl mb-4">
-            <Cloud className="h-10 w-10 text-blue-400" />
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-3xl mx-auto mb-10 text-left">
+            {[
+              {
+                step: '1',
+                title: 'Authorize via OAuth',
+                desc: 'Read-only consent screen — takes 60 seconds. No managed package, no admin elevation.',
+              },
+              {
+                step: '2',
+                title: 'Run a health scan',
+                desc: 'We probe 176 checks across 41 categories: price rules, bundles, approvals, billing, ARM and more.',
+              },
+              {
+                step: '3',
+                title: 'Review findings + fix',
+                desc: 'Severity-coloured issue list, AI fix suggestions, and a white-label PDF export ready in seconds.',
+              },
+            ].map((s) => (
+              <div
+                key={s.step}
+                className="bg-white dark:bg-gray-900/80 rounded-xl border border-gray-100 dark:border-gray-800 p-4"
+              >
+                <div className="w-7 h-7 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 text-sm font-bold flex items-center justify-center mb-2">
+                  {s.step}
+                </div>
+                <div className="font-semibold text-sm text-gray-900 dark:text-white mb-1">{s.title}</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">{s.desc}</div>
+              </div>
+            ))}
           </div>
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">No orgs connected yet</h3>
-          <p className="text-sm text-gray-500 dark:text-gray-400 max-w-sm mx-auto">
-            Click &quot;Connect Salesforce Org&quot; above to link your first org and run a health scan.
-          </p>
+
+          <button
+            onClick={handleConnectOrg}
+            className="inline-flex items-center gap-2 px-7 py-3.5 text-base font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition-all duration-200 shadow-lg shadow-blue-600/25 hover:shadow-xl hover:shadow-blue-600/30 hover:-translate-y-0.5"
+          >
+            <Plus className="h-5 w-5" />
+            Connect a sandbox
+          </button>
+
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs text-gray-500 dark:text-gray-400">
+            <span className="flex items-center gap-1.5">&#128274; Read-only OAuth</span>
+            <span className="hidden sm:inline text-gray-300 dark:text-gray-700">&middot;</span>
+            <span className="flex items-center gap-1.5">&#128202; Metadata only</span>
+            <span className="hidden sm:inline text-gray-300 dark:text-gray-700">&middot;</span>
+            <span className="flex items-center gap-1.5">&#128230; No managed package</span>
+            <span className="hidden sm:inline text-gray-300 dark:text-gray-700">&middot;</span>
+            <span className="flex items-center gap-1.5">&#10060; Disconnect anytime</span>
+          </div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {orgs.map((org) => (
+            <OrgCard
+              key={org.id}
+              org={org}
+              onView={() => router.push(`/orgs/${org.id}`)}
+              onScan={() => handleScan(org.id)}
+              onDisconnect={() => fetchOrgs()}
+              scanning={scanningOrg === org.id}
+            />
+          ))}
+
+          {/* Connect New Org Card */}
+          <button
+            onClick={handleConnectOrg}
+            className="group relative border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-blue-400 dark:hover:border-blue-500 rounded-2xl flex flex-col items-center justify-center min-h-[220px] transition-all duration-300 hover:bg-blue-50/50 dark:hover:bg-blue-900/20 hover:shadow-lg hover:shadow-blue-100/50 cursor-pointer"
+          >
+            <div className="p-3 bg-gray-100 dark:bg-gray-800 group-hover:bg-blue-100 dark:group-hover:bg-blue-900/40 rounded-xl transition-colors duration-300 mb-3">
+              <Plus className="h-6 w-6 text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors" />
+            </div>
+            <p className="text-sm font-semibold text-gray-600 dark:text-gray-300 group-hover:text-blue-700 dark:group-hover:text-blue-400 transition-colors">
+              Connect another sandbox
+            </p>
+            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1 flex items-center gap-1">
+              <Cloud className="h-3 w-3" />
+              OAuth login required
+            </p>
+          </button>
         </div>
       )}
     </div>
