@@ -197,7 +197,7 @@ export default function LandingPage() {
               {
                 icon: Lock,
                 title: 'Enterprise-Grade Security',
-                desc: 'SOC 2 compliant architecture. Read-only Salesforce access. Data encrypted in transit and at rest.',
+                desc: 'Designed to SOC 2 standards. Read-only Salesforce access via OAuth. Data encrypted in transit and at rest.',
                 color: 'red',
               },
             ].map((feature, i) => (
@@ -396,62 +396,73 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ═══ TESTIMONIALS ═══ */}
+      {/* ═══ FOUNDER NOTE (replaces fabricated testimonials) ═══
+          Three first-name+last-initial testimonials at major consulting
+          firms with no photos, no LinkedIn links, and no firm logos read
+          as fabricated to anyone with consulting experience — actively
+          harming trust on a page about trust. Replaced with an honest
+          first-person founder note. Copy is content-v2 Variant A (the
+          renewal opp bug war story). Bring back proper testimonials
+          only once we have real ones with full name, photo, company,
+          role, and a LinkedIn link per testimonial.
+      ═══ */}
       <section className="py-24">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">Trusted by Revenue Cloud Consultants</h2>
-            <p className="text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
-              See how consulting teams use ConfigCheck to deliver faster, more thorough audits.
-            </p>
+        <div className="max-w-2xl mx-auto px-6">
+          <div className="text-center mb-10">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">Why I built ConfigCheck</h2>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-            {[
-              {
-                quote: 'ConfigCheck found 12 critical issues in our client\'s CPQ setup that we missed in manual review. Saved us 40+ hours of audit time.',
-                name: 'Sarah M.',
-                title: 'Salesforce Consultant',
-                company: 'Deloitte',
-                color: 'blue',
-              },
-              {
-                quote: 'We use ConfigCheck before every go-live. The AI fix suggestions are incredibly accurate and save our architects hours of troubleshooting.',
-                name: 'Raj P.',
-                title: 'Solution Architect',
-                company: 'Accenture',
-                color: 'indigo',
-              },
-              {
-                quote: 'The white-label PDF reports are perfect for client deliverables. Our consulting practice now includes ConfigCheck in every SOW.',
-                name: 'James K.',
-                title: 'RevOps Lead',
-                company: 'Slalom',
-                color: 'purple',
-              },
-            ].map((t, i) => (
-              <div
-                key={i}
-                className={`bg-white dark:bg-gray-900/50 rounded-2xl border border-gray-200 dark:border-gray-800 p-7 relative border-l-4 ${
-                  t.color === 'blue' ? 'border-l-blue-500' :
-                  t.color === 'indigo' ? 'border-l-indigo-500' :
-                  'border-l-purple-500'
-                }`}
-              >
-                <Quote className={`h-8 w-8 mb-4 ${
-                  t.color === 'blue' ? 'text-blue-200 dark:text-blue-800' :
-                  t.color === 'indigo' ? 'text-indigo-200 dark:text-indigo-800' :
-                  'text-purple-200 dark:text-purple-800'
-                }`} />
-                <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed mb-6">
-                  &ldquo;{t.quote}&rdquo;
-                </p>
-                <div>
-                  <div className="text-sm font-semibold">{t.name}</div>
-                  <div className="text-xs text-gray-500 dark:text-gray-400">{t.title} at {t.company}</div>
+          <div className="bg-gray-50/50 dark:bg-gray-900/30 rounded-2xl border border-gray-200 dark:border-gray-800 p-7 md:p-9">
+            {/* Desktop: avatar left, copy right. Mobile: stacked. */}
+            <div className="flex flex-col md:flex-row items-start gap-6 md:gap-7">
+              <div className="flex md:flex-col items-center md:items-start gap-4 md:gap-3 md:flex-shrink-0 md:w-32">
+                {/* TODO: replace with real founder photo at /maulik.jpg or similar */}
+                <div className="w-16 h-16 md:w-20 md:h-20 rounded-full flex items-center justify-center flex-shrink-0 text-white font-bold text-xl md:text-2xl" style={{ background: 'linear-gradient(135deg, #5B9BF3 0%, #2563eb 100%)' }}>
+                  M
+                </div>
+                <div className="md:mt-1">
+                  <div className="font-semibold">Maulik</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
+                    Salesforce CPQ practitioner
+                    <br className="hidden md:inline" />
+                    {' '}Vadodara, India
+                  </div>
+                  {/* TODO: add real LinkedIn URL */}
+                  <a
+                    href="#"
+                    className="inline-block mt-1.5 text-xs text-blue-600 dark:text-blue-400 hover:underline"
+                  >
+                    LinkedIn &rarr;
+                  </a>
                 </div>
               </div>
-            ))}
+
+              <div className="flex-1 text-gray-700 dark:text-gray-300 leading-relaxed text-[15px] space-y-4">
+                <p>
+                  A few months ago I was three days deep into a renewal opportunity bug. The customer&rsquo;s contracts had renewal forecast checked, the batch jobs were running, and yet no renewal opps were being created. I ran SOQL queries, checked CPQ batch configurations, traced through the standard objects, and still couldn&rsquo;t pin it down.
+                </p>
+                <p>
+                  What struck me wasn&rsquo;t the bug itself &mdash; every CPQ implementer has lived through one of these. It was that I&rsquo;d seen variations of the same problem across three different orgs in the past year. The misconfiguration patterns were predictable. The detection should have been automated.
+                </p>
+                <p>
+                  ConfigCheck started as a weekend project to catch the configuration patterns I kept tripping over. Today it runs 176 checks across CPQ, Billing, and ARM in under 30 seconds &mdash; the audit I wish I&rsquo;d had the morning that bug ticket landed.
+                </p>
+                <p>
+                  If you&rsquo;ve spent a week chasing a CPQ misconfiguration that turned out to be obvious in hindsight, this is for you.{' '}
+                  {/* TODO: replace once configcheck.io is wired up — site is
+                      currently served from configcheck.vercel.app while this
+                      email points at a domain we don't control yet. */}
+                  Reply directly to{' '}
+                  <a
+                    href="mailto:hello@configcheck.io"
+                    className="text-blue-600 dark:text-blue-400 hover:underline"
+                  >
+                    hello@configcheck.io
+                  </a>
+                  {' '}&mdash; comes straight to my inbox.
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -525,6 +536,9 @@ export default function LandingPage() {
                   </li>
                 ))}
               </ul>
+              {/* TODO: replace once configcheck.io is wired up — site is
+                  currently served from configcheck.vercel.app while this
+                  email points at a domain we don't control yet. */}
               <a
                 href="mailto:hello@configcheck.io"
                 className="block text-center w-full py-2.5 text-sm font-semibold rounded-xl border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
