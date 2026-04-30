@@ -40,3 +40,7 @@ next-env.d.ts
 
 playwright-report/
 test-results/
+
+# Claude Code local files
+.claude/settings.local.json
+.claude/scheduled_tasks.lock
