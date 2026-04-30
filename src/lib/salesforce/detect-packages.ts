@@ -38,34 +38,47 @@ export interface DetectedPackages {
  * ARM (Advanced Revenue Management / Revenue Cloud / RLM) is NOT a managed
  * package — it's part of the core Salesforce platform, gated by license/feature
  * flag. We detect it by probing for standard objects that only exist when
- * Revenue Cloud is enabled on the org.
+ * Revenue Cloud features are enabled on the org.
  *
  * Detection probes:
  * - CPQ:     SBQQ__Quote__c          — Salesforce CPQ managed package
  * - Billing: blng__BillingRule__c    — Salesforce Billing managed package
- * - ARM:     ProductSellingModel +   — Revenue Cloud standard objects
- *            BillingSchedule          (API v55+, only exposed when
- *                                      Revenue Cloud is licensed/enabled).
- *            We require BOTH so a CPQ-only org with the standard
- *            BillingSchedule object backported doesn't false-positive.
+ * - ARM:     ANY of three Revenue Cloud standard objects:
+ *              ProductSellingModel       (modern RLM core)
+ *              PriceAdjustmentSchedule   (RLM pricing engine)
+ *              BillingSchedule           (Revenue Cloud billing)
+ *            Different ARM rollouts expose different subsets of these
+ *            objects, so requiring all of them produced false negatives
+ *            on legitimate ARM orgs. We treat any one as a positive
+ *            signal.
  */
 export async function detectInstalledPackages(conn: Connection): Promise<DetectedPackages> {
   console.log('[PACKAGES] Detecting installed revenue products...');
 
-  const [cpq, billing, hasBillingSchedule, hasProductSellingModel] = await Promise.all([
+  const [
+    cpq,
+    billing,
+    hasProductSellingModel,
+    hasPriceAdjustmentSchedule,
+    hasBillingSchedule,
+  ] = await Promise.all([
     objectExists(conn, 'SBQQ__Quote__c'),
     objectExists(conn, 'blng__BillingRule__c'),
-    objectExists(conn, 'BillingSchedule'),
     objectExists(conn, 'ProductSellingModel'),
+    objectExists(conn, 'PriceAdjustmentSchedule'),
+    objectExists(conn, 'BillingSchedule'),
   ]);
 
-  // Require both ARM-specific objects so we don't false-positive on orgs
-  // that happen to expose BillingSchedule alone via a partial rollout.
-  const arm = hasBillingSchedule && hasProductSellingModel;
+  // Any one of the three standard Revenue Cloud objects is enough to flag
+  // ARM. Each indicates Revenue Cloud licensing/features are enabled.
+  const arm =
+    hasProductSellingModel || hasPriceAdjustmentSchedule || hasBillingSchedule;
 
   console.log(
     `[PACKAGES] Detected: CPQ=${cpq}, Billing=${billing}, ARM=${arm} ` +
-    `(BillingSchedule=${hasBillingSchedule}, ProductSellingModel=${hasProductSellingModel})`
+    `(ProductSellingModel=${hasProductSellingModel}, ` +
+    `PriceAdjustmentSchedule=${hasPriceAdjustmentSchedule}, ` +
+    `BillingSchedule=${hasBillingSchedule})`
   );
 
   return { cpq, billing, arm };
