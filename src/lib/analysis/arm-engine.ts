@@ -1,16 +1,18 @@
 import type { ARMData, Issue, CategoryScores } from '@/types';
 import { armChecks } from './arm-checks';
 
-// Category weights for ARM overall score
+// Category weights for ARM overall score (must sum to 1.0)
+// Weights were tuned for the v1+v2 spread: catalog and selling models
+// sit at the top because misconfigurations there block quoting outright.
 const ARM_CATEGORY_WEIGHTS: Record<string, number> = {
   arm_product_catalog: 0.16,
-  arm_selling_models: 0.16,
-  arm_price_adjustments: 0.12,
-  arm_attribute_pricing: 0.10,
-  arm_bundles: 0.12,
-  arm_pricing_procedures: 0.10,
-  arm_price_books: 0.06,
-  arm_decision_tables: 0.10,
+  arm_selling_models: 0.18,
+  arm_price_adjustments: 0.14,
+  arm_attribute_pricing: 0.08,
+  arm_bundles: 0.16,
+  arm_pricing_procedures: 0.08,
+  arm_price_books: 0.04,
+  arm_decision_tables: 0.08,
   arm_context_service: 0.08,
 };
 

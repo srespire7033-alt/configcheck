@@ -473,4 +473,431 @@ export const armChecks: ARMHealthCheck[] = [
       ];
     },
   },
+
+  // ─────────────────────────────────────────────────────────────────
+  // ARM-011: Term selling model without pricing term
+  // RLM doc: term-defined selling models drive billing/contract length —
+  // a missing PricingTerm causes ambiguous quote calculations.
+  // ─────────────────────────────────────────────────────────────────
+  {
+    id: 'ARM-011',
+    name: 'Term Selling Model Without Pricing Term',
+    category: 'arm_selling_models',
+    severity: 'warning',
+    description:
+      'Active term-defined selling models with no PricingTerm value',
+    run: async (data: ARMData): Promise<Issue[]> => {
+      const offenders = data.sellingModels.filter((m) => {
+        if (!m.IsActive) return false;
+        const t = (m.SellingModelType || '').toLowerCase();
+        if (!t.includes('term')) return false;
+        return !m.PricingTerm || m.PricingTerm <= 0;
+      });
+      if (offenders.length === 0) return [];
+      return [
+        {
+          check_id: 'ARM-011',
+          category: 'arm_selling_models',
+          severity: 'warning',
+          title: `${offenders.length} term selling model(s) missing pricing term`,
+          description: `${offenders.length} active term-defined ProductSellingModel(s) have no PricingTerm or a zero value. Without a defined term, contract duration and billing cadence become ambiguous. Examples: ${offenders.slice(0, 3).map((m) => `"${m.Name}"`).join(', ')}.`,
+          impact:
+            'Quotes built on these models may produce unpredictable billing schedules and contract end dates.',
+          recommendation:
+            'Set PricingTerm to a positive integer matching your billing model (e.g. 1, 12, 24, 36) and confirm PricingTermUnit is set as well.',
+          affected_records: offenders.slice(0, 25).map((m) => ({
+            id: m.Id,
+            name: m.Name,
+            type: 'ProductSellingModel',
+          })),
+        },
+      ];
+    },
+  },
+
+  // ─────────────────────────────────────────────────────────────────
+  // ARM-012: Active option referencing inactive selling model
+  // RLM doc: "All product data definitions must be active to appear in
+  // the sales channels." Inactive parents break downstream lookups.
+  // ─────────────────────────────────────────────────────────────────
+  {
+    id: 'ARM-012',
+    name: 'Active Option Referencing Inactive Selling Model',
+    category: 'arm_selling_models',
+    severity: 'warning',
+    description:
+      'ProductSellingModelOption is active but the referenced ProductSellingModel is inactive',
+    run: async (data: ARMData): Promise<Issue[]> => {
+      const inactiveModelIds = new Set(
+        data.sellingModels.filter((m) => !m.IsActive).map((m) => m.Id)
+      );
+      if (inactiveModelIds.size === 0) return [];
+      const offenders = data.sellingModelOptions.filter(
+        (o) => o.IsActive && inactiveModelIds.has(o.ProductSellingModelId)
+      );
+      if (offenders.length === 0) return [];
+      const productNames: Record<string, string> = {};
+      for (const p of data.products) productNames[p.Id] = p.Name;
+      const modelNames: Record<string, string> = {};
+      for (const m of data.sellingModels) modelNames[m.Id] = m.Name;
+      return [
+        {
+          check_id: 'ARM-012',
+          category: 'arm_selling_models',
+          severity: 'warning',
+          title: `${offenders.length} active option(s) point at an inactive selling model`,
+          description: `${offenders.length} active ProductSellingModelOption record(s) reference a ProductSellingModel that is inactive. Sales channels won't be able to resolve these mappings at runtime.`,
+          impact:
+            'Affected products will silently fail to surface in catalog/quoting flows that depend on the inactive selling model.',
+          recommendation:
+            'Either reactivate the parent selling model, retire the orphan options, or repoint each option at an active model.',
+          affected_records: offenders.slice(0, 25).map((o) => ({
+            id: o.Id,
+            name: `${productNames[o.Product2Id] || o.Product2Id} → ${modelNames[o.ProductSellingModelId] || o.ProductSellingModelId} (inactive)`,
+            type: 'ProductSellingModelOption',
+          })),
+        },
+      ];
+    },
+  },
+
+  // ─────────────────────────────────────────────────────────────────
+  // ARM-013: Bundle component min > max quantity
+  // ─────────────────────────────────────────────────────────────────
+  {
+    id: 'ARM-013',
+    name: 'Bundle Component Min/Max Quantity Mismatch',
+    category: 'arm_bundles',
+    severity: 'critical',
+    description:
+      'ProductRelatedComponent records where MinQuantity exceeds MaxQuantity',
+    run: async (data: ARMData): Promise<Issue[]> => {
+      const offenders = data.productRelatedComponents.filter(
+        (c) =>
+          c.MinQuantity != null &&
+          c.MaxQuantity != null &&
+          c.MinQuantity > c.MaxQuantity
+      );
+      if (offenders.length === 0) return [];
+      const productNames: Record<string, string> = {};
+      for (const p of data.products) productNames[p.Id] = p.Name;
+      return [
+        {
+          check_id: 'ARM-013',
+          category: 'arm_bundles',
+          severity: 'critical',
+          title: `${offenders.length} bundle component(s) with impossible quantity range`,
+          description: `${offenders.length} ProductRelatedComponent record(s) have MinQuantity > MaxQuantity, which makes the configurator unable to satisfy the constraint. The component will either always trigger an error or be silently skipped.`,
+          impact:
+            'Sales reps cannot complete configuration of these bundles — runtime validation errors block quote save.',
+          recommendation:
+            'Fix the MinQuantity/MaxQuantity values so the range is internally consistent (Min ≤ Max).',
+          affected_records: offenders.slice(0, 25).map((c) => ({
+            id: c.Id,
+            name: `${productNames[c.ParentProductId] || c.ParentProductId} → ${productNames[c.ChildProductId] || c.ChildProductId} (Min ${c.MinQuantity}, Max ${c.MaxQuantity})`,
+            type: 'ProductRelatedComponent',
+          })),
+        },
+      ];
+    },
+  },
+
+  // ─────────────────────────────────────────────────────────────────
+  // ARM-014: Bundle component pointing to inactive child product
+  // RLM doc: product definitions must be active to appear in sales channels.
+  // ─────────────────────────────────────────────────────────────────
+  {
+    id: 'ARM-014',
+    name: 'Bundle Component Points to Inactive Child Product',
+    category: 'arm_bundles',
+    severity: 'warning',
+    description:
+      'ProductRelatedComponent rows where the child product is no longer active',
+    run: async (data: ARMData): Promise<Issue[]> => {
+      const productActive: Record<string, boolean> = {};
+      const productName: Record<string, string> = {};
+      for (const p of data.products) {
+        productActive[p.Id] = p.IsActive;
+        productName[p.Id] = p.Name;
+      }
+      const offenders = data.productRelatedComponents.filter((c) => {
+        const active = productActive[c.ChildProductId];
+        return active === false;
+      });
+      if (offenders.length === 0) return [];
+      return [
+        {
+          check_id: 'ARM-014',
+          category: 'arm_bundles',
+          severity: 'warning',
+          title: `${offenders.length} bundle component(s) reference inactive children`,
+          description: `${offenders.length} ProductRelatedComponent record(s) point to a child Product2 marked as inactive. The component will be hidden in selling flows but its parent bundle still expects it to exist.`,
+          impact:
+            'Bundles configured with these components may surface errors or omit the option silently.',
+          recommendation:
+            'Reactivate the child product, replace it with an active equivalent, or remove the component row.',
+          affected_records: offenders.slice(0, 25).map((c) => ({
+            id: c.Id,
+            name: `${productName[c.ParentProductId] || c.ParentProductId} → ${productName[c.ChildProductId] || c.ChildProductId} (inactive)`,
+            type: 'ProductRelatedComponent',
+          })),
+        },
+      ];
+    },
+  },
+
+  // ─────────────────────────────────────────────────────────────────
+  // ARM-015: Bundle parent inactive but components still defined
+  // ─────────────────────────────────────────────────────────────────
+  {
+    id: 'ARM-015',
+    name: 'Inactive Bundle Parent Still Has Components',
+    category: 'arm_bundles',
+    severity: 'info',
+    description:
+      'ProductRelatedComponent rows whose ParentProductId points to an inactive Product2',
+    run: async (data: ARMData): Promise<Issue[]> => {
+      const productActive: Record<string, boolean> = {};
+      const productName: Record<string, string> = {};
+      for (const p of data.products) {
+        productActive[p.Id] = p.IsActive;
+        productName[p.Id] = p.Name;
+      }
+      const offenders = data.productRelatedComponents.filter(
+        (c) => productActive[c.ParentProductId] === false
+      );
+      if (offenders.length === 0) return [];
+      // Reduce noise by reporting one row per parent
+      const byParent: Record<string, number> = {};
+      for (const o of offenders) byParent[o.ParentProductId] = (byParent[o.ParentProductId] || 0) + 1;
+      const parents = Object.entries(byParent);
+      return [
+        {
+          check_id: 'ARM-015',
+          category: 'arm_bundles',
+          severity: 'info',
+          title: `${parents.length} inactive bundle parent(s) still have components defined`,
+          description: `${parents.length} inactive parent product(s) still have ${offenders.length} ProductRelatedComponent row(s) attached. These components are dormant data but add maintenance overhead.`,
+          impact:
+            'Cleanup task — no immediate runtime risk, but stale relationships make future audits harder.',
+          recommendation:
+            'Either reactivate the parent product if it should still be sold, or delete the obsolete ProductRelatedComponent rows.',
+          affected_records: parents.slice(0, 25).map(([parentId, count]) => ({
+            id: parentId,
+            name: `${productName[parentId] || parentId} (${count} component${count !== 1 ? 's' : ''})`,
+            type: 'Product2',
+          })),
+        },
+      ];
+    },
+  },
+
+  // ─────────────────────────────────────────────────────────────────
+  // ARM-016: Active price adjustment schedule with no tiers
+  // ─────────────────────────────────────────────────────────────────
+  {
+    id: 'ARM-016',
+    name: 'Active Price Adjustment Schedule With No Tiers',
+    category: 'arm_price_adjustments',
+    severity: 'warning',
+    description:
+      'PriceAdjustmentSchedule is active but has no PriceAdjustmentTier rows',
+    run: async (data: ARMData): Promise<Issue[]> => {
+      const tiersBySchedule: Record<string, number> = {};
+      for (const t of data.priceAdjustmentTiers) {
+        tiersBySchedule[t.PriceAdjustmentScheduleId] =
+          (tiersBySchedule[t.PriceAdjustmentScheduleId] || 0) + 1;
+      }
+      const empties = data.priceAdjustmentSchedules.filter(
+        (s) => s.IsActive && !tiersBySchedule[s.Id]
+      );
+      if (empties.length === 0) return [];
+      return [
+        {
+          check_id: 'ARM-016',
+          category: 'arm_price_adjustments',
+          severity: 'warning',
+          title: `${empties.length} active price schedule(s) with no tiers`,
+          description: `${empties.length} active PriceAdjustmentSchedule(s) have zero PriceAdjustmentTier records configured. The schedule has no effect at runtime — it acts as a no-op. Examples: ${empties.slice(0, 3).map((s) => `"${s.Name}"`).join(', ')}.`,
+          impact:
+            'Either configuration was abandoned mid-setup or the schedule is dead code. Either way, it adds noise to pricing flows.',
+          recommendation:
+            'Add tiers if the schedule was meant to be active, or deactivate/delete the schedule if it is no longer needed.',
+          affected_records: empties.slice(0, 25).map((s) => ({
+            id: s.Id,
+            name: s.Name,
+            type: 'PriceAdjustmentSchedule',
+          })),
+        },
+      ];
+    },
+  },
+
+  // ─────────────────────────────────────────────────────────────────
+  // ARM-017: Price adjustment tier with invalid bounds (Lower > Upper)
+  // ─────────────────────────────────────────────────────────────────
+  {
+    id: 'ARM-017',
+    name: 'Price Adjustment Tier With Invalid Bounds',
+    category: 'arm_price_adjustments',
+    severity: 'critical',
+    description:
+      'PriceAdjustmentTier rows where LowerBound is greater than UpperBound',
+    run: async (data: ARMData): Promise<Issue[]> => {
+      const offenders = data.priceAdjustmentTiers.filter(
+        (t) =>
+          t.LowerBound != null &&
+          t.UpperBound != null &&
+          t.LowerBound > t.UpperBound
+      );
+      if (offenders.length === 0) return [];
+      const scheduleNames: Record<string, string> = {};
+      for (const s of data.priceAdjustmentSchedules) scheduleNames[s.Id] = s.Name;
+      return [
+        {
+          check_id: 'ARM-017',
+          category: 'arm_price_adjustments',
+          severity: 'critical',
+          title: `${offenders.length} tier(s) with reversed quantity bounds`,
+          description: `${offenders.length} PriceAdjustmentTier(s) have LowerBound greater than UpperBound. The tier can never match any quantity, so its adjustment is dead code (or worse, masks a typo that should have applied).`,
+          impact:
+            'Pricing logic is silently broken — quotes will not receive the intended discount/markup.',
+          recommendation:
+            'Swap the LowerBound and UpperBound values, or correct whichever value is wrong.',
+          affected_records: offenders.slice(0, 25).map((t) => ({
+            id: t.Id,
+            name: `${scheduleNames[t.PriceAdjustmentScheduleId] || t.PriceAdjustmentScheduleId} (Lower ${t.LowerBound}, Upper ${t.UpperBound})`,
+            type: 'PriceAdjustmentTier',
+          })),
+        },
+      ];
+    },
+  },
+
+  // ─────────────────────────────────────────────────────────────────
+  // ARM-018: Active products with no category assignment
+  // RLM doc: "All product data definitions must be active to appear in
+  // the sales channels" — products without category assignment fail
+  // catalog discovery / browse paths.
+  // ─────────────────────────────────────────────────────────────────
+  {
+    id: 'ARM-018',
+    name: 'Active Product Without Category Assignment',
+    category: 'arm_product_catalog',
+    severity: 'info',
+    description:
+      'Active Product2 records that have no ProductCategoryProduct row attached',
+    run: async (data: ARMData): Promise<Issue[]> => {
+      const productsInCategory = new Set(
+        data.productCategoryProducts.map((pcp) => pcp.ProductId)
+      );
+      const orphans = data.products.filter(
+        (p) => p.IsActive && !productsInCategory.has(p.Id)
+      );
+      if (orphans.length === 0) return [];
+      return [
+        {
+          check_id: 'ARM-018',
+          category: 'arm_product_catalog',
+          severity: 'info',
+          title: `${orphans.length} active product(s) without category assignment`,
+          description: `${orphans.length} active product(s) have no ProductCategoryProduct rows. Customers browsing the catalog by category will not find these products. Examples: ${orphans.slice(0, 3).map((p) => `"${p.Name}"`).join(', ')}.`,
+          impact:
+            'Catalog discoverability gap — affected products only surface via direct search, not category browse.',
+          recommendation:
+            'Assign each product to at least one ProductCategory via a ProductCategoryProduct record.',
+          affected_records: orphans.slice(0, 25).map((p) => ({
+            id: p.Id,
+            name: p.Name,
+            type: 'Product2',
+          })),
+        },
+      ];
+    },
+  },
+
+  // ─────────────────────────────────────────────────────────────────
+  // ARM-019: Duplicate selling model options for same product
+  // ─────────────────────────────────────────────────────────────────
+  {
+    id: 'ARM-019',
+    name: 'Duplicate Selling Model Options',
+    category: 'arm_selling_models',
+    severity: 'warning',
+    description:
+      'Multiple active ProductSellingModelOption records for the same Product + SellingModel pair',
+    run: async (data: ARMData): Promise<Issue[]> => {
+      const grouped: Record<string, typeof data.sellingModelOptions> = {};
+      for (const o of data.sellingModelOptions) {
+        if (!o.IsActive) continue;
+        const key = `${o.Product2Id}|${o.ProductSellingModelId}`;
+        if (!grouped[key]) grouped[key] = [];
+        grouped[key].push(o);
+      }
+      const dupes = Object.entries(grouped).filter(([, arr]) => arr.length > 1);
+      if (dupes.length === 0) return [];
+      const productNames: Record<string, string> = {};
+      for (const p of data.products) productNames[p.Id] = p.Name;
+      const modelNames: Record<string, string> = {};
+      for (const m of data.sellingModels) modelNames[m.Id] = m.Name;
+      const allDupeRows = dupes.flatMap(([, arr]) => arr);
+      return [
+        {
+          check_id: 'ARM-019',
+          category: 'arm_selling_models',
+          severity: 'warning',
+          title: `${dupes.length} duplicate selling model option pair(s)`,
+          description: `${dupes.length} (Product, SellingModel) pair${dupes.length === 1 ? '' : 's'} have more than one active ProductSellingModelOption. Duplicates make it nondeterministic which option drives quoting — the engine may pick whichever it iterates first.`,
+          impact:
+            'Sales reps can see different price/term outcomes for the same product depending on the option chosen by the engine.',
+          recommendation:
+            'Deactivate or delete the redundant options so each (Product, SellingModel) pair has exactly one active row.',
+          affected_records: allDupeRows.slice(0, 25).map((o) => ({
+            id: o.Id,
+            name: `${productNames[o.Product2Id] || o.Product2Id} ↔ ${modelNames[o.ProductSellingModelId] || o.ProductSellingModelId}`,
+            type: 'ProductSellingModelOption',
+          })),
+        },
+      ];
+    },
+  },
+
+  // ─────────────────────────────────────────────────────────────────
+  // ARM-020: Expired AttributeBasedAdjRule still active
+  // ─────────────────────────────────────────────────────────────────
+  {
+    id: 'ARM-020',
+    name: 'Expired Attribute Adjustment Rule Still Active',
+    category: 'arm_attribute_pricing',
+    severity: 'info',
+    description:
+      'AttributeBasedAdjRule with an EffectiveEndDate in the past but IsActive=true',
+    run: async (data: ARMData): Promise<Issue[]> => {
+      const todayIso = new Date().toISOString().slice(0, 10);
+      const offenders = data.attributeBasedAdjRules.filter((r) => {
+        if (!r.IsActive) return false;
+        if (!r.EffectiveEndDate) return false;
+        return r.EffectiveEndDate < todayIso;
+      });
+      if (offenders.length === 0) return [];
+      return [
+        {
+          check_id: 'ARM-020',
+          category: 'arm_attribute_pricing',
+          severity: 'info',
+          title: `${offenders.length} attribute rule(s) past their end date`,
+          description: `${offenders.length} active AttributeBasedAdjRule(s) have an EffectiveEndDate before today but remain flagged active. Cleanup task — they no longer apply to new quotes.`,
+          impact:
+            'Low — most pricing engines respect the date filter at evaluation time. But the rule list grows over time and slows audits.',
+          recommendation:
+            'Set IsActive=false on each expired rule, or extend the EffectiveEndDate if the rule should still apply.',
+          affected_records: offenders.slice(0, 25).map((r) => ({
+            id: r.Id,
+            name: `${r.Name} (ended ${r.EffectiveEndDate})`,
+            type: 'AttributeBasedAdjRule',
+          })),
+        },
+      ];
+    },
+  },
 ];
