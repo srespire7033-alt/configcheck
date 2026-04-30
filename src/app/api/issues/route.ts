@@ -104,6 +104,31 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to update issue' }, { status: 500 });
     }
 
+    // Tier 1 — when user marks as false_positive or not_relevant,
+    // suppress this check_id for that org so future scans skip it.
+    if (status === 'false_positive' || status === 'not_relevant') {
+      const { data: issue } = await supabase
+        .from('issues')
+        .select('organization_id, check_id')
+        .eq('id', issueId)
+        .single();
+
+      if (issue?.organization_id && issue?.check_id) {
+        const { error: suppressErr } = await supabase
+          .from('check_suppressions')
+          .upsert({
+            organization_id: issue.organization_id,
+            check_id: issue.check_id,
+            reason: status === 'false_positive' ? 'User marked as false positive' : 'User marked as not relevant',
+            suppressed_by: user.id,
+          }, { onConflict: 'organization_id,check_id' });
+        if (suppressErr) {
+          console.error('[FEEDBACK] Failed to record suppression:', suppressErr);
+          // Non-fatal — feedback still recorded on the issue
+        }
+      }
+    }
+
     return NextResponse.json({ success: true });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error';

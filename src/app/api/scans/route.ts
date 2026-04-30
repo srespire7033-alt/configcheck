@@ -221,10 +221,18 @@ async function runScanInBackground(
       }
     }
 
-    // Step 3: Run analysis
+    // Step 3: Run analysis (skipping any checks the user has suppressed for this org)
     console.log(`[SCAN ${scanId}] Running CPQ analysis...`);
     const analysisStart = Date.now();
-    const result = await runAnalysis(cpqData);
+    const { data: suppressions } = await supabase
+      .from('check_suppressions')
+      .select('check_id')
+      .eq('organization_id', org.id as string);
+    const suppressedCheckIds = (suppressions || []).map((s) => s.check_id);
+    if (suppressedCheckIds.length > 0) {
+      console.log(`[SCAN ${scanId}] Skipping ${suppressedCheckIds.length} suppressed check(s): ${suppressedCheckIds.join(', ')}`);
+    }
+    const result = await runAnalysis(cpqData, suppressedCheckIds);
     console.log(`[SCAN ${scanId}] CPQ analysis done in ${Date.now() - analysisStart}ms — ` +
       `Score: ${result.overall_score}/100, ${result.issues.length} issues`);
 

@@ -97,7 +97,7 @@ export interface DBIssue {
 // ============================================
 
 export type IssueSeverity = 'critical' | 'warning' | 'info';
-export type IssueStatus = 'open' | 'acknowledged' | 'resolved' | 'ignored';
+export type IssueStatus = 'open' | 'acknowledged' | 'resolved' | 'ignored' | 'false_positive' | 'not_relevant';
 // CPQ categories
 export type CPQCategory =
   | 'price_rules'

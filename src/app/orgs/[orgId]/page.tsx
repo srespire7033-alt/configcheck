@@ -26,6 +26,7 @@ export default function OrgDetailPage() {
   const [org, setOrg] = useState<DBOrganization | null>(null);
   const [scan, setScan] = useState<DBScan | null>(null);
   const [issues, setIssues] = useState<DBIssue[]>([]);
+  const [trustScores, setTrustScores] = useState<Record<string, { total_feedback: number; trust_score: number | null }>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [scanning, setScanning] = useState(false);
@@ -126,6 +127,16 @@ export default function OrgDetailPage() {
       if (schedulesRes.ok) {
         const schedulesData = await schedulesRes.json();
         setSchedules(schedulesData);
+      }
+
+      // Fetch aggregate trust scores so we can show "X% helpful" badges
+      try {
+        const trustRes = await fetch('/api/checks/trust-scores');
+        if (trustRes.ok) {
+          setTrustScores(await trustRes.json());
+        }
+      } catch (err) {
+        console.error('Failed to fetch trust scores:', err);
       }
     } catch (err) {
       console.error('Failed to fetch data:', err);
@@ -736,6 +747,7 @@ export default function OrgDetailPage() {
                                   issue={issue}
                                   onClick={() => setSelectedIssue(issue)}
                                   onStatusChange={handleIssueStatusChange}
+                                  trustScore={trustScores[issue.check_id]}
                                 />
                               ))}
                             </div>
@@ -756,6 +768,7 @@ export default function OrgDetailPage() {
                                   issue={issue}
                                   onClick={() => setSelectedIssue(issue)}
                                   onStatusChange={handleIssueStatusChange}
+                                  trustScore={trustScores[issue.check_id]}
                                 />
                               ))}
                             </div>
@@ -776,6 +789,7 @@ export default function OrgDetailPage() {
                                   issue={issue}
                                   onClick={() => setSelectedIssue(issue)}
                                   onStatusChange={handleIssueStatusChange}
+                                  trustScore={trustScores[issue.check_id]}
                                 />
                               ))}
                             </div>

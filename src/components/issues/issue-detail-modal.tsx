@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { X, Sparkles, AlertTriangle, Zap, Loader2, CheckCircle2, ExternalLink, AlertCircle, Info as InfoIcon } from 'lucide-react';
+import { X, Sparkles, AlertTriangle, Zap, Loader2, CheckCircle2, ExternalLink, AlertCircle, Info as InfoIcon, ThumbsDown, EyeOff } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import type { DBIssue } from '@/types';
 
@@ -113,6 +113,9 @@ export function IssueDetailModal({ issue: initialIssue, instanceUrl, onClose, on
   }
 
   const isResolved = issue.status === 'resolved' || issue.status === 'ignored';
+  const isFalsePositive = issue.status === 'false_positive';
+  const isNotRelevant = issue.status === 'not_relevant';
+  const hasFeedback = isResolved || isFalsePositive || isNotRelevant;
   const availableFixes = getAvailableFixes();
 
   return (
@@ -141,6 +144,8 @@ export function IssueDetailModal({ issue: initialIssue, instanceUrl, onClose, on
                   <option value="acknowledged">Acknowledged</option>
                   <option value="resolved">Resolved</option>
                   <option value="ignored">Ignored</option>
+                  <option value="false_positive">False Positive</option>
+                  <option value="not_relevant">Not Relevant</option>
                 </select>
               )}
               {isResolved && (
@@ -349,18 +354,45 @@ export function IssueDetailModal({ issue: initialIssue, instanceUrl, onClose, on
 
         {/* Footer */}
         <div className="flex items-center justify-between px-6 py-3 border-t border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/20 flex-shrink-0">
-          {!isResolved ? (
-            <button
-              onClick={() => handleStatusChange('resolved')}
-              className="px-4 py-2 bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400 rounded-lg text-sm font-medium hover:bg-green-100 dark:hover:bg-green-900/50 transition flex items-center gap-1.5"
-            >
-              <CheckCircle2 className="w-4 h-4" />
-              Mark Fixed
-            </button>
+          {!hasFeedback ? (
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => handleStatusChange('resolved')}
+                className="px-3 py-2 bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400 rounded-lg text-sm font-medium hover:bg-green-100 dark:hover:bg-green-900/50 transition flex items-center gap-1.5"
+                title="This was a real issue and I fixed it"
+              >
+                <CheckCircle2 className="w-4 h-4" />
+                Mark Fixed
+              </button>
+              <button
+                onClick={() => handleStatusChange('false_positive')}
+                className="px-3 py-2 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-lg text-sm font-medium hover:bg-red-100 dark:hover:bg-red-900/50 transition flex items-center gap-1.5"
+                title="This check is wrong — suppress it for this org"
+              >
+                <ThumbsDown className="w-4 h-4" />
+                False Positive
+              </button>
+              <button
+                onClick={() => handleStatusChange('not_relevant')}
+                className="px-3 py-2 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 rounded-lg text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-700 transition flex items-center gap-1.5"
+                title="Valid finding but doesn't apply here"
+              >
+                <EyeOff className="w-4 h-4" />
+                Not Relevant
+              </button>
+            </div>
           ) : (
-            <span className="text-sm text-green-600 dark:text-green-400 font-medium flex items-center gap-1.5">
-              <CheckCircle2 className="w-4 h-4" />
-              Resolved
+            <span className={`text-sm font-medium flex items-center gap-1.5 ${
+              isResolved ? 'text-green-600 dark:text-green-400' :
+              isFalsePositive ? 'text-red-600 dark:text-red-400' :
+              'text-gray-500 dark:text-gray-400'
+            }`}>
+              {isResolved && <CheckCircle2 className="w-4 h-4" />}
+              {isFalsePositive && <ThumbsDown className="w-4 h-4" />}
+              {isNotRelevant && <EyeOff className="w-4 h-4" />}
+              {isResolved && (issue.status === 'resolved' ? 'Resolved' : 'Ignored')}
+              {isFalsePositive && 'False Positive — check suppressed for this org'}
+              {isNotRelevant && 'Not Relevant — check suppressed for this org'}
             </span>
           )}
           <button

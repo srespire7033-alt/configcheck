@@ -26,14 +26,23 @@ const CATEGORY_WEIGHTS: Record<string, number> = {
 };
 
 /**
- * Run all health checks against CPQ data and return scored results
+ * Run all health checks against CPQ data and return scored results.
+ * Optionally pass `suppressedCheckIds` to skip checks the user has muted
+ * for this org (Tier 1 of the feedback learning loop).
  */
-export async function runAnalysis(data: CPQData): Promise<ScanResult> {
+export async function runAnalysis(
+  data: CPQData,
+  suppressedCheckIds: string[] = []
+): Promise<ScanResult> {
   const startTime = Date.now();
   const allIssues: Issue[] = [];
+  const suppressedSet = new Set(suppressedCheckIds);
 
-  // Run all checks
+  // Run all checks (skip suppressed ones)
   for (const check of allChecks) {
+    if (suppressedSet.has(check.id)) {
+      continue;
+    }
     try {
       const issues = await check.run(data);
       allIssues.push(...issues);

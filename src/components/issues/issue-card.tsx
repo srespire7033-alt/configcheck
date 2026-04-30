@@ -1,12 +1,18 @@
 'use client';
 
-import { AlertCircle, AlertTriangle, Info, CheckCircle2, EyeOff } from 'lucide-react';
+import { AlertCircle, AlertTriangle, Info, CheckCircle2, EyeOff, ThumbsDown, Shield } from 'lucide-react';
 import type { DBIssue } from '@/types';
+
+interface TrustScore {
+  total_feedback: number;
+  trust_score: number | null;
+}
 
 interface IssueCardProps {
   issue: DBIssue;
   onClick: () => void;
   onStatusChange?: (issueId: string, status: string) => void;
+  trustScore?: TrustScore;
 }
 
 const severityConfig = {
@@ -45,13 +51,23 @@ const statusConfig: Record<string, { label: string; bg: string; text: string; ic
   acknowledged: { label: 'Acknowledged', bg: 'bg-blue-50', text: 'text-blue-600' },
   resolved: { label: 'Resolved', bg: 'bg-green-50', text: 'text-green-700', icon: CheckCircle2 },
   ignored: { label: 'Ignored', bg: 'bg-gray-50', text: 'text-gray-400', icon: EyeOff },
+  false_positive: { label: 'False Positive', bg: 'bg-red-50', text: 'text-red-600', icon: ThumbsDown },
+  not_relevant: { label: 'Not Relevant', bg: 'bg-gray-50', text: 'text-gray-500', icon: EyeOff },
 };
 
-export function IssueCard({ issue, onClick, onStatusChange }: IssueCardProps) {
+export function IssueCard({ issue, onClick, onStatusChange, trustScore }: IssueCardProps) {
   const config = severityConfig[issue.severity] || severityConfig.info;
   const Icon = config.icon;
   const status = statusConfig[issue.status] || statusConfig.open;
-  const isResolved = issue.status === 'resolved' || issue.status === 'ignored';
+  const isResolved = issue.status === 'resolved' || issue.status === 'ignored' ||
+    issue.status === 'false_positive' || issue.status === 'not_relevant';
+  // Trust score badge: only show when at least 3 users have given feedback (avoid noisy early signals)
+  const showTrustScore = trustScore && trustScore.total_feedback >= 3 && trustScore.trust_score !== null;
+  const trustScoreColor = showTrustScore && trustScore!.trust_score! >= 75
+    ? 'text-emerald-700 bg-emerald-50'
+    : showTrustScore && trustScore!.trust_score! >= 50
+    ? 'text-amber-700 bg-amber-50'
+    : 'text-gray-600 bg-gray-100';
 
   return (
     <div
@@ -75,6 +91,15 @@ export function IssueCard({ issue, onClick, onStatusChange }: IssueCardProps) {
               <span className={`inline-flex items-center gap-1 px-2 py-0.5 ${status.bg} ${status.text} text-xs font-medium rounded-full`}>
                 {status.icon && <status.icon className="w-3 h-3" />}
                 {status.label}
+              </span>
+            )}
+            {showTrustScore && (
+              <span
+                className={`inline-flex items-center gap-1 px-2 py-0.5 ${trustScoreColor} text-xs font-medium rounded-full`}
+                title={`${trustScore!.trust_score}% of users found this helpful (${trustScore!.total_feedback} feedback)`}
+              >
+                <Shield className="w-3 h-3" />
+                {trustScore!.trust_score}% helpful
               </span>
             )}
           </div>
