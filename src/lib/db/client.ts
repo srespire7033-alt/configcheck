@@ -9,8 +9,13 @@ export function createClient() {
   );
 }
 
-// Server client with service role (used in API routes - bypasses RLS)
-// Always sends no-cache headers to prevent PostgREST from returning stale data
+// Server client with service role (used in API routes - bypasses RLS).
+// CRITICAL: Next.js 14 patches global fetch() to cache by default even inside
+// `force-dynamic` routes. Supabase-js uses fetch() to talk to PostgREST, so
+// without `cache: 'no-store'` here a stale row read by one request will be
+// served indefinitely to subsequent requests on the same Vercel function
+// instance — even after a successful PUT updates the database. This was the
+// root cause of the "phone disappears after save" bug.
 export function createServiceClient() {
   return createSupabaseClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -25,6 +30,8 @@ export function createServiceClient() {
           'Cache-Control': 'no-cache',
           'Pragma': 'no-cache',
         },
+        fetch: (input, init) =>
+          fetch(input, { ...init, cache: 'no-store' }),
       },
     }
   );

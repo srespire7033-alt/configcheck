@@ -450,7 +450,7 @@ export default function SettingsPage() {
         alert(data.error || 'Failed to send test email');
       } else {
         // Server marks recipient verified — pull fresh state.
-        const me = await fetch('/api/auth/me');
+        const me = await fetch('/api/auth/me', { cache: 'no-store' });
         if (me.ok) {
           const json = await me.json();
           setNotifSettings(json.notification_settings || null);
@@ -466,15 +466,31 @@ export default function SettingsPage() {
   async function saveAccount() {
     setSavingAccount(true);
     try {
-      await fetch('/api/auth/me', {
+      const res = await fetch('/api/auth/me', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ full_name: fullName, phone, job_title: jobTitle, location, timezone }),
+        cache: 'no-store',
       });
+      if (!res.ok) throw new Error('save failed');
+      const json = await res.json();
+      // Re-hydrate from server-confirmed values so any DB-side trim/coerce is
+      // reflected in the UI (and the unsaved-changes guard sees clean state).
+      const u = json.user || {};
+      const next = {
+        fullName: u.full_name || '',
+        phone: u.phone || '',
+        jobTitle: u.job_title || '',
+        location: u.location || '',
+        timezone: u.timezone || 'Asia/Kolkata',
+      };
+      setFullName(next.fullName);
+      setPhone(next.phone);
+      setJobTitle(next.jobTitle);
+      setLocation(next.location);
+      setTimezone(next.timezone);
+      setSavedProfileSnapshot(next);
       setSavedAccount(true);
-      // Snapshot the just-saved values so the unsaved-changes guard
-      // stops firing until the user edits again.
-      setSavedProfileSnapshot({ fullName, phone, jobTitle, location, timezone });
       setTimeout(() => setSavedAccount(false), 3000);
     } catch {
       alert('Failed to save account settings. Please try again.');
@@ -484,13 +500,23 @@ export default function SettingsPage() {
   async function saveBranding() {
     setSavingBranding(true);
     try {
-      await fetch('/api/auth/me', {
+      const res = await fetch('/api/auth/me', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ company_name: companyName, report_branding_color: brandingColor }),
+        cache: 'no-store',
       });
+      if (!res.ok) throw new Error('save failed');
+      const json = await res.json();
+      const u = json.user || {};
+      const next = {
+        companyName: u.company_name || '',
+        brandingColor: u.report_branding_color || '#1B5E96',
+      };
+      setCompanyName(next.companyName);
+      setBrandingColor(next.brandingColor);
+      setSavedBrandingSnapshot(next);
       setSavedBranding(true);
-      setSavedBrandingSnapshot({ companyName, brandingColor });
       setTimeout(() => setSavedBranding(false), 3000);
     } catch {
       alert('Failed to save branding settings. Please try again.');

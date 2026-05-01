@@ -84,16 +84,20 @@ export async function PUT(request: NextRequest) {
     }
 
     const supabase = createServiceClient();
-    const { error } = await supabase
+    const { data: updated, error } = await supabase
       .from('users')
       .update(updates)
-      .eq('id', user.id);
+      .eq('id', user.id)
+      .select('id, email, full_name, phone, job_title, location, company_name, company_logo_url, report_branding_color, timezone, plan, is_admin, email_notifications_enabled, notification_emails, notification_settings, onboarding_completed, referral_source, role, company_size, checklist_dismissed, checklist_progress, created_at')
+      .single();
 
     if (error) {
       return NextResponse.json({ error: 'Failed to update profile' }, { status: 500 });
     }
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, user: updated }, {
+      headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' },
+    });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json({ error: message }, { status: 500 });

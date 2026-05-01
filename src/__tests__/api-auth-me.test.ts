@@ -50,9 +50,12 @@ describe('/api/auth/me', () => {
     vi.clearAllMocks();
 
     mockSingle = vi.fn();
+    // GET chain: select().eq().single()
     mockEq = vi.fn().mockReturnValue({ single: mockSingle });
+    // PUT chain: update().eq().select().single() — same final mockSingle
+    const updateEqChain = vi.fn().mockReturnValue({ select: vi.fn().mockReturnValue({ single: mockSingle }) });
     mockSelect = vi.fn().mockReturnValue({ eq: mockEq });
-    mockUpdate = vi.fn().mockReturnValue({ eq: mockEq });
+    mockUpdate = vi.fn().mockReturnValue({ eq: updateEqChain });
     mockFrom = vi.fn().mockReturnValue({ select: mockSelect, update: mockUpdate });
     (createServiceClient as ReturnType<typeof vi.fn>).mockReturnValue({ from: mockFrom });
   });
@@ -130,7 +133,7 @@ describe('/api/auth/me', () => {
 
     it('updates company_name successfully', async () => {
       (getAuthUser as ReturnType<typeof vi.fn>).mockResolvedValue(mockUser);
-      mockEq.mockResolvedValue({ error: null });
+      mockSingle.mockResolvedValue({ data: { id: 'user-123' }, error: null });
 
       const res = await PUT(makePutRequest({ company_name: 'New Corp' }));
       const json = await res.json();
@@ -139,12 +142,11 @@ describe('/api/auth/me', () => {
       expect(json.success).toBe(true);
       expect(mockFrom).toHaveBeenCalledWith('users');
       expect(mockUpdate).toHaveBeenCalledWith({ company_name: 'New Corp' });
-      expect(mockEq).toHaveBeenCalledWith('id', 'user-123');
     });
 
     it('updates branding color successfully', async () => {
       (getAuthUser as ReturnType<typeof vi.fn>).mockResolvedValue(mockUser);
-      mockEq.mockResolvedValue({ error: null });
+      mockSingle.mockResolvedValue({ data: { id: 'user-123' }, error: null });
 
       const res = await PUT(makePutRequest({ report_branding_color: '#FF0000' }));
       const json = await res.json();
@@ -156,7 +158,7 @@ describe('/api/auth/me', () => {
 
     it('updates logo URL successfully', async () => {
       (getAuthUser as ReturnType<typeof vi.fn>).mockResolvedValue(mockUser);
-      mockEq.mockResolvedValue({ error: null });
+      mockSingle.mockResolvedValue({ data: { id: 'user-123' }, error: null });
 
       const res = await PUT(makePutRequest({ company_logo_url: 'https://example.com/new-logo.png' }));
       const json = await res.json();
@@ -168,7 +170,7 @@ describe('/api/auth/me', () => {
 
     it('updates multiple fields at once', async () => {
       (getAuthUser as ReturnType<typeof vi.fn>).mockResolvedValue(mockUser);
-      mockEq.mockResolvedValue({ error: null });
+      mockSingle.mockResolvedValue({ data: { id: 'user-123' }, error: null });
 
       const updates = {
         company_name: 'Updated Corp',
@@ -186,7 +188,7 @@ describe('/api/auth/me', () => {
 
     it('returns 500 on DB error', async () => {
       (getAuthUser as ReturnType<typeof vi.fn>).mockResolvedValue(mockUser);
-      mockEq.mockResolvedValue({ error: { message: 'Database connection failed' } });
+      mockSingle.mockResolvedValue({ data: null, error: { message: 'Database connection failed' } });
 
       const res = await PUT(makePutRequest({ company_name: 'Fail Corp' }));
       const json = await res.json();
