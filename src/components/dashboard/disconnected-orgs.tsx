@@ -8,9 +8,13 @@ import type { OrgCardData } from '@/types';
 interface Props {
   onReconnect: () => void;
   onForget: () => void;
+  // Bumped by the parent whenever active-orgs are re-fetched (e.g. after
+  // a disconnect) so we re-pull the disconnected list in sync — otherwise
+  // a freshly-disconnected org wouldn't appear here until manual refresh.
+  refreshKey?: number;
 }
 
-export function DisconnectedOrgs({ onReconnect, onForget }: Props) {
+export function DisconnectedOrgs({ onReconnect, onForget, refreshKey = 0 }: Props) {
   const [orgs, setOrgs] = useState<OrgCardData[]>([]);
   const [loading, setLoading] = useState(true);
   const [forgetingId, setForgetingId] = useState<string | null>(null);
@@ -18,7 +22,7 @@ export function DisconnectedOrgs({ onReconnect, onForget }: Props) {
 
   useEffect(() => {
     fetchDisconnected();
-  }, []);
+  }, [refreshKey]);
 
   async function fetchDisconnected() {
     try {

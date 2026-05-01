@@ -15,6 +15,7 @@ function DashboardContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [orgs, setOrgs] = useState<OrgCardData[]>([]);
+  const [orgsRefreshKey, setOrgsRefreshKey] = useState(0);
   const [loading, setLoading] = useState(true);
   const [scanningOrg, setScanningOrg] = useState<string | null>(null);
   const [checklistProgress, setChecklistProgress] = useState<ChecklistProgress | null>(null);
@@ -81,6 +82,7 @@ function DashboardContent() {
       if (res.ok) {
         const data: OrgCardData[] = await res.json();
         setOrgs(data);
+        setOrgsRefreshKey((k) => k + 1);
 
         // Backfill: any connected org with no detected packages gets a
         // background detection run, so the next "Run Scan" click picks the
@@ -375,7 +377,7 @@ function DashboardContent() {
         </div>
       )}
 
-      <DisconnectedOrgs onReconnect={() => fetchOrgs()} onForget={() => fetchOrgs()} />
+      <DisconnectedOrgs onReconnect={() => fetchOrgs()} onForget={() => fetchOrgs()} refreshKey={orgsRefreshKey} />
     </div>
   );
 }
