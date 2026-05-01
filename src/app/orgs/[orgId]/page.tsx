@@ -2,8 +2,9 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, RefreshCw, Sparkles, Download, FileBarChart, CalendarClock, ShieldCheck, FileSpreadsheet, ChevronDown, AlertTriangle, AlertCircle, Info, TrendingUp, History, X } from 'lucide-react';
+import { ArrowLeft, RefreshCw, Sparkles, Download, FileBarChart, CalendarClock, ShieldCheck, FileSpreadsheet, ChevronDown, ChevronRight, AlertTriangle, AlertCircle, Info, TrendingUp, History, X } from 'lucide-react';
 import { getCategoryLabel, formatTimeAgo } from '@/lib/utils';
+import { groupTopIssues } from '@/lib/analysis/top-issue-grouper';
 import { HealthScore } from '@/components/scan/health-score';
 import { LoadingScreen } from '@/components/ui/loading-screen';
 import { CategoryBreakdown } from '@/components/scan/category-breakdown';
@@ -26,6 +27,9 @@ export default function OrgDetailPage() {
   const [org, setOrg] = useState<DBOrganization | null>(null);
   const [scan, setScan] = useState<DBScan | null>(null);
   const [issues, setIssues] = useState<DBIssue[]>([]);
+  // Tracks which Top-Issues parent groups are expanded. Family ids come
+  // from the grouper (e.g. "products_missing_billing_config:product_billing_config").
+  const [expandedTopGroups, setExpandedTopGroups] = useState<Set<string>>(new Set());
   const [trustScores, setTrustScores] = useState<Record<string, { total_feedback: number; trust_score: number | null }>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -618,11 +622,14 @@ export default function OrgDetailPage() {
             </div>
           </div>
 
-          {/* ===== TOP ISSUES TO ADDRESS ===== */}
+          {/* ===== TOP ISSUES TO ADDRESS =====
+              Sort criticals before warnings, drop info-severity, then run
+              the grouper to fold sibling issues like "products missing X"
+              under one parent (so the same configuration gap doesn't
+              dominate the top-N list with four duplicates). */}
           {issues.length > 0 && (() => {
-            // Deduplicate by title, prioritize critical first, then warning
             const seen = new Set<string>();
-            const topIssues = [...issues]
+            const sorted = [...issues]
               .sort((a, b) => {
                 const order = { critical: 0, warning: 1, info: 2 };
                 const aOrder = order[a.severity as keyof typeof order] ?? 3;
@@ -630,15 +637,15 @@ export default function OrgDetailPage() {
                 if (aOrder !== bOrder) return aOrder - bOrder;
                 return (b.affected_records?.length || 0) - (a.affected_records?.length || 0);
               })
-              .filter(i => {
-                if (i.severity === 'info') return false; // Only critical + warning
+              .filter((i) => {
+                if (i.severity === 'info') return false;
                 if (seen.has(i.title)) return false;
                 seen.add(i.title);
                 return true;
-              })
-              .slice(0, 5);
+              });
 
-            if (topIssues.length === 0) return null;
+            const grouped = groupTopIssues(sorted).slice(0, 5);
+            if (grouped.length === 0) return null;
 
             return (
               <div className="bg-white dark:bg-[#111827] rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-4 sm:p-6 mb-6">
@@ -652,31 +659,127 @@ export default function OrgDetailPage() {
                   </div>
                 </div>
                 <div className="space-y-2">
-                  {topIssues.map((issue, idx) => (
-                    <button
-                      key={issue.id}
-                      onClick={() => setSelectedIssue(issue)}
-                      className="w-full text-left flex items-start gap-2 sm:gap-3 p-2.5 sm:p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition border border-gray-100 dark:border-gray-800"
-                    >
-                      <span className="text-sm font-bold text-gray-400 dark:text-gray-500 mt-0.5 w-5 text-center flex-shrink-0">{idx + 1}</span>
-                      <div className={`w-1 self-stretch rounded-full flex-shrink-0 ${issue.severity === 'critical' ? 'bg-red-500' : 'bg-amber-500'}`} />
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-0.5">
-                          <span className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${
-                            issue.severity === 'critical' ? 'bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-400' : 'bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-400'
-                          }`}>{issue.severity}</span>
-                          <span className="text-xs text-gray-400 dark:text-gray-500">{getCategoryLabel(issue.category)}</span>
-                        </div>
-                        <p className="text-sm font-medium text-gray-900 dark:text-white">{issue.title}</p>
-                        {issue.description && (
-                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 line-clamp-1">{issue.description}</p>
+                  {grouped.map((item, idx) => {
+                    if (item.kind === 'single') {
+                      const issue = item.issue;
+                      return (
+                        <button
+                          key={issue.id}
+                          onClick={() => setSelectedIssue(issue)}
+                          className="w-full text-left flex items-start gap-2 sm:gap-3 p-2.5 sm:p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition border border-gray-100 dark:border-gray-800"
+                        >
+                          <span className="text-sm font-bold text-gray-400 dark:text-gray-500 mt-0.5 w-5 text-center flex-shrink-0">{idx + 1}</span>
+                          <div
+                            className={`w-1 self-stretch rounded-full flex-shrink-0 ${
+                              issue.severity === 'critical' ? 'bg-red-500' : 'bg-amber-500'
+                            }`}
+                          />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-0.5">
+                              <span
+                                className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${
+                                  issue.severity === 'critical'
+                                    ? 'bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-400'
+                                    : 'bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-400'
+                                }`}
+                              >
+                                {issue.severity}
+                              </span>
+                              <span className="text-xs text-gray-400 dark:text-gray-500">{getCategoryLabel(issue.category)}</span>
+                            </div>
+                            <p className="text-sm font-medium text-gray-900 dark:text-white">{issue.title}</p>
+                            {issue.description && (
+                              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 line-clamp-1">{issue.description}</p>
+                            )}
+                          </div>
+                          {issue.affected_records?.length ? (
+                            <span className="text-xs text-gray-400 dark:text-gray-500 flex-shrink-0 mt-1">
+                              {issue.affected_records.length} affected
+                            </span>
+                          ) : null}
+                        </button>
+                      );
+                    }
+
+                    // Parent group — collapsible, contains 2+ siblings
+                    const parent = item;
+                    const isExpanded = expandedTopGroups.has(parent.id);
+                    return (
+                      <div
+                        key={parent.id}
+                        className="rounded-xl border border-gray-100 dark:border-gray-800 overflow-hidden"
+                      >
+                        <button
+                          onClick={() => {
+                            setExpandedTopGroups((prev) => {
+                              const next = new Set(prev);
+                              if (next.has(parent.id)) next.delete(parent.id);
+                              else next.add(parent.id);
+                              return next;
+                            });
+                          }}
+                          className="w-full text-left flex items-start gap-2 sm:gap-3 p-2.5 sm:p-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+                        >
+                          <span className="text-sm font-bold text-gray-400 dark:text-gray-500 mt-0.5 w-5 text-center flex-shrink-0">{idx + 1}</span>
+                          <div
+                            className={`w-1 self-stretch rounded-full flex-shrink-0 ${
+                              parent.severity === 'critical' ? 'bg-red-500' : 'bg-amber-500'
+                            }`}
+                          />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-0.5">
+                              <span
+                                className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${
+                                  parent.severity === 'critical'
+                                    ? 'bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-400'
+                                    : 'bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-400'
+                                }`}
+                              >
+                                {parent.severity}
+                              </span>
+                              <span className="text-xs text-gray-400 dark:text-gray-500">{getCategoryLabel(parent.category)}</span>
+                              <span className="inline-flex items-center text-[10px] font-bold uppercase px-1.5 py-0.5 rounded bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300">
+                                {parent.children.length} related
+                              </span>
+                            </div>
+                            <p className="text-sm font-medium text-gray-900 dark:text-white">{parent.title}</p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 line-clamp-2">{parent.description}</p>
+                          </div>
+                          <span className="text-xs text-gray-400 dark:text-gray-500 flex-shrink-0 mt-1">
+                            {parent.uniqueAffectedRecords} unique affected
+                          </span>
+                          {isExpanded ? (
+                            <ChevronDown className="w-4 h-4 text-gray-400 flex-shrink-0 mt-1" />
+                          ) : (
+                            <ChevronRight className="w-4 h-4 text-gray-400 flex-shrink-0 mt-1" />
+                          )}
+                        </button>
+                        {isExpanded && (
+                          <div className="bg-gray-50/60 dark:bg-gray-900/30 divide-y divide-gray-100 dark:divide-gray-800/60">
+                            {parent.children.map((child) => (
+                              <button
+                                key={child.id}
+                                onClick={() => setSelectedIssue(child)}
+                                className="w-full text-left flex items-start gap-3 pl-12 pr-3 py-2.5 hover:bg-white/60 dark:hover:bg-gray-800/40 transition"
+                              >
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm text-gray-700 dark:text-gray-300">{child.title}</p>
+                                  {child.description && (
+                                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 line-clamp-1">{child.description}</p>
+                                  )}
+                                </div>
+                                {child.affected_records?.length ? (
+                                  <span className="text-xs text-gray-400 dark:text-gray-500 flex-shrink-0 mt-1">
+                                    {child.affected_records.length}
+                                  </span>
+                                ) : null}
+                              </button>
+                            ))}
+                          </div>
                         )}
                       </div>
-                      {issue.affected_records?.length ? (
-                        <span className="text-xs text-gray-400 dark:text-gray-500 flex-shrink-0 mt-1">{issue.affected_records.length} affected</span>
-                      ) : null}
-                    </button>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             );
