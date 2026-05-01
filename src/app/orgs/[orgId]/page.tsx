@@ -571,10 +571,37 @@ export default function OrgDetailPage() {
               score. Without this, missing data looked exactly like a clean
               org. */}
           {(() => {
-            const meta = scan.metadata as { query_failures?: Array<{ object: string; errorCode: string; errorMsg: string }> | null } | null;
+            const meta = scan.metadata as {
+              query_failures?: Array<{ object: string; errorCode: string; errorMsg: string }> | null;
+              data_fetched?: Record<string, number> | null;
+              product_type?: string;
+            } | null;
             const failures = meta?.query_failures;
-            if (!failures || failures.length === 0) return null;
-            const objects = Array.from(new Set(failures.map((f) => f.object))).slice(0, 6);
+            const dataFetched = meta?.data_fetched || {};
+            const isARM = scan.product_type === 'arm' || meta?.product_type === 'arm';
+
+            // Detect "sparse data" condition for ARM scans — when most object
+            // families are empty, the high score isn't really informative.
+            // 33 ARM object families are queried; flag when fewer than 3 have data.
+            let sparseARM: { observed: number; total: number; populatedObjects: string[] } | null = null;
+            if (isARM && Object.keys(dataFetched).length > 0) {
+              const total = Object.keys(dataFetched).length;
+              const populated = Object.entries(dataFetched).filter(([, v]) => Number(v) > 0);
+              if (populated.length <= 3 && populated.length < total) {
+                sparseARM = {
+                  observed: populated.length,
+                  total,
+                  populatedObjects: populated.map(([k]) => k),
+                };
+              }
+            }
+
+            if ((!failures || failures.length === 0) && !sparseARM) return null;
+
+            const failedObjects = failures
+              ? Array.from(new Set(failures.map((f) => f.object))).slice(0, 6)
+              : [];
+
             return (
               <div className="mb-6 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 rounded-2xl p-4 sm:p-5">
                 <div className="flex items-start gap-3">
@@ -583,13 +610,27 @@ export default function OrgDetailPage() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">
-                      Score may be incomplete &mdash; {failures.length} {failures.length === 1 ? 'query' : 'queries'} failed silently
+                      {sparseARM
+                        ? `Score may not be meaningful — ARM data observed in only ${sparseARM.observed} of ${sparseARM.total} object types`
+                        : `Score may be incomplete — ${failures!.length} ${failures!.length === 1 ? 'query' : 'queries'} failed silently`}
                     </p>
-                    <p className="text-sm text-amber-700 dark:text-amber-400 mt-1">
-                      We couldn&apos;t read these objects from Salesforce, so checks that depend on them found nothing to flag — which can make the score look better than it really is. Affected: <span className="font-mono text-xs">{objects.join(', ')}{objects.length < new Set(failures.map((f) => f.object)).size ? '…' : ''}</span>
-                    </p>
+                    {sparseARM && (
+                      <p className="text-sm text-amber-700 dark:text-amber-400 mt-1">
+                        Most ARM objects had zero rows in this org, so most checks had nothing to evaluate against. The high score reflects that absence, not a clean configuration. Populated:{' '}
+                        <span className="font-mono text-xs">
+                          {sparseARM.populatedObjects.length > 0 ? sparseARM.populatedObjects.join(', ') : 'none'}
+                        </span>
+                      </p>
+                    )}
+                    {failures && failures.length > 0 && (
+                      <p className={`text-sm text-amber-700 dark:text-amber-400 ${sparseARM ? 'mt-2' : 'mt-1'}`}>
+                        We couldn&apos;t read these objects from Salesforce, so checks that depend on them found nothing to flag. Affected: <span className="font-mono text-xs">{failedObjects.join(', ')}{failedObjects.length < new Set(failures.map((f) => f.object)).size ? '…' : ''}</span>
+                      </p>
+                    )}
                     <p className="text-xs text-amber-600/80 dark:text-amber-400/80 mt-2">
-                      Most common cause: an OAuth scope is missing for these objects, or the user that connected the org doesn&apos;t have read permission on them. Reconnecting the org with full read scope usually resolves it.
+                      {sparseARM
+                        ? 'Likely causes: this org only uses a subset of Revenue Cloud features, the OAuth scope is missing for the unread objects, or the connected user doesn’t have read permission. Reconnecting with full read scope ensures we see everything that’s actually configured.'
+                        : 'Most common cause: an OAuth scope is missing for these objects, or the user that connected the org doesn’t have read permission on them. Reconnecting the org with full read scope usually resolves it.'}
                     </p>
                   </div>
                 </div>

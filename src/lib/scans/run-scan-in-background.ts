@@ -133,6 +133,10 @@ export async function runScanInBackground(
         products: armData.products.length,
         quoteLines: 0,
       };
+      // Capture row counts for every ARM object family we queried. Used by
+      // the org-detail page to show "data observed in N of M object types"
+      // — critical for transparency when the score is suspiciously high
+      // because most objects are empty (silent failures or partial-RLM org).
       dataFetchedMeta = {
         products: armData.products.length,
         sellingModels: armData.sellingModels.length,
@@ -143,9 +147,29 @@ export async function runScanInBackground(
         productRelatedComponents: armData.productRelatedComponents.length,
         priceBooks: armData.priceBooks.length,
         productCategories: armData.productCategories.length,
+        productCategoryProducts: armData.productCategoryProducts.length,
         pricingProcedures: armData.pricingProcedures.length,
         decisionTables: armData.decisionTables.length,
         contextDefinitions: armData.contextDefinitions.length,
+        rateCards: armData.rateCards.length,
+        rateCardEntries: armData.rateCardEntries.length,
+        attributeDefinitions: armData.attributeDefinitions.length,
+        attributeCategories: armData.attributeCategories.length,
+        attributePicklistValues: armData.attributePicklistValues.length,
+        assets: armData.assets.length,
+        assetStatePeriods: armData.assetStatePeriods.length,
+        assetRelationships: armData.assetRelationships.length,
+        contracts: armData.contracts.length,
+        contractItemPrices: armData.contractItemPrices.length,
+        unitOfMeasureClasses: armData.unitOfMeasureClasses.length,
+        usageResources: armData.usageResources.length,
+        productUsageGrants: armData.productUsageGrants.length,
+        fulfillmentStepDefinitions: armData.fulfillmentStepDefinitions.length,
+        fulfillmentStepDefinitionGroups: armData.fulfillmentStepDefinitionGroups.length,
+        productFulfillmentScenarios: armData.productFulfillmentScenarios.length,
+        fulfillmentTaskAssignmentRules: armData.fulfillmentTaskAssignmentRules.length,
+        costBooks: armData.costBooks.length,
+        costBookEntries: armData.costBookEntries.length,
       };
     } else {
       // CPQ or CPQ + Billing branch
