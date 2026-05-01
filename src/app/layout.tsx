@@ -74,6 +74,68 @@ export default function RootLayout({
             }
           } catch(e) {}
         `}} />
+        {/* JSON-LD SoftwareApplication schema for richer search-engine and
+            social-card rendering. aggregateRating intentionally omitted
+            until we have real reviews to back it. Pricing reflects the
+            Pro tier; revisit when the new Starter tier ships. */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              '@context': 'https://schema.org',
+              '@type': 'SoftwareApplication',
+              name: 'ConfigCheck',
+              description:
+                'Automated Salesforce Revenue Cloud audit tool. Run 182 health checks across CPQ, Billing, and ARM with AI fix suggestions in under 30 seconds.',
+              applicationCategory: 'BusinessApplication',
+              applicationSubCategory: 'Salesforce CPQ audit tool',
+              operatingSystem: 'Web',
+              url: 'https://configcheck.vercel.app',
+              offers: [
+                {
+                  '@type': 'Offer',
+                  name: 'Free',
+                  price: '0',
+                  priceCurrency: 'USD',
+                },
+                {
+                  '@type': 'Offer',
+                  name: 'Pro',
+                  price: '49',
+                  priceCurrency: 'USD',
+                  priceSpecification: {
+                    '@type': 'UnitPriceSpecification',
+                    price: '49',
+                    priceCurrency: 'USD',
+                    referenceQuantity: {
+                      '@type': 'QuantitativeValue',
+                      value: '1',
+                      unitCode: 'MON',
+                    },
+                  },
+                },
+              ],
+              creator: {
+                '@type': 'Person',
+                name: 'Maulik',
+                jobTitle: 'Salesforce CPQ practitioner',
+                address: {
+                  '@type': 'PostalAddress',
+                  addressLocality: 'Vadodara',
+                  addressCountry: 'IN',
+                },
+              },
+              featureList: [
+                'Read-only OAuth connection to any Salesforce org',
+                '182 automated health checks across CPQ, Billing, and ARM',
+                'AI-powered fix suggestions per finding',
+                'White-label PDF audit reports',
+                'Scheduled scans with email notifications',
+                'Org-to-org configuration comparison',
+              ],
+            }),
+          }}
+        />
       </head>
       <body className={`${geistSans.variable} font-sans antialiased bg-gray-50 dark:bg-[#0b1120] min-h-screen`}>
         <ThemeProvider>
