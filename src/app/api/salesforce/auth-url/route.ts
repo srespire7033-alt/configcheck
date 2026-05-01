@@ -6,10 +6,14 @@ import { getAuthUser } from '@/lib/auth/get-user';
 export const dynamic = 'force-dynamic';
 
 // Default flow — uses server-side env credentials.
-// Pass ?orgId=<uuid> when reconnecting a disconnected org so OAuth points
-// at that org's My Domain instead of login.salesforce.com (Salesforce
-// blocks cross-org OAuth flows for external client apps, so a dev org
-// like *.develop.my.salesforce.com must auth against itself).
+// Pass ?orgId=<uuid> when reconnecting a disconnected org. We only
+// honor the per-org loginUrl when the org was originally connected with
+// custom Connected-App credentials (sf_client_id is set) — those orgs
+// have their own External Client App installed on their My Domain. For
+// orgs connected via the platform's shared External Client App we MUST
+// stay on login.salesforce.com, otherwise Salesforce returns
+// "app_not_found" because the platform's app isn't installed in the
+// customer's org.
 export async function GET(request: NextRequest) {
   try {
     const orgId = request.nextUrl.searchParams.get('orgId');
@@ -24,17 +28,19 @@ export async function GET(request: NextRequest) {
       const supabase = createServiceClient();
       const { data: org } = await supabase
         .from('organizations')
-        .select('instance_url, sf_client_id, sf_login_url')
+        .select('sf_client_id, sf_login_url')
         .eq('id', orgId)
         .eq('user_id', user.id)
         .maybeSingle();
-      if (org) {
-        // Prefer the explicitly-stored login URL (custom creds path);
-        // otherwise fall back to the org's instance URL, which is the My
-        // Domain for orgs that have one — exactly what Salesforce wants.
-        loginUrl = org.sf_login_url || org.instance_url || undefined;
-        customClientId = org.sf_client_id || undefined;
+      if (org && org.sf_client_id) {
+        // Custom-creds path — use the org's own Connected App on its
+        // own login URL.
+        customClientId = org.sf_client_id;
+        loginUrl = org.sf_login_url || undefined;
       }
+      // Otherwise fall through to the default shared client_id +
+      // SF_LOGIN_URL — exactly the same flow that worked for the
+      // initial connect.
     }
 
     const { url, codeVerifier } = getAuthorizationUrl(undefined, customClientId, loginUrl);
