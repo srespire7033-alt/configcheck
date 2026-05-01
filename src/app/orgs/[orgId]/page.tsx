@@ -668,6 +668,11 @@ export default function OrgDetailPage() {
             const visibilityIsConcerning =
               notVisible.length / entries.length > 0.25;
 
+            // When everything's healthy — no errored queries, visibility
+            // not concerning — the panel is just informational clutter.
+            // Only render when there's something the user needs to see.
+            if (errored.length === 0 && !visibilityIsConcerning) return null;
+
             return (
               <details className="mb-6 bg-blue-50/40 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900/40 rounded-2xl group" open={visibilityIsConcerning || errored.length > 0}>
                 <summary className="cursor-pointer px-4 sm:px-5 py-3 flex items-center gap-3 text-sm font-medium text-blue-800 dark:text-blue-300 flex-wrap">

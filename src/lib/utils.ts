@@ -20,11 +20,14 @@ export function cn(...inputs: ClassValue[]) {
  *   <40   Critical (F)      → red
  */
 export function getScoreColor(score: number): string {
-  if (score >= 90) return 'text-green-600';
-  if (score >= 75) return 'text-lime-600';
-  if (score >= 60) return 'text-amber-600';
-  if (score >= 40) return 'text-orange-600';
-  return 'text-red-600';
+  // Brightness levels match HealthScore.getBand exactly so org card and
+  // org-detail header show the same shade for the same score (the 600
+  // shade of lime renders near-black at small font sizes).
+  if (score >= 90) return 'text-green-600';   // #16a34a
+  if (score >= 75) return 'text-lime-500';    // #84cc16 — matches getBand
+  if (score >= 60) return 'text-amber-500';   // #f59e0b — matches getBand
+  if (score >= 40) return 'text-orange-500';  // #f97316 — matches getBand
+  return 'text-red-600';                      // #dc2626 — matches getBand
 }
 
 export function getScoreBgColor(score: number): string {
