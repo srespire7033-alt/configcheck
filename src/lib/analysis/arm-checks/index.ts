@@ -5,7 +5,7 @@ import type { ARMHealthCheck, ARMData, Issue, RLMAsset, RLMCostBook } from '@/ty
  *
  * 10 checks across 9 categories targeting the most common Revenue Cloud
  * misconfiguration patterns documented in the Revenue Cloud Developer Guide
- * (Spring '26). All queries run against Salesforce *standard* objects.
+ * (Summer '26). All queries run against Salesforce *standard* objects.
  */
 export const armChecks: ARMHealthCheck[] = [
   // ─────────────────────────────────────────────────────────────────

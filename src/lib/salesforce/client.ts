@@ -161,10 +161,13 @@ export async function handleOAuthCallback(
  *
  * At v50, ALL of these objects come back as INVALID_TYPE — Salesforce's
  * schema metadata at that version literally doesn't know they exist,
- * regardless of how much data the org actually has. Bumping to v62
- * (Spring '26 GA at this commit's date) so we see everything current.
+ * regardless of how much data the org actually has.
+ *
+ * Pinned to v63 (Summer '26) because the Revenue Cloud Developer Guide
+ * we wrote ARM checks against is the Summer '26 edition — using anything
+ * older risks INVALID_FIELD on newly-added fields the guide documents.
  */
-const SF_API_VERSION = '62.0';
+const SF_API_VERSION = '63.0';
 
 export function createConnection(
   instanceUrl: string,

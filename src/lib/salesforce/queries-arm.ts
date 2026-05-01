@@ -41,7 +41,7 @@ import type {
  * (a.k.a. ARM / RLM). These are NOT in the SBQQ__ or blng__ namespace —
  * Revenue Cloud is a native Salesforce platform feature, license-gated.
  *
- * Field names per the Revenue Cloud Developer Guide (Spring '26).
+ * Field names per the Revenue Cloud Developer Guide (Summer '26).
  * Some fields are recent additions; safeARMQuery handles INVALID_FIELD
  * by stripping the offending column and retrying.
  */

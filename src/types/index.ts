@@ -647,7 +647,7 @@ export interface BillingData {
 // ============================================
 // ARM (REVENUE CLOUD / RLM) TYPES
 // These map to Salesforce *standard* objects, not a managed package.
-// Object names per Revenue Cloud Developer Guide (Spring '26).
+// Object names per Revenue Cloud Developer Guide (Summer '26).
 // ============================================
 
 export interface RLMProduct {
