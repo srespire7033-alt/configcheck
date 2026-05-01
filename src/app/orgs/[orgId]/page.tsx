@@ -1124,32 +1124,60 @@ export default function OrgDetailPage() {
                     <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">AI-Powered Analysis</h3>
                     <p className="text-gray-700 dark:text-gray-200 font-medium mb-3">{headline}</p>
 
-                    {topCats.length > 0 && (
-                      <ul className="space-y-1.5 mb-3">
-                        {topCats.map(([cat, counts]) => {
-                          const parts: string[] = [];
-                          if (counts.critical > 0) parts.push(`${counts.critical} critical`);
-                          if (counts.warning > 0) parts.push(`${counts.warning} warning${counts.warning !== 1 ? 's' : ''}`);
-                          return (
-                            <li key={cat} className="flex items-start gap-2 text-sm">
-                              <span className="text-blue-500 mt-1">&bull;</span>
-                              <button
-                                type="button"
-                                onClick={() => setSelectedCategory(cat)}
-                                className="text-left text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition"
-                              >
-                                <span className="font-semibold">{getCategoryLabel(cat)}</span>
-                                <span className="text-gray-500 dark:text-gray-400">
-                                  {' '}— {parts.join(', ')}
-                                  {' '}
-                                  <span className="text-blue-600 dark:text-blue-400">→ View</span>
-                                </span>
-                              </button>
-                            </li>
-                          );
-                        })}
-                      </ul>
-                    )}
+                    {topCats.length > 0 && (() => {
+                      // Bullets show only the top 3 categories. When the org
+                      // has criticals/warnings spread across more categories
+                      // the bullet sums don't match the header counts, which
+                      // confused users (e.g. header says 15 critical but
+                      // bullets list 5+4+2=11). Add a residual line so the
+                      // numbers reconcile.
+                      const shownCritical = topCats.reduce((s, [, c]) => s + c.critical, 0);
+                      const shownWarning = topCats.reduce((s, [, c]) => s + c.warning, 0);
+                      const otherCritical = Math.max(0, critCount - shownCritical);
+                      const otherWarning = Math.max(0, warnCount - shownWarning);
+                      const otherCategoryCount = byCat.size - topCats.length;
+                      const hasResidual =
+                        (otherCritical > 0 || otherWarning > 0) && otherCategoryCount > 0;
+                      return (
+                        <>
+                          <ul className="space-y-1.5 mb-2">
+                            {topCats.map(([cat, counts]) => {
+                              const parts: string[] = [];
+                              if (counts.critical > 0) parts.push(`${counts.critical} critical`);
+                              if (counts.warning > 0) parts.push(`${counts.warning} warning${counts.warning !== 1 ? 's' : ''}`);
+                              return (
+                                <li key={cat} className="flex items-start gap-2 text-sm">
+                                  <span className="text-blue-500 mt-1">&bull;</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => setSelectedCategory(cat)}
+                                    className="text-left text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition"
+                                  >
+                                    <span className="font-semibold">{getCategoryLabel(cat)}</span>
+                                    <span className="text-gray-500 dark:text-gray-400">
+                                      {' '}— {parts.join(', ')}
+                                      {' '}
+                                      <span className="text-blue-600 dark:text-blue-400">→ View</span>
+                                    </span>
+                                  </button>
+                                </li>
+                              );
+                            })}
+                          </ul>
+                          {hasResidual && (
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mb-3 ml-4">
+                              + {[
+                                otherCritical > 0 ? `${otherCritical} critical` : null,
+                                otherWarning > 0 ? `${otherWarning} warning${otherWarning !== 1 ? 's' : ''}` : null,
+                              ]
+                                .filter(Boolean)
+                                .join(', ')}{' '}
+                              across {otherCategoryCount} other categor{otherCategoryCount !== 1 ? 'ies' : 'y'} — see Top Issues above
+                            </p>
+                          )}
+                        </>
+                      );
+                    })()}
 
                     <details className="group">
                       <summary className="cursor-pointer list-none inline-flex items-center gap-1 text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline">
