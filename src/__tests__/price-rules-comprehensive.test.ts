@@ -161,18 +161,32 @@ describe('Price Rules — Comprehensive Tests', () => {
   });
 
   // ═══════════════════════════════════════════════
-  // PR-003: Evaluation Order Gaps
+  // PR-003: Duplicate Evaluation Order on Price Rules
+  // (Replaces the old "Evaluation Order Gaps" check. Gaps in the
+  // sequence are deliberate Salesforce best practice — admins use
+  // 10, 20, 30 so they can later insert a new rule at 15 without
+  // resequencing. The actionable smell is DUPLICATES, not gaps.)
   // ═══════════════════════════════════════════════
-  describe('PR-003: Evaluation Order Gaps', () => {
+  describe('PR-003: Duplicate Evaluation Order', () => {
     const check = getCheck('PR-003');
 
     // ── Negative tests (should NOT trigger) ──
-    it('should pass when evaluation orders are consecutive', async () => {
+    it('should pass on the canonical 10/20/30 spacing (gaps are good)', async () => {
+      const data = createCleanData();
+      data.priceRules = [
+        { Id: 'pr1', Name: 'Rule 1', SBQQ__Active__c: true, SBQQ__EvaluationOrder__c: 10, SBQQ__TargetObject__c: 'Quote Line', SBQQ__LookupObject__c: null, SBQQ__PriceConditions__r: { records: [] }, SBQQ__PriceActions__r: { records: [] } },
+        { Id: 'pr2', Name: 'Rule 2', SBQQ__Active__c: true, SBQQ__EvaluationOrder__c: 20, SBQQ__TargetObject__c: 'Quote Line', SBQQ__LookupObject__c: null, SBQQ__PriceConditions__r: { records: [] }, SBQQ__PriceActions__r: { records: [] } },
+        { Id: 'pr3', Name: 'Rule 3', SBQQ__Active__c: true, SBQQ__EvaluationOrder__c: 30, SBQQ__TargetObject__c: 'Quote Line', SBQQ__LookupObject__c: null, SBQQ__PriceConditions__r: { records: [] }, SBQQ__PriceActions__r: { records: [] } },
+      ];
+      const issues = await check.run(data);
+      expect(issues).toHaveLength(0);
+    });
+
+    it('should pass on consecutive orders (1, 2, 3) with no duplicates', async () => {
       const data = createCleanData();
       data.priceRules = [
         { Id: 'pr1', Name: 'Rule 1', SBQQ__Active__c: true, SBQQ__EvaluationOrder__c: 1, SBQQ__TargetObject__c: 'Quote Line', SBQQ__LookupObject__c: null, SBQQ__PriceConditions__r: { records: [] }, SBQQ__PriceActions__r: { records: [] } },
         { Id: 'pr2', Name: 'Rule 2', SBQQ__Active__c: true, SBQQ__EvaluationOrder__c: 2, SBQQ__TargetObject__c: 'Quote Line', SBQQ__LookupObject__c: null, SBQQ__PriceConditions__r: { records: [] }, SBQQ__PriceActions__r: { records: [] } },
-        { Id: 'pr3', Name: 'Rule 3', SBQQ__Active__c: true, SBQQ__EvaluationOrder__c: 3, SBQQ__TargetObject__c: 'Quote Line', SBQQ__LookupObject__c: null, SBQQ__PriceConditions__r: { records: [] }, SBQQ__PriceActions__r: { records: [] } },
       ];
       const issues = await check.run(data);
       expect(issues).toHaveLength(0);
@@ -187,44 +201,57 @@ describe('Price Rules — Comprehensive Tests', () => {
       expect(issues).toHaveLength(0);
     });
 
-    it('should pass with fewer than 2 active rules', async () => {
+    it('should pass when no rules exist', async () => {
       const data = createCleanData();
       data.priceRules = [];
       const issues = await check.run(data);
       expect(issues).toHaveLength(0);
     });
 
-    it('should ignore inactive rules when checking for gaps', async () => {
+    it('should ignore inactive rules when checking for duplicates', async () => {
       const data = createCleanData();
       data.priceRules = [
-        { Id: 'pr1', Name: 'Active', SBQQ__Active__c: true, SBQQ__EvaluationOrder__c: 1, SBQQ__TargetObject__c: 'Quote Line', SBQQ__LookupObject__c: null, SBQQ__PriceConditions__r: { records: [] }, SBQQ__PriceActions__r: { records: [] } },
-        { Id: 'pr2', Name: 'Active', SBQQ__Active__c: true, SBQQ__EvaluationOrder__c: 2, SBQQ__TargetObject__c: 'Quote Line', SBQQ__LookupObject__c: null, SBQQ__PriceConditions__r: { records: [] }, SBQQ__PriceActions__r: { records: [] } },
-        { Id: 'pr3', Name: 'Inactive Gap', SBQQ__Active__c: false, SBQQ__EvaluationOrder__c: 50, SBQQ__TargetObject__c: 'Quote Line', SBQQ__LookupObject__c: null, SBQQ__PriceConditions__r: { records: [] }, SBQQ__PriceActions__r: { records: [] } },
+        { Id: 'pr1', Name: 'Active', SBQQ__Active__c: true, SBQQ__EvaluationOrder__c: 10, SBQQ__TargetObject__c: 'Quote Line', SBQQ__LookupObject__c: null, SBQQ__PriceConditions__r: { records: [] }, SBQQ__PriceActions__r: { records: [] } },
+        { Id: 'pr2', Name: 'Inactive Dupe', SBQQ__Active__c: false, SBQQ__EvaluationOrder__c: 10, SBQQ__TargetObject__c: 'Quote Line', SBQQ__LookupObject__c: null, SBQQ__PriceConditions__r: { records: [] }, SBQQ__PriceActions__r: { records: [] } },
+      ];
+      const issues = await check.run(data);
+      expect(issues).toHaveLength(0);
+    });
+
+    it('should ignore rules with null evaluation order', async () => {
+      const data = createCleanData();
+      data.priceRules = [
+        { Id: 'pr1', Name: 'No Order A', SBQQ__Active__c: true, SBQQ__EvaluationOrder__c: null, SBQQ__TargetObject__c: 'Quote Line', SBQQ__LookupObject__c: null, SBQQ__PriceConditions__r: { records: [] }, SBQQ__PriceActions__r: { records: [] } },
+        { Id: 'pr2', Name: 'No Order B', SBQQ__Active__c: true, SBQQ__EvaluationOrder__c: null, SBQQ__TargetObject__c: 'Quote Line', SBQQ__LookupObject__c: null, SBQQ__PriceConditions__r: { records: [] }, SBQQ__PriceActions__r: { records: [] } },
       ];
       const issues = await check.run(data);
       expect(issues).toHaveLength(0);
     });
 
     // ── Positive tests (should trigger) ──
-    it('should flag gaps in evaluation order (10, 30)', async () => {
+    it('should flag two active rules sharing evaluation order 10', async () => {
       const data = createCleanData();
-      // Default fixture has orders 10 and 20 — gap from 11-19
+      data.priceRules = [
+        { Id: 'pr1', Name: 'Rule A', SBQQ__Active__c: true, SBQQ__EvaluationOrder__c: 10, SBQQ__TargetObject__c: 'Quote Line', SBQQ__LookupObject__c: null, SBQQ__PriceConditions__r: { records: [] }, SBQQ__PriceActions__r: { records: [] } },
+        { Id: 'pr2', Name: 'Rule B', SBQQ__Active__c: true, SBQQ__EvaluationOrder__c: 10, SBQQ__TargetObject__c: 'Quote Line', SBQQ__LookupObject__c: null, SBQQ__PriceConditions__r: { records: [] }, SBQQ__PriceActions__r: { records: [] } },
+      ];
       const issues = await check.run(data);
       expect(issues).toHaveLength(1);
       expect(issues[0].check_id).toBe('PR-003');
       expect(issues[0].severity).toBe('info');
-      expect(issues[0].description).toContain('gaps');
+      expect(issues[0].title).toContain('share evaluation order 10');
     });
 
-    it('should flag large gap between orders (1, 100)', async () => {
+    it('should flag each duplicate group separately when multiple orders collide', async () => {
       const data = createCleanData();
       data.priceRules = [
-        { Id: 'pr1', Name: 'First', SBQQ__Active__c: true, SBQQ__EvaluationOrder__c: 1, SBQQ__TargetObject__c: 'Quote Line', SBQQ__LookupObject__c: null, SBQQ__PriceConditions__r: { records: [] }, SBQQ__PriceActions__r: { records: [] } },
-        { Id: 'pr2', Name: 'Last', SBQQ__Active__c: true, SBQQ__EvaluationOrder__c: 100, SBQQ__TargetObject__c: 'Quote Line', SBQQ__LookupObject__c: null, SBQQ__PriceConditions__r: { records: [] }, SBQQ__PriceActions__r: { records: [] } },
+        { Id: 'pr1', Name: 'A1', SBQQ__Active__c: true, SBQQ__EvaluationOrder__c: 10, SBQQ__TargetObject__c: 'Quote Line', SBQQ__LookupObject__c: null, SBQQ__PriceConditions__r: { records: [] }, SBQQ__PriceActions__r: { records: [] } },
+        { Id: 'pr2', Name: 'A2', SBQQ__Active__c: true, SBQQ__EvaluationOrder__c: 10, SBQQ__TargetObject__c: 'Quote Line', SBQQ__LookupObject__c: null, SBQQ__PriceConditions__r: { records: [] }, SBQQ__PriceActions__r: { records: [] } },
+        { Id: 'pr3', Name: 'B1', SBQQ__Active__c: true, SBQQ__EvaluationOrder__c: 20, SBQQ__TargetObject__c: 'Quote Line', SBQQ__LookupObject__c: null, SBQQ__PriceConditions__r: { records: [] }, SBQQ__PriceActions__r: { records: [] } },
+        { Id: 'pr4', Name: 'B2', SBQQ__Active__c: true, SBQQ__EvaluationOrder__c: 20, SBQQ__TargetObject__c: 'Quote Line', SBQQ__LookupObject__c: null, SBQQ__PriceConditions__r: { records: [] }, SBQQ__PriceActions__r: { records: [] } },
       ];
       const issues = await check.run(data);
-      expect(issues).toHaveLength(1);
-      expect(issues[0].description).toContain('1, 100');
+      expect(issues).toHaveLength(2);
     });
   });
 

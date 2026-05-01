@@ -95,42 +95,49 @@ export const priceRuleChecks: HealthCheck[] = [
     },
   },
 
-  // PR-003: Evaluation Order Gaps
+  // PR-003: Duplicate Evaluation Order across Active Price Rules
+  // (replaces the old "Evaluation Order Gaps" check, which incorrectly
+  // flagged the deliberate Salesforce best practice of using non-
+  // consecutive orders like 10, 20, 30 so admins can later insert a
+  // new rule at 15 without resequencing everything. Gaps are GOOD —
+  // duplicates are the actionable smell.)
   {
     id: 'PR-003',
-    name: 'Evaluation Order Gaps',
+    name: 'Duplicate Evaluation Order on Price Rules',
     category: 'price_rules',
     severity: 'info',
-    description: 'Gaps in price rule evaluation order sequence',
+    description:
+      'Two or more active price rules share the same evaluation order — execution sequence becomes non-deterministic',
     run: async (data: CPQData): Promise<Issue[]> => {
       const issues: Issue[] = [];
-      const activeRules = data.priceRules.filter((r) => r.SBQQ__Active__c);
-      const orders = activeRules
-        .map((r) => r.SBQQ__EvaluationOrder__c)
-        .filter((o): o is number => o !== null)
-        .sort((a, b) => a - b);
+      const activeRules = data.priceRules.filter(
+        (r) => r.SBQQ__Active__c && r.SBQQ__EvaluationOrder__c !== null
+      );
 
-      if (orders.length < 2) return issues;
-
-      const gaps: number[] = [];
-      for (let i = 1; i < orders.length; i++) {
-        if (orders[i] - orders[i - 1] > 1) {
-          for (let g = orders[i - 1] + 1; g < orders[i]; g++) {
-            gaps.push(g);
-          }
-        }
+      // Group by evaluation order. PR-001 is the stricter sibling that
+      // catches same-field+same-order; this check is the broader "any
+      // overlap" signal regardless of target field.
+      const byOrder: Record<number, typeof activeRules> = {};
+      for (const r of activeRules) {
+        const order = r.SBQQ__EvaluationOrder__c as number;
+        if (!byOrder[order]) byOrder[order] = [];
+        byOrder[order].push(r);
       }
 
-      if (gaps.length > 0) {
+      for (const [orderStr, rules] of Object.entries(byOrder)) {
+        if (rules.length < 2) continue;
+        const order = Number(orderStr);
         issues.push({
           check_id: 'PR-003',
           category: 'price_rules',
           severity: 'info',
-          title: 'Price Rule evaluation order has gaps',
-          description: `Evaluation orders are ${orders.join(', ')} with gaps at positions ${gaps.join(', ')}. New rules could accidentally slot into these gaps.`,
-          impact: 'Not a bug, but makes maintenance confusing and error-prone.',
-          recommendation: 'Consider resequencing price rules to use consecutive evaluation orders (1, 2, 3, ...).',
-          affected_records: activeRules.map((r) => ({
+          title: `${rules.length} price rules share evaluation order ${order}`,
+          description: `Rules ${rules.map((r) => `"${r.Name}"`).join(', ')} all run at evaluation order ${order}. CPQ doesn't guarantee a deterministic sequence between them — if any of them write to the same field, the result depends on internal iteration order.`,
+          impact:
+            'Hard-to-reproduce behaviour: the same quote can produce different totals across runs if these rules mutate fields the others read.',
+          recommendation:
+            'Reassign each rule to a unique evaluation order. Salesforce convention is to use increments of 10 (10, 20, 30…) so future rules can slot in at 15, 25, etc. without resequencing.',
+          affected_records: rules.map((r) => ({
             id: r.Id,
             name: r.Name,
             type: 'SBQQ__PriceRule__c',
