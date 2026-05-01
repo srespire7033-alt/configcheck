@@ -763,31 +763,49 @@ export default function SettingsPage() {
 
               {/* Display preferences (S17) — only Theme for now. Density,
                   date format, default landing page deferred until there's
-                  product demand. Mirrors the header toggle so users who
-                  look for it in Settings (the obvious place) find it. */}
+                  product demand. Three-way segmented control matches the
+                  Light/Dark/System pattern users expect from B2B SaaS,
+                  even though we only store the resolved value (no
+                  separate "system" preference yet). */}
               <SectionCard title="Display" description="How ConfigCheck looks across the app.">
-                <div className="space-y-4 max-w-lg">
-                  <div className="flex items-center justify-between py-1">
-                    <div className="flex items-start gap-3">
-                      <div className="w-8 h-8 rounded-lg bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center flex-shrink-0">
-                        {theme === 'dark' ? (
-                          <Moon className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-                        ) : (
-                          <Sun className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-                        )}
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-900 dark:text-white">Theme</p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                          Currently {theme === 'dark' ? 'dark' : 'light'}. Saved per browser, syncs nothing across devices yet.
-                        </p>
-                      </div>
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                  <div className="flex items-start gap-3">
+                    <div className="w-9 h-9 rounded-lg bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center flex-shrink-0">
+                      {theme === 'dark' ? (
+                        <Moon className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                      ) : (
+                        <Sun className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                      )}
                     </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-900 dark:text-white">Theme</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                        Saved per browser. Doesn&apos;t sync across devices yet.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="inline-flex bg-gray-100 dark:bg-gray-800 rounded-lg p-1 self-start sm:self-auto flex-shrink-0">
                     <button
-                      onClick={toggleTheme}
-                      className="px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                      onClick={() => { if (theme !== 'light') toggleTheme(); }}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors whitespace-nowrap ${
+                        theme === 'light'
+                          ? 'bg-white dark:bg-gray-900 text-gray-900 dark:text-white shadow-sm'
+                          : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+                      }`}
                     >
-                      Switch to {theme === 'dark' ? 'light' : 'dark'}
+                      <Sun className="w-3.5 h-3.5" />
+                      Light
+                    </button>
+                    <button
+                      onClick={() => { if (theme !== 'dark') toggleTheme(); }}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors whitespace-nowrap ${
+                        theme === 'dark'
+                          ? 'bg-white dark:bg-gray-900 text-gray-900 dark:text-white shadow-sm'
+                          : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+                      }`}
+                    >
+                      <Moon className="w-3.5 h-3.5" />
+                      Dark
                     </button>
                   </div>
                 </div>
