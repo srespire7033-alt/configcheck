@@ -2,7 +2,7 @@ import { createServiceClient } from '@/lib/db/client';
 import { createRefreshableConnection } from '@/lib/salesforce/client';
 import { fetchAllCPQData } from '@/lib/salesforce/queries';
 import { fetchAllBillingData, isBillingPackageInstalled } from '@/lib/salesforce/queries-billing';
-import { fetchAllARMData, getARMQueryFailures } from '@/lib/salesforce/queries-arm';
+import { fetchAllARMData, getARMQueryFailures, getARMQueryOutcomes } from '@/lib/salesforce/queries-arm';
 import { runAnalysis } from '@/lib/analysis/engine';
 import { runBillingAnalysis } from '@/lib/analysis/billing-engine';
 import { runARMAnalysis } from '@/lib/analysis/arm-engine';
@@ -97,6 +97,7 @@ export async function runScanInBackground(
     let cpqDataTotals = { priceRules: 0, products: 0, quoteLines: 0 };
     let dataFetchedMeta: Record<string, number> = {};
     let queryFailuresMeta: Array<{ object: string; errorCode: string; errorMsg: string }> = [];
+    let queryOutcomesMeta: Record<string, 'ok' | 'invalid_type' | 'error'> = {};
 
     if (productType === 'arm') {
       console.log(`[SCAN ${scanId}] Fetching ARM (Revenue Cloud) data...`);
@@ -111,6 +112,7 @@ export async function runScanInBackground(
       // org-detail page as a "score may be incomplete" warning so users
       // don't trust an artificially-high score driven by missing data.
       queryFailuresMeta = getARMQueryFailures();
+      queryOutcomesMeta = getARMQueryOutcomes();
       if (queryFailuresMeta.length > 0) {
         console.warn(`[SCAN ${scanId}] ⚠️ ${queryFailuresMeta.length} ARM SOQL queries failed silently — score may be artificially high. Failed objects: ${queryFailuresMeta.map((f) => f.object).join(', ')}`);
       }
@@ -339,6 +341,7 @@ export async function runScanInBackground(
           product_type: productType,
           data_fetched: dataFetchedMeta,
           query_failures: queryFailuresMeta.length > 0 ? queryFailuresMeta : null,
+          query_outcomes: Object.keys(queryOutcomesMeta).length > 0 ? queryOutcomesMeta : null,
         },
         completed_at: new Date().toISOString(),
       })

@@ -568,39 +568,135 @@ export default function OrgDetailPage() {
 
           {/* Data observed panel — only shown for ARM scans. Surfaces the
               per-object row counts ConfigCheck observed during the fetch
-              so the user can verify against their org reality (e.g. "we
-              saw 0 selling models but you know there should be 50 — that
-              means a permissions issue, not a clean configuration"). */}
+              so the user can verify against their org reality. Distinguishes
+              "0 rows returned" (object exists, no data) from "object not
+              visible to the connected SF user" (license or profile issue). */}
           {scan.product_type === 'arm' && (() => {
-            const meta = scan.metadata as { data_fetched?: Record<string, number> | null } | null;
+            const meta = scan.metadata as {
+              data_fetched?: Record<string, number> | null;
+              query_outcomes?: Record<string, 'ok' | 'invalid_type' | 'error'> | null;
+            } | null;
             const dataFetched = meta?.data_fetched || {};
+            const queryOutcomes = meta?.query_outcomes || {};
             if (Object.keys(dataFetched).length === 0) return null;
+
+            // Map ARMData camelCase keys → Salesforce sObject names so we can
+            // cross-reference the per-query outcome (which is keyed by sObject).
+            const dataKeyToSObject: Record<string, string> = {
+              products: 'Product2',
+              sellingModels: 'ProductSellingModel',
+              sellingModelOptions: 'ProductSellingModelOption',
+              priceAdjustmentSchedules: 'PriceAdjustmentSchedule',
+              priceAdjustmentTiers: 'PriceAdjustmentTier',
+              attributeBasedAdjRules: 'AttributeBasedAdjRule',
+              productRelatedComponents: 'ProductRelatedComponent',
+              priceBooks: 'Pricebook2',
+              productCategories: 'ProductCategory',
+              productCategoryProducts: 'ProductCategoryProduct',
+              pricingProcedures: 'PricingProcedure',
+              decisionTables: 'DecisionTable',
+              contextDefinitions: 'ContextDefinition',
+              rateCards: 'RateCard',
+              rateCardEntries: 'RateCardEntry',
+              attributeDefinitions: 'AttributeDefinition',
+              attributeCategories: 'AttributeCategory',
+              attributePicklistValues: 'AttributePicklistValue',
+              assets: 'Asset',
+              assetStatePeriods: 'AssetStatePeriod',
+              assetRelationships: 'AssetRelationship',
+              contracts: 'Contract',
+              contractItemPrices: 'ContractItemPrice',
+              unitOfMeasureClasses: 'UnitOfMeasureClass',
+              usageResources: 'UsageResource',
+              productUsageGrants: 'ProductUsageGrant',
+              fulfillmentStepDefinitions: 'FulfillmentStepDefinition',
+              fulfillmentStepDefinitionGroups: 'FulfillmentStepDefinitionGroup',
+              productFulfillmentScenarios: 'ProductFulfillmentScenario',
+              fulfillmentTaskAssignmentRules: 'FulfillmentTaskAssignmentRule',
+              costBooks: 'CostBook',
+              costBookEntries: 'CostBookEntry',
+            };
+
             const entries = Object.entries(dataFetched).sort((a, b) => Number(b[1]) - Number(a[1]));
             const populated = entries.filter(([, v]) => Number(v) > 0);
             const empty = entries.filter(([, v]) => Number(v) === 0);
+            // Among empties, distinguish "INVALID_TYPE" (object not visible to the
+            // connected user) from "object visible but 0 rows".
+            const notVisible = empty.filter(
+              ([k]) => queryOutcomes[dataKeyToSObject[k] || k] === 'invalid_type'
+            );
+            const errored = empty.filter(
+              ([k]) => queryOutcomes[dataKeyToSObject[k] || k] === 'error'
+            );
+            const trulyEmpty = empty.filter(([k]) => {
+              const outcome = queryOutcomes[dataKeyToSObject[k] || k];
+              return !outcome || outcome === 'ok';
+            });
             const labelize = (k: string) =>
               k.replace(/([A-Z])/g, ' $1').replace(/^./, (c) => c.toUpperCase()).trim();
+
             return (
-              <details className="mb-6 bg-blue-50/40 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900/40 rounded-2xl group">
-                <summary className="cursor-pointer px-4 sm:px-5 py-3 flex items-center gap-3 text-sm font-medium text-blue-800 dark:text-blue-300">
+              <details className="mb-6 bg-blue-50/40 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900/40 rounded-2xl group" open={notVisible.length > 0 || errored.length > 0}>
+                <summary className="cursor-pointer px-4 sm:px-5 py-3 flex items-center gap-3 text-sm font-medium text-blue-800 dark:text-blue-300 flex-wrap">
                   <ChevronRight className="w-4 h-4 transition-transform group-open:rotate-90 flex-shrink-0" />
                   ARM data observed: <span className="font-bold">{populated.length}</span> of {entries.length} object types had data
-                  <span className="text-xs font-normal text-blue-600 dark:text-blue-400 ml-1">(click to verify against your org)</span>
+                  {notVisible.length > 0 && (
+                    <span className="ml-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300">
+                      {notVisible.length} not visible to connected user
+                    </span>
+                  )}
+                  {errored.length > 0 && (
+                    <span className="ml-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-red-100 dark:bg-red-900/40 text-red-800 dark:text-red-300">
+                      {errored.length} errored
+                    </span>
+                  )}
                 </summary>
-                <div className="px-4 sm:px-5 pb-4 pt-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-1 text-xs">
-                  {populated.map(([k, v]) => (
-                    <div key={k} className="flex items-center justify-between py-0.5 border-b border-blue-100/60 dark:border-blue-900/30">
-                      <span className="text-gray-700 dark:text-gray-300">{labelize(k)}</span>
-                      <span className="font-mono font-semibold text-blue-700 dark:text-blue-300">{v}</span>
+                <div className="px-4 sm:px-5 pb-4 pt-1">
+                  {/* Populated objects */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-1 text-xs">
+                    {populated.map(([k, v]) => (
+                      <div key={k} className="flex items-center justify-between py-0.5 border-b border-blue-100/60 dark:border-blue-900/30">
+                        <span className="text-gray-700 dark:text-gray-300">{labelize(k)}</span>
+                        <span className="font-mono font-semibold text-blue-700 dark:text-blue-300">{v}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Not-visible (INVALID_TYPE) — strongest signal of a permissions issue */}
+                  {notVisible.length > 0 && (
+                    <div className="mt-3 pt-3 border-t border-blue-100 dark:border-blue-900/40 bg-amber-50/60 dark:bg-amber-950/20 rounded-lg px-3 py-2 -mx-1">
+                      <div className="text-[11px] font-semibold text-amber-800 dark:text-amber-300 mb-1">
+                        Not visible to connected SF user ({notVisible.length}) — Salesforce returned INVALID_TYPE
+                      </div>
+                      <div className="text-[11px] text-amber-700 dark:text-amber-400 leading-relaxed mb-1">
+                        {notVisible.map(([k]) => labelize(k)).join(' · ')}
+                      </div>
+                      <div className="text-[10px] text-amber-700/80 dark:text-amber-400/80">
+                        These objects exist in Salesforce but the connected user&apos;s profile can&apos;t see them. Reconnect with a System Admin profile, or grant the connected user read on these objects.
+                      </div>
                     </div>
-                  ))}
-                  {empty.length > 0 && (
-                    <div className="col-span-full mt-2 pt-2 border-t border-blue-100 dark:border-blue-900/40">
+                  )}
+
+                  {/* Errored — auth, network, permission denied mid-query */}
+                  {errored.length > 0 && (
+                    <div className="mt-2 pt-2 bg-red-50/60 dark:bg-red-950/20 rounded-lg px-3 py-2 -mx-1">
+                      <div className="text-[11px] font-semibold text-red-800 dark:text-red-300 mb-1">
+                        Query errored ({errored.length}) — see scan.metadata.query_failures
+                      </div>
+                      <div className="text-[11px] text-red-700 dark:text-red-400 leading-relaxed">
+                        {errored.map(([k]) => labelize(k)).join(' · ')}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Truly empty — object visible, just no rows */}
+                  {trulyEmpty.length > 0 && (
+                    <div className="mt-3 pt-2 border-t border-blue-100/60 dark:border-blue-900/30">
                       <div className="text-[11px] text-gray-500 dark:text-gray-400 mb-1">
-                        Empty (no rows returned, {empty.length}):
+                        Empty (object visible, no rows): {trulyEmpty.length}
                       </div>
                       <div className="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed">
-                        {empty.map(([k]) => labelize(k)).join(' · ')}
+                        {trulyEmpty.map(([k]) => labelize(k)).join(' · ')}
                       </div>
                     </div>
                   )}

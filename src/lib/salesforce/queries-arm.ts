@@ -65,12 +65,30 @@ function withTimeout<T>(promiseLike: PromiseLike<T>, ms: number, label = 'Operat
  */
 const armQueryFailures: Array<{ object: string; errorCode: string; errorMsg: string }> = [];
 
+/**
+ * Per-object outcome from the most recent fetchAllARMData() call.
+ *
+ *   ok        — query ran successfully (rows >= 0, including 0)
+ *   invalid_type — Salesforce doesn't expose this sObject to the connected
+ *                  user's profile (object not licensed, or no read on the
+ *                  object). The user-visible difference between this and
+ *                  "ok with 0 rows" is huge: invalid_type means we couldn't
+ *                  see the object at all, not that it was empty.
+ *   error     — anything else (auth, network, permission denied mid-query)
+ */
+const armQueryOutcomes: Record<string, 'ok' | 'invalid_type' | 'error'> = {};
+
 export function getARMQueryFailures() {
   return [...armQueryFailures];
 }
 
+export function getARMQueryOutcomes(): Record<string, 'ok' | 'invalid_type' | 'error'> {
+  return { ...armQueryOutcomes };
+}
+
 function resetARMQueryFailures() {
   armQueryFailures.length = 0;
+  for (const k of Object.keys(armQueryOutcomes)) delete armQueryOutcomes[k];
 }
 
 /**
@@ -91,14 +109,18 @@ async function safeARMQuery(conn: Connection, soql: string, maxRetries = 5): Pro
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
-      return await withTimeout(conn.query(query), 30000, 'ARM SOQL query');
+      const res = await withTimeout(conn.query(query), 30000, 'ARM SOQL query');
+      armQueryOutcomes[objectName] = 'ok';
+      return res;
     } catch (err: any) {
       const errorCode = err?.errorCode || err?.data?.errorCode || '';
       const errorMsg = err?.message || err?.data?.message || '';
 
       if (errorCode === 'INVALID_TYPE') {
-        // Object not exposed in this org — expected on partial-RLM orgs,
-        // not a "silent failure" worth warning about.
+        // Object not exposed in this org — could be missing license OR the
+        // connected user's profile lacks read on this sObject. Track it
+        // separately so the UI can distinguish "0 rows" from "0 visibility".
+        armQueryOutcomes[objectName] = 'invalid_type';
         return { records: [] };
       }
 
@@ -120,6 +142,7 @@ async function safeARMQuery(conn: Connection, soql: string, maxRetries = 5): Pro
       // suspiciously high score that's really driven by missing data.
       console.error('[ARM] Query failed:', errorCode, errorMsg);
       armQueryFailures.push({ object: objectName, errorCode: errorCode || 'unknown', errorMsg: errorMsg || 'no message' });
+      armQueryOutcomes[objectName] = 'error';
       return { records: [] };
     }
   }
