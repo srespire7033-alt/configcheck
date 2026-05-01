@@ -806,8 +806,8 @@ export default function LandingPage() {
                 <li><a href="#pricing" className="hover:text-gray-900 dark:hover:text-white transition-colors">Pricing</a></li>
                 {/* TODO: host real anonymised PDF */}
                 <li><a href="/sample-report.pdf" className="hover:text-gray-900 dark:hover:text-white transition-colors">Sample report</a></li>
-                {/* TODO: build /changelog page */}
                 <li><Link href="/changelog" className="hover:text-gray-900 dark:hover:text-white transition-colors">Changelog</Link></li>
+                <li><Link href="/compare" className="hover:text-gray-900 dark:hover:text-white transition-colors">Compare</Link></li>
               </ul>
             </div>
             <div>
