@@ -16,6 +16,7 @@ import { ComplexityCard } from '@/components/scan/complexity-card';
 import { ScheduleModal } from '@/components/schedule/schedule-modal';
 import { ScheduleList } from '@/components/schedule/schedule-list';
 import { ScoreTrend } from '@/components/scan/score-trend';
+import { ScoreFormulaTooltip } from '@/components/scan/score-formula-tooltip';
 import type { DBScan, DBIssue, DBOrganization, DBScanSchedule, RevenueRiskSummary, ComplexityBreakdown, ProductType } from '@/types';
 import { getProductTypeLabel } from '@/lib/utils';
 
@@ -575,8 +576,9 @@ export default function OrgDetailPage() {
 
               {/* Score Breakdown */}
               <div className="flex-1 w-full">
-                <h2 className="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white mb-4 text-center lg:text-left">
+                <h2 className="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white mb-4 text-center lg:text-left flex items-center justify-center lg:justify-start gap-1">
                   Your {scan.product_type ? getProductTypeLabel(scan.product_type) : 'CPQ'} Health Score
+                  <ScoreFormulaTooltip />
                 </h2>
                 <p className="text-gray-600 dark:text-gray-400 mb-6 text-center lg:text-left text-sm">
                   Last scan: {formatTimeAgo(scan.completed_at || scan.created_at)} &bull; {issues.length} issues found
@@ -759,7 +761,7 @@ export default function OrgDetailPage() {
                       className="w-full px-3 sm:px-6 py-2.5 sm:py-3 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 transition flex items-center justify-center gap-2 text-sm sm:text-base"
                     >
                       <Download className="w-4 h-4 sm:w-5 sm:h-5" />
-                      <span className="hidden xs:inline">Download</span>
+                      Report
                       <ChevronDown className={`w-4 h-4 transition-transform ${showExportMenu ? 'rotate-180' : ''}`} />
                     </button>
                     {showExportMenu && (

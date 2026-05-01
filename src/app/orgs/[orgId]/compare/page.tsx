@@ -256,6 +256,98 @@ export default function ComparePage() {
             </CardContent>
           </Card>
 
+          {/* Score-math explanation — deterministic before the AI prose so the
+              user can see *why* the score moved (or didn't) without depending
+              on the AI to nail the math. The AI summary on its own often says
+              vague things like "the new issue did not cause a score reduction"
+              without explaining why an info-severity finding is below rounding
+              granularity. This block answers that question explicitly. */}
+          {(() => {
+            const PENALTY: Record<string, number> = { critical: 2.0, warning: 0.5, info: 0.1 };
+            const sumPenalty = (issues: DBIssue[]) =>
+              issues.reduce((s, i) => s + (PENALTY[i.severity] ?? 0), 0);
+            const newPenalty = sumPenalty(comparison.newIssues);
+            const resolvedPenalty = sumPenalty(comparison.resolvedIssues);
+            const netPenalty = newPenalty - resolvedPenalty;
+            const scoreDelta = comparison.scoreDelta;
+            // Group new/resolved by severity for the breakdown line
+            const sevCount = (issues: DBIssue[]) => ({
+              critical: issues.filter((i) => i.severity === 'critical').length,
+              warning: issues.filter((i) => i.severity === 'warning').length,
+              info: issues.filter((i) => i.severity === 'info').length,
+            });
+            const nSev = sevCount(comparison.newIssues);
+            const rSev = sevCount(comparison.resolvedIssues);
+            const fmtSev = (c: { critical: number; warning: number; info: number }) => {
+              const parts: string[] = [];
+              if (c.critical) parts.push(`${c.critical} critical`);
+              if (c.warning) parts.push(`${c.warning} warning${c.warning !== 1 ? 's' : ''}`);
+              if (c.info) parts.push(`${c.info} info`);
+              return parts.join(' + ') || 'none';
+            };
+
+            // Decide the headline explanation
+            let explanation: string;
+            if (comparison.newIssues.length === 0 && comparison.resolvedIssues.length === 0) {
+              explanation = 'No new or resolved findings between these scans — score unchanged.';
+            } else if (scoreDelta === 0 && netPenalty !== 0) {
+              const direction =
+                netPenalty > 0
+                  ? `added ${netPenalty.toFixed(1)} points of penalty`
+                  : `removed ${Math.abs(netPenalty).toFixed(1)} points of penalty`;
+              explanation = `The findings ${direction}, but that's below the rounding granularity of the headline score (rounded to nearest whole number), so the displayed score didn't move. With more changes the score will catch up.`;
+            } else if (scoreDelta < 0) {
+              explanation = `Score declined by ${Math.abs(scoreDelta)} point${Math.abs(scoreDelta) !== 1 ? 's' : ''} because new findings (${newPenalty.toFixed(1)} pts of penalty) outweighed resolved ones (${resolvedPenalty.toFixed(1)} pts).`;
+            } else {
+              explanation = `Score improved by ${scoreDelta} point${scoreDelta !== 1 ? 's' : ''} because resolved findings (${resolvedPenalty.toFixed(1)} pts removed) outweighed new ones (${newPenalty.toFixed(1)} pts added).`;
+            }
+
+            return (
+              <div className="bg-gray-50 dark:bg-gray-800/40 rounded-2xl border border-gray-200 dark:border-gray-700 p-4">
+                <div className="flex items-start gap-3">
+                  <div className="w-8 h-8 bg-white dark:bg-gray-900 rounded-lg flex items-center justify-center flex-shrink-0 border border-gray-200 dark:border-gray-700">
+                    <span className="text-xs font-mono font-bold text-gray-500 dark:text-gray-400">Σ</span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-3 flex-wrap mb-1.5">
+                      <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
+                        Score math
+                      </h3>
+                      <span className="text-[11px] text-gray-500 dark:text-gray-400">
+                        Critical −2.0 · Warning −0.5 · Info −0.1
+                      </span>
+                    </div>
+                    <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed mb-2">
+                      {explanation}
+                    </p>
+                    {(comparison.newIssues.length > 0 || comparison.resolvedIssues.length > 0) && (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[12px] mt-2">
+                        <div className="px-3 py-2 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-900/40">
+                          <span className="font-semibold text-red-700 dark:text-red-300">
+                            New ({comparison.newIssues.length}):
+                          </span>{' '}
+                          <span className="text-red-700 dark:text-red-300">{fmtSev(nSev)}</span>{' '}
+                          <span className="text-red-700/70 dark:text-red-300/70 font-mono">
+                            = +{newPenalty.toFixed(1)} pts penalty
+                          </span>
+                        </div>
+                        <div className="px-3 py-2 rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-100 dark:border-green-900/40">
+                          <span className="font-semibold text-green-700 dark:text-green-300">
+                            Resolved ({comparison.resolvedIssues.length}):
+                          </span>{' '}
+                          <span className="text-green-700 dark:text-green-300">{fmtSev(rSev)}</span>{' '}
+                          <span className="text-green-700/70 dark:text-green-300/70 font-mono">
+                            = −{resolvedPenalty.toFixed(1)} pts penalty
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+
           {/* AI Drift Insight */}
           {(aiInsightLoading || aiInsight) && (
             <div className="bg-gradient-to-r from-blue-50 to-teal-50 dark:from-blue-900/20 dark:to-teal-900/20 rounded-2xl border border-blue-100 dark:border-blue-800 p-5">
