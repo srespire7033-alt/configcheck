@@ -3,14 +3,27 @@
 import { useState, useEffect } from 'react';
 import { ShieldCheck } from 'lucide-react';
 
+// Mix of generic + product-specific messages so users on Billing-only or
+// ARM scans don't see "Brewing your CPQ insights..." as if CPQ were the
+// only product we cover.
 const loadingMessages = [
+  // CPQ-specific
   'Brewing your CPQ insights...',
+  'Making sense of your price rules...',
+  // Billing-specific
+  'Reconciling your billing rules...',
+  'Lining up finance periods...',
+  'Tracing revenue recognition schedules...',
+  // ARM (Revenue Cloud) specific
+  'Mapping your selling models...',
+  'Auditing rate cards and adjustments...',
+  'Walking your product catalog...',
+  // Generic / product-agnostic
   'Crunching the numbers, hang tight...',
   'Scanning configurations at lightning speed...',
   'Almost there, just dotting the i\'s...',
   'Good things take a moment...',
   'Wrangling your Salesforce data...',
-  'Making sense of your price rules...',
   'Polishing your health report...',
   'Your config audit is on its way...',
   'Running diagnostics, sit tight...',
