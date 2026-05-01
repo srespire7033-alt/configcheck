@@ -30,6 +30,28 @@ function DashboardContent() {
   // re-appear on refresh.
   const switchedLabel = searchParams.get('switched');
   const [switchedDismissed, setSwitchedDismissed] = useState(false);
+  const [flashDismissed, setFlashDismissed] = useState(false);
+
+  // Auto-clear OAuth success/error params from the URL after they're shown
+  // once, so a page refresh doesn't re-surface a stale message.
+  useEffect(() => {
+    if (!successMsg && !errorMsg) return;
+    const t = setTimeout(() => {
+      const url = new URL(window.location.href);
+      url.searchParams.delete('success');
+      url.searchParams.delete('error');
+      window.history.replaceState({}, '', url.toString());
+    }, 100);
+    return () => clearTimeout(t);
+  }, [successMsg, errorMsg]);
+
+  function dismissFlash() {
+    setFlashDismissed(true);
+    const url = new URL(window.location.href);
+    url.searchParams.delete('success');
+    url.searchParams.delete('error');
+    window.history.replaceState({}, '', url.toString());
+  }
 
   // Refetch orgs on mount AND when page becomes visible/focused again
   // (Next.js client-side router cache can serve stale data on back-navigation)
@@ -238,17 +260,33 @@ function DashboardContent() {
         </div>
       )}
 
-      {/* Success/Error Messages */}
-      {successMsg && (
-        <div className="mb-6 flex items-center gap-3 p-4 bg-green-50 border border-green-200 rounded-xl animate-in fade-in">
-          <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0" />
-          <p className="text-sm font-medium text-green-800">{successMsg}</p>
+      {/* Success/Error Messages — dismissable, and the query param is
+          cleared on dismiss so a refresh doesn't re-surface a stale
+          message (especially OAuth callback errors that linger in the URL). */}
+      {successMsg && !flashDismissed && (
+        <div className="mb-6 flex items-start gap-3 p-4 bg-green-50 border border-green-200 rounded-xl animate-in fade-in">
+          <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
+          <p className="text-sm font-medium text-green-800 flex-1">{successMsg}</p>
+          <button
+            onClick={dismissFlash}
+            className="p-1 text-green-600 hover:text-green-800 hover:bg-green-100 rounded-lg transition flex-shrink-0"
+            aria-label="Dismiss"
+          >
+            <Plus className="w-4 h-4 rotate-45" />
+          </button>
         </div>
       )}
-      {errorMsg && (
-        <div className="mb-6 flex items-center gap-3 p-4 bg-red-50 border border-red-200 rounded-xl">
-          <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0" />
-          <p className="text-sm font-medium text-red-800">{errorMsg}</p>
+      {errorMsg && !flashDismissed && (
+        <div className="mb-6 flex items-start gap-3 p-4 bg-red-50 border border-red-200 rounded-xl">
+          <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+          <p className="text-sm font-medium text-red-800 flex-1 break-words">{errorMsg}</p>
+          <button
+            onClick={dismissFlash}
+            className="p-1 text-red-600 hover:text-red-800 hover:bg-red-100 rounded-lg transition flex-shrink-0"
+            aria-label="Dismiss"
+          >
+            <Plus className="w-4 h-4 rotate-45" />
+          </button>
         </div>
       )}
 
