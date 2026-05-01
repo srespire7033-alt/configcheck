@@ -635,14 +635,28 @@ export default function OrgDetailPage() {
             const labelize = (k: string) =>
               k.replace(/([A-Z])/g, ' $1').replace(/^./, (c) => c.toUpperCase()).trim();
 
+            // Severity heuristic for the "not visible" pill: a handful of
+            // INVALID_TYPE objects on an otherwise healthy fetch is just
+            // "this org didn't enable that optional Revenue Cloud feature"
+            // — not a permission alert. Promote to amber only when a
+            // significant chunk of the schema is missing (>20% of total,
+            // or >5 objects), which is the actual permissions-issue signal.
+            const visibilityIsConcerning =
+              notVisible.length > 5 || notVisible.length / entries.length > 0.2;
+
             return (
-              <details className="mb-6 bg-blue-50/40 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900/40 rounded-2xl group" open={notVisible.length > 0 || errored.length > 0}>
+              <details className="mb-6 bg-blue-50/40 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900/40 rounded-2xl group" open={visibilityIsConcerning || errored.length > 0}>
                 <summary className="cursor-pointer px-4 sm:px-5 py-3 flex items-center gap-3 text-sm font-medium text-blue-800 dark:text-blue-300 flex-wrap">
                   <ChevronRight className="w-4 h-4 transition-transform group-open:rotate-90 flex-shrink-0" />
                   ARM data observed: <span className="font-bold">{populated.length}</span> of {entries.length} object types had data
-                  {notVisible.length > 0 && (
+                  {notVisible.length > 0 && visibilityIsConcerning && (
                     <span className="ml-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300">
                       {notVisible.length} not visible to connected user
+                    </span>
+                  )}
+                  {notVisible.length > 0 && !visibilityIsConcerning && (
+                    <span className="ml-1 text-xs font-medium px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400">
+                      {notVisible.length} feature{notVisible.length !== 1 ? 's' : ''} not enabled
                     </span>
                   )}
                   {errored.length > 0 && (
@@ -662,8 +676,11 @@ export default function OrgDetailPage() {
                     ))}
                   </div>
 
-                  {/* Not-visible (INVALID_TYPE) — strongest signal of a permissions issue */}
-                  {notVisible.length > 0 && (
+                  {/* Not-visible (INVALID_TYPE) — split presentation by severity:
+                      - many missing → likely a permissions issue, alert in amber
+                      - few missing  → optional Revenue Cloud features not enabled,
+                        muted gray "informational" treatment */}
+                  {notVisible.length > 0 && visibilityIsConcerning && (
                     <div className="mt-3 pt-3 border-t border-blue-100 dark:border-blue-900/40 bg-amber-50/60 dark:bg-amber-950/20 rounded-lg px-3 py-2 -mx-1">
                       <div className="text-[11px] font-semibold text-amber-800 dark:text-amber-300 mb-1">
                         Not visible to connected SF user ({notVisible.length}) — Salesforce returned INVALID_TYPE
@@ -673,6 +690,19 @@ export default function OrgDetailPage() {
                       </div>
                       <div className="text-[10px] text-amber-700/80 dark:text-amber-400/80">
                         These objects exist in Salesforce but the connected user&apos;s profile can&apos;t see them. Reconnect with a System Admin profile, or grant the connected user read on these objects.
+                      </div>
+                    </div>
+                  )}
+                  {notVisible.length > 0 && !visibilityIsConcerning && (
+                    <div className="mt-3 pt-2 border-t border-blue-100/60 dark:border-blue-900/30">
+                      <div className="text-[11px] text-gray-500 dark:text-gray-400 mb-1">
+                        Optional Revenue Cloud feature{notVisible.length !== 1 ? 's' : ''} not enabled in this org ({notVisible.length}):
+                      </div>
+                      <div className="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed">
+                        {notVisible.map(([k]) => labelize(k)).join(' · ')}
+                      </div>
+                      <div className="text-[10px] text-gray-400 dark:text-gray-500 mt-1">
+                        Checks for these features are skipped automatically. Enable them in Setup → Feature Settings if you want them scanned.
                       </div>
                     </div>
                   )}
