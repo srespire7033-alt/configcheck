@@ -6,18 +6,17 @@ import {
   Save, LogOut, Upload, X,
   Bell, BellOff, CheckCircle2, Zap,
   Clock, ExternalLink, User, Palette,
-  CreditCard, Activity, Phone, MapPin, Briefcase, Globe, Mail,
+  CreditCard, Phone, MapPin, Briefcase, Globe, Mail,
   AlertTriangle, Download, Trash2
 } from 'lucide-react';
 import { createClient } from '@/lib/db/client';
 import { LoadingScreen } from '@/components/ui/loading-screen';
 
-type SettingsTab = 'account' | 'plan' | 'usage' | 'branding' | 'notifications';
+type SettingsTab = 'account' | 'plan' | 'branding' | 'notifications';
 
 const TABS: { id: SettingsTab; label: string; icon: React.ElementType }[] = [
   { id: 'account', label: 'Account', icon: User },
   { id: 'plan', label: 'Plan & Billing', icon: CreditCard },
-  { id: 'usage', label: 'Usage', icon: Activity },
   { id: 'branding', label: 'Branding', icon: Palette },
   { id: 'notifications', label: 'Notifications', icon: Bell },
 ];
@@ -121,6 +120,7 @@ export default function SettingsPage() {
     ai_calls_this_month: number;
     pdf_reports_this_month: number;
     connected_orgs: number;
+    is_admin?: boolean;
   } | null>(null);
 
   useEffect(() => {
@@ -542,8 +542,11 @@ export default function SettingsPage() {
                 </div>
               </SectionCard>
 
-              {/* Usage limits with progress bars */}
-              <SectionCard title="Plan Usage" description={`Resets on ${resetDateStr} (${daysUntilReset} days)`}>
+              {/* Usage limits with progress bars. Connected Orgs is a
+                  concurrent (not monthly) limit — handled with isConcurrent
+                  so the UsageBar drops the "resets on" copy. Admins get
+                  an "Admin — unlimited" pill instead of the X/Y bar. */}
+              <SectionCard title="Plan Usage" description={usage?.is_admin ? 'Admin — quotas bypassed' : `Resets on ${resetDateStr} (${daysUntilReset} days)`}>
                 <div className="space-y-5">
                   <UsageBar
                     label="Scans"
@@ -552,6 +555,7 @@ export default function SettingsPage() {
                     limit={scanLimit}
                     color="blue"
                     resetDate={resetDateStr}
+                    isAdmin={usage?.is_admin}
                   />
                   <div className="border-t border-gray-100 dark:border-gray-800" />
                   <UsageBar
@@ -561,6 +565,7 @@ export default function SettingsPage() {
                     limit={aiLimit}
                     color="purple"
                     resetDate={resetDateStr}
+                    isAdmin={usage?.is_admin}
                   />
                   <div className="border-t border-gray-100 dark:border-gray-800" />
                   <UsageBar
@@ -570,16 +575,27 @@ export default function SettingsPage() {
                     limit={pdfLimit}
                     color="green"
                     resetDate={resetDateStr}
+                    isAdmin={usage?.is_admin}
                   />
                   <div className="border-t border-gray-100 dark:border-gray-800" />
                   <UsageBar
                     label="Connected Orgs"
-                    description={orgLimit ? `Up to ${orgLimit} Salesforce orgs` : 'Unlimited Salesforce orgs'}
+                    description={orgLimit ? `Up to ${orgLimit} Salesforce org${orgLimit === 1 ? '' : 's'} at a time` : 'Unlimited Salesforce orgs'}
                     used={usage?.connected_orgs ?? 0}
                     limit={orgLimit}
                     color="blue"
                     resetDate={resetDateStr}
+                    isAdmin={usage?.is_admin}
+                    isConcurrent
                   />
+                  <div className="border-t border-gray-100 dark:border-gray-800" />
+                  <div className="flex items-center justify-between py-1">
+                    <div>
+                      <p className="text-sm font-medium text-gray-700 dark:text-gray-300">All-time Scans</p>
+                      <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Total scans run across all orgs</p>
+                    </div>
+                    <span className="text-lg font-bold text-gray-900 dark:text-white">{usage?.total_scans ?? 0}</span>
+                  </div>
                 </div>
               </SectionCard>
 
@@ -592,57 +608,6 @@ export default function SettingsPage() {
                     </div>
                   ))}
                 </div>
-              </SectionCard>
-            </div>
-          )}
-
-          {/* ==================== USAGE TAB ==================== */}
-          {activeTab === 'usage' && (
-            <div className="space-y-6">
-              <SectionCard title="Usage This Month" description={`Resets on ${resetDateStr} (${daysUntilReset} days remaining)`}>
-                {usage ? (
-                  <div className="space-y-5">
-                    <UsageBar
-                      label="Scans"
-                      description={scanLimit ? `Up to ${scanLimit} scans per month` : 'Unlimited scans'}
-                      used={usage.scans_this_month}
-                      limit={scanLimit}
-                      color="blue"
-                      resetDate={resetDateStr}
-                    />
-                    <div className="border-t border-gray-100 dark:border-gray-800" />
-                    <UsageBar
-                      label="AI Remediation Calls"
-                      description={aiLimit ? `Up to ${aiLimit} AI calls per month` : 'Unlimited AI calls'}
-                      used={usage.ai_calls_this_month}
-                      limit={aiLimit}
-                      color="purple"
-                      resetDate={resetDateStr}
-                    />
-                    <div className="border-t border-gray-100 dark:border-gray-800" />
-                    <UsageBar
-                      label="PDF Reports"
-                      description={pdfLimit ? `Up to ${pdfLimit} reports per month` : 'Unlimited reports'}
-                      used={usage.pdf_reports_this_month}
-                      limit={pdfLimit}
-                      color="green"
-                      resetDate={resetDateStr}
-                    />
-                    <div className="border-t border-gray-100 dark:border-gray-800" />
-                    <div className="flex items-center justify-between py-1">
-                      <div>
-                        <p className="text-sm font-medium text-gray-700 dark:text-gray-300">All-time Scans</p>
-                        <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Total scans run across all orgs</p>
-                      </div>
-                      <span className="text-lg font-bold text-gray-900 dark:text-white">{usage.total_scans}</span>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-2 py-8 justify-center text-sm text-gray-500 dark:text-gray-400">
-                    <div className="animate-spin h-4 w-4 border-2 border-blue-600 border-t-transparent rounded-full" />
-                    Loading usage data...
-                  </div>
-                )}
               </SectionCard>
             </div>
           )}
@@ -1063,6 +1028,8 @@ function UsageBar({
   limit,
   color,
   resetDate,
+  isAdmin = false,
+  isConcurrent = false,
 }: {
   label: string;
   description: string;
@@ -1070,13 +1037,22 @@ function UsageBar({
   limit: number | null;
   color: 'blue' | 'purple' | 'green';
   resetDate: string;
+  // Admins bypass quota — render an "Admin — unlimited" pill rather than
+  // an X/Y bar that misleadingly shows "over limit" because admins don't
+  // count usage.
+  isAdmin?: boolean;
+  // Concurrent (non-monthly) limit — Connected Orgs is N at a time, not
+  // N per month. Hides "resets on" copy; over-limit message points at
+  // disconnect rather than waiting for a reset.
+  isConcurrent?: boolean;
 }) {
-  const isUnlimited = limit === null;
-  const percent = isUnlimited ? 0 : Math.min((used / limit) * 100, 100);
-  const isAtLimit = !isUnlimited && used >= limit;
-  const isNearLimit = !isUnlimited && percent > 75 && !isAtLimit;
+  const isUnlimited = limit === null || isAdmin;
+  const cappedPercent = limit ? Math.min((used / limit) * 100, 100) : 0;
+  const isOverLimit = !isAdmin && limit !== null && used > limit;
+  const isAtLimit = !isAdmin && limit !== null && used >= limit;
+  const isNearLimit = !isAdmin && limit !== null && cappedPercent > 75 && !isAtLimit;
 
-  const barColor = isAtLimit
+  const barColor = isOverLimit || isAtLimit
     ? 'bg-red-500'
     : isNearLimit
       ? 'bg-amber-500'
@@ -1084,45 +1060,58 @@ function UsageBar({
 
   return (
     <div className="space-y-2.5">
-      <div className="flex items-start justify-between">
-        <div>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
           <p className="text-sm font-medium text-gray-700 dark:text-gray-300">{label}</p>
           <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{description}</p>
         </div>
-        <span className="text-sm font-mono text-gray-500 dark:text-gray-400 tabular-nums">
-          {isUnlimited ? (
+        <span className="text-sm font-mono text-gray-500 dark:text-gray-400 tabular-nums flex-shrink-0 flex items-center gap-2">
+          {isAdmin ? (
+            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 font-sans">
+              Admin · {used}
+            </span>
+          ) : limit === null ? (
             <>{used} used</>
           ) : (
-            <>{used} <span className="text-gray-300 dark:text-gray-600">/</span> {limit}</>
+            <>
+              {used} <span className="text-gray-300 dark:text-gray-600">/</span> {limit}
+              {isOverLimit && (
+                <span className="text-[10px] font-sans font-semibold px-1.5 py-0.5 rounded bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300">
+                  +{used - limit} over
+                </span>
+              )}
+            </>
           )}
         </span>
       </div>
 
-      {!isUnlimited && (
+      {!isUnlimited && limit !== null && (
         <div className="w-full h-2 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
           <div
             className={`h-full rounded-full transition-all duration-500 ${barColor}`}
-            style={{ width: `${Math.max(percent, used > 0 ? 2 : 0)}%` }}
+            style={{ width: `${Math.max(cappedPercent, used > 0 ? 2 : 0)}%` }}
           />
         </div>
       )}
 
-      {isAtLimit && (
-        <div className="flex items-center justify-between p-3 bg-red-50 dark:bg-red-900/15 border border-red-200 dark:border-red-800/40 rounded-lg">
-          <div className="flex items-center gap-2">
-            <Zap className="w-3.5 h-3.5 text-red-500" />
+      {isAtLimit && !isAdmin && (
+        <div className="flex items-center justify-between gap-3 p-3 bg-red-50 dark:bg-red-900/15 border border-red-200 dark:border-red-800/40 rounded-lg">
+          <div className="flex items-center gap-2 min-w-0">
+            <Zap className="w-3.5 h-3.5 text-red-500 flex-shrink-0" />
             <p className="text-xs text-red-600 dark:text-red-400 font-medium">
-              {label} limit reached — resets {resetDate}
+              {isConcurrent
+                ? `${label} limit reached — disconnect an org to free a slot, or upgrade.`
+                : `${label} limit reached — resets ${resetDate}`}
             </p>
           </div>
-          <a href="/#pricing" className="text-xs text-blue-600 dark:text-blue-400 hover:underline font-semibold flex-shrink-0 ml-4">
+          <a href="/#pricing" className="text-xs text-blue-600 dark:text-blue-400 hover:underline font-semibold flex-shrink-0">
             Upgrade plan
           </a>
         </div>
       )}
-      {isNearLimit && (
+      {isNearLimit && !isAdmin && (
         <p className="text-xs text-amber-600 dark:text-amber-400">
-          {limit - used} remaining — resets {resetDate}
+          {limit! - used} remaining{isConcurrent ? '' : ` — resets ${resetDate}`}
         </p>
       )}
     </div>

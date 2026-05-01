@@ -72,10 +72,13 @@ export async function checkQuota(userId: string, quotaType: QuotaType): Promise<
       .gte('created_at', monthStart);
     used = count || 0;
   } else if (quotaType === 'orgs') {
+    // Concurrent limit — soft-disconnected orgs don't have credentials and
+    // can't be used, so they shouldn't count against the quota.
     const { count } = await supabase
       .from('organizations')
       .select('id', { count: 'exact', head: true })
-      .eq('user_id', userId);
+      .eq('user_id', userId)
+      .is('disconnected_at', null);
     used = count || 0;
   } else {
     // AI calls and PDF reports use usage_logs

@@ -37,3 +37,22 @@ html.theme-transition *::after {
     text-wrap: balance;
   }
 }
+
+@layer components {
+  /* Settings form inputs — explicit styles so saved values render in
+     full body color while placeholder text stays subtly gray + italic.
+     Without this, browser default styling makes both look the same
+     and users can't tell saved values from suggestions. */
+  .form-input {
+    @apply w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-gray-900 text-sm
+           placeholder:text-gray-400 placeholder:italic
+           focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500
+           disabled:bg-gray-50 disabled:text-gray-500;
+  }
+  .dark .form-input {
+    @apply border-gray-700 bg-gray-900 text-white
+           placeholder:text-gray-500
+           focus:ring-blue-500 focus:border-blue-500
+           disabled:bg-gray-800 disabled:text-gray-500;
+  }
+}

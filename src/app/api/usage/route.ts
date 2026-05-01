@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
 
   // Fetch all usage logs for this user
-  const [totalRes, monthRes, byTypeRes, orgsRes] = await Promise.all([
+  const [totalRes, monthRes, byTypeRes, orgsRes, adminRes] = await Promise.all([
     // Total scans ever
     supabase
       .from('usage_logs')
@@ -43,11 +43,19 @@ export async function GET(request: NextRequest) {
       .eq('user_id', user.id)
       .gte('created_at', monthStart)
       .order('created_at', { ascending: false }),
-    // Connected orgs count
+    // Connected orgs count — exclude soft-disconnected since they have no
+    // creds and don't count against the concurrent-org limit.
     supabase
       .from('organizations')
       .select('id', { count: 'exact', head: true })
-      .eq('user_id', user.id),
+      .eq('user_id', user.id)
+      .is('disconnected_at', null),
+    // Admin flag — UI shows "Admin — unlimited" rather than X/Y red bar.
+    supabase
+      .from('users')
+      .select('is_admin')
+      .eq('id', user.id)
+      .maybeSingle(),
   ]);
 
   // Count by type
@@ -71,6 +79,7 @@ export async function GET(request: NextRequest) {
     ai_calls_this_month: (eventCounts['ai_remediation'] || 0) + (eventCounts['ai_scan_diff'] || 0) + (eventCounts['ai_fix_suggestion'] || 0),
     pdf_reports_this_month: eventCounts['pdf_report'] || 0,
     connected_orgs: orgsRes.count || 0,
+    is_admin: adminRes.data?.is_admin === true,
     daily_scans: dailyScans,
     event_counts: eventCounts,
   });
