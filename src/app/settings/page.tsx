@@ -7,18 +7,19 @@ import {
   Bell, BellOff, CheckCircle2, Zap,
   Clock, ExternalLink, User, Palette,
   CreditCard, Phone, MapPin, Briefcase, Globe, Mail,
-  AlertTriangle, Download, Trash2
+  AlertTriangle, Download, Trash2, AlertCircle, ShieldCheck
 } from 'lucide-react';
 import { createClient } from '@/lib/db/client';
 import { LoadingScreen } from '@/components/ui/loading-screen';
 
-type SettingsTab = 'account' | 'plan' | 'branding' | 'notifications';
+type SettingsTab = 'account' | 'plan' | 'branding' | 'notifications' | 'privacy';
 
 const TABS: { id: SettingsTab; label: string; icon: React.ElementType }[] = [
   { id: 'account', label: 'Account', icon: User },
   { id: 'plan', label: 'Plan & Billing', icon: CreditCard },
   { id: 'branding', label: 'Branding', icon: Palette },
   { id: 'notifications', label: 'Notifications', icon: Bell },
+  { id: 'privacy', label: 'Privacy', icon: ShieldCheck },
 ];
 
 const PLAN_INFO: Record<string, {
@@ -107,6 +108,7 @@ export default function SettingsPage() {
   const [savedAccount, setSavedAccount] = useState(false);
   const [savingBranding, setSavingBranding] = useState(false);
   const [savedBranding, setSavedBranding] = useState(false);
+  const [logoError, setLogoError] = useState<string | null>(null);
 
   // Danger zone states
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -166,9 +168,16 @@ export default function SettingsPage() {
   async function handleLogoUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
+    setLogoError(null);
     const allowedTypes = ['image/png', 'image/svg+xml', 'image/jpeg', 'image/webp'];
-    if (!allowedTypes.includes(file.type)) { alert('Only PNG, SVG, JPEG, and WebP files are allowed'); return; }
-    if (file.size > 2 * 1024 * 1024) { alert('File must be under 2MB'); return; }
+    if (!allowedTypes.includes(file.type)) {
+      setLogoError('Only PNG, SVG, JPEG, and WebP files are allowed.');
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      setLogoError(`File must be under 2 MB (yours is ${(file.size / 1024 / 1024).toFixed(1)} MB).`);
+      return;
+    }
 
     setUploading(true);
     try {
@@ -179,11 +188,12 @@ export default function SettingsPage() {
         const data = await res.json();
         setLogoUrl(data.url);
       } else {
-        const err = await res.json();
-        alert(err.error || 'Upload failed');
+        const err = await res.json().catch(() => ({}));
+        setLogoError(err.error || 'Upload failed.');
       }
-    } catch { alert('Upload failed'); }
-    finally { setUploading(false); }
+    } catch {
+      setLogoError('Upload failed.');
+    } finally { setUploading(false); }
   }
 
   async function handleRemoveLogo() {
@@ -450,8 +460,15 @@ export default function SettingsPage() {
                 <SaveBar saving={savingAccount} saved={savedAccount} onSave={saveAccount} />
               </SectionCard>
 
-              {/* Danger Zone */}
-              <SectionCard title="Data & Account" description="Manage your data export and account deletion.">
+            </div>
+          )}
+
+          {/* ==================== PRIVACY TAB ====================
+              Destructive actions (export, delete) live here so they're
+              not one mis-click away from the Profile form. */}
+          {activeTab === 'privacy' && (
+            <div className="space-y-6">
+              <SectionCard title="Your Data" description="Export everything we have about you, or remove your account.">
                 <div className="space-y-4">
                   {/* Export Data */}
                   <div className="flex items-center justify-between p-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
@@ -462,7 +479,7 @@ export default function SettingsPage() {
                       <div>
                         <p className="text-sm font-medium text-gray-900 dark:text-white">Export My Data</p>
                         <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                          Download a JSON file containing all your account data
+                          Download a JSON file containing all your account data — orgs, scans, issues, schedules, and profile.
                         </p>
                       </div>
                     </div>
@@ -491,7 +508,7 @@ export default function SettingsPage() {
                       <div>
                         <p className="text-sm font-medium text-gray-900 dark:text-white">Delete My Account</p>
                         <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                          Permanently delete your account and all associated data
+                          Permanently delete your account, all scan history, and disconnect every Salesforce org.
                         </p>
                       </div>
                     </div>
@@ -616,85 +633,106 @@ export default function SettingsPage() {
           {activeTab === 'branding' && (
             <div className="space-y-6">
               <SectionCard title="Company & Branding" description="Customize white-label PDF reports with your brand identity.">
-                <div className="space-y-5 max-w-lg">
-                  <FormField label="Company Name">
-                    <input
-                      type="text"
-                      value={companyName}
-                      onChange={(e) => setCompanyName(e.target.value)}
-                      placeholder="Your consulting firm name"
-                      className="form-input"
-                    />
-                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-1.5">Displayed on PDF report headers and footers.</p>
-                  </FormField>
-
-                  <FormField label="Brand Color">
-                    <div className="flex items-center gap-3">
-                      <input
-                        type="color"
-                        value={brandingColor}
-                        onChange={(e) => setBrandingColor(e.target.value)}
-                        className="h-10 w-12 rounded-lg cursor-pointer border border-gray-300 dark:border-gray-600 bg-transparent"
-                      />
+                <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-8">
+                  {/* Form column */}
+                  <div className="space-y-5">
+                    <FormField label="Company Name">
                       <input
                         type="text"
-                        value={brandingColor}
-                        onChange={(e) => setBrandingColor(e.target.value)}
-                        className="w-28 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-mono bg-white dark:bg-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        value={companyName}
+                        onChange={(e) => setCompanyName(e.target.value)}
+                        placeholder="Your consulting firm name"
+                        className="form-input"
                       />
-                      <div
-                        className="h-10 w-20 rounded-lg border border-gray-200 dark:border-gray-600"
-                        style={{ backgroundColor: brandingColor }}
-                      />
-                    </div>
-                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-1.5">Used as the accent color in PDF reports.</p>
-                  </FormField>
+                      <p className="text-xs text-gray-400 dark:text-gray-500 mt-1.5">Displayed on PDF report headers and footers.</p>
+                    </FormField>
 
-                  <FormField label="Company Logo">
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept="image/png,image/svg+xml,image/jpeg,image/webp"
-                      onChange={handleLogoUpload}
-                      className="hidden"
-                    />
-                    {logoUrl ? (
-                      <div className="flex items-center gap-4">
-                        <div className="w-16 h-16 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden bg-white dark:bg-gray-800 flex items-center justify-center flex-shrink-0">
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={logoUrl} alt="Company logo" className="max-w-full max-h-full object-contain p-1.5" />
-                        </div>
-                        <div className="flex gap-3 text-sm">
-                          <button onClick={() => fileInputRef.current?.click()} className="text-blue-600 dark:text-blue-400 hover:underline font-medium">
-                            Change
-                          </button>
-                          <button onClick={handleRemoveLogo} className="flex items-center gap-1 text-red-500 dark:text-red-400 hover:underline font-medium">
-                            <X className="h-3 w-3" /> Remove
-                          </button>
-                        </div>
+                    <FormField label="Brand Color">
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="color"
+                          value={brandingColor}
+                          onChange={(e) => setBrandingColor(e.target.value)}
+                          className="h-10 w-12 rounded-lg cursor-pointer border border-gray-300 dark:border-gray-600 bg-transparent"
+                        />
+                        <input
+                          type="text"
+                          value={brandingColor}
+                          onChange={(e) => setBrandingColor(e.target.value)}
+                          className="w-28 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-mono bg-white dark:bg-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        />
+                        <div
+                          className="h-10 w-20 rounded-lg border border-gray-200 dark:border-gray-600"
+                          style={{ backgroundColor: brandingColor }}
+                        />
                       </div>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => fileInputRef.current?.click()}
-                        disabled={uploading}
-                        className="w-full border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg p-6 text-center hover:border-gray-400 dark:hover:border-gray-500 transition-colors cursor-pointer disabled:opacity-50"
-                      >
-                        {uploading ? (
-                          <div className="flex items-center justify-center gap-2">
-                            <div className="animate-spin h-5 w-5 border-2 border-blue-600 border-t-transparent rounded-full" />
-                            <span className="text-sm text-gray-500">Uploading...</span>
+                      <p className="text-xs text-gray-400 dark:text-gray-500 mt-1.5">Used as the accent color in PDF reports.</p>
+                      <ContrastWarning color={brandingColor} />
+                    </FormField>
+
+                    <FormField label="Company Logo">
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/png,image/svg+xml,image/jpeg,image/webp"
+                        onChange={handleLogoUpload}
+                        className="hidden"
+                      />
+                      {logoUrl ? (
+                        <div className="flex items-center gap-4">
+                          <div className="w-16 h-16 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden bg-white dark:bg-gray-800 flex items-center justify-center flex-shrink-0">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={logoUrl} alt="Company logo" className="max-w-full max-h-full object-contain p-1.5" />
                           </div>
-                        ) : (
-                          <>
-                            <Upload className="h-5 w-5 mx-auto text-gray-400 mb-1.5" />
-                            <p className="text-sm text-gray-600 dark:text-gray-400">Click to upload your logo</p>
-                            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">PNG, SVG, JPEG or WebP, max 2MB</p>
-                          </>
-                        )}
-                      </button>
-                    )}
-                  </FormField>
+                          <div className="flex gap-3 text-sm">
+                            <button onClick={() => fileInputRef.current?.click()} className="text-blue-600 dark:text-blue-400 hover:underline font-medium">
+                              Change
+                            </button>
+                            <button onClick={handleRemoveLogo} className="flex items-center gap-1 text-red-500 dark:text-red-400 hover:underline font-medium">
+                              <X className="h-3 w-3" /> Remove
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => fileInputRef.current?.click()}
+                          disabled={uploading}
+                          className="w-full border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg p-6 text-center hover:border-gray-400 dark:hover:border-gray-500 transition-colors cursor-pointer disabled:opacity-50"
+                        >
+                          {uploading ? (
+                            <div className="flex items-center justify-center gap-2">
+                              <div className="animate-spin h-5 w-5 border-2 border-blue-600 border-t-transparent rounded-full" />
+                              <span className="text-sm text-gray-500">Uploading...</span>
+                            </div>
+                          ) : (
+                            <>
+                              <Upload className="h-5 w-5 mx-auto text-gray-400 mb-1.5" />
+                              <p className="text-sm text-gray-600 dark:text-gray-400">Click to upload your logo</p>
+                              <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">PNG, SVG, JPEG or WebP, max 2 MB · recommended 200×60 px</p>
+                            </>
+                          )}
+                        </button>
+                      )}
+                      {logoError && (
+                        <p className="text-xs text-red-600 dark:text-red-400 mt-2 flex items-start gap-1.5">
+                          <AlertCircle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
+                          <span>{logoError}</span>
+                        </p>
+                      )}
+                    </FormField>
+                  </div>
+
+                  {/* Preview column — sticky so it stays in view as the user
+                      scrolls the form. Updates live as fields change. */}
+                  <div className="lg:sticky lg:top-6 self-start w-full">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">PDF preview</p>
+                    <BrandingPreview
+                      companyName={companyName}
+                      brandColor={brandingColor}
+                      logoUrl={logoUrl}
+                    />
+                  </div>
                 </div>
                 <SaveBar saving={savingBranding} saved={savedBranding} onSave={saveBranding} />
               </SectionCard>
@@ -1158,5 +1196,138 @@ function NotificationRow({
         }`} />
       </button>
     </div>
+  );
+}
+
+// ─── Branding live preview ──────────────────────────────────────────
+// Mirrors the white-label PDF report header: logo (or company name as
+// fallback), brand-color accent bar, sample title, footer with
+// company name. Updates live as the user edits.
+function BrandingPreview({
+  companyName,
+  brandColor,
+  logoUrl,
+}: {
+  companyName: string;
+  brandColor: string;
+  logoUrl: string | null;
+}) {
+  const displayName = companyName.trim() || 'Your Company';
+  const textOnBrand = textColorForBackground(brandColor);
+  return (
+    <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white shadow-sm overflow-hidden">
+      {/* Aspect ratio mimics letter-size PDF page (8.5×11) */}
+      <div className="relative aspect-[8.5/11] bg-white text-gray-900 flex flex-col">
+        {/* Header bar with logo + accent strip */}
+        <div className="px-5 pt-4 pb-3 flex items-center gap-3 border-b border-gray-100">
+          {logoUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={logoUrl} alt="" className="h-8 max-w-[120px] object-contain" />
+          ) : (
+            <div className="text-sm font-bold text-gray-900 truncate">{displayName}</div>
+          )}
+          <div className="ml-auto text-[9px] font-mono text-gray-400 tracking-wider uppercase">Audit Report</div>
+        </div>
+        <div className="h-1" style={{ backgroundColor: brandColor }} />
+
+        {/* Body */}
+        <div className="px-5 pt-4 flex-1 space-y-3">
+          <div>
+            <p className="text-[9px] uppercase tracking-wider text-gray-500">Configuration Health</p>
+            <p className="text-base font-bold text-gray-900 mt-0.5">{displayName} — CPQ Audit</p>
+          </div>
+
+          {/* Brand-color score chip */}
+          <div className="inline-flex items-center gap-2 rounded-md px-2.5 py-1" style={{ backgroundColor: brandColor, color: textOnBrand }}>
+            <span className="text-[10px] font-semibold tracking-wide">Score</span>
+            <span className="text-sm font-bold">87 / 100</span>
+          </div>
+
+          <div className="space-y-1.5 pt-1">
+            <div className="h-1.5 w-full bg-gray-100 rounded" />
+            <div className="h-1.5 w-11/12 bg-gray-100 rounded" />
+            <div className="h-1.5 w-10/12 bg-gray-100 rounded" />
+          </div>
+
+          <div className="grid grid-cols-3 gap-2 pt-2">
+            <div className="rounded border border-gray-200 p-2">
+              <div className="h-1 w-10 rounded mb-1.5" style={{ backgroundColor: brandColor }} />
+              <p className="text-[9px] text-gray-500 uppercase">Critical</p>
+              <p className="text-sm font-bold">3</p>
+            </div>
+            <div className="rounded border border-gray-200 p-2">
+              <div className="h-1 w-10 rounded mb-1.5" style={{ backgroundColor: brandColor, opacity: 0.5 }} />
+              <p className="text-[9px] text-gray-500 uppercase">Warning</p>
+              <p className="text-sm font-bold">9</p>
+            </div>
+            <div className="rounded border border-gray-200 p-2">
+              <div className="h-1 w-10 rounded mb-1.5 bg-gray-300" />
+              <p className="text-[9px] text-gray-500 uppercase">Info</p>
+              <p className="text-sm font-bold">2</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="border-t border-gray-100 px-5 py-2.5 flex items-center justify-between text-[9px] text-gray-500">
+          <span>{displayName}</span>
+          <span style={{ color: brandColor, fontWeight: 600 }}>configcheck.app</span>
+          <span>Page 1 of 12</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Pick black or white text for legibility against an arbitrary
+// background color. Uses relative-luminance per WCAG.
+function textColorForBackground(hex: string): string {
+  const lum = relativeLuminance(hex);
+  return lum > 0.5 ? '#0f172a' : '#ffffff';
+}
+
+function relativeLuminance(hex: string): number {
+  const rgb = hexToRgb(hex);
+  if (!rgb) return 0.5;
+  const [r, g, b] = [rgb.r, rgb.g, rgb.b].map((v) => {
+    const c = v / 255;
+    return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+  });
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
+  const m = /^#?([a-f\d]{6})$/i.exec(hex.trim());
+  if (!m) return null;
+  const n = parseInt(m[1], 16);
+  return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
+}
+
+function contrastRatio(hex1: string, hex2: string): number {
+  const l1 = relativeLuminance(hex1);
+  const l2 = relativeLuminance(hex2);
+  const [light, dark] = l1 > l2 ? [l1, l2] : [l2, l1];
+  return (light + 0.05) / (dark + 0.05);
+}
+
+// Warn when the chosen brand color won't have enough contrast against
+// either pure white or near-black text — readers won't be able to read
+// score chips and accent text on the PDF. WCAG AA = 4.5:1 for normal
+// text, 3:1 for large/bold.
+function ContrastWarning({ color }: { color: string }) {
+  if (!/^#?[a-f\d]{6}$/i.test(color.trim())) return null;
+  const vsWhite = contrastRatio(color, '#ffffff');
+  const vsDark = contrastRatio(color, '#0f172a');
+  // The PDF uses brand color as a fill behind white text in chips, so
+  // the relevant check is contrast against #ffffff.
+  if (vsWhite >= 3) return null;
+  return (
+    <p className="text-xs text-amber-700 dark:text-amber-400 mt-2 flex items-start gap-1.5">
+      <AlertCircle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
+      <span>
+        Low contrast against white text (ratio {vsWhite.toFixed(1)}:1, WCAG AA needs ≥3:1).
+        White-on-{color} text in PDF chips may be hard to read. Consider a darker shade — your color contrasts {vsDark.toFixed(1)}:1 with dark text.
+      </span>
+    </p>
   );
 }
