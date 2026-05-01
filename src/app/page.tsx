@@ -80,7 +80,7 @@ export default function LandingPage() {
           {/* Eyebrow tag — names the wedge in 5 words */}
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 text-blue-700 dark:text-blue-400 text-sm font-medium mb-8">
             <Sparkles className="h-4 w-4" />
-            Beta &middot; 176 checks &middot; OAuth read-only
+            Beta &middot; 182 checks &middot; OAuth read-only
           </div>
 
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight mb-6 leading-[1.1] max-w-5xl mx-auto">
@@ -91,7 +91,7 @@ export default function LandingPage() {
           </h1>
 
           <p className="text-lg md:text-xl text-gray-600 dark:text-gray-400 max-w-3xl mx-auto mb-10 leading-relaxed">
-            Connect your Salesforce org, get 176 CPQ + Billing + ARM health checks with AI fix
+            Connect your Salesforce org, get 182 CPQ + Billing + ARM health checks with AI fix
             suggestions in under 30 seconds. Built for consultants who quote audits in days, not quarters.
           </p>
 
@@ -179,12 +179,12 @@ export default function LandingPage() {
           {/* Stats */}
           <div className="flex items-center justify-center gap-8 md:gap-16 text-center flex-wrap">
             <div>
-              <div className="text-3xl font-bold text-blue-600">176</div>
+              <div className="text-3xl font-bold text-blue-600">182</div>
               <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">Health Checks</div>
             </div>
             <div className="w-px h-10 bg-gray-200 dark:bg-gray-700" />
             <div>
-              <div className="text-3xl font-bold text-blue-600">41</div>
+              <div className="text-3xl font-bold text-blue-600">45</div>
               <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">Categories</div>
             </div>
             <div className="w-px h-10 bg-gray-200 dark:bg-gray-700" />
@@ -239,8 +239,8 @@ export default function LandingPage() {
               },
               {
                 icon: Zap,
-                title: '176 Automated Health Checks',
-                desc: 'Price rules, discount schedules, products, approval rules, QCP scripts, billing rules, ARM selling models, bundles, rate cards, contracts &mdash; 41 categories scanned automatically.',
+                title: '182 Automated Health Checks',
+                desc: 'Price rules, discount schedules, products, approval rules, QCP scripts, billing rules, ARM selling models, bundles, rate cards, contracts &mdash; 45 categories scanned automatically.',
                 color: 'amber',
               },
               {
@@ -345,39 +345,81 @@ export default function LandingPage() {
       <section id="checks" className="py-24">
         <div className="max-w-7xl mx-auto px-6">
           <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">102 Health Checks Across CPQ, Billing &amp; ARM</h2>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">182 Health Checks Across CPQ, Billing &amp; ARM</h2>
             <p className="text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
               Every critical Revenue Cloud configuration area is covered. Issues are classified as Critical, Warning, or Info.
             </p>
           </div>
 
+          {/* Per-product totals — visual anchor before the long grid */}
+          <div className="grid grid-cols-3 gap-4 max-w-3xl mx-auto mb-10">
+            <div className="text-center p-5 rounded-2xl bg-blue-50 dark:bg-blue-500/10 border border-blue-200/60 dark:border-blue-500/20">
+              <div className="text-3xl font-bold text-blue-700 dark:text-blue-400">92</div>
+              <div className="text-xs uppercase tracking-wider text-blue-600/80 dark:text-blue-400/80 mt-1 font-semibold">CPQ</div>
+              <div className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">21 categories</div>
+            </div>
+            <div className="text-center p-5 rounded-2xl bg-purple-50 dark:bg-purple-500/10 border border-purple-200/60 dark:border-purple-500/20">
+              <div className="text-3xl font-bold text-purple-700 dark:text-purple-400">39</div>
+              <div className="text-xs uppercase tracking-wider text-purple-600/80 dark:text-purple-400/80 mt-1 font-semibold">Billing</div>
+              <div className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">8 categories</div>
+            </div>
+            <div className="text-center p-5 rounded-2xl bg-teal-50 dark:bg-teal-500/10 border border-teal-200/60 dark:border-teal-500/20">
+              <div className="text-3xl font-bold text-teal-700 dark:text-teal-400">51</div>
+              <div className="text-xs uppercase tracking-wider text-teal-600/80 dark:text-teal-400/80 mt-1 font-semibold">ARM</div>
+              <div className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">16 categories</div>
+            </div>
+          </div>
+
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {[
+              // CPQ — 21 categories, 92 checks
               { name: 'Price Rules', checks: 5, icon: '&#9889;', type: 'CPQ' },
               { name: 'Discount Schedules', checks: 4, icon: '&#128181;', type: 'CPQ' },
               { name: 'Products', checks: 4, icon: '&#128230;', type: 'CPQ' },
-              { name: 'Product Rules', checks: 4, icon: '&#128295;', type: 'CPQ' },
-              { name: 'Approval Rules', checks: 4, icon: '&#9989;', type: 'CPQ' },
-              { name: 'Summary Variables', checks: 5, icon: '&#128202;', type: 'CPQ' },
-              { name: 'Guided Selling', checks: 3, icon: '&#129517;', type: 'CPQ' },
-              { name: 'Quote Templates', checks: 4, icon: '&#128196;', type: 'CPQ' },
+              { name: 'Product Rules', checks: 5, icon: '&#128295;', type: 'CPQ' },
+              { name: 'Approval Rules', checks: 5, icon: '&#9989;', type: 'CPQ' },
+              { name: 'Summary Variables', checks: 6, icon: '&#128202;', type: 'CPQ' },
+              { name: 'Guided Selling', checks: 4, icon: '&#129517;', type: 'CPQ' },
+              { name: 'Quote Templates', checks: 5, icon: '&#128196;', type: 'CPQ' },
               { name: 'Custom Scripts (QCP)', checks: 4, icon: '&#128187;', type: 'CPQ' },
               { name: 'CPQ Settings', checks: 4, icon: '&#9881;', type: 'CPQ' },
               { name: 'Config Attributes', checks: 4, icon: '&#128736;', type: 'CPQ' },
-              { name: 'Subscriptions', checks: 2, icon: '&#128260;', type: 'CPQ' },
-              { name: 'Quote Lines', checks: 3, icon: '&#128203;', type: 'CPQ' },
+              { name: 'Subscriptions', checks: 4, icon: '&#128260;', type: 'CPQ' },
+              { name: 'Quote Lines', checks: 4, icon: '&#128203;', type: 'CPQ' },
               { name: 'Twin Fields', checks: 1, icon: '&#128178;', type: 'CPQ' },
-              { name: 'Contracted Prices', checks: 1, icon: '&#128220;', type: 'CPQ' },
-              { name: 'Advanced Pricing', checks: 4, icon: '&#127919;', type: 'CPQ' },
+              { name: 'Contracted Prices', checks: 3, icon: '&#128220;', type: 'CPQ' },
+              { name: 'Advanced Pricing', checks: 5, icon: '&#127919;', type: 'CPQ' },
               { name: 'Performance', checks: 5, icon: '&#128640;', type: 'CPQ' },
+              { name: 'Bundle Integrity', checks: 6, icon: '&#129513;', type: 'CPQ' },
+              { name: 'Impact Analysis', checks: 6, icon: '&#127919;', type: 'CPQ' },
+              { name: 'Lookup Queries', checks: 5, icon: '&#128270;', type: 'CPQ' },
+              { name: 'Usage Analytics', checks: 3, icon: '&#128202;', type: 'CPQ' },
+              // Billing — 8 categories, 39 checks
               { name: 'Billing Rules', checks: 4, icon: '&#128176;', type: 'Billing' },
               { name: 'Revenue Recognition', checks: 4, icon: '&#128200;', type: 'Billing' },
-              { name: 'Tax Rules', checks: 3, icon: '&#127974;', type: 'Billing' },
-              { name: 'Finance Books', checks: 6, icon: '&#128218;', type: 'Billing' },
-              { name: 'GL Rules', checks: 4, icon: '&#128209;', type: 'Billing' },
-              { name: 'Legal Entity', checks: 3, icon: '&#127971;', type: 'Billing' },
+              { name: 'Tax Rules', checks: 4, icon: '&#127974;', type: 'Billing' },
+              { name: 'Finance Books', checks: 7, icon: '&#128218;', type: 'Billing' },
+              { name: 'GL Rules', checks: 5, icon: '&#128209;', type: 'Billing' },
+              { name: 'Legal Entity', checks: 4, icon: '&#127971;', type: 'Billing' },
               { name: 'Product Billing Config', checks: 6, icon: '&#128179;', type: 'Billing' },
-              { name: 'Invoicing', checks: 4, icon: '&#128451;', type: 'Billing' },
+              { name: 'Invoicing', checks: 5, icon: '&#128451;', type: 'Billing' },
+              // ARM — 16 categories, 51 checks
+              { name: 'Product Catalog', checks: 3, icon: '&#128218;', type: 'ARM' },
+              { name: 'Selling Models', checks: 4, icon: '&#128221;', type: 'ARM' },
+              { name: 'Price Adjustments', checks: 3, icon: '&#128293;', type: 'ARM' },
+              { name: 'Attribute Pricing', checks: 2, icon: '&#127919;', type: 'ARM' },
+              { name: 'Bundles', checks: 4, icon: '&#129513;', type: 'ARM' },
+              { name: 'Pricing Procedures', checks: 2, icon: '&#9881;', type: 'ARM' },
+              { name: 'Price Books', checks: 2, icon: '&#128214;', type: 'ARM' },
+              { name: 'Decision Tables', checks: 2, icon: '&#128202;', type: 'ARM' },
+              { name: 'Context Service', checks: 2, icon: '&#128279;', type: 'ARM' },
+              { name: 'Rate Cards', checks: 3, icon: '&#128176;', type: 'ARM' },
+              { name: 'Attributes', checks: 3, icon: '&#128203;', type: 'ARM' },
+              { name: 'Assets', checks: 5, icon: '&#127968;', type: 'ARM' },
+              { name: 'Contracts', checks: 4, icon: '&#128196;', type: 'ARM' },
+              { name: 'Usage Management', checks: 5, icon: '&#128200;', type: 'ARM' },
+              { name: 'Orchestration (DRO)', checks: 4, icon: '&#128260;', type: 'ARM' },
+              { name: 'Cost Books', checks: 3, icon: '&#128181;', type: 'ARM' },
             ].map((cat, i) => (
               <div
                 key={i}
@@ -390,7 +432,9 @@ export default function LandingPage() {
                     <span className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${
                       cat.type === 'CPQ'
                         ? 'text-blue-700 dark:text-blue-300 bg-blue-100 dark:bg-blue-500/15'
-                        : 'text-purple-700 dark:text-purple-300 bg-purple-100 dark:bg-purple-500/15'
+                        : cat.type === 'Billing'
+                        ? 'text-purple-700 dark:text-purple-300 bg-purple-100 dark:bg-purple-500/15'
+                        : 'text-teal-700 dark:text-teal-300 bg-teal-100 dark:bg-teal-500/15'
                     }`}>
                       {cat.type}
                     </span>
@@ -483,10 +527,14 @@ export default function LandingPage() {
             {/* Desktop: avatar left, copy right. Mobile: stacked. */}
             <div className="flex flex-col md:flex-row items-start gap-6 md:gap-7">
               <div className="flex md:flex-col items-center md:items-start gap-4 md:gap-3 md:flex-shrink-0 md:w-32">
-                {/* TODO: replace with real founder photo at /maulik.jpg or similar */}
-                <div className="w-16 h-16 md:w-20 md:h-20 rounded-full flex items-center justify-center flex-shrink-0 text-white font-bold text-xl md:text-2xl" style={{ background: 'linear-gradient(135deg, #5B9BF3 0%, #2563eb 100%)' }}>
-                  M
-                </div>
+                {/* Real founder photo at /maulik.png */}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/maulik.png"
+                  alt="Maulik Thakkar — founder of ConfigCheck"
+                  className="w-16 h-16 md:w-20 md:h-20 rounded-full flex-shrink-0 object-cover ring-2 ring-white dark:ring-gray-800 shadow-md"
+                  loading="lazy"
+                />
                 <div className="md:mt-1">
                   <div className="font-semibold">Maulik</div>
                   <div className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
@@ -512,7 +560,7 @@ export default function LandingPage() {
                   What struck me wasn&rsquo;t the bug itself &mdash; every CPQ implementer has lived through one of these. It was that I&rsquo;d seen variations of the same problem across three different orgs in the past year. The misconfiguration patterns were predictable. The detection should have been automated.
                 </p>
                 <p>
-                  ConfigCheck started as a weekend project to catch the configuration patterns I kept tripping over. Today it runs 176 checks across CPQ, Billing, and ARM in under 30 seconds &mdash; the audit I wish I&rsquo;d had the morning that bug ticket landed.
+                  ConfigCheck started as a weekend project to catch the configuration patterns I kept tripping over. Today it runs 182 checks across CPQ, Billing, and ARM in under 30 seconds &mdash; the audit I wish I&rsquo;d had the morning that bug ticket landed.
                 </p>
                 <p>
                   If you&rsquo;ve spent a week chasing a CPQ misconfiguration that turned out to be obvious in hindsight, this is for you.{' '}
@@ -694,7 +742,7 @@ export default function LandingPage() {
             <div className="relative z-10">
               <h2 className="text-3xl md:text-4xl font-bold mb-4">Ready to audit your first Revenue Cloud org?</h2>
               <p className="text-blue-100 text-lg mb-8 max-w-xl mx-auto">
-                Connect a sandbox in 60 seconds. 176 health checks. AI fix suggestions. White-label reports.
+                Connect a sandbox in 60 seconds. 182 health checks. AI fix suggestions. White-label reports.
               </p>
               <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
                 <Link

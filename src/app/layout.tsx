@@ -12,7 +12,7 @@ const geistSans = localFont({
 // TODO: replace with the live custom domain once configcheck.io is wired up
 const SITE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://configcheck.vercel.app';
 const DESCRIPTION =
-  'Connect any Salesforce org and run 176 automated CPQ + Billing + ARM health checks with AI fix suggestions in under 30 seconds. Built for Revenue Cloud consultants.';
+  'Connect any Salesforce org and run 182 automated CPQ + Billing + ARM health checks with AI fix suggestions in under 30 seconds. Built for Revenue Cloud consultants.';
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
