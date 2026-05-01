@@ -14,6 +14,59 @@ import { LoadingScreen } from '@/components/ui/loading-screen';
 
 type SettingsTab = 'account' | 'plan' | 'branding' | 'notifications' | 'privacy';
 
+// Notification event catalog. Each event can fire on email and/or in-app
+// channels. Order is what shows in the matrix UI.
+type NotifEventId =
+  | 'scan_completed'
+  | 'scan_failed'
+  | 'critical_issue_found'
+  | 'scheduled_scan_ran'
+  | 'weekly_summary'
+  | 'plan_limit_approaching'
+  | 'plan_limit_reached'
+  | 'billing_update';
+
+interface NotifEventDef {
+  id: NotifEventId;
+  label: string;
+  description: string;
+  defaultEmail: boolean;
+  defaultInApp: boolean;
+}
+
+const NOTIF_EVENTS: NotifEventDef[] = [
+  { id: 'scan_completed', label: 'Scan completed', description: 'Any scan finishes with a score.', defaultEmail: true, defaultInApp: true },
+  { id: 'scan_failed', label: 'Scan failed', description: 'A scan errored before producing a score.', defaultEmail: true, defaultInApp: true },
+  { id: 'critical_issue_found', label: 'Critical issue found', description: 'A new critical-severity finding lands.', defaultEmail: true, defaultInApp: true },
+  { id: 'scheduled_scan_ran', label: 'Scheduled scan ran', description: 'A cron-triggered scan completes.', defaultEmail: true, defaultInApp: true },
+  { id: 'weekly_summary', label: 'Weekly summary', description: 'Sunday digest of the week\'s scans across orgs.', defaultEmail: false, defaultInApp: true },
+  { id: 'plan_limit_approaching', label: 'Plan limit approaching', description: 'You\'ve hit 80% of a monthly limit.', defaultEmail: true, defaultInApp: true },
+  { id: 'plan_limit_reached', label: 'Plan limit reached', description: 'A monthly limit has been hit.', defaultEmail: true, defaultInApp: true },
+  { id: 'billing_update', label: 'Billing update', description: 'Invoices, plan changes, payment issues.', defaultEmail: true, defaultInApp: true },
+];
+
+interface NotifChannelPrefs {
+  email: boolean;
+  in_app: boolean;
+}
+interface NotifRecipient {
+  email: string;
+  verified?: boolean;
+  last_notified_at?: string | null;
+}
+interface NotificationSettings {
+  events?: Partial<Record<NotifEventId, NotifChannelPrefs>>;
+  recipients?: NotifRecipient[];
+}
+
+function getEventPref(settings: NotificationSettings | null, def: NotifEventDef): NotifChannelPrefs {
+  const stored = settings?.events?.[def.id];
+  return {
+    email: stored?.email ?? def.defaultEmail,
+    in_app: stored?.in_app ?? def.defaultInApp,
+  };
+}
+
 const TABS: { id: SettingsTab; label: string; icon: React.ElementType }[] = [
   { id: 'account', label: 'Account', icon: User },
   { id: 'plan', label: 'Plan & Billing', icon: CreditCard },
@@ -99,6 +152,11 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true);
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [notificationEmails, setNotificationEmails] = useState<string[]>([]);
+  // Per-event prefs and richer recipients (verified + last-notified). Null
+  // means "not yet customized" — defaults apply via DEFAULT_NOTIF_EVENTS.
+  const [notifSettings, setNotifSettings] = useState<NotificationSettings | null>(null);
+  const [bulkEmailInput, setBulkEmailInput] = useState('');
+  const [testingEmail, setTestingEmail] = useState<string | null>(null);
   const [newNotifEmail, setNewNotifEmail] = useState('');
   const [notifEmailError, setNotifEmailError] = useState('');
   const [savingNotifEmails, setSavingNotifEmails] = useState(false);
@@ -144,6 +202,7 @@ export default function SettingsPage() {
           setCreatedAt(data.created_at || null);
           setEmailNotifications(data.email_notifications_enabled !== false);
           setNotificationEmails(data.notification_emails || []);
+          setNotifSettings(data.notification_settings || null);
         }
       } catch (err) {
         console.error('Failed to load profile:', err);
@@ -247,6 +306,99 @@ export default function SettingsPage() {
       setNotifEmailError('Failed to save');
     } finally {
       setSavingNotifEmails(false);
+    }
+  }
+
+  async function persistNotifSettings(next: NotificationSettings) {
+    setNotifSettings(next);
+    try {
+      await fetch('/api/auth/me', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notification_settings: next }),
+      });
+    } catch (err) {
+      console.error('Failed to save notification settings:', err);
+    }
+  }
+
+  function toggleEventChannel(eventId: NotifEventId, channel: 'email' | 'in_app') {
+    const def = NOTIF_EVENTS.find((e) => e.id === eventId)!;
+    const current = getEventPref(notifSettings, def);
+    const next: NotificationSettings = {
+      ...(notifSettings || {}),
+      events: {
+        ...(notifSettings?.events || {}),
+        [eventId]: { ...current, [channel]: !current[channel] },
+      },
+    };
+    persistNotifSettings(next);
+  }
+
+  // Comma- or newline-separated paste, parsed into individual valid emails.
+  // Skips duplicates of existing recipients and the user's own account email.
+  async function handleBulkAddEmails() {
+    const raw = bulkEmailInput.trim();
+    if (!raw) return;
+    const emails = raw
+      .split(/[\s,;]+/)
+      .map((e) => e.trim().toLowerCase())
+      .filter((e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e));
+    if (emails.length === 0) {
+      setNotifEmailError('No valid email addresses found in the input.');
+      return;
+    }
+    const existing = new Set(
+      [...(notifSettings?.recipients || []).map((r) => r.email), ...notificationEmails, email.toLowerCase()],
+    );
+    const toAdd = emails.filter((e) => !existing.has(e));
+    if (toAdd.length === 0) {
+      setNotifEmailError('All entered addresses are already added.');
+      return;
+    }
+    const next: NotificationSettings = {
+      ...(notifSettings || {}),
+      recipients: [
+        ...(notifSettings?.recipients || []),
+        ...toAdd.map((e) => ({ email: e, verified: false, last_notified_at: null })),
+      ],
+    };
+    setBulkEmailInput('');
+    setNotifEmailError('');
+    await persistNotifSettings(next);
+  }
+
+  async function removeRecipient(target: string) {
+    const next: NotificationSettings = {
+      ...(notifSettings || {}),
+      recipients: (notifSettings?.recipients || []).filter((r) => r.email !== target),
+    };
+    await persistNotifSettings(next);
+  }
+
+  async function sendTestNotification(target: string) {
+    setTestingEmail(target);
+    try {
+      const res = await fetch('/api/notifications/test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: target }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        alert(data.error || 'Failed to send test email');
+      } else {
+        // Server marks recipient verified — pull fresh state.
+        const me = await fetch('/api/auth/me');
+        if (me.ok) {
+          const json = await me.json();
+          setNotifSettings(json.notification_settings || null);
+        }
+      }
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to send test email');
+    } finally {
+      setTestingEmail(null);
     }
   }
 
@@ -742,68 +894,94 @@ export default function SettingsPage() {
           {/* ==================== NOTIFICATIONS TAB ==================== */}
           {activeTab === 'notifications' && (
             <div className="space-y-6">
-              <SectionCard title="Notifications" description="Control how and when you receive updates.">
-                <div className="space-y-4 max-w-lg">
-                  <NotificationRow
-                    icon={<Bell className="w-4 h-4" />}
-                    activeIcon={<Bell className="w-4 h-4 text-blue-600 dark:text-blue-400" />}
-                    inactiveIcon={<BellOff className="w-4 h-4 text-gray-400" />}
-                    title="Email Notifications"
-                    description="Get notified when scans complete, fail, or find critical issues"
-                    enabled={emailNotifications}
-                    onToggle={async () => {
-                      const newVal = !emailNotifications;
-                      setEmailNotifications(newVal);
-                      await fetch('/api/auth/me', {
-                        method: 'PUT',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ email_notifications_enabled: newVal }),
-                      });
-                    }}
-                  />
-                  <div className="border-t border-gray-100 dark:border-gray-800" />
-                  <div className="flex items-start gap-3 py-1">
-                    <div className="w-8 h-8 rounded-lg bg-purple-50 dark:bg-purple-900/20 flex items-center justify-center flex-shrink-0">
-                      <Clock className="w-4 h-4 text-purple-600 dark:text-purple-400" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-gray-900 dark:text-white">Scheduled Scan Alerts</p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                        Results from scheduled scans are automatically emailed after each run
-                      </p>
-                    </div>
-                  </div>
+              <SectionCard title="Master switch" description="Turn off email notifications globally. Per-event preferences below still apply when this is on.">
+                <NotificationRow
+                  activeIcon={<Bell className="w-4 h-4 text-blue-600 dark:text-blue-400" />}
+                  inactiveIcon={<BellOff className="w-4 h-4 text-gray-400" />}
+                  title="Email Notifications"
+                  description={emailNotifications ? 'Email channel is on for all events configured below.' : 'No emails will be sent for any event, regardless of per-event settings.'}
+                  enabled={emailNotifications}
+                  onToggle={async () => {
+                    const newVal = !emailNotifications;
+                    setEmailNotifications(newVal);
+                    await fetch('/api/auth/me', {
+                      method: 'PUT',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ email_notifications_enabled: newVal }),
+                    });
+                  }}
+                />
+              </SectionCard>
+
+              <SectionCard title="Events" description="Pick which events trigger which channels. In-app notifications appear in the bell icon; email goes to all recipients below.">
+                <div className="overflow-hidden rounded-lg border border-gray-200 dark:border-gray-800">
+                  <table className="w-full text-sm">
+                    <thead className="bg-gray-50 dark:bg-gray-900/50">
+                      <tr>
+                        <th className="text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 px-4 py-2.5">Event</th>
+                        <th className="text-center text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 px-3 py-2.5 w-20">Email</th>
+                        <th className="text-center text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 px-3 py-2.5 w-20">In-app</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {NOTIF_EVENTS.map((evt, i) => {
+                        const pref = getEventPref(notifSettings, evt);
+                        return (
+                          <tr key={evt.id} className={i > 0 ? 'border-t border-gray-100 dark:border-gray-800' : ''}>
+                            <td className="px-4 py-3">
+                              <p className="text-sm font-medium text-gray-900 dark:text-white">{evt.label}</p>
+                              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{evt.description}</p>
+                            </td>
+                            <td className="px-3 py-3 text-center">
+                              <MatrixToggle checked={pref.email} onChange={() => toggleEventChannel(evt.id, 'email')} />
+                            </td>
+                            <td className="px-3 py-3 text-center">
+                              <MatrixToggle checked={pref.in_app} onChange={() => toggleEventChannel(evt.id, 'in_app')} />
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
                 </div>
               </SectionCard>
 
-              {/* Notification Recipients */}
-              <SectionCard title="Notification Recipients" description="Add up to 5 email addresses to receive scan notifications. Your account email always receives notifications.">
-                <div className="space-y-4 max-w-lg">
-                  {/* Account email (always included) */}
+              <SectionCard title="Recipients" description="Who receives email notifications, in addition to your account email. Send a test to verify a new address actually receives mail.">
+                <div className="space-y-3">
+                  {/* Account email — always included */}
                   <div className="flex items-center gap-3 px-3 py-2.5 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
                     <Mail className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                    <span className="text-sm text-gray-600 dark:text-gray-300 flex-1">{email}</span>
-                    <span className="text-[10px] font-medium text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 px-2 py-0.5 rounded-full">Account</span>
+                    <span className="text-sm text-gray-600 dark:text-gray-300 flex-1 break-all">{email}</span>
+                    <span className="text-[10px] font-medium text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 px-2 py-0.5 rounded-full flex-shrink-0">Account</span>
                   </div>
 
-                  {/* Additional emails list */}
-                  {notificationEmails.map((ne, idx) => (
-                    <div key={idx} className="flex items-center gap-3 px-3 py-2.5 bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 group">
+                  {/* Additional recipients */}
+                  {(notifSettings?.recipients || []).map((r) => (
+                    <div key={r.email} className="flex flex-wrap items-center gap-3 px-3 py-2.5 bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 group">
                       <Mail className="w-4 h-4 text-blue-400 flex-shrink-0" />
-                      <span className="text-sm text-gray-700 dark:text-gray-300 flex-1">{ne}</span>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-gray-700 dark:text-gray-300 break-all">{r.email}</p>
+                        {r.last_notified_at && (
+                          <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-0.5">
+                            Last notified {new Date(r.last_notified_at).toLocaleString()}
+                          </p>
+                        )}
+                      </div>
+                      {r.verified && (
+                        <span className="text-[10px] font-medium text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 px-2 py-0.5 rounded-full flex items-center gap-1 flex-shrink-0">
+                          <CheckCircle2 className="w-3 h-3" /> Verified
+                        </span>
+                      )}
                       <button
-                        onClick={async () => {
-                          const updated = notificationEmails.filter((_, i) => i !== idx);
-                          setNotificationEmails(updated);
-                          setSavingNotifEmails(true);
-                          await fetch('/api/auth/me', {
-                            method: 'PUT',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ notification_emails: updated }),
-                          });
-                          setSavingNotifEmails(false);
-                        }}
-                        className="p-1 rounded-md text-gray-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 opacity-0 group-hover:opacity-100 transition-all"
+                        onClick={() => sendTestNotification(r.email)}
+                        disabled={testingEmail === r.email}
+                        className="text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline disabled:opacity-50 flex-shrink-0"
+                      >
+                        {testingEmail === r.email ? 'Sending…' : 'Send test'}
+                      </button>
+                      <button
+                        onClick={() => removeRecipient(r.email)}
+                        className="p-1 rounded-md text-gray-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors flex-shrink-0"
                         title="Remove"
                       >
                         <X className="w-3.5 h-3.5" />
@@ -811,42 +989,30 @@ export default function SettingsPage() {
                     </div>
                   ))}
 
-                  {/* Add new email */}
-                  {notificationEmails.length < 5 && (
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="email"
-                          placeholder="colleague@company.com"
-                          value={newNotifEmail}
-                          onChange={(e) => { setNewNotifEmail(e.target.value); setNotifEmailError(''); }}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                              e.preventDefault();
-                              addNotificationEmail();
-                            }
-                          }}
-                          className="form-input flex-1"
-                        />
-                        <button
-                          onClick={addNotificationEmail}
-                          disabled={!newNotifEmail || savingNotifEmails}
-                          className="px-4 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex-shrink-0"
-                        >
-                          {savingNotifEmails ? '...' : 'Add'}
-                        </button>
-                      </div>
-                      {notifEmailError && (
-                        <p className="text-xs text-red-500 mt-1.5">{notifEmailError}</p>
-                      )}
-                      <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
-                        {5 - notificationEmails.length} of 5 slots remaining
-                      </p>
+                  {/* Bulk add */}
+                  <div className="pt-2">
+                    <p className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1.5">Add recipients</p>
+                    <textarea
+                      value={bulkEmailInput}
+                      onChange={(e) => { setBulkEmailInput(e.target.value); setNotifEmailError(''); }}
+                      placeholder="alice@company.com, bob@company.com&#10;carol@company.com"
+                      rows={2}
+                      className="form-input resize-y min-h-[60px]"
+                    />
+                    <div className="flex items-center justify-between gap-3 mt-2">
+                      <p className="text-xs text-gray-400 dark:text-gray-500">Paste comma- or newline-separated emails. Send a test from the row to verify.</p>
+                      <button
+                        onClick={handleBulkAddEmails}
+                        disabled={!bulkEmailInput.trim()}
+                        className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex-shrink-0"
+                      >
+                        Add
+                      </button>
                     </div>
-                  )}
-                  {notificationEmails.length >= 5 && (
-                    <p className="text-xs text-amber-500">Maximum 5 additional emails reached. Remove one to add another.</p>
-                  )}
+                    {notifEmailError && (
+                      <p className="text-xs text-red-500 mt-1.5">{notifEmailError}</p>
+                    )}
+                  </div>
                 </div>
               </SectionCard>
             </div>
@@ -1164,7 +1330,6 @@ function NotificationRow({
   enabled,
   onToggle,
 }: {
-  icon: React.ReactNode;
   activeIcon: React.ReactNode;
   inactiveIcon: React.ReactNode;
   title: string;
@@ -1196,6 +1361,24 @@ function NotificationRow({
         }`} />
       </button>
     </div>
+  );
+}
+
+// Compact toggle for the notification matrix — smaller than NotificationRow's
+// switch since each row has two of them and the table has 8 rows.
+function MatrixToggle({ checked, onChange }: { checked: boolean; onChange: () => void }) {
+  return (
+    <button
+      onClick={onChange}
+      className={`relative w-9 h-5 rounded-full transition-colors duration-200 ${
+        checked ? 'bg-blue-600' : 'bg-gray-300 dark:bg-gray-600'
+      }`}
+      aria-pressed={checked}
+    >
+      <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform duration-200 ${
+        checked ? 'translate-x-4' : 'translate-x-0'
+      }`} />
+    </button>
   );
 }
 
