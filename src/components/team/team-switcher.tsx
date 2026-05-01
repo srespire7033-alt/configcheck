@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Users, ChevronDown, Check, Plus, User } from 'lucide-react';
+import { Users, ChevronDown, Check, Plus, User, Info } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 interface Team {
@@ -15,6 +15,7 @@ export function TeamSwitcher() {
   const router = useRouter();
   const [teams, setTeams] = useState<Team[]>([]);
   const [activeTeamId, setActiveTeamId] = useState<string | null>(null);
+  const [personalLabel, setPersonalLabel] = useState<string>('My workspace');
   const [open, setOpen] = useState(false);
   const [switching, setSwitching] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -33,6 +34,15 @@ export function TeamSwitcher() {
         if (meRes.ok) {
           const data = await meRes.json();
           setActiveTeamId(data.active_team_id || null);
+          // Personalize the personal-workspace label so the switcher
+          // shows "Maulik's workspace" rather than the generic "My
+          // workspace" — clearer when toggling between personal and
+          // team contexts.
+          if (data.full_name) {
+            setPersonalLabel(`${data.full_name.split(' ')[0]}'s workspace`);
+          } else if (data.email) {
+            setPersonalLabel(`${data.email.split('@')[0]}'s workspace`);
+          }
         }
       } catch {
         // silently fail
@@ -67,7 +77,7 @@ export function TeamSwitcher() {
         // — instead of silently swapping the org list under the user's feet.
         const switchedLabel = teamId
           ? teams.find((t) => t.id === teamId)?.name || 'team'
-          : 'My workspace';
+          : personalLabel;
         const params = new URLSearchParams();
         params.set('switched', switchedLabel);
         // Land on the dashboard so the org list refreshes for the new context.
@@ -81,9 +91,9 @@ export function TeamSwitcher() {
   }
 
   const activeTeam = teams.find((t) => t.id === activeTeamId);
-  // "My workspace" is clearer than "Personal" — users were confused whether
-  // "Personal" implied a separate environment vs. just their own org list.
-  const label = activeTeam ? activeTeam.name : 'My workspace';
+  // Personal workspace label is the user's first name — clearer about
+  // whose context you're in when toggling between personal and team.
+  const label = activeTeam ? activeTeam.name : personalLabel;
 
   const roleBadgeColor: Record<string, string> = {
     owner: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
@@ -108,7 +118,18 @@ export function TeamSwitcher() {
       </button>
 
       {open && (
-        <div className="absolute top-full left-0 mt-1.5 w-64 bg-white dark:bg-[#111827] rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 py-1.5 z-50 animate-in fade-in slide-in-from-top-1 duration-150">
+        <div className="absolute top-full left-0 mt-1.5 w-72 bg-white dark:bg-[#111827] rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 py-1.5 z-50 animate-in fade-in slide-in-from-top-1 duration-150">
+          {/* Workspace independence — the architectural call documented
+              in-line so users understand they're switching plans, orgs,
+              and team membership all at once. Each workspace is a fully
+              independent billing unit. */}
+          <div className="mx-2 mb-1.5 mt-0.5 flex items-start gap-2 px-2.5 py-2 rounded-lg bg-blue-50/70 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-900/40">
+            <Info className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+            <p className="text-[11px] text-blue-800 dark:text-blue-300 leading-snug">
+              Workspaces are independent — each has its own plan, orgs, and team. Switching changes what you see everywhere.
+            </p>
+          </div>
+
           {/* Personal */}
           <button
             onClick={() => switchTeam(null)}
@@ -118,10 +139,10 @@ export function TeamSwitcher() {
               <User className="h-3.5 w-3.5 text-gray-500 dark:text-gray-400" />
             </div>
             <div className="flex-1 min-w-0">
-              <span className="font-medium text-gray-900 dark:text-white block">My workspace</span>
+              <span className="font-medium text-gray-900 dark:text-white block truncate">{personalLabel}</span>
               <span className="text-[11px] text-gray-500 dark:text-gray-400 block">Just you — orgs you connected</span>
             </div>
-            {!activeTeamId && <Check className="h-4 w-4 text-blue-500" />}
+            {!activeTeamId && <Check className="h-4 w-4 text-blue-500 flex-shrink-0" />}
           </button>
 
           {teams.length > 0 && (

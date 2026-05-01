@@ -7,9 +7,11 @@ import {
   Bell, BellOff, CheckCircle2, Zap,
   Clock, User, Palette,
   CreditCard, Phone, MapPin, Briefcase, Globe, Mail,
-  AlertTriangle, Download, Trash2, AlertCircle, ShieldCheck
+  AlertTriangle, Download, Trash2, AlertCircle, ShieldCheck, Sun, Moon
 } from 'lucide-react';
 import { createClient } from '@/lib/db/client';
+import { useUnsavedChanges } from '@/lib/hooks/use-unsaved-changes';
+import { useTheme } from '@/components/theme-provider';
 import { LoadingScreen } from '@/components/ui/loading-screen';
 
 type SettingsTab = 'account' | 'plan' | 'branding' | 'notifications' | 'privacy';
@@ -135,6 +137,7 @@ export default function SettingsPage() {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [activeTab, setActiveTab] = useState<SettingsTab>('account');
+  const { theme, toggleTheme } = useTheme();
 
   // Profile fields
   const [fullName, setFullName] = useState('');
@@ -179,6 +182,40 @@ export default function SettingsPage() {
   // with monthly/annual toggle. Checkout integration is wired separately.
   const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
 
+  // Saved snapshots — what's actually in the DB. The unsaved-changes
+  // guard compares the live form state against these. They're hydrated
+  // alongside the form state on initial load.
+  const [savedProfileSnapshot, setSavedProfileSnapshot] = useState<{
+    fullName: string; phone: string; jobTitle: string; location: string; timezone: string;
+  }>({ fullName: '', phone: '', jobTitle: '', location: '', timezone: 'Asia/Kolkata' });
+  const [savedBrandingSnapshot, setSavedBrandingSnapshot] = useState<{
+    companyName: string; brandingColor: string;
+  }>({ companyName: '', brandingColor: '#1B5E96' });
+
+  const profileDirty = useUnsavedChanges(
+    { fullName, phone, jobTitle, location, timezone },
+    savedProfileSnapshot,
+  );
+  const brandingDirty = useUnsavedChanges(
+    { companyName, brandingColor },
+    savedBrandingSnapshot,
+  );
+
+  // Tab switch with confirmation when leaving an unsaved form. Only the
+  // explicit-save tabs (account, branding) need this — auto-save tabs
+  // are always in sync.
+  function attemptSetActiveTab(next: SettingsTab) {
+    if (next === activeTab) return;
+    const leavingDirty =
+      (activeTab === 'account' && profileDirty.isDirty()) ||
+      (activeTab === 'branding' && brandingDirty.isDirty());
+    if (leavingDirty) {
+      const ok = confirm('You have unsaved changes on this tab. Discard and switch?');
+      if (!ok) return;
+    }
+    setActiveTab(next);
+  }
+
   // Danger zone states
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
@@ -214,6 +251,19 @@ export default function SettingsPage() {
           setEmailNotifications(data.email_notifications_enabled !== false);
           setNotificationEmails(data.notification_emails || []);
           setNotifSettings(data.notification_settings || null);
+          // Snapshot saved values so the unsaved-changes guard treats
+          // freshly-loaded state as clean rather than dirty.
+          setSavedProfileSnapshot({
+            fullName: data.full_name || '',
+            phone: data.phone || '',
+            jobTitle: data.job_title || '',
+            location: data.location || '',
+            timezone: data.timezone || 'Asia/Kolkata',
+          });
+          setSavedBrandingSnapshot({
+            companyName: data.company_name || '',
+            brandingColor: data.report_branding_color || '#1B5E96',
+          });
         }
       } catch (err) {
         console.error('Failed to load profile:', err);
@@ -422,6 +472,9 @@ export default function SettingsPage() {
         body: JSON.stringify({ full_name: fullName, phone, job_title: jobTitle, location, timezone }),
       });
       setSavedAccount(true);
+      // Snapshot the just-saved values so the unsaved-changes guard
+      // stops firing until the user edits again.
+      setSavedProfileSnapshot({ fullName, phone, jobTitle, location, timezone });
       setTimeout(() => setSavedAccount(false), 3000);
     } catch {
       alert('Failed to save account settings. Please try again.');
@@ -437,6 +490,7 @@ export default function SettingsPage() {
         body: JSON.stringify({ company_name: companyName, report_branding_color: brandingColor }),
       });
       setSavedBranding(true);
+      setSavedBrandingSnapshot({ companyName, brandingColor });
       setTimeout(() => setSavedBranding(false), 3000);
     } catch {
       alert('Failed to save branding settings. Please try again.');
@@ -539,7 +593,7 @@ export default function SettingsPage() {
     : null;
 
   return (
-    <div className="max-w-6xl mx-auto">
+    <div className="max-w-7xl mx-auto">
       <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Settings</h1>
 
       <div className="flex flex-col lg:flex-row gap-6">
@@ -552,7 +606,7 @@ export default function SettingsPage() {
               return (
                 <button
                   key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
+                  onClick={() => attemptSetActiveTab(tab.id)}
                   className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
                     isActive
                       ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 shadow-sm border border-blue-100 dark:border-blue-800/50'
@@ -705,6 +759,38 @@ export default function SettingsPage() {
                     </div>
                   </div>
                 )}
+              </SectionCard>
+
+              {/* Display preferences (S17) — only Theme for now. Density,
+                  date format, default landing page deferred until there's
+                  product demand. Mirrors the header toggle so users who
+                  look for it in Settings (the obvious place) find it. */}
+              <SectionCard title="Display" description="How ConfigCheck looks across the app.">
+                <div className="space-y-4 max-w-lg">
+                  <div className="flex items-center justify-between py-1">
+                    <div className="flex items-start gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center flex-shrink-0">
+                        {theme === 'dark' ? (
+                          <Moon className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                        ) : (
+                          <Sun className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                        )}
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-900 dark:text-white">Theme</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                          Currently {theme === 'dark' ? 'dark' : 'light'}. Saved per browser, syncs nothing across devices yet.
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={toggleTheme}
+                      className="px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                    >
+                      Switch to {theme === 'dark' ? 'light' : 'dark'}
+                    </button>
+                  </div>
+                </div>
               </SectionCard>
 
             </div>
