@@ -7,7 +7,7 @@ import { getCategoryLabel, formatTimeAgo } from '@/lib/utils';
 import { HealthScore } from '@/components/scan/health-score';
 import { LoadingScreen } from '@/components/ui/loading-screen';
 import { CategoryBreakdown } from '@/components/scan/category-breakdown';
-import { IssueCard } from '@/components/issues/issue-card';
+import { GroupedIssueList } from '@/components/issues/grouped-issue-list';
 import { IssueDetailModal } from '@/components/issues/issue-detail-modal';
 import { SeverityModal } from '@/components/issues/severity-modal';
 import { RevenueRiskCard } from '@/components/scan/revenue-risk-card';
@@ -740,17 +740,12 @@ export default function OrgDetailPage() {
                               <AlertCircle className="w-4 h-4 text-red-500" />
                               <span className="text-sm font-semibold text-red-700 dark:text-red-400">Critical ({catCritical.length})</span>
                             </div>
-                            <div className="divide-y divide-gray-100 dark:divide-gray-800">
-                              {catCritical.map((issue) => (
-                                <IssueCard
-                                  key={issue.id}
-                                  issue={issue}
-                                  onClick={() => setSelectedIssue(issue)}
-                                  onStatusChange={handleIssueStatusChange}
-                                  trustScore={trustScores[issue.check_id]}
-                                />
-                              ))}
-                            </div>
+                            <GroupedIssueList
+                              issues={catCritical}
+                              onIssueClick={(issue) => setSelectedIssue(issue)}
+                              onStatusChange={handleIssueStatusChange}
+                              trustScores={trustScores}
+                            />
                           </div>
                         )}
 
@@ -761,17 +756,12 @@ export default function OrgDetailPage() {
                               <AlertTriangle className="w-4 h-4 text-amber-500" />
                               <span className="text-sm font-semibold text-amber-700 dark:text-amber-400">Warnings ({catWarning.length})</span>
                             </div>
-                            <div className="divide-y divide-gray-100 dark:divide-gray-800">
-                              {catWarning.map((issue) => (
-                                <IssueCard
-                                  key={issue.id}
-                                  issue={issue}
-                                  onClick={() => setSelectedIssue(issue)}
-                                  onStatusChange={handleIssueStatusChange}
-                                  trustScore={trustScores[issue.check_id]}
-                                />
-                              ))}
-                            </div>
+                            <GroupedIssueList
+                              issues={catWarning}
+                              onIssueClick={(issue) => setSelectedIssue(issue)}
+                              onStatusChange={handleIssueStatusChange}
+                              trustScores={trustScores}
+                            />
                           </div>
                         )}
 
@@ -782,17 +772,12 @@ export default function OrgDetailPage() {
                               <Info className="w-4 h-4 text-blue-500" />
                               <span className="text-sm font-semibold text-blue-700 dark:text-blue-400">Best Practices ({catInfo.length})</span>
                             </div>
-                            <div className="divide-y divide-gray-100 dark:divide-gray-800">
-                              {catInfo.map((issue) => (
-                                <IssueCard
-                                  key={issue.id}
-                                  issue={issue}
-                                  onClick={() => setSelectedIssue(issue)}
-                                  onStatusChange={handleIssueStatusChange}
-                                  trustScore={trustScores[issue.check_id]}
-                                />
-                              ))}
-                            </div>
+                            <GroupedIssueList
+                              issues={catInfo}
+                              onIssueClick={(issue) => setSelectedIssue(issue)}
+                              onStatusChange={handleIssueStatusChange}
+                              trustScores={trustScores}
+                            />
                           </div>
                         )}
                       </div>
