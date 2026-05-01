@@ -56,12 +56,39 @@ function withTimeout<T>(promiseLike: PromiseLike<T>, ms: number, label = 'Operat
 }
 
 /**
+ * Tracks ARM SOQL queries that returned empty due to errors during the
+ * current fetch cycle. Surfaces silent query failures to the scan
+ * metadata so the org-detail page can warn the user when the score may
+ * be artificially high (silent empties == checks find nothing to flag).
+ *
+ * Reset at the start of each fetchAllARMData() call.
+ */
+const armQueryFailures: Array<{ object: string; errorCode: string; errorMsg: string }> = [];
+
+export function getARMQueryFailures() {
+  return [...armQueryFailures];
+}
+
+function resetARMQueryFailures() {
+  armQueryFailures.length = 0;
+}
+
+/**
  * Resilient SOQL query for ARM objects. ARM rolled out gradually — some fields
  * exist on newer orgs only — so we strip INVALID_FIELD errors and retry, and
  * return an empty result immediately if the object type doesn't exist at all.
+ *
+ * Failures (other than INVALID_TYPE, which is "object not licensed" and
+ * therefore expected) are recorded in armQueryFailures so the org-detail
+ * page can surface "scan may be incomplete" warnings.
  */
 async function safeARMQuery(conn: Connection, soql: string, maxRetries = 5): Promise<any> {
   let query = soql;
+  // Pull the FROM <Object> token for failure tracking — easier to display than
+  // the full SOQL string.
+  const fromMatch = soql.match(/\bFROM\s+([A-Za-z0-9_]+)/i);
+  const objectName = fromMatch?.[1] || 'unknown';
+
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
       return await withTimeout(conn.query(query), 30000, 'ARM SOQL query');
@@ -70,6 +97,8 @@ async function safeARMQuery(conn: Connection, soql: string, maxRetries = 5): Pro
       const errorMsg = err?.message || err?.data?.message || '';
 
       if (errorCode === 'INVALID_TYPE') {
+        // Object not exposed in this org — expected on partial-RLM orgs,
+        // not a "silent failure" worth warning about.
         return { records: [] };
       }
 
@@ -86,8 +115,11 @@ async function safeARMQuery(conn: Connection, soql: string, maxRetries = 5): Pro
         }
       }
 
-      // Unrecoverable — log and return empty so the scan can continue
+      // Unrecoverable — log, record, and return empty so the scan can continue.
+      // The recorded failure surfaces to the user so they don't trust a
+      // suspiciously high score that's really driven by missing data.
       console.error('[ARM] Query failed:', errorCode, errorMsg);
+      armQueryFailures.push({ object: objectName, errorCode: errorCode || 'unknown', errorMsg: errorMsg || 'no message' });
       return { records: [] };
     }
   }
@@ -95,6 +127,7 @@ async function safeARMQuery(conn: Connection, soql: string, maxRetries = 5): Pro
 }
 
 export async function fetchAllARMData(conn: Connection): Promise<ARMData> {
+  resetARMQueryFailures();
   const [
     productsRes,
     sellingModelsRes,

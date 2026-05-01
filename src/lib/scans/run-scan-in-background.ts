@@ -2,7 +2,7 @@ import { createServiceClient } from '@/lib/db/client';
 import { createRefreshableConnection } from '@/lib/salesforce/client';
 import { fetchAllCPQData } from '@/lib/salesforce/queries';
 import { fetchAllBillingData, isBillingPackageInstalled } from '@/lib/salesforce/queries-billing';
-import { fetchAllARMData } from '@/lib/salesforce/queries-arm';
+import { fetchAllARMData, getARMQueryFailures } from '@/lib/salesforce/queries-arm';
 import { runAnalysis } from '@/lib/analysis/engine';
 import { runBillingAnalysis } from '@/lib/analysis/billing-engine';
 import { runARMAnalysis } from '@/lib/analysis/arm-engine';
@@ -96,6 +96,7 @@ export async function runScanInBackground(
     let result: import('@/types').ScanResult;
     let cpqDataTotals = { priceRules: 0, products: 0, quoteLines: 0 };
     let dataFetchedMeta: Record<string, number> = {};
+    let queryFailuresMeta: Array<{ object: string; errorCode: string; errorMsg: string }> = [];
 
     if (productType === 'arm') {
       console.log(`[SCAN ${scanId}] Fetching ARM (Revenue Cloud) data...`);
@@ -105,6 +106,14 @@ export async function runScanInBackground(
         `${armData.products.length} products, ${armData.sellingModels.length} selling models, ` +
         `${armData.priceAdjustmentSchedules.length} price adjustments, ` +
         `${armData.productRelatedComponents.length} bundle components`);
+
+      // Capture any silent SOQL failures from the fetch — surfaced on the
+      // org-detail page as a "score may be incomplete" warning so users
+      // don't trust an artificially-high score driven by missing data.
+      queryFailuresMeta = getARMQueryFailures();
+      if (queryFailuresMeta.length > 0) {
+        console.warn(`[SCAN ${scanId}] ⚠️ ${queryFailuresMeta.length} ARM SOQL queries failed silently — score may be artificially high. Failed objects: ${queryFailuresMeta.map((f) => f.object).join(', ')}`);
+      }
 
       console.log(`[SCAN ${scanId}] Running ARM analysis...`);
       const analysisStart = Date.now();
@@ -305,6 +314,7 @@ export async function runScanInBackground(
           complexity: result.complexity || null,
           product_type: productType,
           data_fetched: dataFetchedMeta,
+          query_failures: queryFailuresMeta.length > 0 ? queryFailuresMeta : null,
         },
         completed_at: new Date().toISOString(),
       })

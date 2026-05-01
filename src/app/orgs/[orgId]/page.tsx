@@ -566,6 +566,37 @@ export default function OrgDetailPage() {
             </div>
           )}
 
+          {/* Silent-query-failures warning — surfaces ARM SOQL queries that
+              failed and returned empty so we don't trust an artificially-high
+              score. Without this, missing data looked exactly like a clean
+              org. */}
+          {(() => {
+            const meta = scan.metadata as { query_failures?: Array<{ object: string; errorCode: string; errorMsg: string }> | null } | null;
+            const failures = meta?.query_failures;
+            if (!failures || failures.length === 0) return null;
+            const objects = Array.from(new Set(failures.map((f) => f.object))).slice(0, 6);
+            return (
+              <div className="mb-6 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 rounded-2xl p-4 sm:p-5">
+                <div className="flex items-start gap-3">
+                  <div className="w-8 h-8 bg-amber-100 dark:bg-amber-900/50 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">
+                      Score may be incomplete &mdash; {failures.length} {failures.length === 1 ? 'query' : 'queries'} failed silently
+                    </p>
+                    <p className="text-sm text-amber-700 dark:text-amber-400 mt-1">
+                      We couldn&apos;t read these objects from Salesforce, so checks that depend on them found nothing to flag — which can make the score look better than it really is. Affected: <span className="font-mono text-xs">{objects.join(', ')}{objects.length < new Set(failures.map((f) => f.object)).size ? '…' : ''}</span>
+                    </p>
+                    <p className="text-xs text-amber-600/80 dark:text-amber-400/80 mt-2">
+                      Most common cause: an OAuth scope is missing for these objects, or the user that connected the org doesn&apos;t have read permission on them. Reconnecting the org with full read scope usually resolves it.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+
           {/* ===== HEALTH SCORE CARD — matches ideation exactly ===== */}
           <div className="bg-white dark:bg-[#111827] rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-4 sm:p-6 lg:p-8 mb-8">
             <div className="flex flex-col lg:flex-row items-center gap-6 lg:gap-12">
@@ -1099,13 +1130,21 @@ export default function OrgDetailPage() {
             );
           })()}
 
-          {/* ===== SCORE TREND CHART ===== */}
-          {allScans.length >= 2 && (
-            <ScoreTrend
-              scans={allScans}
-              onViewHistory={() => router.push(`/orgs/${orgId}/history`)}
-            />
-          )}
+          {/* ===== SCORE TREND CHART =====
+              Filtered to scans of the SAME product_type as the displayed scan.
+              Mixing CPQ + ARM + Billing scans on one chart was misleading
+              because each engine has a different score distribution — an
+              ARM 99 next to a CPQ 91 isn't comparable. */}
+          {(() => {
+            const sameTypeScans = allScans.filter((s) => s.product_type === scan.product_type);
+            if (sameTypeScans.length < 2) return null;
+            return (
+              <ScoreTrend
+                scans={sameTypeScans}
+                onViewHistory={() => router.push(`/orgs/${orgId}/history`)}
+              />
+            );
+          })()}
 
           {/* ===== REVENUE RISK + COMPLEXITY ===== */}
           {(() => {
