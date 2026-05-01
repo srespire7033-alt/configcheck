@@ -1,8 +1,24 @@
 'use client';
 
 import { useState } from 'react';
-import { Clock, Repeat, Calendar, CalendarDays, Trash2, CalendarPlus, Check, Pause, AlertTriangle, Play, Loader2 } from 'lucide-react';
+import { Clock, Repeat, Calendar, CalendarDays, Trash2, CalendarPlus, Check, Pause, AlertTriangle, Play, Loader2, History, ChevronDown, ChevronRight, CheckCircle2, XCircle, Hourglass } from 'lucide-react';
+import { formatTimeAgo } from '@/lib/utils';
 import type { DBScanSchedule } from '@/types';
+
+interface ScheduleRunRow {
+  id: string;
+  status: 'pending' | 'running' | 'completed' | 'failed';
+  overall_score: number | null;
+  total_issues: number;
+  critical_count: number;
+  warning_count: number;
+  info_count: number;
+  duration_ms: number | null;
+  error_message: string | null;
+  started_at: string | null;
+  completed_at: string | null;
+  created_at: string;
+}
 
 interface ScheduleListProps {
   schedules: DBScanSchedule[];
@@ -95,6 +111,35 @@ function describeNextRun(nextRunAt: string | null): NextRunStatus {
 export function ScheduleList({ schedules, onToggle, onDelete, onCreateClick, onRunNow }: ScheduleListProps) {
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [runningId, setRunningId] = useState<string | null>(null);
+  // Per-schedule run-history state. Lazy-loaded the first time the user
+  // expands a row so we don't fan out N queries on initial render.
+  const [expandedHistoryId, setExpandedHistoryId] = useState<string | null>(null);
+  const [historyByScheduleId, setHistoryByScheduleId] = useState<Record<string, ScheduleRunRow[]>>({});
+  const [historyLoadingId, setHistoryLoadingId] = useState<string | null>(null);
+
+  async function toggleHistory(scheduleId: string) {
+    if (expandedHistoryId === scheduleId) {
+      setExpandedHistoryId(null);
+      return;
+    }
+    setExpandedHistoryId(scheduleId);
+    if (!historyByScheduleId[scheduleId]) {
+      setHistoryLoadingId(scheduleId);
+      try {
+        const res = await fetch(`/api/schedules/${scheduleId}/runs?limit=5`, { cache: 'no-store' });
+        if (res.ok) {
+          const data: ScheduleRunRow[] = await res.json();
+          setHistoryByScheduleId((prev) => ({ ...prev, [scheduleId]: data }));
+        } else {
+          setHistoryByScheduleId((prev) => ({ ...prev, [scheduleId]: [] }));
+        }
+      } catch {
+        setHistoryByScheduleId((prev) => ({ ...prev, [scheduleId]: [] }));
+      } finally {
+        setHistoryLoadingId(null);
+      }
+    }
+  }
 
   function handleDeleteClick(scheduleId: string) {
     if (confirmDeleteId === scheduleId) {
@@ -144,9 +189,11 @@ export function ScheduleList({ schedules, onToggle, onDelete, onCreateClick, onR
           const nextRun = describeNextRun(schedule.next_run_at);
           const isOverdue = schedule.enabled && nextRun.overdue;
           const isRunning = runningId === schedule.id;
+          const isHistoryOpen = expandedHistoryId === schedule.id;
+          const historyRows = historyByScheduleId[schedule.id];
           return (
+            <div key={schedule.id}>
             <div
-              key={schedule.id}
               className={`px-6 py-4 flex items-center gap-4 transition-colors ${
                 isOverdue ? 'bg-amber-50/40 dark:bg-amber-950/20' : ''
               }`}
@@ -240,6 +287,25 @@ export function ScheduleList({ schedules, onToggle, onDelete, onCreateClick, onR
                 {schedule.enabled ? 'Active' : 'Paused'}
               </button>
 
+              {/* History toggle — opens last-5-runs panel below the row.
+                  Lazy-loaded so we don't fetch N histories on initial render. */}
+              <button
+                onClick={() => toggleHistory(schedule.id)}
+                title={isHistoryOpen ? 'Hide run history' : 'Show recent runs'}
+                className={`p-2 rounded-lg transition flex-shrink-0 inline-flex items-center gap-1 ${
+                  isHistoryOpen
+                    ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'
+                    : 'text-gray-400 hover:text-blue-500 hover:bg-gray-50 dark:hover:bg-gray-800'
+                }`}
+              >
+                <History className="w-4 h-4" />
+                {isHistoryOpen ? (
+                  <ChevronDown className="w-3 h-3" />
+                ) : (
+                  <ChevronRight className="w-3 h-3" />
+                )}
+              </button>
+
               {/* Delete */}
               <button
                 onClick={() => handleDeleteClick(schedule.id)}
@@ -253,9 +319,107 @@ export function ScheduleList({ schedules, onToggle, onDelete, onCreateClick, onR
                 <Trash2 className="w-4 h-4" />
               </button>
             </div>
+            {/* Run history panel — shown when expanded */}
+            {isHistoryOpen && (
+              <RunHistoryPanel
+                loading={historyLoadingId === schedule.id}
+                rows={historyRows}
+              />
+            )}
+            </div>
           );
         })}
       </div>
+    </div>
+  );
+}
+
+/**
+ * Renders the last-N runs of a schedule. Each row shows status (succeeded /
+ * failed / running / pending), score, severity counts, duration, and the
+ * error message inline if it failed.
+ */
+function RunHistoryPanel({
+  loading,
+  rows,
+}: {
+  loading: boolean;
+  rows: ScheduleRunRow[] | undefined;
+}) {
+  if (loading) {
+    return (
+      <div className="px-6 py-4 bg-gray-50 dark:bg-gray-900/40 border-t border-gray-100 dark:border-gray-800/60 text-xs text-gray-500 dark:text-gray-400 flex items-center gap-2">
+        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+        Loading recent runs…
+      </div>
+    );
+  }
+  if (!rows || rows.length === 0) {
+    return (
+      <div className="px-6 py-4 bg-gray-50 dark:bg-gray-900/40 border-t border-gray-100 dark:border-gray-800/60 text-xs text-gray-500 dark:text-gray-400">
+        No scheduled runs yet. The next run will appear here once the scheduler triggers it.
+      </div>
+    );
+  }
+  return (
+    <div className="bg-gray-50 dark:bg-gray-900/40 border-t border-gray-100 dark:border-gray-800/60">
+      <div className="px-6 py-2.5 text-[11px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 border-b border-gray-100 dark:border-gray-800/60">
+        Recent runs ({rows.length})
+      </div>
+      <ul className="divide-y divide-gray-100 dark:divide-gray-800/60">
+        {rows.map((r) => {
+          const StatusIcon =
+            r.status === 'completed'
+              ? CheckCircle2
+              : r.status === 'failed'
+              ? XCircle
+              : Hourglass;
+          const statusCls =
+            r.status === 'completed'
+              ? 'text-green-600 dark:text-green-400'
+              : r.status === 'failed'
+              ? 'text-red-600 dark:text-red-400'
+              : 'text-gray-400 dark:text-gray-500';
+          const ranAt = r.completed_at || r.started_at || r.created_at;
+          const durationStr = r.duration_ms
+            ? r.duration_ms < 60000
+              ? `${Math.round(r.duration_ms / 1000)}s`
+              : `${Math.floor(r.duration_ms / 60000)}m ${Math.round((r.duration_ms % 60000) / 1000)}s`
+            : null;
+          return (
+            <li key={r.id} className="px-6 py-2.5 flex items-center gap-3 text-xs">
+              <StatusIcon className={`w-3.5 h-3.5 flex-shrink-0 ${statusCls}`} />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className={`font-medium capitalize ${statusCls}`}>{r.status}</span>
+                  <span className="text-gray-400">{formatTimeAgo(ranAt)}</span>
+                  {durationStr && (
+                    <span className="text-gray-400">&middot; {durationStr}</span>
+                  )}
+                  {r.status === 'completed' && r.overall_score !== null && (
+                    <>
+                      <span className="text-gray-400">&middot;</span>
+                      <span className="font-medium text-gray-700 dark:text-gray-300">
+                        Score {r.overall_score}
+                      </span>
+                      {r.total_issues > 0 && (
+                        <span className="text-gray-400">
+                          ({r.critical_count}C / {r.warning_count}W / {r.info_count}I)
+                        </span>
+                      )}
+                    </>
+                  )}
+                </div>
+                {r.status === 'failed' && r.error_message && (
+                  <div className="text-red-600 dark:text-red-400 mt-0.5 truncate" title={r.error_message}>
+                    {r.error_message}
+                  </div>
+                )}
+              </div>
+            </li>
+          );
+        })}
+      </ul>
     </div>
   );
 }

@@ -69,6 +69,9 @@ export interface DBScan {
   started_at: string | null;
   completed_at: string | null;
   created_at: string;
+  // Set when the scan was launched by a scheduled-scan cron run, null for
+  // manual scans. Drives the per-schedule "last N runs" history view.
+  triggered_by_schedule_id?: string | null;
 }
 
 export interface DBIssue {

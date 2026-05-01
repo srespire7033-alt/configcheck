@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { waitUntil } from '@vercel/functions';
 import { createServiceClient } from '@/lib/db/client';
 import { calculateNextRun } from '@/lib/schedule-helpers';
+import { runScanInBackground } from '@/lib/scans/run-scan-in-background';
+import type { ProductType } from '@/types';
 
 export const dynamic = 'force-dynamic';
+export const maxDuration = 180;
 
 /**
  * GET /api/cron/run-scans
@@ -53,7 +57,20 @@ export async function GET(request: NextRequest) {
         continue;
       }
 
-      // Create a new scan record
+      // Pick the right product type based on installed packages, mirroring
+      // the dashboard's auto-detection (CPQ+Billing > CPQ > ARM > fallback).
+      const pkgs: string[] = Array.isArray(org.installed_packages) ? org.installed_packages : [];
+      const productType: ProductType =
+        pkgs.includes('cpq') && pkgs.includes('billing')
+          ? 'cpq_billing'
+          : pkgs.includes('cpq')
+          ? 'cpq'
+          : pkgs.includes('arm')
+          ? 'arm'
+          : (schedule.product_type as ProductType | undefined) || 'cpq';
+
+      // Create a new scan record. Tag it with the schedule that triggered
+      // it so the UI can show "last 5 runs" history per schedule.
       const { data: scan, error: scanError } = await supabase
         .from('scans')
         .insert({
@@ -61,6 +78,8 @@ export async function GET(request: NextRequest) {
           user_id: schedule.user_id,
           status: 'pending',
           scan_type: 'full',
+          product_type: productType,
+          triggered_by_schedule_id: schedule.id,
           started_at: new Date().toISOString(),
         })
         .select()
@@ -72,15 +91,24 @@ export async function GET(request: NextRequest) {
         continue;
       }
 
-      // Trigger the scan via internal fetch to reuse existing scan logic
-      const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-      fetch(`${appUrl}/api/scans`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ organizationId: schedule.organization_id }),
-      }).catch((err) => {
-        console.error(`Background scan trigger failed for schedule ${schedule.id}:`, err);
-      });
+      // Run the scan inline via waitUntil. The previous fire-and-forget
+      // POST to /api/scans was bouncing off getAuthUser (cookie-only auth),
+      // so cron-triggered scans were stuck in pending forever. Calling
+      // runScanInBackground directly bypasses the auth gate — we already
+      // verified the schedule belongs to a real org above.
+      waitUntil(
+        runScanInBackground(scan.id, org, productType).catch(async (error: unknown) => {
+          console.error(`[CRON-SCAN ${scan.id}] Scan execution failed:`, error);
+          await supabase
+            .from('scans')
+            .update({
+              status: 'failed',
+              error_message: error instanceof Error ? error.message : 'Scheduled scan failed unexpectedly',
+              completed_at: new Date().toISOString(),
+            })
+            .eq('id', scan.id);
+        })
+      );
 
       // Update the schedule: set last_run_at and calculate next_run_at
       const updateData: Record<string, unknown> = {
