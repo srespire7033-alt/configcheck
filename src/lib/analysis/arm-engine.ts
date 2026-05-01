@@ -1,30 +1,9 @@
 import type { ARMData, Issue, CategoryScores } from '@/types';
 import { armChecks } from './arm-checks';
 
-// Category weights for ARM overall score (must sum to 1.0).
-// Tuned for the v1-v4 spread. Catalog, selling models, and bundles
-// dominate because misconfigurations there block quoting outright.
-// Assets, contracts, and usage carry meaningful weight because they
-// govern post-quote revenue accuracy.
-const ARM_CATEGORY_WEIGHTS: Record<string, number> = {
-  arm_product_catalog: 0.10,
-  arm_selling_models: 0.11,
-  arm_price_adjustments: 0.08,
-  arm_attribute_pricing: 0.05,
-  arm_bundles: 0.10,
-  arm_pricing_procedures: 0.05,
-  arm_price_books: 0.03,
-  arm_decision_tables: 0.05,
-  arm_context_service: 0.05,
-  arm_rate_cards: 0.05,
-  arm_attributes: 0.05,
-  // v4
-  arm_assets: 0.09,
-  arm_contracts: 0.08,
-  arm_usage_management: 0.06,
-  arm_orchestration: 0.03,
-  arm_cost_books: 0.02,
-};
+// The old ARM_CATEGORY_WEIGHTS map was removed when the overall score
+// switched to an issue-based penalty model — see calculateARMOverallScore.
+// Per-category scores still use the bucket-and-clamp model.
 
 export interface ARMScanResult {
   overall_score: number;
@@ -59,7 +38,7 @@ export async function runARMAnalysis(
   }
 
   const categoryScores = calculateCategoryScores(allIssues);
-  const overallScore = calculateARMOverallScore(categoryScores);
+  const overallScore = calculateARMOverallScore(allIssues);
 
   return {
     overall_score: overallScore,
@@ -112,17 +91,26 @@ function calculateCategoryScores(issues: Issue[]): CategoryScores {
   return scores as unknown as CategoryScores;
 }
 
-function calculateARMOverallScore(categoryScores: CategoryScores): number {
-  let weightedSum = 0;
-  let totalWeight = 0;
-  for (const [category, weight] of Object.entries(ARM_CATEGORY_WEIGHTS)) {
-    const score = (categoryScores as unknown as Record<string, number>)[category];
-    if (score !== undefined) {
-      weightedSum += score * weight;
-      totalWeight += weight;
-    }
+/**
+ * Calculate the overall ARM score from raw issues.
+ * Same penalty schedule as the CPQ and Billing engines — see
+ * analysis/engine.ts for the full rationale.
+ *   critical → -2.0 each
+ *   warning  → -0.5 each
+ *   info     → -0.1 each
+ * Floor at 0.
+ */
+function calculateARMOverallScore(issues: Issue[]): number {
+  const PENALTY: Record<string, number> = {
+    critical: 2.0,
+    warning: 0.5,
+    info: 0.1,
+  };
+  let penalty = 0;
+  for (const issue of issues) {
+    penalty += PENALTY[issue.severity] ?? 0;
   }
-  return totalWeight > 0 ? Math.round(weightedSum / totalWeight) : 0;
+  return Math.max(0, Math.min(100, Math.round(100 - penalty)));
 }
 
 export function getARMCheckCount(): number {

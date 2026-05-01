@@ -323,11 +323,17 @@ async function runScanInBackground(
           ...result.category_scores,
           ...billingResult.category_scores,
         } as typeof result.category_scores;
-        const cpqWeight = 0.6;
-        const billingWeight = 0.4;
-        result.overall_score = Math.round(
-          result.overall_score * cpqWeight + billingResult.overall_score * billingWeight
-        );
+        // Recompute the combined overall score from the merged issue list
+        // using the same issue-based penalty model the engines use.
+        // (Previously this was a weighted average of CPQ + Billing
+        // overall scores — that diluted the signal when severity was
+        // concentrated in one engine.)
+        const PENALTY: Record<string, number> = { critical: 2.0, warning: 0.5, info: 0.1 };
+        let combinedPenalty = 0;
+        for (const issue of result.issues) {
+          combinedPenalty += PENALTY[issue.severity] ?? 0;
+        }
+        result.overall_score = Math.max(0, Math.min(100, Math.round(100 - combinedPenalty)));
       }
 
       cpqDataTotals = {

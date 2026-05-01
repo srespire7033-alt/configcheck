@@ -1,17 +1,10 @@
 import type { BillingData, Issue, CategoryScores } from '@/types';
 import { allBillingChecks } from './billing-checks';
 
-// Category weights for billing overall score
-const BILLING_CATEGORY_WEIGHTS: Record<string, number> = {
-  billing_rules: 0.15,
-  rev_rec_rules: 0.15,
-  tax_rules: 0.12,
-  finance_books: 0.18,
-  gl_rules: 0.12,
-  legal_entity: 0.08,
-  product_billing_config: 0.12,
-  invoicing: 0.08,
-};
+// The old BILLING_CATEGORY_WEIGHTS map was removed when the overall
+// score switched to an issue-based penalty model — see
+// calculateBillingOverallScore. Per-category scores still use the
+// bucket-and-clamp model.
 
 export interface BillingScanResult {
   overall_score: number;
@@ -37,7 +30,7 @@ export async function runBillingAnalysis(data: BillingData): Promise<BillingScan
   }
 
   const categoryScores = calculateCategoryScores(allIssues);
-  const overallScore = calculateBillingOverallScore(categoryScores);
+  const overallScore = calculateBillingOverallScore(allIssues);
 
   return {
     overall_score: overallScore,
@@ -87,21 +80,26 @@ function calculateCategoryScores(issues: Issue[]): CategoryScores {
 }
 
 /**
- * Calculate weighted overall billing score
+ * Calculate the overall billing score from raw issues.
+ * Same penalty schedule as the CPQ engine — see analysis/engine.ts for
+ * the full rationale on why this changed from a category-weighted
+ * average to an issue-based penalty.
+ *   critical → -2.0 each
+ *   warning  → -0.5 each
+ *   info     → -0.1 each
+ * Floor at 0.
  */
-function calculateBillingOverallScore(categoryScores: CategoryScores): number {
-  let weightedSum = 0;
-  let totalWeight = 0;
-
-  for (const [category, weight] of Object.entries(BILLING_CATEGORY_WEIGHTS)) {
-    const score = (categoryScores as unknown as Record<string, number>)[category];
-    if (score !== undefined) {
-      weightedSum += score * weight;
-      totalWeight += weight;
-    }
+function calculateBillingOverallScore(issues: Issue[]): number {
+  const PENALTY: Record<string, number> = {
+    critical: 2.0,
+    warning: 0.5,
+    info: 0.1,
+  };
+  let penalty = 0;
+  for (const issue of issues) {
+    penalty += PENALTY[issue.severity] ?? 0;
   }
-
-  return totalWeight > 0 ? Math.round(weightedSum / totalWeight) : 0;
+  return Math.max(0, Math.min(100, Math.round(100 - penalty)));
 }
 
 /**

@@ -2,28 +2,10 @@ import type { CPQData, Issue, CategoryScores, ScanResult, HealthCheck } from '@/
 import { allChecks } from './checks';
 import { calculateRevenueRisk } from './revenue-scoring';
 
-// Category weights for overall score
-const CATEGORY_WEIGHTS: Record<string, number> = {
-  price_rules: 0.10,
-  discount_schedules: 0.06,
-  products: 0.08,
-  product_rules: 0.07,
-  summary_variables: 0.05,
-  approval_rules: 0.06,
-  quote_calculator_plugin: 0.06,
-  quote_templates: 0.04,
-  configuration_attributes: 0.05,
-  guided_selling: 0.04,
-  advanced_pricing: 0.06,
-  cpq_settings: 0.05,
-  subscriptions: 0.05,
-  quote_lines: 0.06,
-  contracted_prices: 0.04,
-  performance: 0.09,
-  impact_analysis: 0.09,
-  bundles: 0.06,
-  lookup_queries: 0.05,
-};
+// Note: the old CATEGORY_WEIGHTS map (used to weight per-category scores
+// into a single overall score) was removed when the overall score
+// switched to an issue-based penalty model. Per-category scores below
+// still use a bucket-and-clamp model — see calculateCategoryScores.
 
 /**
  * Run all health checks against CPQ data and return scored results.
@@ -51,9 +33,15 @@ export async function runAnalysis(
     }
   }
 
-  // Calculate scores
+  // Calculate scores. Per-category scores still use the bucket model
+  // (start at 100, deduct per severity, clamp to 0-100) — they feed the
+  // category cards on the org-detail page where users want to see how
+  // each area is doing in isolation.
+  // The overall score now uses an issue-based penalty model so the
+  // headline number actually reflects severity volume — see
+  // calculateOverallScoreFromIssues for the rationale.
   const categoryScores = calculateCategoryScores(allIssues);
-  const overallScore = calculateOverallScore(categoryScores);
+  const overallScore = calculateOverallScoreFromIssues(allIssues);
 
   // Revenue risk scoring
   const { enrichedIssues, revenueSummary } = calculateRevenueRisk(allIssues, data);
@@ -125,21 +113,42 @@ function calculateCategoryScores(issues: Issue[]): CategoryScores {
 }
 
 /**
- * Calculate weighted overall score from category scores
+ * Calculate the overall org health score from the raw issue list.
+ *
+ * Why this changed: the previous model was a weighted average of
+ * per-category scores. That meant a category that hit zero (say, 21
+ * criticals all in price_rules) only impacted the overall score by its
+ * weight (~10%). An org with 21 critical issues was scoring 80/100,
+ * which made the headline number feel like a vanity metric.
+ *
+ * The new model penalises each finding directly:
+ *   critical → -2.0 points each
+ *   warning  → -0.5 points each
+ *   info     → -0.1 points each
+ *
+ * Floor at 0 (no negative scores). Calibrated so that:
+ *   • 0 critical, ≤5 warnings   → 95+
+ *   • a handful of criticals     → 70-90
+ *   • 20+ criticals              → 30-50
+ *   • a hopelessly broken org    → close to 0
+ *
+ * Per-category scores still use the old bucket-and-clamp model — those
+ * are about how each area is doing in isolation, not the headline.
+ *
+ * @deprecated The old name is kept for any callers that may still
+ * reference it; new code should use calculateOverallScoreFromIssues.
  */
-function calculateOverallScore(categoryScores: CategoryScores): number {
-  let weightedSum = 0;
-  let totalWeight = 0;
-
-  for (const [category, weight] of Object.entries(CATEGORY_WEIGHTS)) {
-    const score = (categoryScores as unknown as Record<string, number>)[category];
-    if (score !== undefined) {
-      weightedSum += score * weight;
-      totalWeight += weight;
-    }
+function calculateOverallScoreFromIssues(issues: Issue[]): number {
+  const PENALTY: Record<string, number> = {
+    critical: 2.0,
+    warning: 0.5,
+    info: 0.1,
+  };
+  let penalty = 0;
+  for (const issue of issues) {
+    penalty += PENALTY[issue.severity] ?? 0;
   }
-
-  return totalWeight > 0 ? Math.round(weightedSum / totalWeight) : 0;
+  return Math.max(0, Math.min(100, Math.round(100 - penalty)));
 }
 
 /**
