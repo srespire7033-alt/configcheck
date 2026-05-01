@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { getCategoryLabel } from '@/lib/utils';
+import { getCategoryLabel, getShortCategoryLabel } from '@/lib/utils';
 import { DollarSign, Percent, Package, GitBranch, Settings, RefreshCw, FileText, Handshake, Variable, ShieldCheck, Code, FileSpreadsheet, SlidersHorizontal, Compass, Layers, Gauge, Network, ChevronRight, GripVertical, Receipt, BookOpen, Landmark, Building2, CircleDollarSign, Scale, BadgeDollarSign, FileCheck, Boxes, Search } from 'lucide-react';
 import {
   DndContext,
@@ -146,14 +146,28 @@ function SortableCategoryCard({
           onClick={() => onCategoryClick?.(category)}
           className="flex-1 text-left p-3 sm:p-4 min-w-0"
         >
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2 min-w-0">
-              <Icon className={`w-4 h-4 flex-shrink-0 ${isSelected ? 'text-blue-500' : 'text-gray-400 dark:text-gray-500'}`} />
-              <span className={`text-sm font-medium truncate ${isSelected ? 'text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-300'}`}>
-                {getCategoryLabel(category)}
+          <div className="flex items-start justify-between mb-3 gap-2">
+            <div className="flex items-start gap-2 min-w-0 flex-1">
+              <Icon className={`w-4 h-4 flex-shrink-0 mt-0.5 ${isSelected ? 'text-blue-500' : 'text-gray-400 dark:text-gray-500'}`} />
+              {/*
+                Short label so the most common categories no longer truncate
+                in the 5-up grid. Full label is exposed via title for
+                hover/screen-reader and stays in modals/reports.
+              */}
+              <span
+                className={`text-sm font-medium leading-tight ${isSelected ? 'text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-300'}`}
+                title={getCategoryLabel(category)}
+                style={{
+                  display: '-webkit-box',
+                  WebkitLineClamp: 2,
+                  WebkitBoxOrient: 'vertical',
+                  overflow: 'hidden',
+                }}
+              >
+                {getShortCategoryLabel(category)}
               </span>
             </div>
-            <span className={`text-lg font-bold flex-shrink-0 ml-2 ${getScoreTextColor(score)}`}>
+            <span className={`text-lg font-bold flex-shrink-0 ${getScoreTextColor(score)}`}>
               {score}%
             </span>
           </div>
@@ -305,7 +319,7 @@ export function CategoryBreakdown({ scores, issues = [], layout = 'vertical', se
                 <div className="flex-1 h-px bg-gray-200 dark:bg-gray-700" />
               </div>
             )}
-            <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
+            <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
               {cpqCategories.map((category) => {
                 const score = scoresMap[category];
                 if (score === undefined) return null;

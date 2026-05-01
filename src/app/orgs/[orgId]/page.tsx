@@ -980,12 +980,18 @@ export default function OrgDetailPage() {
             </div>
           )}
 
-          {/* ===== SCHEDULED SCANS ===== */}
+          {/* ===== SCHEDULED SCANS =====
+              onRunNow lets the user kick off a scan when a scheduled run is
+              overdue (cron lag, server clock drift, etc.). Reuses the same
+              handleScan() that the top-of-page Run Scan button calls. */}
           <ScheduleList
             schedules={schedules}
             onToggle={handleToggleSchedule}
             onDelete={handleDeleteSchedule}
             onCreateClick={() => setShowScheduleModal(true)}
+            onRunNow={async () => {
+              await handleScan();
+            }}
           />
 
           {/* No issues state */}

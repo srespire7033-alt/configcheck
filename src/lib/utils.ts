@@ -108,6 +108,54 @@ export function getCategoryLabel(category: string): string {
   return labels[category] || category;
 }
 
+/**
+ * Short version of getCategoryLabel for cramped UIs (the per-category
+ * cards on the org-detail page especially). Drops articles, conjunctions,
+ * and the "(ARM)" suffix where the badge colour already conveys product.
+ * Use this only where space is genuinely tight; modals, reports, and
+ * exports should keep the full label from getCategoryLabel().
+ */
+export function getShortCategoryLabel(category: string): string {
+  const short: Record<string, string> = {
+    // CPQ shortenings (only where the full label was truncating)
+    discount_schedules: 'Discounts',
+    products: 'Products',
+    contracted_prices: 'Contracted',
+    summary_variables: 'Summary Vars',
+    approval_rules: 'Approvals',
+    quote_calculator_plugin: 'QCP',
+    quote_templates: 'Templates',
+    configuration_attributes: 'Config Attrs',
+    advanced_pricing: 'Adv. Pricing',
+    impact_analysis: 'Impact',
+    bundles: 'Bundles',
+    lookup_queries: 'Lookups',
+    // Billing
+    rev_rec_rules: 'Rev Rec',
+    finance_books: 'Finance Books',
+    legal_entity: 'Legal Entity',
+    product_billing_config: 'Billing Config',
+    // ARM — drop the "(ARM)" suffix in the cramped card view
+    arm_product_catalog: 'Catalog',
+    arm_selling_models: 'Selling Models',
+    arm_price_adjustments: 'Price Adj.',
+    arm_attribute_pricing: 'Attr. Pricing',
+    arm_bundles: 'Bundles',
+    arm_pricing_procedures: 'Pricing Proc.',
+    arm_price_books: 'Price Books',
+    arm_decision_tables: 'Decision Tables',
+    arm_context_service: 'Context Svc.',
+    arm_rate_cards: 'Rate Cards',
+    arm_attributes: 'Attributes',
+    arm_assets: 'Assets',
+    arm_contracts: 'Contracts',
+    arm_usage_management: 'Usage Mgmt.',
+    arm_orchestration: 'Orchestration',
+    arm_cost_books: 'Cost Books',
+  };
+  return short[category] || getCategoryLabel(category);
+}
+
 export function getProductTypeLabel(productType: string): string {
   const labels: Record<string, string> = {
     cpq: 'CPQ',
