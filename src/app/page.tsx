@@ -351,100 +351,115 @@ export default function LandingPage() {
             </p>
           </div>
 
-          {/* Per-product totals — visual anchor before the long grid */}
-          <div className="grid grid-cols-3 gap-4 max-w-3xl mx-auto mb-10">
-            <div className="text-center p-5 rounded-2xl bg-blue-50 dark:bg-blue-500/10 border border-blue-200/60 dark:border-blue-500/20">
-              <div className="text-3xl font-bold text-blue-700 dark:text-blue-400">92</div>
-              <div className="text-xs uppercase tracking-wider text-blue-600/80 dark:text-blue-400/80 mt-1 font-semibold">CPQ</div>
-              <div className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">21 categories</div>
-            </div>
-            <div className="text-center p-5 rounded-2xl bg-purple-50 dark:bg-purple-500/10 border border-purple-200/60 dark:border-purple-500/20">
-              <div className="text-3xl font-bold text-purple-700 dark:text-purple-400">39</div>
-              <div className="text-xs uppercase tracking-wider text-purple-600/80 dark:text-purple-400/80 mt-1 font-semibold">Billing</div>
-              <div className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">8 categories</div>
-            </div>
-            <div className="text-center p-5 rounded-2xl bg-teal-50 dark:bg-teal-500/10 border border-teal-200/60 dark:border-teal-500/20">
-              <div className="text-3xl font-bold text-teal-700 dark:text-teal-400">51</div>
-              <div className="text-xs uppercase tracking-wider text-teal-600/80 dark:text-teal-400/80 mt-1 font-semibold">ARM</div>
-              <div className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">16 categories</div>
-            </div>
-          </div>
-
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {/* Three parent product cards with example checks. Replaces the
+              long flat grid of 45 mini-tiles per task #8 — gives a visitor
+              a 20-second read of what a "check" actually means in practice
+              and links to /checks for the full inventory. */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
             {[
-              // CPQ — 21 categories, 92 checks
-              { name: 'Price Rules', checks: 5, icon: '&#9889;', type: 'CPQ' },
-              { name: 'Discount Schedules', checks: 4, icon: '&#128181;', type: 'CPQ' },
-              { name: 'Products', checks: 4, icon: '&#128230;', type: 'CPQ' },
-              { name: 'Product Rules', checks: 5, icon: '&#128295;', type: 'CPQ' },
-              { name: 'Approval Rules', checks: 5, icon: '&#9989;', type: 'CPQ' },
-              { name: 'Summary Variables', checks: 6, icon: '&#128202;', type: 'CPQ' },
-              { name: 'Guided Selling', checks: 4, icon: '&#129517;', type: 'CPQ' },
-              { name: 'Quote Templates', checks: 5, icon: '&#128196;', type: 'CPQ' },
-              { name: 'Custom Scripts (QCP)', checks: 4, icon: '&#128187;', type: 'CPQ' },
-              { name: 'CPQ Settings', checks: 4, icon: '&#9881;', type: 'CPQ' },
-              { name: 'Config Attributes', checks: 4, icon: '&#128736;', type: 'CPQ' },
-              { name: 'Subscriptions', checks: 4, icon: '&#128260;', type: 'CPQ' },
-              { name: 'Quote Lines', checks: 4, icon: '&#128203;', type: 'CPQ' },
-              { name: 'Twin Fields', checks: 1, icon: '&#128178;', type: 'CPQ' },
-              { name: 'Contracted Prices', checks: 3, icon: '&#128220;', type: 'CPQ' },
-              { name: 'Advanced Pricing', checks: 5, icon: '&#127919;', type: 'CPQ' },
-              { name: 'Performance', checks: 5, icon: '&#128640;', type: 'CPQ' },
-              { name: 'Bundle Integrity', checks: 6, icon: '&#129513;', type: 'CPQ' },
-              { name: 'Impact Analysis', checks: 6, icon: '&#127919;', type: 'CPQ' },
-              { name: 'Lookup Queries', checks: 5, icon: '&#128270;', type: 'CPQ' },
-              { name: 'Usage Analytics', checks: 3, icon: '&#128202;', type: 'CPQ' },
-              // Billing — 8 categories, 39 checks
-              { name: 'Billing Rules', checks: 4, icon: '&#128176;', type: 'Billing' },
-              { name: 'Revenue Recognition', checks: 4, icon: '&#128200;', type: 'Billing' },
-              { name: 'Tax Rules', checks: 4, icon: '&#127974;', type: 'Billing' },
-              { name: 'Finance Books', checks: 7, icon: '&#128218;', type: 'Billing' },
-              { name: 'GL Rules', checks: 5, icon: '&#128209;', type: 'Billing' },
-              { name: 'Legal Entity', checks: 4, icon: '&#127971;', type: 'Billing' },
-              { name: 'Product Billing Config', checks: 6, icon: '&#128179;', type: 'Billing' },
-              { name: 'Invoicing', checks: 5, icon: '&#128451;', type: 'Billing' },
-              // ARM — 16 categories, 51 checks
-              { name: 'Product Catalog', checks: 3, icon: '&#128218;', type: 'ARM' },
-              { name: 'Selling Models', checks: 4, icon: '&#128221;', type: 'ARM' },
-              { name: 'Price Adjustments', checks: 3, icon: '&#128293;', type: 'ARM' },
-              { name: 'Attribute Pricing', checks: 2, icon: '&#127919;', type: 'ARM' },
-              { name: 'Bundles', checks: 4, icon: '&#129513;', type: 'ARM' },
-              { name: 'Pricing Procedures', checks: 2, icon: '&#9881;', type: 'ARM' },
-              { name: 'Price Books', checks: 2, icon: '&#128214;', type: 'ARM' },
-              { name: 'Decision Tables', checks: 2, icon: '&#128202;', type: 'ARM' },
-              { name: 'Context Service', checks: 2, icon: '&#128279;', type: 'ARM' },
-              { name: 'Rate Cards', checks: 3, icon: '&#128176;', type: 'ARM' },
-              { name: 'Attributes', checks: 3, icon: '&#128203;', type: 'ARM' },
-              { name: 'Assets', checks: 5, icon: '&#127968;', type: 'ARM' },
-              { name: 'Contracts', checks: 4, icon: '&#128196;', type: 'ARM' },
-              { name: 'Usage Management', checks: 5, icon: '&#128200;', type: 'ARM' },
-              { name: 'Orchestration (DRO)', checks: 4, icon: '&#128260;', type: 'ARM' },
-              { name: 'Cost Books', checks: 3, icon: '&#128181;', type: 'ARM' },
-            ].map((cat, i) => (
-              <div
-                key={i}
-                className="flex items-center gap-3 bg-white dark:bg-gray-900/50 rounded-xl border border-gray-200 dark:border-gray-800 px-4 py-3.5 hover:border-blue-300 dark:hover:border-blue-600/40 transition-colors"
-              >
-                <span className="text-xl" dangerouslySetInnerHTML={{ __html: cat.icon }} />
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium truncate">{cat.name}</span>
-                    <span className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${
-                      cat.type === 'CPQ'
-                        ? 'text-blue-700 dark:text-blue-300 bg-blue-100 dark:bg-blue-500/15'
-                        : cat.type === 'Billing'
-                        ? 'text-purple-700 dark:text-purple-300 bg-purple-100 dark:bg-purple-500/15'
-                        : 'text-teal-700 dark:text-teal-300 bg-teal-100 dark:bg-teal-500/15'
-                    }`}>
-                      {cat.type}
+              {
+                product: 'Salesforce CPQ',
+                badge: 'CPQ',
+                count: 92,
+                categories: 21,
+                accent: 'blue',
+                examples: [
+                  'Detects price rules with conflicting conditions on the same field',
+                  'Flags products missing a default subscription term',
+                  'Identifies discount schedules with overlapping tier ranges',
+                  'Surfaces QCP scripts with unhandled error paths',
+                ],
+              },
+              {
+                product: 'Salesforce Billing',
+                badge: 'Billing',
+                count: 39,
+                categories: 8,
+                accent: 'purple',
+                examples: [
+                  'Catches finance books with no period covering today',
+                  'Detects products missing a billing rule reference',
+                  'Surfaces GL treatments missing one side of the debit/credit pair',
+                  'Flags invoices stuck in Draft for more than seven days',
+                ],
+              },
+              {
+                product: 'Revenue Cloud (ARM)',
+                badge: 'ARM',
+                count: 51,
+                categories: 16,
+                accent: 'teal',
+                examples: [
+                  'Detects active products without an assigned selling model',
+                  'Flags bundles with impossible quantity ranges (Min > Max)',
+                  'Identifies overlapping price adjustment tiers',
+                  'Surfaces assets with multiple "current" state periods',
+                ],
+              },
+            ].map((group) => {
+              const accentRing = group.accent === 'blue'
+                ? 'ring-blue-200 dark:ring-blue-500/30'
+                : group.accent === 'purple'
+                ? 'ring-purple-200 dark:ring-purple-500/30'
+                : 'ring-teal-200 dark:ring-teal-500/30';
+              const accentBg = group.accent === 'blue'
+                ? 'bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-300'
+                : group.accent === 'purple'
+                ? 'bg-purple-50 dark:bg-purple-500/10 text-purple-700 dark:text-purple-300'
+                : 'bg-teal-50 dark:bg-teal-500/10 text-teal-700 dark:text-teal-300';
+              const numberColor = group.accent === 'blue'
+                ? 'text-blue-700 dark:text-blue-400'
+                : group.accent === 'purple'
+                ? 'text-purple-700 dark:text-purple-400'
+                : 'text-teal-700 dark:text-teal-400';
+              const checkColor = group.accent === 'blue'
+                ? 'text-blue-500'
+                : group.accent === 'purple'
+                ? 'text-purple-500'
+                : 'text-teal-500';
+              return (
+                <div
+                  key={group.product}
+                  className={`bg-white dark:bg-gray-900/50 rounded-2xl border border-gray-200 dark:border-gray-800 ring-1 ${accentRing} p-7 flex flex-col`}
+                >
+                  <div className="flex items-baseline gap-3 mb-2">
+                    <span className={`text-5xl font-bold ${numberColor}`}>{group.count}</span>
+                    <span className={`px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded ${accentBg}`}>
+                      {group.badge}
                     </span>
                   </div>
+                  <div className="text-base font-semibold text-gray-900 dark:text-white mb-1">{group.product}</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400 mb-5">
+                    {group.count} checks across {group.categories} categories
+                  </div>
+                  <ul className="space-y-2.5 mb-6 flex-1">
+                    {group.examples.map((ex) => (
+                      <li key={ex} className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+                        <CheckCircle className={`h-4 w-4 ${checkColor} flex-shrink-0 mt-0.5`} />
+                        <span>{ex}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <Link
+                    href="/checks"
+                    className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center gap-1 mt-auto"
+                  >
+                    View all {group.count} {group.badge} checks
+                    <ArrowRight className="h-3.5 w-3.5" />
+                  </Link>
                 </div>
-                <span className="text-xs font-semibold text-blue-600 bg-blue-50 dark:bg-blue-500/10 px-2 py-0.5 rounded-full">
-                  {cat.checks}
-                </span>
-              </div>
-            ))}
+              );
+            })}
+          </div>
+
+          <div className="text-center mt-10">
+            <Link
+              href="/checks"
+              className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-xl border border-gray-200 dark:border-gray-700 transition-all"
+            >
+              View all 182 checks across 45 categories
+              <ArrowRight className="h-4 w-4" />
+            </Link>
           </div>
         </div>
       </section>
