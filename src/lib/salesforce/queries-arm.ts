@@ -248,10 +248,16 @@ export async function fetchAllARMData(conn: Connection): Promise<ARMData> {
        FROM ProductCategoryProduct
        LIMIT 5000`
     ),
+    // Pricing Procedures live on the standard ExpressionSet sObject in
+    // the Business Rules Engine. Filtering to the 'PricingProcedure' type
+    // discriminator and only the latest active version excludes
+    // eligibility rules / decision-table expression sets and old versions.
+    // (User confirmed via direct URL inspection: /lightning/r/ExpressionSet/...)
     safeARMQuery(
       conn,
-      `SELECT Id, Name, IsActive, ResolutionPolicy
-       FROM PricingProcedure
+      `SELECT Id, Name, IsActive, ExpressionSetType, ResolutionPolicy, IsLatestVersion
+       FROM ExpressionSet
+       WHERE ExpressionSetType = 'PricingProcedure'
        LIMIT 200`
     ),
     safeARMQuery(

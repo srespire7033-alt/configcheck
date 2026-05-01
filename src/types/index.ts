@@ -733,13 +733,21 @@ export interface RLMProductCategoryProduct {
   ProductCategoryId: string;
 }
 
-// PricingProcedure has a related Resolution Policy. Empty resolution policy
-// means lookups won't return a deterministic result.
+// Pricing Procedures live on the standard ExpressionSet sObject in the
+// Business Rules Engine. The type discriminator (ExpressionSetType) is
+// 'PricingProcedure' for procedures used by Salesforce Pricing — other
+// values exist for eligibility rules, advanced decision tables, etc.
+//
+// We keep the interface name "RLMPricingProcedure" because that's still
+// the conceptual entity in the rest of our codebase; only the SOQL FROM
+// clause changes.
 export interface RLMPricingProcedure {
   Id: string;
   Name: string;
-  IsActive: boolean;
+  IsActive?: boolean;
+  ExpressionSetType?: string | null;
   ResolutionPolicy?: string | null;
+  IsLatestVersion?: boolean;
 }
 
 // Decision tables / expression sets — Business Rules Engine surfaces

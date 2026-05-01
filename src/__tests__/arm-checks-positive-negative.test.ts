@@ -182,8 +182,18 @@ describe('ARM check simulation — positive (clean) + negative (broken) scenario
     const c = getCheck('ARM-006');
     it('FIRES on active procedure with null ResolutionPolicy', async () => {
       const d = empty();
-      d.pricingProcedures = [{ Id: 'pp1', Name: 'Default', IsActive: true }];
+      // Use explicit null so the check can tell the field exists in the
+      // schema (vs. undefined, which means the field was stripped from
+      // the SOQL query — in which case the check correctly skips).
+      d.pricingProcedures = [{ Id: 'pp1', Name: 'Default', IsActive: true, ResolutionPolicy: null }];
       expect(await c.run(d)).toHaveLength(1);
+    });
+    it('STAYS SILENT when ResolutionPolicy field doesn\'t exist on this org\'s ExpressionSet schema', async () => {
+      const d = empty();
+      // No ResolutionPolicy property at all — same shape as if safeARMQuery's
+      // INVALID_FIELD retry stripped it. Should not flag every record as missing.
+      d.pricingProcedures = [{ Id: 'pp1', Name: 'Default', IsActive: true }];
+      expect(await c.run(d)).toHaveLength(0);
     });
     it('PASSES with resolution policy set', async () => {
       const d = empty();

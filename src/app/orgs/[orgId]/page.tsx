@@ -593,7 +593,7 @@ export default function OrgDetailPage() {
               priceBooks: 'Pricebook2',
               productCategories: 'ProductCategory',
               productCategoryProducts: 'ProductCategoryProduct',
-              pricingProcedures: 'PricingProcedure',
+              pricingProcedures: 'ExpressionSet',
               decisionTables: 'DecisionTable',
               contextDefinitions: 'ContextDefinition',
               rateCards: 'RateCard',

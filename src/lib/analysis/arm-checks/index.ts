@@ -286,8 +286,17 @@ export const armChecks: ARMHealthCheck[] = [
     description:
       'Active PricingProcedure records with no ResolutionPolicy set',
     run: async (data: ARMData): Promise<Issue[]> => {
+      // If ResolutionPolicy field doesn't exist on this org's ExpressionSet
+      // schema (older API version, or field stripped by safeARMQuery's
+      // INVALID_FIELD retry), every record will have it as undefined. Skip
+      // rather than flag every record as a false positive.
+      const fieldExists = data.pricingProcedures.some(
+        (p) => p.ResolutionPolicy !== undefined
+      );
+      if (!fieldExists) return [];
+
       const missing = data.pricingProcedures.filter(
-        (p) => p.IsActive && !p.ResolutionPolicy
+        (p) => p.IsActive !== false && !p.ResolutionPolicy
       );
       if (missing.length === 0) return [];
       return [
@@ -1173,7 +1182,11 @@ export const armChecks: ARMHealthCheck[] = [
     description:
       'More than one active PricingProcedure exists — usually only one is primary',
     run: async (data: ARMData): Promise<Issue[]> => {
-      const active = data.pricingProcedures.filter((p) => p.IsActive);
+      // Treat IsActive=true OR undefined as "active" — the field may be
+      // stripped from the query if the org's ExpressionSet schema doesn't
+      // expose it, in which case being in the result set already implies
+      // it's a current/published procedure. Filter strictly false-out.
+      const active = data.pricingProcedures.filter((p) => p.IsActive !== false);
       if (active.length <= 1) return [];
       return [
         {
