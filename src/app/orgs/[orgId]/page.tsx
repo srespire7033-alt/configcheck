@@ -389,32 +389,33 @@ export default function OrgDetailPage() {
         Back to Dashboard
       </button>
 
-      {/* Gradient Org Header */}
+      {/* Compact org context strip
+          Replaces the previous gradient banner that wasted above-the-fold
+          real estate restating the product name. Users already know what
+          product they're in — what they actually need is a quick read of
+          which org + environment they're looking at. The strip hands the
+          hero space below to the health score and primary metrics. */}
       {org && (
-        <div
-          className="rounded-2xl text-white px-4 sm:px-6 py-4 mb-6"
-          style={{ background: 'linear-gradient(135deg, #0b8aff 0%, #00b4b4 100%)' }}
-        >
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <div
-                className="w-10 h-10 rounded-xl flex items-center justify-center"
-                style={{ background: '#5B9BF3' }}
-              >
-                <ShieldCheck className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <h1 className="text-xl font-semibold">ConfigCheck</h1>
-                <p className="text-sm text-white/80">AI-Driven Config Audits for Salesforce Revenue Cloud</p>
-              </div>
+        <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-200 dark:border-gray-800">
+          <div className="flex items-center gap-3 min-w-0">
+            <div
+              className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+              style={{ background: '#5B9BF3' }}
+            >
+              <ShieldCheck className="w-4 h-4 text-white" />
             </div>
-            <div className="flex items-center gap-4">
-              <div className="text-right">
-                <p className="text-sm text-white/80">Connected Org</p>
-                <p className="font-medium">{org.name} ({org.is_sandbox ? 'Sandbox' : 'Production'})</p>
-              </div>
-              <div className="w-3 h-3 bg-green-400 rounded-full animate-pulse" />
+            <div className="min-w-0">
+              <p className="text-base font-semibold text-gray-900 dark:text-white truncate">
+                {org.name}
+              </p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                {org.is_sandbox ? 'Sandbox' : 'Production'} &middot; Connected
+              </p>
             </div>
+          </div>
+          <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+            <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
+            Live
           </div>
         </div>
       )}
@@ -1010,20 +1011,103 @@ export default function OrgDetailPage() {
 
           {/* Old severity-based issue lists removed — issues now shown by category above */}
 
-          {/* ===== AI RECOMMENDATIONS ===== */}
-          {scan.summary && (
-            <div className="bg-gradient-to-r from-blue-50 to-teal-50 dark:from-blue-900/20 dark:to-teal-900/20 rounded-2xl border border-blue-100 dark:border-blue-800 p-6 mb-8">
-              <div className="flex items-start gap-4">
-                <div className="w-12 h-12 bg-white dark:bg-gray-800 rounded-xl flex items-center justify-center shadow-sm flex-shrink-0">
-                  <Sparkles className="w-7 h-7 text-blue-600 dark:text-blue-400" />
-                </div>
-                <div className="flex-1">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">AI-Powered Analysis</h3>
-                  <p className="text-gray-600 dark:text-gray-300 leading-relaxed whitespace-pre-line">{scan.summary}</p>
+          {/* ===== AI RECOMMENDATIONS =====
+              Skim-first layout: one-sentence headline derived from issue
+              counts, then a "top affected categories" bullet list with
+              jump links into the category modal, then the full AI prose
+              behind a "Show full analysis" toggle so it doesn't dominate
+              the page on first view. */}
+          {scan.summary && (() => {
+            const critCount = issues.filter((i) => i.severity === 'critical').length;
+            const warnCount = issues.filter((i) => i.severity === 'warning').length;
+            const infoCount = issues.filter((i) => i.severity === 'info').length;
+
+            // Find the 3 categories with the most critical findings; fall
+            // back to most-warning when an org has zero criticals so the
+            // bullet list is still useful.
+            const byCat = new Map<string, { critical: number; warning: number; total: number }>();
+            for (const i of issues) {
+              const e = byCat.get(i.category) ?? { critical: 0, warning: 0, total: 0 };
+              if (i.severity === 'critical') e.critical += 1;
+              else if (i.severity === 'warning') e.warning += 1;
+              e.total += 1;
+              byCat.set(i.category, e);
+            }
+            const topCats = [...byCat.entries()]
+              .sort(([, a], [, b]) => {
+                if (a.critical !== b.critical) return b.critical - a.critical;
+                if (a.warning !== b.warning) return b.warning - a.warning;
+                return b.total - a.total;
+              })
+              .slice(0, 3)
+              .filter(([, c]) => c.total > 0);
+
+            // Headline — derived deterministically from counts so we don't
+            // depend on the AI summary having a single sentence we can
+            // pull. Phrasing follows the doc's "Your org has X critical
+            // issues centred on Y..." pattern.
+            const headline =
+              critCount === 0 && warnCount === 0 && infoCount === 0
+                ? 'Your org is clean across all 182 health checks.'
+                : critCount > 0
+                ? `Your org has ${critCount} critical issue${critCount !== 1 ? 's' : ''}${
+                    topCats.length > 0
+                      ? ' centred on ' + topCats.slice(0, 2).map(([c]) => getCategoryLabel(c)).join(' and ')
+                      : ''
+                  }.`
+                : warnCount > 0
+                ? `Your org is critical-clean but has ${warnCount} warning${warnCount !== 1 ? 's' : ''} worth reviewing.`
+                : `Your org has ${infoCount} best-practice nudge${infoCount !== 1 ? 's' : ''}.`;
+
+            return (
+              <div className="bg-gradient-to-r from-blue-50 to-teal-50 dark:from-blue-900/20 dark:to-teal-900/20 rounded-2xl border border-blue-100 dark:border-blue-800 p-6 mb-8">
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 bg-white dark:bg-gray-800 rounded-xl flex items-center justify-center shadow-sm flex-shrink-0">
+                    <Sparkles className="w-7 h-7 text-blue-600 dark:text-blue-400" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">AI-Powered Analysis</h3>
+                    <p className="text-gray-700 dark:text-gray-200 font-medium mb-3">{headline}</p>
+
+                    {topCats.length > 0 && (
+                      <ul className="space-y-1.5 mb-3">
+                        {topCats.map(([cat, counts]) => {
+                          const parts: string[] = [];
+                          if (counts.critical > 0) parts.push(`${counts.critical} critical`);
+                          if (counts.warning > 0) parts.push(`${counts.warning} warning${counts.warning !== 1 ? 's' : ''}`);
+                          return (
+                            <li key={cat} className="flex items-start gap-2 text-sm">
+                              <span className="text-blue-500 mt-1">&bull;</span>
+                              <button
+                                type="button"
+                                onClick={() => setSelectedCategory(cat)}
+                                className="text-left text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition"
+                              >
+                                <span className="font-semibold">{getCategoryLabel(cat)}</span>
+                                <span className="text-gray-500 dark:text-gray-400">
+                                  {' '}— {parts.join(', ')}
+                                  {' '}
+                                  <span className="text-blue-600 dark:text-blue-400">→ View</span>
+                                </span>
+                              </button>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    )}
+
+                    <details className="group">
+                      <summary className="cursor-pointer list-none inline-flex items-center gap-1 text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline">
+                        <ChevronRight className="w-4 h-4 group-open:rotate-90 transition-transform" />
+                        Show full analysis
+                      </summary>
+                      <p className="mt-3 text-sm text-gray-600 dark:text-gray-300 leading-relaxed whitespace-pre-line">{scan.summary}</p>
+                    </details>
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
 
           {/* ===== REMEDIATION PLAN ===== */}
           {issues.length > 0 && (
