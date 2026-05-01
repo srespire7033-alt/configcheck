@@ -23,6 +23,11 @@ function DashboardContent() {
 
   const successMsg = searchParams.get('success');
   const errorMsg = searchParams.get('error');
+  // Workspace-switch confirmation banner — set by TeamSwitcher when the user
+  // changes context. Dismissable; auto-clears the query param so it doesn't
+  // re-appear on refresh.
+  const switchedLabel = searchParams.get('switched');
+  const [switchedDismissed, setSwitchedDismissed] = useState(false);
 
   // Refetch orgs on mount AND when page becomes visible/focused again
   // (Next.js client-side router cache can serve stale data on back-navigation)
@@ -199,6 +204,36 @@ function DashboardContent() {
   return (
     <div>
       <ConnectOrgModal isOpen={connectModalOpen} onClose={() => setConnectModalOpen(false)} />
+
+      {/* Workspace-switch confirmation banner */}
+      {switchedLabel && !switchedDismissed && (
+        <div className="mb-6 flex items-start gap-3 p-4 bg-blue-50 border border-blue-200 dark:bg-blue-950/30 dark:border-blue-900/50 rounded-xl animate-in fade-in slide-in-from-top-1 duration-200">
+          <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900/40 rounded-lg flex items-center justify-center flex-shrink-0">
+            <CheckCircle className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-blue-900 dark:text-blue-300">
+              You&apos;re now viewing <span className="font-bold">{switchedLabel}</span>
+            </p>
+            <p className="text-xs text-blue-700 dark:text-blue-400 mt-0.5">
+              {orgs.length} org{orgs.length !== 1 ? 's' : ''} visible in this workspace
+            </p>
+          </div>
+          <button
+            onClick={() => {
+              setSwitchedDismissed(true);
+              // Clear the query param so a refresh doesn't re-show the banner
+              const url = new URL(window.location.href);
+              url.searchParams.delete('switched');
+              window.history.replaceState({}, '', url.toString());
+            }}
+            className="p-1 text-blue-500 hover:text-blue-700 hover:bg-blue-100 dark:hover:bg-blue-900/40 rounded-lg transition flex-shrink-0"
+            aria-label="Dismiss"
+          >
+            <Plus className="w-4 h-4 rotate-45" />
+          </button>
+        </div>
+      )}
 
       {/* Success/Error Messages */}
       {successMsg && (

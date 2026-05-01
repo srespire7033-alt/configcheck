@@ -62,7 +62,16 @@ export function TeamSwitcher() {
         body: JSON.stringify({ team_id: teamId }),
       });
       if (res.ok) {
-        window.location.reload();
+        // Pass the new workspace label as a query param so the dashboard
+        // can show a confirmation banner — "You're now viewing X · N orgs"
+        // — instead of silently swapping the org list under the user's feet.
+        const switchedLabel = teamId
+          ? teams.find((t) => t.id === teamId)?.name || 'team'
+          : 'My workspace';
+        const params = new URLSearchParams();
+        params.set('switched', switchedLabel);
+        // Land on the dashboard so the org list refreshes for the new context.
+        window.location.href = `/dashboard?${params.toString()}`;
       }
     } catch {
       // silently fail
