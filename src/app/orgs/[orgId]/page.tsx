@@ -35,6 +35,10 @@ export default function OrgDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [scanning, setScanning] = useState(false);
   const [allScans, setAllScans] = useState<DBScan[]>([]);
+  // The most recent FAILED scan if it occurred after the displayed completed
+  // scan — surfaces "the scan you ran 3 minutes ago died" without forcing the
+  // user to dig through History to find out why.
+  const [recentFailedScan, setRecentFailedScan] = useState<DBScan | null>(null);
   const [schedules, setSchedules] = useState<DBScanSchedule[]>([]);
   const [showScheduleModal, setShowScheduleModal] = useState(false);
   const [showExportMenu, setShowExportMenu] = useState(false);
@@ -130,6 +134,18 @@ export default function OrgDetailPage() {
             pollForScan(runningScan.id);
           }
         }
+
+        // Detect any failed scans newer than our latest completed scan, so
+        // we can show a banner explaining why the user's recent attempt didn't
+        // produce results. Without this, the page silently shows old data and
+        // the user has no idea their last 3 scans died.
+        const latestCompleted = completedScans[0] ?? null;
+        const failedAfterLastCompleted = scans.find((s: DBScan) => {
+          if (s.status !== 'failed') return false;
+          if (!latestCompleted) return true;
+          return new Date(s.created_at).getTime() > new Date(latestCompleted.created_at).getTime();
+        }) || null;
+        setRecentFailedScan(failedAfterLastCompleted);
 
         // Use the latest COMPLETED scan, not running/failed ones
         const latestScan = completedScans.length > 0 ? completedScans[0] : (scans.length > 0 ? scans[0] : null);
@@ -507,6 +523,48 @@ export default function OrgDetailPage() {
         </div>
       ) : (
         <>
+          {/* Recent-failure banner — shown when a scan failed AFTER the latest
+              completed scan. Explains why the data below is stale and how to
+              recover, instead of leaving the user guessing why "Run scan" did
+              nothing. */}
+          {recentFailedScan && (
+            <div className="mb-6 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 rounded-2xl p-4 sm:p-5">
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 bg-red-100 dark:bg-red-900/50 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <AlertCircle className="w-4 h-4 text-red-600 dark:text-red-400" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-red-800 dark:text-red-300">
+                    Last scan failed {formatTimeAgo(recentFailedScan.created_at)}
+                  </p>
+                  <p className="text-sm text-red-700 dark:text-red-400 mt-1 break-words">
+                    {recentFailedScan.error_message ||
+                      'No error detail recorded. The scan failed before it could complete — most often because the Salesforce session expired or the OAuth token was revoked.'}
+                  </p>
+                  <p className="text-xs text-red-600/80 dark:text-red-400/80 mt-2">
+                    The data shown below is from the most recent successful scan. Try reconnecting the org and running a new scan.
+                  </p>
+                  <div className="flex items-center gap-2 mt-3">
+                    <button
+                      onClick={handleScan}
+                      disabled={scanning}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg disabled:opacity-50 transition"
+                    >
+                      <RefreshCw className={`w-3.5 h-3.5 ${scanning ? 'animate-spin' : ''}`} />
+                      {scanning ? 'Retrying…' : 'Retry scan'}
+                    </button>
+                    <button
+                      onClick={() => setRecentFailedScan(null)}
+                      className="px-3 py-1.5 text-xs font-medium text-red-700 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40 rounded-lg transition"
+                    >
+                      Dismiss
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* ===== HEALTH SCORE CARD — matches ideation exactly ===== */}
           <div className="bg-white dark:bg-[#111827] rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-4 sm:p-6 lg:p-8 mb-8">
             <div className="flex flex-col lg:flex-row items-center gap-6 lg:gap-12">

@@ -601,7 +601,10 @@ export default function ScanHistoryPage() {
                               {score}
                             </span>
                           ) : (
-                            <span className="text-sm text-gray-400">\u2014</span>
+                            // String escapes don't get processed inside JSX text
+                            // (was rendering literal "\u2014"). Use the actual
+                            // em-dash character or an entity instead.
+                            <span className="text-sm text-gray-400">&mdash;</span>
                           )}
                         </td>
                         <td className="px-4 py-3.5">
@@ -640,9 +643,18 @@ export default function ScanHistoryPage() {
                               Completed
                             </span>
                           ) : scan.status === 'failed' ? (
-                            <span className="inline-flex items-center gap-1 text-xs font-medium text-red-700 dark:text-red-400">
+                            <span
+                              className="inline-flex items-center gap-1 text-xs font-medium text-red-700 dark:text-red-400 cursor-help"
+                              title={
+                                scan.error_message ||
+                                'No error detail recorded. Most common causes: Salesforce session expired, OAuth token revoked, or the org went offline mid-scan. Re-run the scan to retry.'
+                              }
+                            >
                               <XCircle className="w-3.5 h-3.5" />
                               Failed
+                              {scan.error_message && (
+                                <span className="ml-1 underline decoration-dotted">why?</span>
+                              )}
                             </span>
                           ) : (
                             <Badge variant="default">{scan.status}</Badge>
