@@ -566,6 +566,49 @@ export default function OrgDetailPage() {
             </div>
           )}
 
+          {/* Data observed panel — only shown for ARM scans. Surfaces the
+              per-object row counts ConfigCheck observed during the fetch
+              so the user can verify against their org reality (e.g. "we
+              saw 0 selling models but you know there should be 50 — that
+              means a permissions issue, not a clean configuration"). */}
+          {scan.product_type === 'arm' && (() => {
+            const meta = scan.metadata as { data_fetched?: Record<string, number> | null } | null;
+            const dataFetched = meta?.data_fetched || {};
+            if (Object.keys(dataFetched).length === 0) return null;
+            const entries = Object.entries(dataFetched).sort((a, b) => Number(b[1]) - Number(a[1]));
+            const populated = entries.filter(([, v]) => Number(v) > 0);
+            const empty = entries.filter(([, v]) => Number(v) === 0);
+            const labelize = (k: string) =>
+              k.replace(/([A-Z])/g, ' $1').replace(/^./, (c) => c.toUpperCase()).trim();
+            return (
+              <details className="mb-6 bg-blue-50/40 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900/40 rounded-2xl group">
+                <summary className="cursor-pointer px-4 sm:px-5 py-3 flex items-center gap-3 text-sm font-medium text-blue-800 dark:text-blue-300">
+                  <ChevronRight className="w-4 h-4 transition-transform group-open:rotate-90 flex-shrink-0" />
+                  ARM data observed: <span className="font-bold">{populated.length}</span> of {entries.length} object types had data
+                  <span className="text-xs font-normal text-blue-600 dark:text-blue-400 ml-1">(click to verify against your org)</span>
+                </summary>
+                <div className="px-4 sm:px-5 pb-4 pt-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-1 text-xs">
+                  {populated.map(([k, v]) => (
+                    <div key={k} className="flex items-center justify-between py-0.5 border-b border-blue-100/60 dark:border-blue-900/30">
+                      <span className="text-gray-700 dark:text-gray-300">{labelize(k)}</span>
+                      <span className="font-mono font-semibold text-blue-700 dark:text-blue-300">{v}</span>
+                    </div>
+                  ))}
+                  {empty.length > 0 && (
+                    <div className="col-span-full mt-2 pt-2 border-t border-blue-100 dark:border-blue-900/40">
+                      <div className="text-[11px] text-gray-500 dark:text-gray-400 mb-1">
+                        Empty (no rows returned, {empty.length}):
+                      </div>
+                      <div className="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed">
+                        {empty.map(([k]) => labelize(k)).join(' · ')}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </details>
+            );
+          })()}
+
           {/* Silent-query-failures warning — surfaces ARM SOQL queries that
               failed and returned empty so we don't trust an artificially-high
               score. Without this, missing data looked exactly like a clean
