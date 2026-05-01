@@ -1148,7 +1148,10 @@ export default function OrgDetailPage() {
               e.total += 1;
               byCat.set(i.category, e);
             }
-            const topCats = [...byCat.entries()]
+            // Use Array.from rather than spread on a MapIterator — the
+            // tsconfig target doesn't enable downlevelIteration, so spreading
+            // an iterator typechecks-fails even though it works at runtime.
+            const topCats = Array.from(byCat.entries())
               .sort(([, a], [, b]) => {
                 if (a.critical !== b.critical) return b.critical - a.critical;
                 if (a.warning !== b.warning) return b.warning - a.warning;

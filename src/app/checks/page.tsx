@@ -5,7 +5,7 @@ import { allChecks } from '@/lib/analysis/checks';
 import { allBillingChecks } from '@/lib/analysis/billing-checks';
 import { armChecks } from '@/lib/analysis/arm-checks';
 import { getCategoryLabel } from '@/lib/utils';
-import type { Issue, IssueSeverity } from '@/types';
+import type { IssueSeverity } from '@/types';
 
 export const metadata: Metadata = {
   title: 'All 182 Health Checks — ConfigCheck',
@@ -128,14 +128,15 @@ function ChecksGroup({
 }
 
 export default function ChecksPage() {
-  // Helper because allBillingChecks/armChecks have category typed narrower
-  // than the shared CheckRow we use here — toRow widens for the UI layer.
-  const cpqRows = allChecks.map((c) => toRow({ ...c, run: c.run as unknown as () => Promise<Issue[]> }));
+  // toRow only needs the metadata fields (id, name, category, severity,
+  // description) — drop `run` and any other check-engine internals before
+  // passing to the UI layer.
+  const cpqRows = allChecks.map((c) => toRow({ id: c.id, name: c.name, category: c.category, severity: c.severity, description: c.description }));
   const billingRows = allBillingChecks.map((c) =>
-    toRow({ ...c, run: c.run as unknown as () => Promise<Issue[]> })
+    toRow({ id: c.id, name: c.name, category: c.category, severity: c.severity, description: c.description })
   );
   const armRows = armChecks.map((c) =>
-    toRow({ ...c, run: c.run as unknown as () => Promise<Issue[]> })
+    toRow({ id: c.id, name: c.name, category: c.category, severity: c.severity, description: c.description })
   );
 
   return (

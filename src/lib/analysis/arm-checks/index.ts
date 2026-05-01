@@ -1,4 +1,4 @@
-import type { ARMHealthCheck, ARMData, Issue } from '@/types';
+import type { ARMHealthCheck, ARMData, Issue, RLMAsset, RLMCostBook } from '@/types';
 
 /**
  * ARM (Revenue Cloud / RLM) v1 health checks.
