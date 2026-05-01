@@ -147,6 +147,25 @@ export async function handleOAuthCallback(
  * Create a JSForce connection from stored tokens.
  * Pass orgId to enable auto-persist of refreshed tokens to the database.
  */
+/**
+ * Salesforce REST API version we connect with.
+ *
+ * jsforce defaults to v50.0 (Winter '21, October 2020) which is far older
+ * than ConfigCheck needs. Most ARM / Revenue Cloud / RLM standard objects
+ * were introduced in later releases:
+ *   - ProductSellingModel, ProductRelatedComponent  → v57 (Spring '23)
+ *   - AttributeDefinition (RLM schema)              → v58 (Summer '23)
+ *   - RateCard, RateCardEntry                       → v59 (Winter '24)
+ *   - PricingProcedure, ContextDefinition           → v60 (Spring '24)
+ *   - DecisionTable, FulfillmentStepDefinition      → v61 (Summer '24)
+ *
+ * At v50, ALL of these objects come back as INVALID_TYPE — Salesforce's
+ * schema metadata at that version literally doesn't know they exist,
+ * regardless of how much data the org actually has. Bumping to v62
+ * (Spring '26 GA at this commit's date) so we see everything current.
+ */
+const SF_API_VERSION = '62.0';
+
 export function createConnection(
   instanceUrl: string,
   accessToken: string,
@@ -158,6 +177,7 @@ export function createConnection(
     instanceUrl,
     accessToken,
     refreshToken,
+    version: SF_API_VERSION,
   });
 
   conn.on('refresh', (newAccessToken: string) => {
