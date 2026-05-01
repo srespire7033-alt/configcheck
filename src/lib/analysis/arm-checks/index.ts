@@ -284,38 +284,31 @@ export const armChecks: ARMHealthCheck[] = [
     category: 'arm_pricing_procedures',
     severity: 'warning',
     description:
-      'Active PricingProcedure records with no ResolutionPolicy set',
+      'PricingProcedure records that lack a Pricing usage type',
     run: async (data: ARMData): Promise<Issue[]> => {
-      // If ResolutionPolicy field doesn't exist on this org's ExpressionSet
-      // schema (older API version, or field stripped by safeARMQuery's
-      // INVALID_FIELD retry), every record will have it as undefined. Skip
-      // rather than flag every record as a false positive.
-      const fieldExists = data.pricingProcedures.some(
-        (p) => p.ResolutionPolicy !== undefined
-      );
-      if (!fieldExists) return [];
-
-      const missing = data.pricingProcedures.filter(
-        (p) => p.IsActive !== false && !p.ResolutionPolicy
-      );
+      // ExpressionSet schema at v66 dropped ResolutionPolicy / IsActive in
+      // favor of UsageType + InterfaceSourceType. The Pricing UsageType is
+      // what makes a procedure participate in pricing — anything without
+      // a usage type set is mis-configured.
+      const missing = data.pricingProcedures.filter((p) => !p.UsageType);
       if (missing.length === 0) return [];
       return [
         {
           check_id: 'ARM-006',
           category: 'arm_pricing_procedures',
           severity: 'warning',
-          title: `${missing.length} pricing procedure(s) without resolution policy`,
-          description: `${missing.length} active PricingProcedure(s) have no ResolutionPolicy. Without one, ambiguous price-rule matches don't have a deterministic winner. Examples: ${missing
+          title: `${missing.length} pricing procedure(s) without UsageType`,
+          description: `${missing.length} ExpressionSet procedure(s) have no UsageType. Without one, the procedure isn't routed to the pricing engine. Examples: ${missing
             .slice(0, 3)
-            .map((p) => `"${p.Name}"`)
+            .map((p) => `"${p.ApiName}"`)
             .join(', ')}.`,
           impact:
-            'When multiple pricing rules could apply to the same line, the result becomes order-dependent and harder to reproduce.',
+            'A procedure without UsageType won\'t participate in price calculation and silently does nothing.',
           recommendation:
-            'Set a ResolutionPolicy (e.g., HighestPriority) on every active pricing procedure.',
+            'Set UsageType to "Pricing" or "PricingDiscovery" on every pricing procedure.',
           affected_records: missing.slice(0, 25).map((p) => ({
             id: p.Id,
-            name: p.Name,
+            name: p.ApiName,
             type: 'PricingProcedure',
           })),
         },
@@ -1180,28 +1173,27 @@ export const armChecks: ARMHealthCheck[] = [
     category: 'arm_pricing_procedures',
     severity: 'info',
     description:
-      'More than one active PricingProcedure exists — usually only one is primary',
+      'More than one PricingProcedure is defined — usually only one is primary',
     run: async (data: ARMData): Promise<Issue[]> => {
-      // Treat IsActive=true OR undefined as "active" — the field may be
-      // stripped from the query if the org's ExpressionSet schema doesn't
-      // expose it, in which case being in the result set already implies
-      // it's a current/published procedure. Filter strictly false-out.
-      const active = data.pricingProcedures.filter((p) => p.IsActive !== false);
-      if (active.length <= 1) return [];
+      // ExpressionSet at v66 doesn't expose IsActive — published procedures
+      // are simply present in the result set. Multiple procedures with the
+      // same UsageType is the drift signal.
+      const pricing = data.pricingProcedures.filter((p) => p.UsageType === 'Pricing');
+      if (pricing.length <= 1) return [];
       return [
         {
           check_id: 'ARM-027',
           category: 'arm_pricing_procedures',
           severity: 'info',
-          title: `${active.length} pricing procedures are active`,
-          description: `${active.length} PricingProcedure records are active simultaneously: ${active.slice(0, 5).map((p) => `"${p.Name}"`).join(', ')}${active.length > 5 ? `, +${active.length - 5} more` : ''}. Most orgs operate with a single primary procedure plus a small number of overrides — having many active suggests configuration drift.`,
+          title: `${pricing.length} pricing procedures defined`,
+          description: `${pricing.length} ExpressionSet records with UsageType=Pricing exist simultaneously: ${pricing.slice(0, 5).map((p) => `"${p.ApiName}"`).join(', ')}${pricing.length > 5 ? `, +${pricing.length - 5} more` : ''}. Most orgs operate with a single primary procedure plus a small number of overrides — having many suggests configuration drift.`,
           impact:
             'Pricing rule resolution becomes harder to reason about, especially when multiple procedures could match the same quote line.',
           recommendation:
-            'Audit each active procedure. Deactivate any that are no longer needed, or document why each one needs to stay active.',
-          affected_records: active.slice(0, 25).map((p) => ({
+            'Audit each pricing procedure. Retire any no longer needed, or document why each one needs to stay.',
+          affected_records: pricing.slice(0, 25).map((p) => ({
             id: p.Id,
-            name: p.Name,
+            name: p.ApiName,
             type: 'PricingProcedure',
           })),
         },

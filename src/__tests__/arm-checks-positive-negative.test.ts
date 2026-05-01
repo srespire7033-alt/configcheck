@@ -199,27 +199,22 @@ describe('ARM check simulation — positive (clean) + negative (broken) scenario
     });
   });
 
-  // ─── ARM-006 Pricing procedure without resolution policy ─────────
-  describe('ARM-006 Pricing procedure without resolution policy', () => {
+  // ─── ARM-006 Pricing procedure without UsageType ─────────────────
+  describe('ARM-006 Pricing procedure without UsageType', () => {
     const c = getCheck('ARM-006');
-    it('FIRES on active procedure with null ResolutionPolicy', async () => {
+    it('FIRES on procedure with null UsageType', async () => {
       const d = empty();
-      // Use explicit null so the check can tell the field exists in the
-      // schema (vs. undefined, which means the field was stripped from
-      // the SOQL query — in which case the check correctly skips).
-      d.pricingProcedures = [{ Id: 'pp1', Name: 'Default', IsActive: true, ResolutionPolicy: null }];
+      d.pricingProcedures = [{ Id: 'pp1', ApiName: 'Default', UsageType: null }];
       expect(await c.run(d)).toHaveLength(1);
     });
-    it('STAYS SILENT when ResolutionPolicy field doesn\'t exist on this org\'s ExpressionSet schema', async () => {
+    it('STAYS SILENT when no procedures present', async () => {
       const d = empty();
-      // No ResolutionPolicy property at all — same shape as if safeARMQuery's
-      // INVALID_FIELD retry stripped it. Should not flag every record as missing.
-      d.pricingProcedures = [{ Id: 'pp1', Name: 'Default', IsActive: true }];
+      d.pricingProcedures = [];
       expect(await c.run(d)).toHaveLength(0);
     });
-    it('PASSES with resolution policy set', async () => {
+    it('PASSES with UsageType set to Pricing', async () => {
       const d = empty();
-      d.pricingProcedures = [{ Id: 'pp1', Name: 'Default', IsActive: true, ResolutionPolicy: 'HighestPriority' }];
+      d.pricingProcedures = [{ Id: 'pp1', ApiName: 'Default', UsageType: 'Pricing' }];
       expect(await c.run(d)).toHaveLength(0);
     });
   });

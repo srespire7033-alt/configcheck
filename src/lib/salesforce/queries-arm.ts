@@ -303,16 +303,16 @@ export async function fetchAllARMData(conn: Connection): Promise<ARMData> {
        FROM ProductCategoryProduct
        LIMIT 5000`
     ),
-    // Pricing Procedures live on the standard ExpressionSet sObject in
-    // the Business Rules Engine. Filtering to the 'PricingProcedure' type
-    // discriminator and only the latest active version excludes
-    // eligibility rules / decision-table expression sets and old versions.
-    // (User confirmed via direct URL inspection: /lightning/r/ExpressionSet/...)
+    // Pricing Procedures live on the standard ExpressionSet sObject. At
+    // API v66 the schema dropped ExpressionSetType / IsActive / ResolutionPolicy
+    // / IsLatestVersion in favor of UsageType + InterfaceSourceType +
+    // ApiName + ExpressionSetDefinitionId. UsageType discriminates
+    // pricing-related procedures from generic Business Rules Engine sets.
     safeARMQuery(
       conn,
-      `SELECT Id, Name, IsActive, ExpressionSetType, ResolutionPolicy, IsLatestVersion
+      `SELECT Id, ApiName, UsageType, InterfaceSourceType, ExpressionSetDefinitionId
        FROM ExpressionSet
-       WHERE ExpressionSetType = 'PricingProcedure'
+       WHERE UsageType IN ('Pricing', 'PricingDiscovery')
        LIMIT 200`
     ),
     safeARMQuery(
@@ -540,7 +540,7 @@ export async function fetchAllARMData(conn: Connection): Promise<ARMData> {
     safeARMQuery(
       conn,
       `SELECT Id, AccountingPeriodId, Status
-       FROM LegalEntityAccountingPeriod
+       FROM LegalEntyAccountingPeriod
        LIMIT 2000`
     ),
     // Contract Clauses

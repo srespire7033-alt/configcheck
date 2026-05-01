@@ -750,11 +750,10 @@ export interface RLMProductCategoryProduct {
 // clause changes.
 export interface RLMPricingProcedure {
   Id: string;
-  Name: string;
-  IsActive?: boolean;
-  ExpressionSetType?: string | null;
-  ResolutionPolicy?: string | null;
-  IsLatestVersion?: boolean;
+  ApiName: string;
+  UsageType?: string | null;
+  InterfaceSourceType?: string | null;
+  ExpressionSetDefinitionId?: string | null;
 }
 
 // Decision tables / expression sets — Business Rules Engine surfaces

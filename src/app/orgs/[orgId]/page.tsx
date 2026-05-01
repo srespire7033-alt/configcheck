@@ -631,7 +631,7 @@ export default function OrgDetailPage() {
               generalLedgerAccounts: 'GeneralLedgerAccount',
               generalLedgerAcctAsgntRules: 'GeneralLedgerAcctAsgntRule',
               accountingPeriods: 'AccountingPeriod',
-              legalEntityAccountingPeriods: 'LegalEntityAccountingPeriod',
+              legalEntityAccountingPeriods: 'LegalEntyAccountingPeriod',
               documentClauseSets: 'DocumentClauseSet',
               documentClauses: 'DocumentClause',
               productQualifications: 'ProductQualification',
