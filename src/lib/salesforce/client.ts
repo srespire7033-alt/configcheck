@@ -163,11 +163,15 @@ export async function handleOAuthCallback(
  * schema metadata at that version literally doesn't know they exist,
  * regardless of how much data the org actually has.
  *
- * Pinned to v63 (Summer '26) because the Revenue Cloud Developer Guide
- * we wrote ARM checks against is the Summer '26 edition — using anything
- * older risks INVALID_FIELD on newly-added fields the guide documents.
+ * Pinned to v66 (Spring '26) — the latest GA release at time of writing.
+ * Bumped from v63 because several RLM Billing/Tax objects (BillingArrangement,
+ * BillingArrangementLine, TaxTreatmentItem, PaymentRetryRuleSet,
+ * LegalEntityAccountingPeriod) were returning INVALID_TYPE on orgs that
+ * demonstrably have those objects — the schema metadata at v63 didn't
+ * surface them. The Revenue Cloud Developer Guide we audit against is the
+ * Spring '26 edition, which matches v66.
  */
-const SF_API_VERSION = '63.0';
+const SF_API_VERSION = '66.0';
 
 export function createConnection(
   instanceUrl: string,
