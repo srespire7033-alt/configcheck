@@ -729,17 +729,41 @@ export default function OrgDetailPage() {
                     </div>
                   )}
 
-                  {/* Errored — auth, network, permission denied mid-query */}
-                  {errored.length > 0 && (
-                    <div className="mt-2 pt-2 bg-red-50/60 dark:bg-red-950/20 rounded-lg px-3 py-2 -mx-1">
-                      <div className="text-[11px] font-semibold text-red-800 dark:text-red-300 mb-1">
-                        Query errored ({errored.length}) — see scan.metadata.query_failures
+                  {/* Errored — auth, network, permission denied mid-query.
+                      Surface the actual Salesforce errorCode + message so the
+                      user (and we) can diagnose without digging into raw
+                      metadata. */}
+                  {errored.length > 0 && (() => {
+                    const failures = (scan.metadata as { query_failures?: Array<{ object: string; errorCode: string; errorMsg: string }> | null } | null)?.query_failures || [];
+                    const failureBySObject = new Map<string, { errorCode: string; errorMsg: string }>();
+                    for (const f of failures) failureBySObject.set(f.object, { errorCode: f.errorCode, errorMsg: f.errorMsg });
+                    return (
+                      <div className="mt-2 pt-2 bg-red-50/60 dark:bg-red-950/20 rounded-lg px-3 py-2 -mx-1">
+                        <div className="text-[11px] font-semibold text-red-800 dark:text-red-300 mb-1">
+                          Query errored ({errored.length})
+                        </div>
+                        <div className="space-y-1.5">
+                          {errored.map(([k]) => {
+                            const sObject = dataKeyToSObject[k] || k;
+                            const fail = failureBySObject.get(sObject);
+                            return (
+                              <div key={k} className="text-[11px] text-red-700 dark:text-red-400 leading-relaxed">
+                                <span className="font-medium">{labelize(k)}</span>
+                                {fail && (
+                                  <>
+                                    {' '}<span className="font-mono text-[10px] px-1 py-0.5 rounded bg-red-100 dark:bg-red-900/40">{fail.errorCode}</span>
+                                    {fail.errorMsg && fail.errorMsg !== 'no message' && (
+                                      <div className="text-[10px] text-red-600/80 dark:text-red-400/80 mt-0.5 ml-1 break-words font-mono">{fail.errorMsg}</div>
+                                    )}
+                                  </>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
                       </div>
-                      <div className="text-[11px] text-red-700 dark:text-red-400 leading-relaxed">
-                        {errored.map(([k]) => labelize(k)).join(' · ')}
-                      </div>
-                    </div>
-                  )}
+                    );
+                  })()}
 
                   {/* Truly empty — object visible, just no rows */}
                   {trulyEmpty.length > 0 && (
