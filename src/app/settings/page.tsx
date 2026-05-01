@@ -3,9 +3,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-  Save, LogOut, Upload, X,
+  Save, Upload, X,
   Bell, BellOff, CheckCircle2, Zap,
-  Clock, ExternalLink, User, Palette,
+  Clock, User, Palette,
   CreditCard, Phone, MapPin, Briefcase, Globe, Mail,
   AlertTriangle, Download, Trash2, AlertCircle, ShieldCheck
 } from 'lucide-react';
@@ -167,6 +167,17 @@ export default function SettingsPage() {
   const [savingBranding, setSavingBranding] = useState(false);
   const [savedBranding, setSavedBranding] = useState(false);
   const [logoError, setLogoError] = useState<string | null>(null);
+  // S9 — inline email-change flow. Submitting calls supabase.auth.updateUser
+  // which fires verification emails to both old and new addresses; account
+  // stays on the current email until the new one is confirmed.
+  const [emailChangeOpen, setEmailChangeOpen] = useState(false);
+  const [newEmail, setNewEmail] = useState('');
+  const [emailChanging, setEmailChanging] = useState(false);
+  const [emailChangeMsg, setEmailChangeMsg] = useState<{ kind: 'error' | 'ok'; text: string } | null>(null);
+  // S12 — in-app upgrade modal so users don't bounce out to /#pricing
+  // and lose context. Initial implementation: side-by-side tier cards
+  // with monthly/annual toggle. Checkout integration is wired separately.
+  const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
 
   // Danger zone states
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -432,6 +443,36 @@ export default function SettingsPage() {
     } finally { setSavingBranding(false); }
   }
 
+  async function handleEmailChange() {
+    const trimmed = newEmail.trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
+      setEmailChangeMsg({ kind: 'error', text: 'Please enter a valid email address.' });
+      return;
+    }
+    if (trimmed === email.toLowerCase()) {
+      setEmailChangeMsg({ kind: 'error', text: 'That\'s already your current email.' });
+      return;
+    }
+    setEmailChanging(true);
+    setEmailChangeMsg(null);
+    try {
+      const supabase = createClient();
+      const { error } = await supabase.auth.updateUser({ email: trimmed });
+      if (error) {
+        setEmailChangeMsg({ kind: 'error', text: error.message });
+      } else {
+        setEmailChangeMsg({
+          kind: 'ok',
+          text: `We sent a confirmation link to ${trimmed}. Click it to complete the change.`,
+        });
+      }
+    } catch (err) {
+      setEmailChangeMsg({ kind: 'error', text: err instanceof Error ? err.message : 'Failed to send verification' });
+    } finally {
+      setEmailChanging(false);
+    }
+  }
+
   async function handleExportData() {
     setIsExporting(true);
     try {
@@ -524,16 +565,6 @@ export default function SettingsPage() {
               );
             })}
 
-            {/* Sign out at bottom */}
-            <div className="pt-4 mt-4 border-t border-gray-200 dark:border-gray-700">
-              <button
-                onClick={handleSignOut}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-              >
-                <LogOut className="w-4 h-4" />
-                Sign Out
-              </button>
-            </div>
           </div>
         </nav>
 
@@ -555,17 +586,64 @@ export default function SettingsPage() {
                     />
                   </FormField>
                   <FormField label="Email Address" icon={<Mail className="w-4 h-4" />}>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="email"
-                        value={email}
-                        disabled
-                        className="form-input opacity-60 cursor-not-allowed"
-                      />
-                      <span className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded-md whitespace-nowrap flex-shrink-0">
-                        <CheckCircle2 className="w-3 h-3" /> Verified
-                      </span>
-                    </div>
+                    {!emailChangeOpen ? (
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <input
+                          type="email"
+                          value={email}
+                          disabled
+                          className="form-input opacity-80 cursor-not-allowed flex-1 min-w-0"
+                          title={email}
+                        />
+                        <span className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded-md whitespace-nowrap flex-shrink-0">
+                          <CheckCircle2 className="w-3 h-3" /> Verified
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => { setEmailChangeOpen(true); setNewEmail(''); setEmailChangeMsg(null); }}
+                          className="text-xs text-blue-600 dark:text-blue-400 hover:underline font-medium flex-shrink-0"
+                        >
+                          Change email
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <input
+                          type="email"
+                          value={newEmail}
+                          onChange={(e) => setNewEmail(e.target.value)}
+                          placeholder="new-address@company.com"
+                          className="form-input"
+                          autoFocus
+                        />
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={handleEmailChange}
+                            disabled={emailChanging || !newEmail.trim()}
+                            className="px-3 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {emailChanging ? 'Sending…' : 'Send verification'}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => { setEmailChangeOpen(false); setEmailChangeMsg(null); }}
+                            disabled={emailChanging}
+                            className="px-3 py-2 text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          We&apos;ll email a verification link to the new address. Your account stays on {email} until you confirm.
+                        </p>
+                        {emailChangeMsg && (
+                          <p className={`text-xs ${emailChangeMsg.kind === 'error' ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
+                            {emailChangeMsg.text}
+                          </p>
+                        )}
+                      </div>
+                    )}
                   </FormField>
                   <FormField label="Phone Number" icon={<Phone className="w-4 h-4" />}>
                     <input
@@ -606,10 +684,27 @@ export default function SettingsPage() {
                     </select>
                   </FormField>
                 </div>
-                {memberSince && (
-                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-4">Member since {memberSince}</p>
-                )}
                 <SaveBar saving={savingAccount} saved={savedAccount} onSave={saveAccount} />
+                {/* Account-stats footer — replaces the lone "Member since"
+                    line that used to sit awkwardly between the form and
+                    the save bar. Now it's a quick activity snapshot at
+                    the very bottom of the Profile card. */}
+                {memberSince && (
+                  <div className="mt-6 pt-5 border-t border-gray-100 dark:border-gray-800 grid grid-cols-3 gap-4">
+                    <div>
+                      <p className="text-[11px] uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-0.5">Member since</p>
+                      <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">{memberSince}</p>
+                    </div>
+                    <div>
+                      <p className="text-[11px] uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-0.5">All-time scans</p>
+                      <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">{usage?.total_scans ?? '—'}</p>
+                    </div>
+                    <div>
+                      <p className="text-[11px] uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-0.5">Connected orgs</p>
+                      <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">{usage?.connected_orgs ?? '—'}</p>
+                    </div>
+                  </div>
+                )}
               </SectionCard>
 
             </div>
@@ -701,13 +796,12 @@ export default function SettingsPage() {
                       </p>
                     </div>
                   </div>
-                  <a
-                    href="/#pricing"
+                  <button
+                    onClick={() => setUpgradeModalOpen(true)}
                     className="flex items-center gap-1.5 px-5 py-2.5 text-sm font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
                   >
-                    {plan === 'free' ? 'Upgrade' : 'Manage Plan'}
-                    <ExternalLink className="w-3.5 h-3.5" />
-                  </a>
+                    {plan === 'free' ? 'Upgrade' : 'Manage plan'}
+                  </button>
                 </div>
               </SectionCard>
 
@@ -768,16 +862,35 @@ export default function SettingsPage() {
                 </div>
               </SectionCard>
 
-              <SectionCard title="Plan Features" description="What's included in your plan.">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                  {planInfo.features.map((feature) => (
-                    <div key={feature} className="flex items-center gap-2.5 py-2 px-3 rounded-lg bg-green-50 dark:bg-green-900/10 border border-green-100 dark:border-green-900/30">
-                      <CheckCircle2 className="w-4 h-4 text-green-500 flex-shrink-0" />
-                      <span className="text-sm text-gray-700 dark:text-gray-300 font-medium">{feature}</span>
-                    </div>
-                  ))}
-                </div>
-              </SectionCard>
+              {plan === 'free' || plan === 'pro' ? (
+                // S13 — On Free/Pro, frame this card as upgrade-value
+                // (what they unlock by moving up) rather than a list of
+                // features they already have. Enterprise sees nothing —
+                // there's nothing left to upsell.
+                <SectionCard
+                  title={plan === 'free' ? 'Upgrade to unlock' : 'Available on Enterprise'}
+                  description={plan === 'free' ? 'Pro and Enterprise unlock these capabilities on top of your current plan.' : 'Reach out about an Enterprise plan to unlock these.'}
+                >
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    {(plan === 'free' ? PLAN_INFO.pro.features : PLAN_INFO.enterprise.features)
+                      .filter((f) => !planInfo.features.includes(f))
+                      .map((feature) => (
+                        <div key={feature} className="flex items-center gap-2.5 py-2 px-3 rounded-lg bg-blue-50 dark:bg-blue-900/15 border border-blue-100 dark:border-blue-900/30">
+                          <Zap className="w-4 h-4 text-blue-600 dark:text-blue-400 flex-shrink-0" />
+                          <span className="text-sm text-gray-700 dark:text-gray-300 font-medium">{feature}</span>
+                        </div>
+                      ))}
+                  </div>
+                  <div className="mt-4">
+                    <button
+                      onClick={() => setUpgradeModalOpen(true)}
+                      className="text-sm font-semibold text-blue-600 dark:text-blue-400 hover:underline"
+                    >
+                      {plan === 'free' ? 'See plans →' : 'Talk to us →'}
+                    </button>
+                  </div>
+                </SectionCard>
+              ) : null}
             </div>
           )}
 
@@ -1019,6 +1132,12 @@ export default function SettingsPage() {
           )}
         </div>
       </div>
+
+      {/* Upgrade plan modal (S12) — in-app tier comparison so users
+          stay in context. Annual toggle saves ~20%. */}
+      {upgradeModalOpen && (
+        <UpgradeModal currentPlan={plan} onClose={() => setUpgradeModalOpen(false)} />
+      )}
 
       {/* Delete Account Confirmation Modal */}
       {showDeleteModal && (
@@ -1360,6 +1479,142 @@ function NotificationRow({
           enabled ? 'translate-x-5' : 'translate-x-0'
         }`} />
       </button>
+    </div>
+  );
+}
+
+// In-app upgrade modal. Shows the three tiers side-by-side with monthly /
+// annual toggle. Doesn't actually take payment yet — links to /#pricing
+// for checkout — but keeps the comparison and annual-discount math
+// in-app so users don't bounce out of Settings to evaluate.
+function UpgradeModal({ currentPlan, onClose }: { currentPlan: string; onClose: () => void }) {
+  const [annual, setAnnual] = useState(true);
+  const tiers = [
+    {
+      id: 'free',
+      label: 'Free',
+      monthly: 0,
+      tagline: 'Get started',
+      features: PLAN_INFO.free.features,
+      highlight: false,
+    },
+    {
+      id: 'pro',
+      label: 'Pro',
+      monthly: 49,
+      tagline: 'For growing consulting firms',
+      features: PLAN_INFO.pro.features,
+      highlight: true,
+    },
+    {
+      id: 'enterprise',
+      label: 'Enterprise',
+      monthly: null as number | null,
+      tagline: 'Custom for your team',
+      features: PLAN_INFO.enterprise.features,
+      highlight: false,
+    },
+  ];
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={onClose}>
+      <div
+        className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="p-6 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
+          <div>
+            <h3 className="text-lg font-bold text-gray-900 dark:text-white">Choose a plan</h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Switch any time. You&apos;re currently on <span className="font-semibold capitalize">{currentPlan}</span>.</p>
+          </div>
+          <div className="flex items-center gap-2 bg-gray-100 dark:bg-gray-800 rounded-lg p-1 text-xs font-medium">
+            <button
+              onClick={() => setAnnual(false)}
+              className={`px-3 py-1.5 rounded-md transition-colors ${!annual ? 'bg-white dark:bg-gray-900 text-gray-900 dark:text-white shadow-sm' : 'text-gray-500'}`}
+            >
+              Monthly
+            </button>
+            <button
+              onClick={() => setAnnual(true)}
+              className={`px-3 py-1.5 rounded-md transition-colors flex items-center gap-1.5 ${annual ? 'bg-white dark:bg-gray-900 text-gray-900 dark:text-white shadow-sm' : 'text-gray-500'}`}
+            >
+              Annual
+              <span className="text-[10px] font-semibold text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/30 px-1.5 py-0.5 rounded">−20%</span>
+            </button>
+          </div>
+        </div>
+        <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+          {tiers.map((t) => {
+            const annualMonthly = t.monthly !== null ? Math.round(t.monthly * 0.8) : null;
+            const showPrice = annual ? annualMonthly : t.monthly;
+            const isCurrent = t.id === currentPlan;
+            return (
+              <div
+                key={t.id}
+                className={`relative rounded-xl border-2 p-5 flex flex-col ${
+                  t.highlight
+                    ? 'border-blue-500 bg-blue-50/30 dark:bg-blue-900/10'
+                    : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900/50'
+                }`}
+              >
+                {t.highlight && (
+                  <span className="absolute -top-2.5 left-4 text-[10px] font-bold uppercase tracking-wider bg-blue-600 text-white px-2 py-0.5 rounded-full">
+                    Most popular
+                  </span>
+                )}
+                <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1">{t.label}</p>
+                <div className="mb-1">
+                  {showPrice === null ? (
+                    <span className="text-2xl font-bold text-gray-900 dark:text-white">Custom</span>
+                  ) : (
+                    <>
+                      <span className="text-3xl font-bold text-gray-900 dark:text-white">${showPrice}</span>
+                      <span className="text-sm text-gray-500 dark:text-gray-400">/mo</span>
+                      {annual && t.monthly !== null && t.monthly > 0 && (
+                        <span className="text-[11px] text-gray-400 dark:text-gray-500 ml-1.5">billed yearly</span>
+                      )}
+                    </>
+                  )}
+                </div>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">{t.tagline}</p>
+                <ul className="space-y-1.5 mb-5 flex-1">
+                  {t.features.map((f) => (
+                    <li key={f} className="flex items-start gap-2 text-xs text-gray-700 dark:text-gray-300">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-green-500 flex-shrink-0 mt-0.5" />
+                      <span>{f}</span>
+                    </li>
+                  ))}
+                </ul>
+                {isCurrent ? (
+                  <button
+                    disabled
+                    className="w-full py-2.5 text-sm font-semibold rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 cursor-default"
+                  >
+                    Current plan
+                  </button>
+                ) : t.id === 'enterprise' ? (
+                  <a
+                    href="mailto:hello@configcheck.app?subject=Enterprise%20plan%20enquiry"
+                    className="w-full py-2.5 text-sm font-semibold rounded-lg bg-gray-900 dark:bg-white text-white dark:text-gray-900 hover:opacity-90 transition-opacity text-center"
+                  >
+                    Talk to us
+                  </a>
+                ) : (
+                  <a
+                    href="/#pricing"
+                    className={`w-full py-2.5 text-sm font-semibold rounded-lg text-center transition-colors ${
+                      t.highlight
+                        ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                        : 'bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-900 dark:text-white'
+                    }`}
+                  >
+                    {t.id === 'free' ? 'Downgrade' : 'Upgrade'}
+                  </a>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
     </div>
   );
 }

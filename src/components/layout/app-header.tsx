@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 import { Logo } from '@/components/ui/logo';
 import { useTheme } from '@/components/theme-provider';
 import { TeamSwitcher } from '@/components/team/team-switcher';
+import { UserMenu } from '@/components/layout/user-menu';
 
 export function AppHeader() {
   const pathname = usePathname();
@@ -58,6 +59,7 @@ export function AppHeader() {
             >
               {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
             </button>
+            <UserMenu />
           </nav>
         </div>
       </div>
