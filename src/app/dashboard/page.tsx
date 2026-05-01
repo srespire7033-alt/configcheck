@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Plus, CheckCircle, AlertCircle, Cloud, GitCompare } from 'lucide-react';
+import { Plus, CheckCircle, AlertCircle, Cloud, GitCompare, RefreshCw } from 'lucide-react';
 import { OrgCard } from '@/components/dashboard/org-card';
 import { DisconnectedOrgs } from '@/components/dashboard/disconnected-orgs';
 import { OnboardingChecklist } from '@/components/dashboard/onboarding-checklist';
@@ -18,6 +18,13 @@ function DashboardContent() {
   const [orgsRefreshKey, setOrgsRefreshKey] = useState(0);
   const [loading, setLoading] = useState(true);
   const [scanningOrg, setScanningOrg] = useState<string | null>(null);
+  // Scan-all progress: tracks the running batch so we can show a banner
+  // and disable the trigger while it's in flight.
+  const [scanAllProgress, setScanAllProgress] = useState<{
+    current: number;
+    total: number;
+    currentOrgName: string;
+  } | null>(null);
   const [checklistProgress, setChecklistProgress] = useState<ChecklistProgress | null>(null);
   const [checklistDismissed, setChecklistDismissed] = useState(true); // default hidden
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -147,6 +154,99 @@ function DashboardContent() {
 
   function handleConnectOrg() {
     setConnectModalOpen(true);
+  }
+
+  // Pick the best product type for an org based on installed packages,
+  // running detection if it hasn't been done. Shared by handleScan and
+  // handleScanAll so we don't duplicate the priority logic.
+  async function pickProductType(orgId: string): Promise<'cpq' | 'cpq_billing' | 'arm'> {
+    const org = orgs.find((o) => o.id === orgId);
+    let packages = org?.installed_packages || [];
+    if (packages.length === 0) {
+      try {
+        const detectRes = await fetch('/api/orgs/detect-packages', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ organizationId: orgId }),
+        });
+        if (detectRes.ok) {
+          const detectData = await detectRes.json();
+          packages = detectData.packages || [];
+        }
+      } catch (err) {
+        console.error('Package detection failed before scan:', err);
+      }
+    }
+    const hasCPQ = packages.includes('cpq');
+    const hasBilling = packages.includes('billing');
+    const hasARM = packages.includes('arm');
+    if (hasCPQ && hasBilling) return 'cpq_billing';
+    if (hasCPQ) return 'cpq';
+    if (hasARM) return 'arm';
+    return 'cpq';
+  }
+
+  // Trigger a scan and resolve when it reaches a terminal state (completed
+  // or failed). Returns null if the trigger itself failed (e.g. quota 429
+  // — message already shown to user).
+  async function runScanAndWait(
+    orgId: string,
+    productType: 'cpq' | 'cpq_billing' | 'arm',
+  ): Promise<{ status: 'completed' | 'failed'; scanId: string } | null> {
+    const res = await fetch('/api/scans', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ organizationId: orgId, productType }),
+    });
+    const data = await res.json();
+    if (res.status === 429) {
+      alert(data.message || 'You have reached your scan limit. Please upgrade to continue.');
+      return null;
+    }
+    if (!res.ok) {
+      console.error('Scan trigger failed:', data);
+      return null;
+    }
+    const scanId: string = data.scanId;
+    return new Promise((resolve) => {
+      const interval = setInterval(async () => {
+        try {
+          const statusRes = await fetch(`/api/scans?scanId=${scanId}`);
+          const scan = await statusRes.json();
+          if (scan.status === 'completed' || scan.status === 'failed') {
+            clearInterval(interval);
+            resolve({ status: scan.status, scanId });
+          }
+        } catch (err) {
+          console.error('Scan poll failed:', err);
+        }
+      }, 3000);
+    });
+  }
+
+  async function handleScanAll() {
+    const targets = orgs.filter((o) => (o.connection_status === 'connected' || !o.connection_status));
+    if (targets.length === 0) return;
+    if (!confirm(`Scan all ${targets.length} org${targets.length !== 1 ? 's' : ''} sequentially? This may take several minutes.`)) {
+      return;
+    }
+    for (let i = 0; i < targets.length; i++) {
+      const o = targets[i];
+      setScanAllProgress({ current: i + 1, total: targets.length, currentOrgName: o.name });
+      setScanningOrg(o.id);
+      try {
+        const productType = await pickProductType(o.id);
+        const result = await runScanAndWait(o.id, productType);
+        if (!result) {
+          // Quota or trigger failure — abort the rest of the batch.
+          break;
+        }
+      } finally {
+        setScanningOrg(null);
+      }
+    }
+    setScanAllProgress(null);
+    await fetchOrgs();
   }
 
   async function handleScan(orgId: string) {
@@ -307,17 +407,44 @@ function DashboardContent() {
             Connect Salesforce orgs to scan their Revenue Cloud configuration
           </p>
         </div>
-        {orgs.length >= 2 && (
-          <button
-            onClick={() => router.push('/compare-orgs')}
-            title="Diff config between any two connected orgs (sandbox ↔ sandbox, sandbox ↔ production, etc.)"
-            className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-600 rounded-lg text-sm font-medium hover:bg-indigo-100 transition"
-          >
-            <GitCompare className="w-4 h-4" />
-            Compare two orgs
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          {orgs.length >= 1 && (
+            <button
+              onClick={handleScanAll}
+              disabled={!!scanAllProgress || !!scanningOrg}
+              title="Scan every connected org one after another"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              <RefreshCw className={`w-4 h-4 ${scanAllProgress ? 'animate-spin' : ''}`} />
+              {scanAllProgress ? `Scanning ${scanAllProgress.current}/${scanAllProgress.total}…` : 'Scan all'}
+            </button>
+          )}
+          {orgs.length >= 2 && (
+            <button
+              onClick={() => router.push('/compare-orgs')}
+              title="Diff config between any two connected orgs (sandbox ↔ sandbox, sandbox ↔ production, etc.)"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-600 rounded-lg text-sm font-medium hover:bg-indigo-100 transition"
+            >
+              <GitCompare className="w-4 h-4" />
+              Compare two orgs
+            </button>
+          )}
+        </div>
       </div>
+
+      {scanAllProgress && (
+        <div className="mb-6 flex items-center gap-3 p-4 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900/50 rounded-xl">
+          <RefreshCw className="w-5 h-5 text-blue-600 dark:text-blue-400 animate-spin flex-shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-blue-900 dark:text-blue-200">
+              Scanning {scanAllProgress.current} of {scanAllProgress.total} — <span className="font-mono">{scanAllProgress.currentOrgName}</span>
+            </p>
+            <p className="text-xs text-blue-700 dark:text-blue-400 mt-0.5">
+              Each org runs end-to-end before the next starts. Leave this page open until the batch finishes.
+            </p>
+          </div>
+        </div>
+      )}
 
       {orgs.length === 0 ? (
         // First-time empty state — educational, not just an empty canvas.
