@@ -243,7 +243,7 @@ export function OrgCard({ org, onView, onScan, onDisconnect, scanning = false }:
               Are you sure you want to disconnect <strong className="text-gray-900 dark:text-white">{org.name}</strong>?
             </p>
             <p className="text-xs text-gray-500 dark:text-gray-500 mb-6">
-              This will permanently delete all scans, issues, and schedules for this org. You can reconnect the org later.
+              We&apos;ll keep your scan history and remove the connection. Reconnect with the same Salesforce org any time and your history will be restored. To wipe history permanently, use &quot;Forget permanently&quot; from the Disconnected orgs section on the dashboard.
             </p>
             <div className="flex items-center gap-3">
               <button

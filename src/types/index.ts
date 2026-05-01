@@ -1186,6 +1186,7 @@ export interface OrgCardData {
   last_scan_at: string | null;
   critical_count: number;
   installed_packages?: string[];
+  disconnected_at?: string | null;
 }
 
 export interface IssueFilters {

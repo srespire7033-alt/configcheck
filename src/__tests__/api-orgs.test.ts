@@ -24,6 +24,8 @@ function createBuilder(mockResult: { data: unknown; error: unknown; count?: numb
     gte: vi.fn().mockReturnThis(),
     order: vi.fn().mockReturnThis(),
     limit: vi.fn().mockReturnThis(),
+    is: vi.fn().mockReturnThis(),
+    not: vi.fn().mockReturnThis(),
     single: vi.fn().mockResolvedValue(mockResult),
   };
   Object.defineProperty(builder, 'then', {

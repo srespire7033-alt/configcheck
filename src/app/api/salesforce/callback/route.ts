@@ -66,21 +66,27 @@ export async function GET(request: NextRequest) {
     // Store in database using service client (bypasses RLS)
     const supabase = createServiceClient();
 
-    // Check if org already connected
+    // Check if this user has already connected this Salesforce org —
+    // scoped by user_id so two different users can each connect the same
+    // org without colliding. Matches both active and soft-disconnected
+    // rows; reconnecting a disconnected org restores its scan history.
     const { data: existingOrg } = await supabase
       .from('organizations')
       .select('id')
       .eq('salesforce_org_id', orgId)
-      .single();
+      .eq('user_id', user.id)
+      .maybeSingle();
 
     if (existingOrg) {
-      // Update existing connection (include custom creds if provided)
+      // Update existing connection (include custom creds if provided).
+      // disconnected_at cleared so the org returns to the active list.
       const updateData: Record<string, unknown> = {
         name: orgName,
         access_token: accessToken,
         refresh_token: refreshToken,
         instance_url: instanceUrl,
         connection_status: 'connected',
+        disconnected_at: null,
         cpq_package_version: cpqVersion,
         installed_packages: installedPackages,
         last_connected_at: new Date().toISOString(),

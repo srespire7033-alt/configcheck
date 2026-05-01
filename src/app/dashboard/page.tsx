@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Plus, CheckCircle, AlertCircle, Cloud, GitCompare } from 'lucide-react';
 import { OrgCard } from '@/components/dashboard/org-card';
+import { DisconnectedOrgs } from '@/components/dashboard/disconnected-orgs';
 import { OnboardingChecklist } from '@/components/dashboard/onboarding-checklist';
 import type { ChecklistProgress } from '@/components/dashboard/onboarding-checklist';
 import { ConnectOrgModal } from '@/components/dashboard/connect-org-modal';
@@ -373,6 +374,8 @@ function DashboardContent() {
           </button>
         </div>
       )}
+
+      <DisconnectedOrgs onReconnect={() => fetchOrgs()} onForget={() => fetchOrgs()} />
     </div>
   );
 }

@@ -8,7 +8,8 @@ export const dynamic = 'force-dynamic';
  * GET /api/orgs or /api/orgs?orgId=xxx
  */
 /**
- * DELETE /api/orgs?orgId=xxx — Disconnect and remove an org + all its data
+ * DELETE /api/orgs?orgId=xxx — Soft-disconnect (preserves scan history).
+ * Pass &mode=forget to hard-delete permanently (history wiped via cascade).
  */
 export async function DELETE(request: NextRequest) {
   const user = await getAuthUser(request);
@@ -17,6 +18,7 @@ export async function DELETE(request: NextRequest) {
   }
 
   const orgId = request.nextUrl.searchParams.get('orgId');
+  const mode = request.nextUrl.searchParams.get('mode'); // 'forget' = hard delete
   if (!orgId) {
     return NextResponse.json({ error: 'orgId is required' }, { status: 400 });
   }
@@ -35,19 +37,40 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ error: 'Organization not found' }, { status: 404 });
   }
 
-  // Delete the org — cascade deletes handle scans, issues, schedules
-  const { error: deleteError } = await supabase
+  if (mode === 'forget') {
+    // Hard delete — cascade wipes all scans, issues, schedules.
+    const { error: deleteError } = await supabase
+      .from('organizations')
+      .delete()
+      .eq('id', orgId)
+      .eq('user_id', user.id);
+    if (deleteError) {
+      console.error('Failed to forget org:', deleteError);
+      return NextResponse.json({ error: 'Failed to permanently delete organization' }, { status: 500 });
+    }
+    return NextResponse.json({ success: true, name: org.name, mode: 'forget' });
+  }
+
+  // Soft disconnect — drop credentials but preserve scans/issues/schedules.
+  // Reconnecting via OAuth with the same Salesforce org id will clear
+  // disconnected_at and repopulate tokens.
+  const { error: updateError } = await supabase
     .from('organizations')
-    .delete()
+    .update({
+      disconnected_at: new Date().toISOString(),
+      access_token: null,
+      refresh_token: null,
+      connection_status: 'expired',
+    })
     .eq('id', orgId)
     .eq('user_id', user.id);
 
-  if (deleteError) {
-    console.error('Failed to delete org:', deleteError);
+  if (updateError) {
+    console.error('Failed to disconnect org:', updateError);
     return NextResponse.json({ error: 'Failed to disconnect organization' }, { status: 500 });
   }
 
-  return NextResponse.json({ success: true, name: org.name });
+  return NextResponse.json({ success: true, name: org.name, mode: 'disconnect' });
 }
 
 /**
@@ -81,13 +104,20 @@ export async function GET(request: NextRequest) {
     });
   }
 
-  // List all orgs for the authenticated user
-  // NOTE: Using select('*') to avoid PostgREST stale-data caching on specific columns
-  const { data, error } = await supabase
+  // List orgs for the authenticated user. By default returns active
+  // (non-disconnected) orgs; pass ?status=disconnected to fetch the
+  // archive of orgs the user has soft-disconnected (scan history kept).
+  const status = request.nextUrl.searchParams.get('status');
+  const queryBuilder = supabase
     .from('organizations')
     .select('*')
-    .eq('user_id', user.id)
-    .order('created_at', { ascending: false });
+    .eq('user_id', user.id);
+  if (status === 'disconnected') {
+    queryBuilder.not('disconnected_at', 'is', null);
+  } else {
+    queryBuilder.is('disconnected_at', null);
+  }
+  const { data, error } = await queryBuilder.order('created_at', { ascending: false });
 
   if (error) {
     return NextResponse.json({ error: 'Failed to fetch organizations' }, { status: 500 });
