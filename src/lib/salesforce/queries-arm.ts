@@ -34,6 +34,27 @@ import type {
   RLMFulfillmentTaskAssignmentRule,
   RLMCostBook,
   RLMCostBookEntry,
+  RLMPricebookEntry,
+  RLMTaxTreatment,
+  RLMTaxEngine,
+  RLMTaxPolicy,
+  RLMTaxTreatmentItem,
+  RLMBillingPolicy,
+  RLMBillingTreatment,
+  RLMBillingArrangement,
+  RLMBillingArrangementLine,
+  RLMBillingMilestonePlan,
+  RLMBillingMilestonePlanItem,
+  RLMPaymentRetryRuleSet,
+  RLMGeneralLedgerAccount,
+  RLMGeneralLedgerAcctAsgntRule,
+  RLMAccountingPeriod,
+  RLMLegalEntityAccountingPeriod,
+  RLMDocumentClauseSet,
+  RLMDocumentClause,
+  RLMProductQualification,
+  RLMProductRampSegment,
+  RLMFulfillmentStepDependencyDef,
 } from '@/types';
 
 /**
@@ -184,6 +205,28 @@ export async function fetchAllARMData(conn: Connection): Promise<ARMData> {
     fulfillmentTaskAssignmentRulesRes,
     costBooksRes,
     costBookEntriesRes,
+    // v5 — Tax / Billing / GL / Clauses / Qualification / Ramp / Fulfillment deps
+    pricebookEntriesRes,
+    taxTreatmentsRes,
+    taxEnginesRes,
+    taxPoliciesRes,
+    taxTreatmentItemsRes,
+    billingPoliciesRes,
+    billingTreatmentsRes,
+    billingArrangementsRes,
+    billingArrangementLinesRes,
+    billingMilestonePlansRes,
+    billingMilestonePlanItemsRes,
+    paymentRetryRuleSetsRes,
+    generalLedgerAccountsRes,
+    generalLedgerAcctAsgntRulesRes,
+    accountingPeriodsRes,
+    legalEntityAccountingPeriodsRes,
+    documentClauseSetsRes,
+    documentClausesRes,
+    productQualificationsRes,
+    productRampSegmentsRes,
+    fulfillmentStepDependencyDefsRes,
   ] = await Promise.all([
     // Products are standard Product2 — but for ARM we want active ones with
     // selling model coverage. Pull a reasonable cap to keep payload bounded.
@@ -387,6 +430,141 @@ export async function fetchAllARMData(conn: Connection): Promise<ARMData> {
        FROM CostBookEntry
        LIMIT 5000`
     ),
+    // ── v5 queries ────────────────────────────────────────────────
+    // Pricing — PricebookEntry needs ProductSellingModelId for ARM-132
+    safeARMQuery(
+      conn,
+      `SELECT Id, Product2Id, Pricebook2Id, ProductSellingModelId, IsActive, UnitPrice, CurrencyIsoCode
+       FROM PricebookEntry
+       LIMIT 5000`
+    ),
+    // Tax
+    safeARMQuery(
+      conn,
+      `SELECT Id, Name, Status, IsTaxable, TaxEngineId, TaxPolicyId, ShouldUseTaxTreatmentItems
+       FROM TaxTreatment
+       LIMIT 500`
+    ),
+    safeARMQuery(
+      conn,
+      `SELECT Id, Name, IsActive, Status
+       FROM TaxEngine
+       LIMIT 200`
+    ),
+    safeARMQuery(
+      conn,
+      `SELECT Id, Name, Status
+       FROM TaxPolicy
+       LIMIT 200`
+    ),
+    safeARMQuery(
+      conn,
+      `SELECT Id, TaxTreatmentId, Status
+       FROM TaxTreatmentItem
+       LIMIT 2000`
+    ),
+    // Billing Policies / Entities
+    safeARMQuery(
+      conn,
+      `SELECT Id, Name, Status, BillingTreatmentSelection, DefaultBillingTreatmentId
+       FROM BillingPolicy
+       LIMIT 500`
+    ),
+    safeARMQuery(
+      conn,
+      `SELECT Id, Name, Status
+       FROM BillingTreatment
+       LIMIT 500`
+    ),
+    safeARMQuery(
+      conn,
+      `SELECT Id, Name, Status
+       FROM BillingArrangement
+       LIMIT 500`
+    ),
+    safeARMQuery(
+      conn,
+      `SELECT Id, BillingArrangementId
+       FROM BillingArrangementLine
+       LIMIT 5000`
+    ),
+    safeARMQuery(
+      conn,
+      `SELECT Id, Name, Status, BillingTreatmentId
+       FROM BillingMilestonePlan
+       LIMIT 500`
+    ),
+    safeARMQuery(
+      conn,
+      `SELECT Id, BillingMilestonePlanId
+       FROM BillingMilestonePlanItem
+       LIMIT 2000`
+    ),
+    safeARMQuery(
+      conn,
+      `SELECT Id, Name, Status, IsOrgDefault
+       FROM PaymentRetryRuleSet
+       LIMIT 200`
+    ),
+    // General Ledger
+    safeARMQuery(
+      conn,
+      `SELECT Id, Name, LegalEntityId, Status
+       FROM GeneralLedgerAccount
+       LIMIT 1000`
+    ),
+    safeARMQuery(
+      conn,
+      `SELECT Id, Name, Status, CreditGeneralLedgerAccountId, DebitGeneralLedgerAccountId, LegalEntityId
+       FROM GeneralLedgerAcctAsgntRule
+       LIMIT 1000`
+    ),
+    safeARMQuery(
+      conn,
+      `SELECT Id, Name, Status, StartDate, EndDate
+       FROM AccountingPeriod
+       LIMIT 500`
+    ),
+    safeARMQuery(
+      conn,
+      `SELECT Id, AccountingPeriodId, Status
+       FROM LegalEntityAccountingPeriod
+       LIMIT 2000`
+    ),
+    // Contract Clauses
+    safeARMQuery(
+      conn,
+      `SELECT Id, Name, Status
+       FROM DocumentClauseSet
+       LIMIT 500`
+    ),
+    safeARMQuery(
+      conn,
+      `SELECT Id, Name, Status, DocumentClauseSetId, ClauseLanguage, ClauseName, IsAlternateClause, Content, LastModifiedDate, CreatedDate
+       FROM DocumentClause
+       LIMIT 2000`
+    ),
+    // Product Qualification
+    safeARMQuery(
+      conn,
+      `SELECT Id, Name, ProductId, RootProductId, EffectiveFromDate, EffectiveToDate, IsQualified
+       FROM ProductQualification
+       LIMIT 2000`
+    ),
+    // Ramp Deals
+    safeARMQuery(
+      conn,
+      `SELECT Id, Name, ProductId, ProductSellingModelId, SegmentType, TrialDuration, DurationType
+       FROM ProductRampSegment
+       LIMIT 2000`
+    ),
+    // Fulfillment Step Dependencies (for orchestration internals)
+    safeARMQuery(
+      conn,
+      `SELECT Id, Name, FulfillmentStepDefinitionId, DependsOnStepDefinitionId, DependencyScope
+       FROM FulfillmentStepDependencyDef
+       LIMIT 2000`
+    ),
   ]);
 
   return {
@@ -434,5 +612,27 @@ export async function fetchAllARMData(conn: Connection): Promise<ARMData> {
       (fulfillmentTaskAssignmentRulesRes.records as RLMFulfillmentTaskAssignmentRule[]) || [],
     costBooks: (costBooksRes.records as RLMCostBook[]) || [],
     costBookEntries: (costBookEntriesRes.records as RLMCostBookEntry[]) || [],
+    // v5
+    pricebookEntries: (pricebookEntriesRes.records as RLMPricebookEntry[]) || [],
+    taxTreatments: (taxTreatmentsRes.records as RLMTaxTreatment[]) || [],
+    taxEngines: (taxEnginesRes.records as RLMTaxEngine[]) || [],
+    taxPolicies: (taxPoliciesRes.records as RLMTaxPolicy[]) || [],
+    taxTreatmentItems: (taxTreatmentItemsRes.records as RLMTaxTreatmentItem[]) || [],
+    billingPolicies: (billingPoliciesRes.records as RLMBillingPolicy[]) || [],
+    billingTreatments: (billingTreatmentsRes.records as RLMBillingTreatment[]) || [],
+    billingArrangements: (billingArrangementsRes.records as RLMBillingArrangement[]) || [],
+    billingArrangementLines: (billingArrangementLinesRes.records as RLMBillingArrangementLine[]) || [],
+    billingMilestonePlans: (billingMilestonePlansRes.records as RLMBillingMilestonePlan[]) || [],
+    billingMilestonePlanItems: (billingMilestonePlanItemsRes.records as RLMBillingMilestonePlanItem[]) || [],
+    paymentRetryRuleSets: (paymentRetryRuleSetsRes.records as RLMPaymentRetryRuleSet[]) || [],
+    generalLedgerAccounts: (generalLedgerAccountsRes.records as RLMGeneralLedgerAccount[]) || [],
+    generalLedgerAcctAsgntRules: (generalLedgerAcctAsgntRulesRes.records as RLMGeneralLedgerAcctAsgntRule[]) || [],
+    accountingPeriods: (accountingPeriodsRes.records as RLMAccountingPeriod[]) || [],
+    legalEntityAccountingPeriods: (legalEntityAccountingPeriodsRes.records as RLMLegalEntityAccountingPeriod[]) || [],
+    documentClauseSets: (documentClauseSetsRes.records as RLMDocumentClauseSet[]) || [],
+    documentClauses: (documentClausesRes.records as RLMDocumentClause[]) || [],
+    productQualifications: (productQualificationsRes.records as RLMProductQualification[]) || [],
+    productRampSegments: (productRampSegmentsRes.records as RLMProductRampSegment[]) || [],
+    fulfillmentStepDependencyDefs: (fulfillmentStepDependencyDefsRes.records as RLMFulfillmentStepDependencyDef[]) || [],
   };
 }

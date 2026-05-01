@@ -66,6 +66,13 @@ function calculateCategoryScores(issues: Issue[]): CategoryScores {
     arm_usage_management: 100,
     arm_orchestration: 100,
     arm_cost_books: 100,
+    // v5 additions
+    arm_tax: 100,
+    arm_billing_policies: 100,
+    arm_general_ledger: 100,
+    arm_clauses: 100,
+    arm_product_qualification: 100,
+    arm_ramp_deals: 100,
   };
 
   for (const issue of issues) {

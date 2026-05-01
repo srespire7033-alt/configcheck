@@ -45,6 +45,28 @@ const empty = (): ARMData => ({
   fulfillmentTaskAssignmentRules: [],
   costBooks: [],
   costBookEntries: [],
+  // v5
+  pricebookEntries: [],
+  taxTreatments: [],
+  taxEngines: [],
+  taxPolicies: [],
+  taxTreatmentItems: [],
+  billingPolicies: [],
+  billingTreatments: [],
+  billingArrangements: [],
+  billingArrangementLines: [],
+  billingMilestonePlans: [],
+  billingMilestonePlanItems: [],
+  paymentRetryRuleSets: [],
+  generalLedgerAccounts: [],
+  generalLedgerAcctAsgntRules: [],
+  accountingPeriods: [],
+  legalEntityAccountingPeriods: [],
+  documentClauseSets: [],
+  documentClauses: [],
+  productQualifications: [],
+  productRampSegments: [],
+  fulfillmentStepDependencyDefs: [],
 });
 
 const getCheck = (id: string) => armChecks.find((c) => c.id === id)!;
@@ -661,6 +683,292 @@ describe('ARM check simulation — positive (clean) + negative (broken) scenario
       d.costBooks = [{ Id: 'cb1', Name: 'Standard Costs', IsActive: true, IsStandard: false }];
       d.costBookEntries = [{ Id: 'cbe1', CostBookId: 'cb1', Cost: 50 }];
       expect(await c.run(d)).toHaveLength(0);
+    });
+  });
+
+  // ═════ v5 checks (ARM-110+) ══════════════════════════════════════
+
+  describe('ARM-110 Expired qualification still qualified', () => {
+    const c = getCheck('ARM-110');
+    it('FIRES on expired+qualified', async () => {
+      const d = empty();
+      d.productQualifications = [{ Id: 'q1', Name: 'Q1', EffectiveToDate: '2020-01-01', IsQualified: true }];
+      expect(await c.run(d)).toHaveLength(1);
+    });
+    it('PASSES on expired but disqualified', async () => {
+      const d = empty();
+      d.productQualifications = [{ Id: 'q1', Name: 'Q1', EffectiveToDate: '2020-01-01', IsQualified: false }];
+      expect(await c.run(d)).toHaveLength(0);
+    });
+  });
+
+  describe('ARM-111 Reversed qualification dates', () => {
+    const c = getCheck('ARM-111');
+    it('FIRES on reversed dates', async () => {
+      const d = empty();
+      d.productQualifications = [{ Id: 'q1', Name: 'Q1', EffectiveFromDate: '2026-12-01', EffectiveToDate: '2026-01-01' }];
+      expect(await c.run(d)).toHaveLength(1);
+    });
+    it('PASSES on valid dates', async () => {
+      const d = empty();
+      d.productQualifications = [{ Id: 'q1', Name: 'Q1', EffectiveFromDate: '2026-01-01', EffectiveToDate: '2026-12-01' }];
+      expect(await c.run(d)).toHaveLength(0);
+    });
+  });
+
+  describe('ARM-112 Qualification on inactive product', () => {
+    const c = getCheck('ARM-112');
+    it('FIRES when product is inactive', async () => {
+      const d = empty();
+      d.products = [{ Id: 'p1', Name: 'Old', IsActive: false }];
+      d.productQualifications = [{ Id: 'q1', Name: 'Q1', ProductId: 'p1' }];
+      expect(await c.run(d)).toHaveLength(1);
+    });
+  });
+
+  describe('ARM-120 Ramp segment without selling model', () => {
+    const c = getCheck('ARM-120');
+    it('FIRES when Yearly segment has no selling model', async () => {
+      const d = empty();
+      d.productRampSegments = [{ Id: 'r1', Name: 'Y1', SegmentType: 'Yearly' }];
+      expect(await c.run(d)).toHaveLength(1);
+    });
+    it('PASSES on FreeTrial without selling model', async () => {
+      const d = empty();
+      d.productRampSegments = [{ Id: 'r1', Name: 'Trial', SegmentType: 'FreeTrial', TrialDuration: 30, DurationType: 'Days' }];
+      expect(await c.run(d)).toHaveLength(0);
+    });
+  });
+
+  describe('ARM-121 FreeTrial without trial duration', () => {
+    const c = getCheck('ARM-121');
+    it('FIRES when TrialDuration is 0', async () => {
+      const d = empty();
+      d.productRampSegments = [{ Id: 'r1', Name: 'Trial', SegmentType: 'FreeTrial', TrialDuration: 0, DurationType: 'Days' }];
+      expect(await c.run(d)).toHaveLength(1);
+    });
+    it('PASSES when valid', async () => {
+      const d = empty();
+      d.productRampSegments = [{ Id: 'r1', Name: 'Trial', SegmentType: 'FreeTrial', TrialDuration: 14, DurationType: 'Days' }];
+      expect(await c.run(d)).toHaveLength(0);
+    });
+  });
+
+  describe('ARM-122 Overlapping custom segments', () => {
+    const c = getCheck('ARM-122');
+    it('FIRES on duplicate custom segments', async () => {
+      const d = empty();
+      d.productRampSegments = [
+        { Id: 'r1', Name: 'A', ProductId: 'p1', ProductSellingModelId: 's1', SegmentType: 'Custom' },
+        { Id: 'r2', Name: 'B', ProductId: 'p1', ProductSellingModelId: 's1', SegmentType: 'Custom' },
+      ];
+      expect(await c.run(d)).toHaveLength(1);
+    });
+  });
+
+  describe('ARM-130 Tier outside parent schedule', () => {
+    const c = getCheck('ARM-130');
+    it('FIRES on tier dates outside parent', async () => {
+      const d = empty();
+      d.priceAdjustmentSchedules = [
+        { Id: 's1', Name: 'Sched', IsActive: true, EffectiveFrom: '2026-01-01', EffectiveTo: '2026-12-31' } as never,
+      ];
+      d.priceAdjustmentTiers = [
+        { Id: 't1', PriceAdjustmentScheduleId: 's1', LowerBound: 0, UpperBound: 100, EffectiveFrom: '2025-01-01', EffectiveTo: '2026-12-31' } as never,
+      ];
+      expect(await c.run(d)).toHaveLength(1);
+    });
+  });
+
+  describe('ARM-132 PBE without matching PSMO', () => {
+    const c = getCheck('ARM-132');
+    it('FIRES when PBE has selling model but no option', async () => {
+      const d = empty();
+      d.pricebookEntries = [{ Id: 'pbe1', Product2Id: 'p1', Pricebook2Id: 'pb1', ProductSellingModelId: 's1', IsActive: true }];
+      expect(await c.run(d)).toHaveLength(1);
+    });
+    it('PASSES when matching PSMO exists', async () => {
+      const d = empty();
+      d.pricebookEntries = [{ Id: 'pbe1', Product2Id: 'p1', Pricebook2Id: 'pb1', ProductSellingModelId: 's1', IsActive: true }];
+      d.sellingModelOptions = [{ Id: 'o1', Product2Id: 'p1', ProductSellingModelId: 's1', IsActive: true }];
+      expect(await c.run(d)).toHaveLength(0);
+    });
+  });
+
+  describe('ARM-171 Step dependency self-reference', () => {
+    const c = getCheck('ARM-171');
+    it('FIRES on self-reference', async () => {
+      const d = empty();
+      d.fulfillmentStepDependencyDefs = [{ Id: 'd1', FulfillmentStepDefinitionId: 'step1', DependsOnStepDefinitionId: 'step1' }];
+      expect(await c.run(d)).toHaveLength(1);
+    });
+    it('FIRES on null target', async () => {
+      const d = empty();
+      d.fulfillmentStepDependencyDefs = [{ Id: 'd1', FulfillmentStepDefinitionId: 'step1' }];
+      expect(await c.run(d)).toHaveLength(1);
+    });
+  });
+
+  describe('ARM-180 Active taxable treatment without engine', () => {
+    const c = getCheck('ARM-180');
+    it('FIRES when taxable + no engine', async () => {
+      const d = empty();
+      d.taxTreatments = [{ Id: 'tt1', Name: 'US Sales Tax', Status: 'Active', IsTaxable: true }];
+      expect(await c.run(d)).toHaveLength(1);
+    });
+    it('PASSES when engine is active', async () => {
+      const d = empty();
+      d.taxTreatments = [{ Id: 'tt1', Name: 'US Sales Tax', Status: 'Active', IsTaxable: true, TaxEngineId: 'te1' }];
+      d.taxEngines = [{ Id: 'te1', Name: 'Avalara', IsActive: true, Status: 'Active' }];
+      expect(await c.run(d)).toHaveLength(0);
+    });
+  });
+
+  describe('ARM-181 Tax treatment requires items but has none', () => {
+    const c = getCheck('ARM-181');
+    it('FIRES when flag set but no items', async () => {
+      const d = empty();
+      d.taxTreatments = [{ Id: 'tt1', Name: 'US Sales Tax', Status: 'Active', ShouldUseTaxTreatmentItems: true }];
+      expect(await c.run(d)).toHaveLength(1);
+    });
+  });
+
+  describe('ARM-190 Default billing policy without default treatment', () => {
+    const c = getCheck('ARM-190');
+    it('FIRES when default mode but no treatment', async () => {
+      const d = empty();
+      d.billingPolicies = [{ Id: 'bp1', Name: 'P1', Status: 'Active', BillingTreatmentSelection: 'Default' }];
+      expect(await c.run(d)).toHaveLength(1);
+    });
+    it('PASSES when default treatment exists and active', async () => {
+      const d = empty();
+      d.billingPolicies = [{ Id: 'bp1', Name: 'P1', Status: 'Active', BillingTreatmentSelection: 'Default', DefaultBillingTreatmentId: 'bt1' }];
+      d.billingTreatments = [{ Id: 'bt1', Name: 'T1', Status: 'Active' }];
+      expect(await c.run(d)).toHaveLength(0);
+    });
+  });
+
+  describe('ARM-191 Active arrangement without lines', () => {
+    const c = getCheck('ARM-191');
+    it('FIRES when active but empty', async () => {
+      const d = empty();
+      d.billingArrangements = [{ Id: 'ba1', Name: 'A1', Status: 'Active' }];
+      expect(await c.run(d)).toHaveLength(1);
+    });
+    it('PASSES with at least one line', async () => {
+      const d = empty();
+      d.billingArrangements = [{ Id: 'ba1', Name: 'A1', Status: 'Active' }];
+      d.billingArrangementLines = [{ Id: 'bal1', BillingArrangementId: 'ba1' }];
+      expect(await c.run(d)).toHaveLength(0);
+    });
+  });
+
+  describe('ARM-193 Multiple org-default retry rule sets', () => {
+    const c = getCheck('ARM-193');
+    it('FIRES on >1 active org-default', async () => {
+      const d = empty();
+      d.paymentRetryRuleSets = [
+        { Id: 's1', Name: 'A', Status: 'Active', IsOrgDefault: true },
+        { Id: 's2', Name: 'B', Status: 'Active', IsOrgDefault: true },
+      ];
+      expect(await c.run(d)).toHaveLength(1);
+    });
+    it('PASSES with single org-default', async () => {
+      const d = empty();
+      d.paymentRetryRuleSets = [
+        { Id: 's1', Name: 'A', Status: 'Active', IsOrgDefault: true },
+        { Id: 's2', Name: 'B', Status: 'Active', IsOrgDefault: false },
+      ];
+      expect(await c.run(d)).toHaveLength(0);
+    });
+  });
+
+  describe('ARM-200 GL rule missing credit/debit', () => {
+    const c = getCheck('ARM-200');
+    it('FIRES when missing credit', async () => {
+      const d = empty();
+      d.generalLedgerAcctAsgntRules = [{ Id: 'r1', Name: 'R1', Status: 'Active', DebitGeneralLedgerAccountId: 'gla1' }];
+      expect(await c.run(d)).toHaveLength(1);
+    });
+    it('PASSES when both set', async () => {
+      const d = empty();
+      d.generalLedgerAcctAsgntRules = [{ Id: 'r1', Name: 'R1', Status: 'Active', CreditGeneralLedgerAccountId: 'gla1', DebitGeneralLedgerAccountId: 'gla2' }];
+      expect(await c.run(d)).toHaveLength(0);
+    });
+  });
+
+  describe('ARM-201 Cross-legal-entity GL rule', () => {
+    const c = getCheck('ARM-201');
+    it('FIRES on mismatched LE', async () => {
+      const d = empty();
+      d.generalLedgerAccounts = [
+        { Id: 'gla1', Name: 'A', LegalEntityId: 'le1' },
+        { Id: 'gla2', Name: 'B', LegalEntityId: 'le2' },
+      ];
+      d.generalLedgerAcctAsgntRules = [{ Id: 'r1', Name: 'R1', Status: 'Active', CreditGeneralLedgerAccountId: 'gla1', DebitGeneralLedgerAccountId: 'gla2', LegalEntityId: 'le1' }];
+      expect(await c.run(d)).toHaveLength(1);
+    });
+  });
+
+  describe('ARM-202 Closed period with open children', () => {
+    const c = getCheck('ARM-202');
+    it('FIRES on closed parent + open child', async () => {
+      const d = empty();
+      d.accountingPeriods = [{ Id: 'ap1', Name: 'Q1', Status: 'Closed' }];
+      d.legalEntityAccountingPeriods = [{ Id: 'leap1', AccountingPeriodId: 'ap1', Status: 'Open' }];
+      expect(await c.run(d)).toHaveLength(1);
+    });
+  });
+
+  describe('ARM-210 Active clause without content', () => {
+    const c = getCheck('ARM-210');
+    it('FIRES when active and empty', async () => {
+      const d = empty();
+      d.documentClauses = [{ Id: 'dc1', Name: 'C1', Status: 'Active', Content: '' }];
+      expect(await c.run(d)).toHaveLength(1);
+    });
+    it('PASSES when content exists', async () => {
+      const d = empty();
+      d.documentClauses = [{ Id: 'dc1', Name: 'C1', Status: 'Active', Content: 'Lorem ipsum...' }];
+      expect(await c.run(d)).toHaveLength(0);
+    });
+  });
+
+  describe('ARM-211 Multiple main clauses', () => {
+    const c = getCheck('ARM-211');
+    it('FIRES on duplicate mains', async () => {
+      const d = empty();
+      d.documentClauses = [
+        { Id: 'dc1', DocumentClauseSetId: 'set1', ClauseName: 'Limitation', ClauseLanguage: 'en', IsAlternateClause: false },
+        { Id: 'dc2', DocumentClauseSetId: 'set1', ClauseName: 'Limitation', ClauseLanguage: 'en', IsAlternateClause: false },
+      ];
+      expect(await c.run(d)).toHaveLength(1);
+    });
+  });
+
+  describe('ARM-212 Orphan alternate clause', () => {
+    const c = getCheck('ARM-212');
+    it('FIRES when no main exists', async () => {
+      const d = empty();
+      d.documentClauses = [
+        { Id: 'dc1', DocumentClauseSetId: 'set1', ClauseName: 'Limitation', ClauseLanguage: 'en', IsAlternateClause: true },
+      ];
+      expect(await c.run(d)).toHaveLength(1);
+    });
+  });
+
+  describe('ARM-213 Clause references missing/inactive set', () => {
+    const c = getCheck('ARM-213');
+    it('FIRES on missing set', async () => {
+      const d = empty();
+      d.documentClauses = [{ Id: 'dc1', DocumentClauseSetId: 'set1' }];
+      expect(await c.run(d)).toHaveLength(1);
+    });
+    it('FIRES on inactive set', async () => {
+      const d = empty();
+      d.documentClauses = [{ Id: 'dc1', DocumentClauseSetId: 'set1' }];
+      d.documentClauseSets = [{ Id: 'set1', Status: 'Inactive' }];
+      expect(await c.run(d)).toHaveLength(1);
     });
   });
 });

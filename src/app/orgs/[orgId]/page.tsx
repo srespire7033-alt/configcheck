@@ -615,6 +615,28 @@ export default function OrgDetailPage() {
               fulfillmentTaskAssignmentRules: 'FulfillmentTaskAssignmentRule',
               costBooks: 'CostBook',
               costBookEntries: 'CostBookEntry',
+              // v5
+              pricebookEntries: 'PricebookEntry',
+              taxTreatments: 'TaxTreatment',
+              taxEngines: 'TaxEngine',
+              taxPolicies: 'TaxPolicy',
+              taxTreatmentItems: 'TaxTreatmentItem',
+              billingPolicies: 'BillingPolicy',
+              billingTreatments: 'BillingTreatment',
+              billingArrangements: 'BillingArrangement',
+              billingArrangementLines: 'BillingArrangementLine',
+              billingMilestonePlans: 'BillingMilestonePlan',
+              billingMilestonePlanItems: 'BillingMilestonePlanItem',
+              paymentRetryRuleSets: 'PaymentRetryRuleSet',
+              generalLedgerAccounts: 'GeneralLedgerAccount',
+              generalLedgerAcctAsgntRules: 'GeneralLedgerAcctAsgntRule',
+              accountingPeriods: 'AccountingPeriod',
+              legalEntityAccountingPeriods: 'LegalEntityAccountingPeriod',
+              documentClauseSets: 'DocumentClauseSet',
+              documentClauses: 'DocumentClause',
+              productQualifications: 'ProductQualification',
+              productRampSegments: 'ProductRampSegment',
+              fulfillmentStepDependencyDefs: 'FulfillmentStepDependencyDef',
             };
 
             const entries = Object.entries(dataFetched).sort((a, b) => Number(b[1]) - Number(a[1]));

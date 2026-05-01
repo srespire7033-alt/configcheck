@@ -172,6 +172,28 @@ export async function runScanInBackground(
         fulfillmentTaskAssignmentRules: armData.fulfillmentTaskAssignmentRules.length,
         costBooks: armData.costBooks.length,
         costBookEntries: armData.costBookEntries.length,
+        // v5
+        pricebookEntries: armData.pricebookEntries.length,
+        taxTreatments: armData.taxTreatments.length,
+        taxEngines: armData.taxEngines.length,
+        taxPolicies: armData.taxPolicies.length,
+        taxTreatmentItems: armData.taxTreatmentItems.length,
+        billingPolicies: armData.billingPolicies.length,
+        billingTreatments: armData.billingTreatments.length,
+        billingArrangements: armData.billingArrangements.length,
+        billingArrangementLines: armData.billingArrangementLines.length,
+        billingMilestonePlans: armData.billingMilestonePlans.length,
+        billingMilestonePlanItems: armData.billingMilestonePlanItems.length,
+        paymentRetryRuleSets: armData.paymentRetryRuleSets.length,
+        generalLedgerAccounts: armData.generalLedgerAccounts.length,
+        generalLedgerAcctAsgntRules: armData.generalLedgerAcctAsgntRules.length,
+        accountingPeriods: armData.accountingPeriods.length,
+        legalEntityAccountingPeriods: armData.legalEntityAccountingPeriods.length,
+        documentClauseSets: armData.documentClauseSets.length,
+        documentClauses: armData.documentClauses.length,
+        productQualifications: armData.productQualifications.length,
+        productRampSegments: armData.productRampSegments.length,
+        fulfillmentStepDependencyDefs: armData.fulfillmentStepDependencyDefs.length,
       };
     } else {
       // CPQ or CPQ + Billing branch

@@ -81,6 +81,13 @@ const categoryIcons: Record<string, React.ElementType> = {
   arm_usage_management: Clock,
   arm_orchestration: Zap,
   arm_cost_books: Wallet,
+  // v5 — Tax / Billing / GL / Clauses / Qualification / Ramp
+  arm_tax: Receipt,
+  arm_billing_policies: BookOpen,
+  arm_general_ledger: Scale,
+  arm_clauses: FileSignature,
+  arm_product_qualification: ShieldCheck,
+  arm_ramp_deals: Zap,
 };
 
 interface CategoryBreakdownProps {

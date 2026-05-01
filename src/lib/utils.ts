@@ -5,21 +5,41 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+/**
+ * 5-band score colour scheme — must match HealthScore donut bands so the
+ * org card score and the detail page score are visually consistent. The
+ * old 3-band scheme (80+ green / 60-79 yellow / <60 red) made a 77 look
+ * "yellow" on the card while HealthScore showed it as lime-green inside
+ * the page — caught by user comparison.
+ *
+ * Band thresholds match HealthScore.getBand:
+ *   90+  Healthy (A)        → green
+ *   75-89 Passable (B)      → lime
+ *   60-74 Needs work (C)    → amber
+ *   40-59 Poor (D)          → orange
+ *   <40   Critical (F)      → red
+ */
 export function getScoreColor(score: number): string {
-  if (score >= 80) return 'text-green-600';
-  if (score >= 60) return 'text-yellow-600';
+  if (score >= 90) return 'text-green-600';
+  if (score >= 75) return 'text-lime-600';
+  if (score >= 60) return 'text-amber-600';
+  if (score >= 40) return 'text-orange-600';
   return 'text-red-600';
 }
 
 export function getScoreBgColor(score: number): string {
-  if (score >= 80) return 'bg-green-100 border-green-300';
-  if (score >= 60) return 'bg-yellow-100 border-yellow-300';
+  if (score >= 90) return 'bg-green-100 border-green-300';
+  if (score >= 75) return 'bg-lime-100 border-lime-300';
+  if (score >= 60) return 'bg-amber-100 border-amber-300';
+  if (score >= 40) return 'bg-orange-100 border-orange-300';
   return 'bg-red-100 border-red-300';
 }
 
 export function getScoreBarColor(score: number): string {
-  if (score >= 80) return 'bg-green-500';
-  if (score >= 60) return 'bg-yellow-500';
+  if (score >= 90) return 'bg-green-500';
+  if (score >= 75) return 'bg-lime-500';
+  if (score >= 60) return 'bg-amber-500';
+  if (score >= 40) return 'bg-orange-500';
   return 'bg-red-500';
 }
 
@@ -104,6 +124,12 @@ export function getCategoryLabel(category: string): string {
     arm_usage_management: 'Usage Management (ARM)',
     arm_orchestration: 'Orchestration (ARM)',
     arm_cost_books: 'Cost Books (ARM)',
+    arm_tax: 'Tax (ARM)',
+    arm_billing_policies: 'Billing Policies (ARM)',
+    arm_general_ledger: 'General Ledger (ARM)',
+    arm_clauses: 'Contract Clauses (ARM)',
+    arm_product_qualification: 'Product Qualification (ARM)',
+    arm_ramp_deals: 'Ramp Deals (ARM)',
   };
   return labels[category] || category;
 }
@@ -152,6 +178,12 @@ export function getShortCategoryLabel(category: string): string {
     arm_usage_management: 'Usage Mgmt.',
     arm_orchestration: 'Orchestration',
     arm_cost_books: 'Cost Books',
+    arm_tax: 'Tax',
+    arm_billing_policies: 'Billing Pol.',
+    arm_general_ledger: 'GL',
+    arm_clauses: 'Clauses',
+    arm_product_qualification: 'Qualification',
+    arm_ramp_deals: 'Ramp Deals',
   };
   return short[category] || getCategoryLabel(category);
 }

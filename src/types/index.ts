@@ -153,7 +153,14 @@ export type ARMCategory =
   | 'arm_contracts'
   | 'arm_usage_management'
   | 'arm_orchestration'
-  | 'arm_cost_books';
+  | 'arm_cost_books'
+  // v5 additions
+  | 'arm_tax'
+  | 'arm_billing_policies'
+  | 'arm_general_ledger'
+  | 'arm_clauses'
+  | 'arm_product_qualification'
+  | 'arm_ramp_deals';
 
 export type IssueCategory = CPQCategory | BillingCategory | ARMCategory;
 
@@ -926,6 +933,166 @@ export interface RLMCostBookEntry {
   CurrencyIsoCode?: string | null;
 }
 
+// ─── v5 additions: Tax / Billing / GL / Clauses ──────────────
+// New object families queried for ARM checks 100-214 mined from the
+// Spring '26 Revenue Cloud Developer Guide v66.0.
+
+// PRICING extension — PricebookEntry needs ProductSellingModelId for
+// the orphan-PBE check (ARM-132). Standard sObject.
+export interface RLMPricebookEntry {
+  Id: string;
+  Product2Id: string;
+  Pricebook2Id: string;
+  ProductSellingModelId?: string | null;
+  IsActive?: boolean;
+  UnitPrice?: number | null;
+  CurrencyIsoCode?: string | null;
+}
+
+// TAX
+export interface RLMTaxTreatment {
+  Id: string;
+  Name: string;
+  Status?: string | null;
+  IsTaxable?: boolean | null;
+  TaxEngineId?: string | null;
+  TaxPolicyId?: string | null;
+  ShouldUseTaxTreatmentItems?: boolean | null;
+}
+export interface RLMTaxEngine {
+  Id: string;
+  Name: string;
+  IsActive?: boolean | null;
+  Status?: string | null;
+}
+export interface RLMTaxPolicy {
+  Id: string;
+  Name: string;
+  Status?: string | null;
+}
+export interface RLMTaxTreatmentItem {
+  Id: string;
+  TaxTreatmentId: string;
+  Status?: string | null;
+}
+
+// BILLING POLICIES & ENTITIES
+export interface RLMBillingPolicy {
+  Id: string;
+  Name: string;
+  Status?: string | null;
+  BillingTreatmentSelection?: string | null;
+  DefaultBillingTreatmentId?: string | null;
+}
+export interface RLMBillingTreatment {
+  Id: string;
+  Name: string;
+  Status?: string | null;
+}
+export interface RLMBillingArrangement {
+  Id: string;
+  Name?: string | null;
+  Status?: string | null;
+}
+export interface RLMBillingArrangementLine {
+  Id: string;
+  BillingArrangementId: string;
+}
+export interface RLMBillingMilestonePlan {
+  Id: string;
+  Name: string;
+  Status?: string | null;
+  BillingTreatmentId?: string | null;
+}
+export interface RLMBillingMilestonePlanItem {
+  Id: string;
+  BillingMilestonePlanId: string;
+}
+export interface RLMPaymentRetryRuleSet {
+  Id: string;
+  Name: string;
+  Status?: string | null;
+  IsOrgDefault?: boolean | null;
+}
+
+// GENERAL LEDGER & ACCOUNTING PERIODS
+export interface RLMGeneralLedgerAccount {
+  Id: string;
+  Name: string;
+  LegalEntityId?: string | null;
+  Status?: string | null;
+}
+export interface RLMGeneralLedgerAcctAsgntRule {
+  Id: string;
+  Name: string;
+  Status?: string | null;
+  CreditGeneralLedgerAccountId?: string | null;
+  DebitGeneralLedgerAccountId?: string | null;
+  LegalEntityId?: string | null;
+}
+export interface RLMAccountingPeriod {
+  Id: string;
+  Name: string;
+  Status?: string | null;
+  StartDate?: string | null;
+  EndDate?: string | null;
+}
+export interface RLMLegalEntityAccountingPeriod {
+  Id: string;
+  AccountingPeriodId: string;
+  Status?: string | null;
+}
+
+// CONTRACT CLAUSES
+export interface RLMDocumentClauseSet {
+  Id: string;
+  Name?: string | null;
+  Status?: string | null;
+}
+export interface RLMDocumentClause {
+  Id: string;
+  Name?: string | null;
+  Status?: string | null;
+  DocumentClauseSetId?: string | null;
+  ClauseLanguage?: string | null;
+  ClauseName?: string | null;
+  IsAlternateClause?: boolean | null;
+  Content?: string | null;
+  LastModifiedDate?: string | null;
+  CreatedDate?: string | null;
+}
+
+// PRODUCT QUALIFICATION
+export interface RLMProductQualification {
+  Id: string;
+  Name?: string | null;
+  ProductId?: string | null;
+  RootProductId?: string | null;
+  EffectiveFromDate?: string | null;
+  EffectiveToDate?: string | null;
+  IsQualified?: boolean | null;
+}
+
+// RAMP DEALS
+export interface RLMProductRampSegment {
+  Id: string;
+  Name?: string | null;
+  ProductId?: string | null;
+  ProductSellingModelId?: string | null;
+  SegmentType?: string | null;
+  TrialDuration?: number | null;
+  DurationType?: string | null;
+}
+
+// FULFILLMENT extensions
+export interface RLMFulfillmentStepDependencyDef {
+  Id: string;
+  Name?: string | null;
+  FulfillmentStepDefinitionId: string;
+  DependsOnStepDefinitionId?: string | null;
+  DependencyScope?: string | null;
+}
+
 export interface ARMData {
   products: RLMProduct[];
   sellingModels: RLMProductSellingModel[];
@@ -961,6 +1128,28 @@ export interface ARMData {
   fulfillmentTaskAssignmentRules: RLMFulfillmentTaskAssignmentRule[];
   costBooks: RLMCostBook[];
   costBookEntries: RLMCostBookEntry[];
+  // v5 additions — Tax / Billing / GL / Clauses / Qualification / Ramp
+  pricebookEntries: RLMPricebookEntry[];
+  taxTreatments: RLMTaxTreatment[];
+  taxEngines: RLMTaxEngine[];
+  taxPolicies: RLMTaxPolicy[];
+  taxTreatmentItems: RLMTaxTreatmentItem[];
+  billingPolicies: RLMBillingPolicy[];
+  billingTreatments: RLMBillingTreatment[];
+  billingArrangements: RLMBillingArrangement[];
+  billingArrangementLines: RLMBillingArrangementLine[];
+  billingMilestonePlans: RLMBillingMilestonePlan[];
+  billingMilestonePlanItems: RLMBillingMilestonePlanItem[];
+  paymentRetryRuleSets: RLMPaymentRetryRuleSet[];
+  generalLedgerAccounts: RLMGeneralLedgerAccount[];
+  generalLedgerAcctAsgntRules: RLMGeneralLedgerAcctAsgntRule[];
+  accountingPeriods: RLMAccountingPeriod[];
+  legalEntityAccountingPeriods: RLMLegalEntityAccountingPeriod[];
+  documentClauseSets: RLMDocumentClauseSet[];
+  documentClauses: RLMDocumentClause[];
+  productQualifications: RLMProductQualification[];
+  productRampSegments: RLMProductRampSegment[];
+  fulfillmentStepDependencyDefs: RLMFulfillmentStepDependencyDef[];
 }
 
 // ============================================
