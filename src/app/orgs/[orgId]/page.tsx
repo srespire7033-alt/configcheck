@@ -661,10 +661,12 @@ export default function OrgDetailPage() {
             // INVALID_TYPE objects on an otherwise healthy fetch is just
             // "this org didn't enable that optional Revenue Cloud feature"
             // — not a permission alert. Promote to amber only when a
-            // significant chunk of the schema is missing (>20% of total,
-            // or >5 objects), which is the actual permissions-issue signal.
+            // significant chunk of the schema is missing (>25% of total),
+            // which is the actual permissions-issue signal. The schema is
+            // 53 objects; below ~13 missing it's almost always optional
+            // Revenue Cloud features the org just hasn't licensed.
             const visibilityIsConcerning =
-              notVisible.length > 5 || notVisible.length / entries.length > 0.2;
+              notVisible.length / entries.length > 0.25;
 
             return (
               <details className="mb-6 bg-blue-50/40 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900/40 rounded-2xl group" open={visibilityIsConcerning || errored.length > 0}>
