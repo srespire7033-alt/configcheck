@@ -149,6 +149,18 @@ async function safeARMQuery(conn: Connection, soql: string, maxRetries = 5): Pro
         const fieldMatch = errorMsg.match(/No such column '([^']+)'/);
         if (fieldMatch) {
           const badField = fieldMatch[1];
+          // If the missing field is part of the WHERE clause, stripping it
+          // leaves malformed SOQL (e.g. `WHERE = 'PricingProcedure'`). The
+          // filter was the whole point of the query, so the result without
+          // it would be meaningless anyway. Treat as feature-not-enabled —
+          // same UX as INVALID_TYPE on the sObject itself.
+          const whereMatch = query.match(/\bWHERE\b([\s\S]*?)(?:\bLIMIT\b|\bORDER\s+BY\b|\bGROUP\s+BY\b|$)/i);
+          const inWhere = whereMatch && new RegExp(`\\b${badField.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`).test(whereMatch[1]);
+          if (inWhere) {
+            console.log(`[ARM] ${objectName}: filter field '${badField}' missing — treating as feature-not-enabled`);
+            armQueryOutcomes[objectName] = 'invalid_type';
+            return { records: [] };
+          }
           query = query
             .replace(new RegExp(`,\\s*${badField.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`), '')
             .replace(new RegExp(`\\b${badField.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*,`), '')
