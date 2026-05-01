@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { getCategoryLabel, getShortCategoryLabel } from '@/lib/utils';
-import { DollarSign, Percent, Package, GitBranch, Settings, RefreshCw, FileText, Handshake, Variable, ShieldCheck, Code, FileSpreadsheet, SlidersHorizontal, Compass, Layers, Gauge, Network, ChevronRight, GripVertical, Receipt, BookOpen, Landmark, Building2, CircleDollarSign, Scale, BadgeDollarSign, FileCheck, Boxes, Search } from 'lucide-react';
+import { DollarSign, Percent, Package, GitBranch, Settings, RefreshCw, FileText, Handshake, Variable, ShieldCheck, Code, FileSpreadsheet, SlidersHorizontal, Compass, Layers, Gauge, Network, ChevronRight, GripVertical, Receipt, BookOpen, Landmark, Building2, CircleDollarSign, Scale, BadgeDollarSign, FileCheck, Boxes, Search, Repeat, ListChecks, FileType, Tag, Zap, ArrowDownToLine, Sparkles, Table2, Workflow, Globe, Gauge as GaugeIcon, Hash, Boxes as BoxesIcon, Activity, FileSignature, Clock, Wallet } from 'lucide-react';
 import {
   DndContext,
   closestCenter,
@@ -29,19 +29,25 @@ const BILLING_CATEGORIES = new Set([
   'gl_rules', 'legal_entity', 'product_billing_config', 'invoicing',
 ]);
 
+// Icon audit (#18): every category gets a distinct, semantically meaningful
+// icon. Previously: 16 ARM categories all fell through to the FileText
+// fallback (indistinguishable in the grid). Also fixed: `subscriptions`
+// was using RefreshCw which collides with the re-scan button; now uses Repeat.
+// `quote_lines` was using FileText (the fallback); now ListChecks.
 const categoryIcons: Record<string, React.ElementType> = {
+  // CPQ
   price_rules: DollarSign,
   discount_schedules: Percent,
   products: Package,
   product_rules: GitBranch,
   cpq_settings: Settings,
-  subscriptions: RefreshCw,
-  quote_lines: FileText,
+  subscriptions: Repeat,
+  quote_lines: ListChecks,
   contracted_prices: Handshake,
   summary_variables: Variable,
   approval_rules: ShieldCheck,
   quote_calculator_plugin: Code,
-  quote_templates: FileSpreadsheet,
+  quote_templates: FileType,
   configuration_attributes: SlidersHorizontal,
   guided_selling: Compass,
   advanced_pricing: Layers,
@@ -49,7 +55,7 @@ const categoryIcons: Record<string, React.ElementType> = {
   impact_analysis: Network,
   bundles: Boxes,
   lookup_queries: Search,
-  // Billing categories
+  // Billing
   billing_rules: Receipt,
   rev_rec_rules: BookOpen,
   tax_rules: Landmark,
@@ -58,6 +64,23 @@ const categoryIcons: Record<string, React.ElementType> = {
   legal_entity: Building2,
   product_billing_config: BadgeDollarSign,
   invoicing: FileCheck,
+  // ARM / Revenue Cloud — each gets a distinct icon (previously all FileText)
+  arm_product_catalog: Package,
+  arm_selling_models: Tag,
+  arm_price_adjustments: ArrowDownToLine,
+  arm_attribute_pricing: Sparkles,
+  arm_bundles: BoxesIcon,
+  arm_pricing_procedures: Workflow,
+  arm_price_books: BookOpen,
+  arm_decision_tables: Table2,
+  arm_context_service: Globe,
+  arm_rate_cards: GaugeIcon,
+  arm_attributes: Hash,
+  arm_assets: Activity,
+  arm_contracts: FileSignature,
+  arm_usage_management: Clock,
+  arm_orchestration: Zap,
+  arm_cost_books: Wallet,
 };
 
 interface CategoryBreakdownProps {

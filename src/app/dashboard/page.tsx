@@ -234,10 +234,11 @@ function DashboardContent() {
         {orgs.length >= 2 && (
           <button
             onClick={() => router.push('/compare-orgs')}
+            title="Diff config between any two connected orgs (sandbox ↔ sandbox, sandbox ↔ production, etc.)"
             className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-600 rounded-lg text-sm font-medium hover:bg-indigo-100 transition"
           >
             <GitCompare className="w-4 h-4" />
-            Sandbox vs Production
+            Compare two orgs
           </button>
         )}
       </div>

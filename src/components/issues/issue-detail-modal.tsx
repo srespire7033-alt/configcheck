@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { X, Sparkles, AlertTriangle, Zap, Loader2, CheckCircle2, ExternalLink, AlertCircle, Info as InfoIcon, ThumbsDown, EyeOff } from 'lucide-react';
+import { X, Sparkles, AlertTriangle, Zap, Loader2, CheckCircle2, ExternalLink, AlertCircle, Info as InfoIcon, ThumbsDown, EyeOff, Copy, Search, FileText, Target, Wrench, TrendingDown } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import type { DBIssue } from '@/types';
 
@@ -20,6 +20,11 @@ export function IssueDetailModal({ issue: initialIssue, instanceUrl, onClose, on
   const [fixResult, setFixResult] = useState<{ success: boolean; details: string } | null>(null);
   const [showConfirm, setShowConfirm] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'details' | 'fix'>('details');
+  // Search filter for the Affected Records list — once a check fires on
+  // 50+ records the raw list is unscannable. A simple substring filter on
+  // record name + id is the cheapest unblock.
+  const [recordFilter, setRecordFilter] = useState('');
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const severityConfig = {
     critical: { icon: AlertCircle, color: 'text-red-500', bg: 'bg-red-100 dark:bg-red-900/30' },
@@ -107,6 +112,23 @@ export function IssueDetailModal({ issue: initialIssue, instanceUrl, onClose, on
     }
   }
 
+  function formatRevenue(value: number): string {
+    if (value >= 10000000) return `₹${(value / 10000000).toFixed(1)}Cr`;
+    if (value >= 100000) return `₹${(value / 100000).toFixed(1)}L`;
+    if (value >= 1000) return `₹${(value / 1000).toFixed(1)}K`;
+    return `₹${Math.round(value)}`;
+  }
+
+  async function copyId(id: string) {
+    try {
+      await navigator.clipboard.writeText(id);
+      setCopiedId(id);
+      setTimeout(() => setCopiedId(null), 1500);
+    } catch {
+      // ignore — clipboard might be blocked
+    }
+  }
+
   function handleStatusChange(status: string) {
     onStatusChange?.(issue.id, status);
     setIssue((prev) => ({ ...prev, status: status as DBIssue['status'] }));
@@ -123,8 +145,9 @@ export function IssueDetailModal({ issue: initialIssue, instanceUrl, onClose, on
       {/* Backdrop */}
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
 
-      {/* Modal */}
-      <div className="relative bg-white dark:bg-[#111827] rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700/60 w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden">
+      {/* Modal — widened from max-w-2xl to max-w-3xl so Affected Records
+          rows don't truncate at typical Salesforce-name lengths. */}
+      <div className="relative bg-white dark:bg-[#111827] rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700/60 w-full max-w-3xl max-h-[88vh] flex flex-col overflow-hidden">
         {/* Header */}
         <div className="flex items-start gap-3 px-6 py-4 border-b border-gray-100 dark:border-gray-800 flex-shrink-0">
           <div className={`w-10 h-10 ${sev.bg} rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5`}>
@@ -165,6 +188,34 @@ export function IssueDetailModal({ issue: initialIssue, instanceUrl, onClose, on
           </button>
         </div>
 
+        {/* Key-facts strip — surface the most-asked questions ("how many
+            records?", "how much revenue?", "what's the category?") above
+            the fold so they're visible without scrolling or tab-switching. */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-px bg-gray-100 dark:bg-gray-800 border-b border-gray-100 dark:border-gray-800 flex-shrink-0">
+          <div className="px-4 py-3 bg-white dark:bg-[#111827]">
+            <div className="text-[10px] font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500">Severity</div>
+            <div className={`mt-1 text-sm font-semibold capitalize ${sev.color}`}>{issue.severity}</div>
+          </div>
+          <div className="px-4 py-3 bg-white dark:bg-[#111827]">
+            <div className="text-[10px] font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500">Affected</div>
+            <div className="mt-1 text-sm font-semibold text-gray-900 dark:text-white">
+              {issue.affected_records?.length ?? 0} record{(issue.affected_records?.length ?? 0) === 1 ? '' : 's'}
+            </div>
+          </div>
+          <div className="px-4 py-3 bg-white dark:bg-[#111827]">
+            <div className="text-[10px] font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500">Revenue at risk</div>
+            <div className={`mt-1 text-sm font-semibold ${issue.revenue_impact && issue.revenue_impact > 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-400 dark:text-gray-500'}`}>
+              {issue.revenue_impact && issue.revenue_impact > 0 ? formatRevenue(issue.revenue_impact) : '—'}
+            </div>
+          </div>
+          <div className="px-4 py-3 bg-white dark:bg-[#111827]">
+            <div className="text-[10px] font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500">Category</div>
+            <div className="mt-1 text-sm font-semibold text-gray-900 dark:text-white truncate" title={issue.category}>
+              {issue.category.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())}
+            </div>
+          </div>
+        </div>
+
         {/* Tabs */}
         <div className="flex border-b border-gray-100 dark:border-gray-800 flex-shrink-0">
           <button
@@ -194,59 +245,102 @@ export function IssueDetailModal({ issue: initialIssue, instanceUrl, onClose, on
         <div className="overflow-y-auto flex-1 px-6 py-5">
           {activeTab === 'details' ? (
             <div className="space-y-5">
-              {/* Description */}
+              {/* What's Wrong */}
               <div>
-                <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">What&apos;s Wrong</h4>
+                <h4 className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
+                  <FileText className="w-3.5 h-3.5" /> What&apos;s Wrong
+                </h4>
                 <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">{issue.description}</p>
               </div>
 
-              {/* Impact */}
+              {/* Why It Matters */}
               <div>
-                <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Why It Matters</h4>
+                <h4 className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
+                  <TrendingDown className="w-3.5 h-3.5" /> Why It Matters
+                </h4>
                 <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">{issue.impact}</p>
               </div>
 
               {/* Recommendation */}
-              <div>
-                <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Recommendation</h4>
+              <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-900/50 rounded-xl p-4">
+                <h4 className="flex items-center gap-1.5 text-xs font-semibold text-blue-700 dark:text-blue-300 uppercase tracking-wider mb-2">
+                  <Target className="w-3.5 h-3.5" /> Recommended Fix
+                </h4>
                 <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">{issue.recommendation}</p>
               </div>
 
-              {/* Affected Records */}
-              {issue.affected_records && issue.affected_records.length > 0 && (
-                <div>
-                  <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
-                    Affected Records ({issue.affected_records.length})
-                  </h4>
-                  <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-3 space-y-2">
-                    {issue.affected_records.map((record, idx) => (
-                      <div key={idx} className="flex items-center gap-2 text-sm">
-                        <span className="font-mono text-xs text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded">{record.type}</span>
-                        <span className="text-gray-700 dark:text-gray-300">{record.name}</span>
-                        {instanceUrl && (
-                          <a
-                            href={`${instanceUrl}/lightning/r/${record.type}/${record.id}/view`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-blue-500 hover:text-blue-700 dark:text-blue-400 ml-auto"
-                          >
-                            <ExternalLink className="h-3.5 w-3.5" />
-                          </a>
-                        )}
-                      </div>
-                    ))}
+              {/* Affected Records — searchable + scrollable + copy-to-clipboard.
+                  Previously just dumped the full list; with 50+ records it was
+                  unscannable. */}
+              {issue.affected_records && issue.affected_records.length > 0 && (() => {
+                const filtered = recordFilter
+                  ? issue.affected_records.filter((r) =>
+                      `${r.name ?? ''} ${r.id ?? ''}`.toLowerCase().includes(recordFilter.toLowerCase())
+                    )
+                  : issue.affected_records;
+                return (
+                  <div>
+                    <div className="flex items-center justify-between mb-2 gap-3 flex-wrap">
+                      <h4 className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                        <Wrench className="w-3.5 h-3.5" /> Affected Records ({issue.affected_records.length})
+                      </h4>
+                      {issue.affected_records.length > 5 && (
+                        <div className="relative flex-1 max-w-[200px]">
+                          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+                          <input
+                            type="text"
+                            value={recordFilter}
+                            onChange={(e) => setRecordFilter(e.target.value)}
+                            placeholder="Filter…"
+                            className="w-full pl-8 pr-2 py-1 text-xs border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                          />
+                        </div>
+                      )}
+                    </div>
+                    <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl divide-y divide-gray-100 dark:divide-gray-700/60 max-h-72 overflow-y-auto">
+                      {filtered.length === 0 ? (
+                        <div className="px-3 py-4 text-xs text-gray-400 italic text-center">
+                          No records match &quot;{recordFilter}&quot;
+                        </div>
+                      ) : (
+                        filtered.map((record, idx) => (
+                          <div key={idx} className="flex items-center gap-2 text-sm px-3 py-2 hover:bg-white dark:hover:bg-gray-800 transition group">
+                            <span className="font-mono text-[10px] text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded flex-shrink-0">{record.type}</span>
+                            <span className="text-gray-700 dark:text-gray-300 truncate flex-1" title={record.name}>{record.name}</span>
+                            <button
+                              onClick={() => copyId(record.id)}
+                              className="opacity-0 group-hover:opacity-100 transition-opacity p-1 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400"
+                              title={copiedId === record.id ? 'Copied!' : 'Copy ID'}
+                            >
+                              {copiedId === record.id ? (
+                                <CheckCircle2 className="w-3.5 h-3.5 text-green-500" />
+                              ) : (
+                                <Copy className="w-3.5 h-3.5" />
+                              )}
+                            </button>
+                            {instanceUrl && (
+                              <a
+                                href={`${instanceUrl}/lightning/r/${record.type}/${record.id}/view`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="p-1 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 flex-shrink-0"
+                                title="Open in Salesforce"
+                              >
+                                <ExternalLink className="w-3.5 h-3.5" />
+                              </a>
+                            )}
+                          </div>
+                        ))
+                      )}
+                    </div>
+                    {filtered.length !== issue.affected_records.length && (
+                      <p className="text-[11px] text-gray-400 mt-1">
+                        Showing {filtered.length} of {issue.affected_records.length} records
+                      </p>
+                    )}
                   </div>
-                </div>
-              )}
-
-              {/* Revenue impact */}
-              {issue.revenue_impact && issue.revenue_impact > 0 && (
-                <div className="bg-red-50 dark:bg-red-950/30 border border-red-100 dark:border-red-900/50 rounded-xl p-4">
-                  <p className="text-sm font-medium text-red-700 dark:text-red-400">
-                    Estimated revenue at risk: <span className="text-lg font-bold">₹{issue.revenue_impact.toLocaleString()}</span>
-                  </p>
-                </div>
-              )}
+                );
+              })()}
             </div>
           ) : (
             <div className="space-y-5">

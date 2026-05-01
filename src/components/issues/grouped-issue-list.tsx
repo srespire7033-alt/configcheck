@@ -1,9 +1,76 @@
 'use client';
 
 import { useState } from 'react';
-import { ChevronRight, ChevronDown } from 'lucide-react';
+import { ChevronRight, ChevronDown, AlertCircle, AlertTriangle, Info } from 'lucide-react';
 import { IssueCard } from './issue-card';
 import type { DBIssue } from '@/types';
+
+const groupSeverityConfig = {
+  critical: {
+    icon: AlertCircle,
+    iconColor: 'text-red-600 dark:text-red-400',
+    bgColor: 'bg-red-100 dark:bg-red-900/40',
+    badgeBg: 'bg-red-100 dark:bg-red-900/40',
+    badgeText: 'text-red-700 dark:text-red-300',
+    countBg: 'bg-red-600 dark:bg-red-500',
+    countText: 'text-white',
+    leftBorder: 'border-l-4 border-l-red-500',
+  },
+  warning: {
+    icon: AlertTriangle,
+    iconColor: 'text-amber-600 dark:text-amber-400',
+    bgColor: 'bg-amber-100 dark:bg-amber-900/40',
+    badgeBg: 'bg-amber-100 dark:bg-amber-900/40',
+    badgeText: 'text-amber-700 dark:text-amber-300',
+    countBg: 'bg-amber-500 dark:bg-amber-500',
+    countText: 'text-white',
+    leftBorder: 'border-l-4 border-l-amber-500',
+  },
+  info: {
+    icon: Info,
+    iconColor: 'text-blue-600 dark:text-blue-400',
+    bgColor: 'bg-blue-100 dark:bg-blue-900/40',
+    badgeBg: 'bg-blue-100 dark:bg-blue-900/40',
+    badgeText: 'text-blue-700 dark:text-blue-300',
+    countBg: 'bg-blue-600 dark:bg-blue-500',
+    countText: 'text-white',
+    leftBorder: 'border-l-4 border-l-blue-500',
+  },
+} as const;
+
+function aggregateAffected(group: DBIssue[]): number {
+  const ids = new Set<string>();
+  let untrackedRecords = 0;
+  for (const issue of group) {
+    if (Array.isArray(issue.affected_records) && issue.affected_records.length > 0) {
+      for (const r of issue.affected_records) {
+        if (r && typeof (r as { id?: unknown }).id === 'string') {
+          ids.add((r as { id: string }).id);
+        } else {
+          untrackedRecords += 1;
+        }
+      }
+    }
+  }
+  return ids.size + untrackedRecords;
+}
+
+function aggregateRevenue(group: DBIssue[]): number {
+  let total = 0;
+  for (const issue of group) {
+    if (typeof issue.revenue_impact === 'number' && issue.revenue_impact > 0) {
+      total += issue.revenue_impact;
+    }
+  }
+  return total;
+}
+
+function formatRevenue(value: number): string {
+  if (value >= 10000000) return `₹${(value / 10000000).toFixed(1)}Cr`;
+  if (value >= 100000) return `₹${(value / 100000).toFixed(1)}L`;
+  if (value >= 1000) return `₹${(value / 1000).toFixed(1)}K`;
+  return `₹${Math.round(value)}`;
+}
 
 interface GroupedIssueListProps {
   issues: DBIssue[];
@@ -75,53 +142,115 @@ export function GroupedIssueList({
           );
         }
 
-        // Multiple occurrences: collapsible group.
+        // Multiple occurrences: collapsible group with full IssueCard-equivalent visual weight.
         const isOpen = expanded[checkId] ?? false; // collapsed by default
         const fixedCount = group.filter((i) => i.status === 'resolved').length;
+        const openCount = group.length - fixedCount;
+        const allFixed = openCount === 0;
         const severity = group[0].severity;
-        const sevDot =
-          severity === 'critical'
-            ? 'bg-red-500'
-            : severity === 'warning'
-            ? 'bg-amber-500'
-            : 'bg-blue-500';
-        const sevPillCls =
-          severity === 'critical'
-            ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300'
-            : severity === 'warning'
-            ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300'
-            : 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300';
+        const config = groupSeverityConfig[severity] || groupSeverityConfig.info;
+        const Icon = config.icon;
+        const affectedTotal = aggregateAffected(group);
+        const revenueTotal = aggregateRevenue(group);
+        const description = group[0].description;
+
+        const handleMarkAllFixed = (e: React.MouseEvent) => {
+          e.stopPropagation();
+          for (const issue of group) {
+            if (issue.status !== 'resolved') onStatusChange(issue.id, 'resolved');
+          }
+        };
 
         return (
-          <div key={checkId} className="border-b border-gray-100 dark:border-gray-800 last:border-b-0">
-            {/* Group header — click to expand/collapse */}
-            <button
+          <div
+            key={checkId}
+            className={`${config.leftBorder} border-b border-gray-100 dark:border-gray-800 last:border-b-0 ${allFixed ? 'opacity-60' : ''}`}
+          >
+            {/* Group header — visually equivalent to a single IssueCard */}
+            <div
               onClick={() => toggle(checkId)}
-              className="w-full text-left px-6 py-3 hover:bg-gray-50 dark:hover:bg-gray-800/40 transition flex items-center gap-3"
+              className="p-4 sm:p-6 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition cursor-pointer"
             >
-              {isOpen ? (
-                <ChevronDown className="w-4 h-4 text-gray-400 flex-shrink-0" />
-              ) : (
-                <ChevronRight className="w-4 h-4 text-gray-400 flex-shrink-0" />
-              )}
-              <span className={`w-2 h-2 rounded-full ${sevDot} flex-shrink-0`} />
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-sm font-semibold text-gray-900 dark:text-white">
-                    {checkLabel(group)}
-                  </span>
-                  <span
-                    className={`px-1.5 py-0.5 text-[10px] font-mono font-medium rounded ${sevPillCls}`}
+              <div className="flex flex-col sm:flex-row items-start gap-4">
+                {/* Icon + count stack */}
+                <div className="flex flex-col items-center gap-1.5 flex-shrink-0">
+                  <div className={`relative w-10 h-10 ${config.bgColor} rounded-xl flex items-center justify-center`}>
+                    <Icon className={`w-5 h-5 ${config.iconColor}`} />
+                    <span
+                      className={`absolute -top-1.5 -right-1.5 min-w-[20px] h-5 px-1 ${config.countBg} ${config.countText} text-[11px] font-bold rounded-full flex items-center justify-center ring-2 ring-white dark:ring-gray-900`}
+                    >
+                      {group.length}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Content */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-3 mb-1 flex-wrap">
+                    <h4 className={`font-semibold ${allFixed ? 'text-gray-500 dark:text-gray-500 line-through' : 'text-gray-900 dark:text-white'}`}>
+                      {checkLabel(group)}
+                    </h4>
+                    <span className={`px-2 py-0.5 ${config.badgeBg} ${config.badgeText} text-xs font-medium rounded-full`}>
+                      {checkId}
+                    </span>
+                    <span className={`px-2 py-0.5 ${config.badgeBg} ${config.badgeText} text-xs font-bold rounded-full`}>
+                      {group.length}× occurrences
+                    </span>
+                    {fixedCount > 0 && (
+                      <span className="px-2 py-0.5 bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-xs font-medium rounded-full">
+                        {fixedCount} fixed
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-gray-600 dark:text-gray-400 mb-3 text-sm">
+                    {description}
+                  </p>
+                  {(affectedTotal > 0 || revenueTotal > 0) && (
+                    <div className="flex items-center gap-6 text-sm flex-wrap">
+                      {affectedTotal > 0 && (
+                        <span className="text-gray-500 dark:text-gray-400">
+                          <strong className="text-gray-700 dark:text-gray-300">Impact:</strong>{' '}
+                          {affectedTotal} record{affectedTotal !== 1 ? 's' : ''} affected across {group.length} finding{group.length !== 1 ? 's' : ''}
+                        </span>
+                      )}
+                      {revenueTotal > 0 && (
+                        <span className="text-red-600 font-medium">
+                          Est. {formatRevenue(revenueTotal)} at risk
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Actions */}
+                <div className="flex gap-2 flex-shrink-0 sm:ml-0 ml-14 items-center">
+                  {!allFixed && (
+                    <button
+                      onClick={handleMarkAllFixed}
+                      className="px-4 py-2 bg-green-50 text-green-600 rounded-lg text-sm font-medium hover:bg-green-100 transition"
+                    >
+                      Mark all fixed
+                    </button>
+                  )}
+                  <button
+                    onClick={(e) => { e.stopPropagation(); toggle(checkId); }}
+                    className="px-4 py-2 bg-blue-50 text-blue-600 rounded-lg text-sm font-medium hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400 dark:hover:bg-blue-900/50 transition inline-flex items-center gap-1.5"
                   >
-                    {checkId}
-                  </span>
-                  <span className="text-xs text-gray-500 dark:text-gray-400">
-                    {group.length} occurrence{group.length !== 1 ? 's' : ''}
-                    {fixedCount > 0 && ` • ${fixedCount} fixed`}
-                  </span>
+                    {isOpen ? (
+                      <>
+                        <ChevronDown className="w-4 h-4" />
+                        Hide {group.length}
+                      </>
+                    ) : (
+                      <>
+                        <ChevronRight className="w-4 h-4" />
+                        View all {group.length}
+                      </>
+                    )}
+                  </button>
                 </div>
               </div>
-            </button>
+            </div>
 
             {/* Nested issue cards when expanded */}
             {isOpen && (

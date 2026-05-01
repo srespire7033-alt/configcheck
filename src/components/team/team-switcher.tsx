@@ -72,7 +72,9 @@ export function TeamSwitcher() {
   }
 
   const activeTeam = teams.find((t) => t.id === activeTeamId);
-  const label = activeTeam ? activeTeam.name : 'Personal';
+  // "My workspace" is clearer than "Personal" — users were confused whether
+  // "Personal" implied a separate environment vs. just their own org list.
+  const label = activeTeam ? activeTeam.name : 'My workspace';
 
   const roleBadgeColor: Record<string, string> = {
     owner: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
@@ -106,7 +108,10 @@ export function TeamSwitcher() {
             <div className="w-7 h-7 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center flex-shrink-0">
               <User className="h-3.5 w-3.5 text-gray-500 dark:text-gray-400" />
             </div>
-            <span className="flex-1 font-medium text-gray-900 dark:text-white">Personal</span>
+            <div className="flex-1 min-w-0">
+              <span className="font-medium text-gray-900 dark:text-white block">My workspace</span>
+              <span className="text-[11px] text-gray-500 dark:text-gray-400 block">Just you — orgs you connected</span>
+            </div>
             {!activeTeamId && <Check className="h-4 w-4 text-blue-500" />}
           </button>
 

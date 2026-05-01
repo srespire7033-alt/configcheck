@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, RefreshCw, Sparkles, Download, FileBarChart, CalendarClock, ShieldCheck, FileSpreadsheet, ChevronDown, ChevronRight, AlertTriangle, AlertCircle, Info, TrendingUp, History, X } from 'lucide-react';
+import { ArrowLeft, RefreshCw, Sparkles, Download, FileBarChart, CalendarClock, ShieldCheck, FileSpreadsheet, ChevronDown, ChevronRight, AlertTriangle, AlertCircle, Info, X } from 'lucide-react';
 import { getCategoryLabel, formatTimeAgo } from '@/lib/utils';
 import { groupTopIssues } from '@/lib/analysis/top-issue-grouper';
 import { HealthScore } from '@/components/scan/health-score';
@@ -15,7 +15,7 @@ import { RevenueRiskCard } from '@/components/scan/revenue-risk-card';
 import { ComplexityCard } from '@/components/scan/complexity-card';
 import { ScheduleModal } from '@/components/schedule/schedule-modal';
 import { ScheduleList } from '@/components/schedule/schedule-list';
-import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
+import { ScoreTrend } from '@/components/scan/score-trend';
 import type { DBScan, DBIssue, DBOrganization, DBScanSchedule, RevenueRiskSummary, ComplexityBreakdown, ProductType } from '@/types';
 import { getProductTypeLabel } from '@/lib/utils';
 
@@ -369,6 +369,21 @@ export default function OrgDetailPage() {
   }
 
   const resolvedCount = issues.filter(i => i.status === 'resolved').length;
+  const acknowledgedCount = issues.filter(i => i.status === 'acknowledged').length;
+  const ignoredCount = issues.filter(i => i.status === 'ignored' || i.status === 'false_positive' || i.status === 'not_relevant').length;
+  // Cross-scan delta — how many issues did this scan fix vs. the previous one?
+  // We approximate "fixed since last scan" by comparing total_issues totals.
+  // (The DBIssue rows are scan-scoped, so an issue that disappears between
+  // scans is the cleanest signal of a real fix in Salesforce.)
+  const previousScan = allScans.length >= 2
+    ? allScans.find(s => s.id !== scan?.id) ?? null
+    : null;
+  const issuesFixedSinceLastScan = previousScan && scan
+    ? Math.max(0, (previousScan.total_issues || 0) - (scan.total_issues || 0))
+    : 0;
+  const newIssuesSinceLastScan = previousScan && scan
+    ? Math.max(0, (scan.total_issues || 0) - (previousScan.total_issues || 0))
+    : 0;
 
   if (loading) {
     return <LoadingScreen />;
@@ -556,21 +571,78 @@ export default function OrgDetailPage() {
                   </button>
                 </div>
 
-                {/* Resolution Progress */}
-                {issues.length > 0 && (
-                  <div className="mt-4">
-                    <div className="flex items-center justify-between text-sm mb-1.5">
-                      <span className="text-gray-500 dark:text-gray-400">Resolution Progress</span>
-                      <span className="font-medium text-gray-700 dark:text-gray-300">{resolvedCount}/{issues.length} fixed</span>
+                {/* Resolution Progress — segmented bar (resolved / acknowledged / ignored / open)
+                    plus cross-scan delta so users see the trajectory across scans, not just
+                    the current snapshot. */}
+                {issues.length > 0 && (() => {
+                  const total = issues.length;
+                  const openCount = total - resolvedCount - acknowledgedCount - ignoredCount;
+                  const pct = (n: number) => (total === 0 ? 0 : (n / total) * 100);
+                  return (
+                    <div className="mt-4">
+                      <div className="flex items-center justify-between text-sm mb-1.5">
+                        <span className="text-gray-500 dark:text-gray-400">Resolution Progress</span>
+                        <span className="font-medium text-gray-700 dark:text-gray-300">
+                          {resolvedCount}/{total} fixed
+                          {acknowledgedCount > 0 && (
+                            <span className="text-blue-600 dark:text-blue-400"> • {acknowledgedCount} ack</span>
+                          )}
+                          {ignoredCount > 0 && (
+                            <span className="text-gray-400"> • {ignoredCount} ignored</span>
+                          )}
+                        </span>
+                      </div>
+                      {/* Segmented bar */}
+                      <div className="w-full h-2 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden flex">
+                        {resolvedCount > 0 && (
+                          <div
+                            className="h-full bg-green-500 transition-all duration-500"
+                            style={{ width: `${pct(resolvedCount)}%` }}
+                            title={`${resolvedCount} resolved`}
+                          />
+                        )}
+                        {acknowledgedCount > 0 && (
+                          <div
+                            className="h-full bg-blue-400 transition-all duration-500"
+                            style={{ width: `${pct(acknowledgedCount)}%` }}
+                            title={`${acknowledgedCount} acknowledged`}
+                          />
+                        )}
+                        {ignoredCount > 0 && (
+                          <div
+                            className="h-full bg-gray-400 transition-all duration-500"
+                            style={{ width: `${pct(ignoredCount)}%` }}
+                            title={`${ignoredCount} ignored / not relevant / false positive`}
+                          />
+                        )}
+                        {openCount > 0 && (
+                          <div
+                            className="h-full bg-amber-300 dark:bg-amber-500/60 transition-all duration-500"
+                            style={{ width: `${pct(openCount)}%` }}
+                            title={`${openCount} open`}
+                          />
+                        )}
+                      </div>
+                      {/* Cross-scan delta — only when we have a previous scan to compare to */}
+                      {previousScan && (issuesFixedSinceLastScan > 0 || newIssuesSinceLastScan > 0) && (
+                        <div className="flex items-center gap-3 mt-2 text-[11px] flex-wrap">
+                          {issuesFixedSinceLastScan > 0 && (
+                            <span className="inline-flex items-center gap-1 text-green-600 dark:text-green-400 font-medium">
+                              <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                              {issuesFixedSinceLastScan} fixed since last scan
+                            </span>
+                          )}
+                          {newIssuesSinceLastScan > 0 && (
+                            <span className="inline-flex items-center gap-1 text-red-600 dark:text-red-400 font-medium">
+                              <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
+                              {newIssuesSinceLastScan} new since last scan
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </div>
-                    <div className="w-full h-2 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-green-500 rounded-full transition-all duration-500"
-                        style={{ width: `${(resolvedCount / issues.length) * 100}%` }}
-                      />
-                    </div>
-                  </div>
-                )}
+                  );
+                })()}
               </div>
 
               {/* Actions */}
@@ -618,13 +690,66 @@ export default function OrgDetailPage() {
                 </div>
                 {/* Action buttons */}
                 <div className="grid grid-cols-3 lg:grid-cols-1 gap-2 sm:gap-3">
-                  <a
-                    href={`/api/reports?scanId=${scan.id}`}
-                    className="px-3 sm:px-6 py-2.5 sm:py-3 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 transition flex items-center justify-center gap-2 text-sm sm:text-base"
-                  >
-                    <Download className="w-4 h-4 sm:w-5 sm:h-5" />
-                    <span className="hidden xs:inline">Download</span> Report
-                  </a>
+                  {/* Unified Download / Export menu — consolidates the PDF report
+                      and the Excel/CSV issue & documentation exports in one
+                      prominent place (was previously split: PDF here, Excel
+                      buried below the trend chart). */}
+                  <div className="relative">
+                    <button
+                      onClick={() => setShowExportMenu(!showExportMenu)}
+                      onBlur={() => setTimeout(() => setShowExportMenu(false), 150)}
+                      className="w-full px-3 sm:px-6 py-2.5 sm:py-3 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 transition flex items-center justify-center gap-2 text-sm sm:text-base"
+                    >
+                      <Download className="w-4 h-4 sm:w-5 sm:h-5" />
+                      <span className="hidden xs:inline">Download</span>
+                      <ChevronDown className={`w-4 h-4 transition-transform ${showExportMenu ? 'rotate-180' : ''}`} />
+                    </button>
+                    {showExportMenu && (
+                      <div className="absolute top-full right-0 lg:right-auto lg:left-0 mt-2 w-64 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-30">
+                        <a
+                          href={`/api/reports?scanId=${scan.id}`}
+                          className="flex items-start gap-3 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition"
+                        >
+                          <FileBarChart className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                          <div className="text-left">
+                            <div className="font-medium">PDF Report</div>
+                            <div className="text-[11px] text-gray-500 dark:text-gray-400">Branded executive summary — share with clients</div>
+                          </div>
+                        </a>
+                        <div className="border-t border-gray-100 dark:border-gray-700 my-1" />
+                        <a
+                          href={`/api/exports?scanId=${scan.id}&format=xlsx&type=issues`}
+                          className="flex items-start gap-3 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition"
+                        >
+                          <FileSpreadsheet className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
+                          <div className="text-left">
+                            <div className="font-medium">Issues — Excel</div>
+                            <div className="text-[11px] text-gray-500 dark:text-gray-400">Filterable workbook for triage</div>
+                          </div>
+                        </a>
+                        <a
+                          href={`/api/exports?scanId=${scan.id}&format=csv&type=issues`}
+                          className="flex items-start gap-3 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition"
+                        >
+                          <FileSpreadsheet className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" />
+                          <div className="text-left">
+                            <div className="font-medium">Issues — CSV</div>
+                            <div className="text-[11px] text-gray-500 dark:text-gray-400">Plain CSV for Jira / ticket import</div>
+                          </div>
+                        </a>
+                        <a
+                          href={`/api/exports?scanId=${scan.id}&format=xlsx&type=documentation`}
+                          className="flex items-start gap-3 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition"
+                        >
+                          <FileSpreadsheet className="w-4 h-4 text-purple-600 mt-0.5 flex-shrink-0" />
+                          <div className="text-left">
+                            <div className="font-medium">Config Documentation</div>
+                            <div className="text-[11px] text-gray-500 dark:text-gray-400">Full inventory of probed objects</div>
+                          </div>
+                        </a>
+                      </div>
+                    )}
+                  </div>
                   <button
                     onClick={handleScan}
                     disabled={scanning}
@@ -915,75 +1040,12 @@ export default function OrgDetailPage() {
           })()}
 
           {/* ===== SCORE TREND CHART ===== */}
-          {allScans.length >= 2 && (() => {
-            const trendData = allScans
-              .slice()
-              .reverse()
-              .map((s, idx) => ({
-                name: new Date(s.completed_at || s.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-                score: s.overall_score || 0,
-                issues: s.total_issues || 0,
-                scan: `Scan #${idx + 1}`,
-              }));
-            const first = trendData[0]?.score || 0;
-            const last = trendData[trendData.length - 1]?.score || 0;
-            const diff = last - first;
-            return (
-              <div className="bg-white dark:bg-[#111827] rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 mb-8">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-blue-50 dark:bg-blue-900/30 rounded-xl flex items-center justify-center">
-                      <TrendingUp className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Score Trend</h3>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">
-                        {diff > 0 ? (
-                          <span className="text-green-600 font-medium">+{diff} points improvement</span>
-                        ) : diff < 0 ? (
-                          <span className="text-red-600 font-medium">{diff} points decline</span>
-                        ) : (
-                          <span>No change</span>
-                        )}
-                        {' '}over {allScans.length} scans
-                      </p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => router.push(`/orgs/${orgId}/history`)}
-                    className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-600 bg-gray-50 hover:bg-gray-100 dark:text-gray-400 dark:bg-gray-800 dark:hover:bg-gray-700 rounded-xl transition"
-                  >
-                    <History className="w-4 h-4" />
-                    View History
-                  </button>
-                </div>
-                <div className="h-48">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={trendData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
-                      <defs>
-                        <linearGradient id="scoreGradient" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.2} />
-                          <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
-                      <XAxis dataKey="name" tick={{ fontSize: 12, fill: '#9ca3af' }} axisLine={false} tickLine={false} />
-                      <YAxis domain={[0, 100]} tick={{ fontSize: 12, fill: '#9ca3af' }} axisLine={false} tickLine={false} />
-                      <Tooltip
-                        contentStyle={{ borderRadius: '12px', border: '1px solid #e5e7eb', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                        formatter={(value: any, name: any) => [
-                          name === 'score' ? `${value}/100` : value,
-                          name === 'score' ? 'Health Score' : 'Issues',
-                        ]}
-                      />
-                      <Area type="monotone" dataKey="score" stroke="#3b82f6" strokeWidth={2.5} fill="url(#scoreGradient)" dot={{ r: 4, fill: '#3b82f6', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 6 }} />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-            );
-          })()}
+          {allScans.length >= 2 && (
+            <ScoreTrend
+              scans={allScans}
+              onViewHistory={() => router.push(`/orgs/${orgId}/history`)}
+            />
+          )}
 
           {/* ===== REVENUE RISK + COMPLEXITY ===== */}
           {(() => {
@@ -1000,38 +1062,9 @@ export default function OrgDetailPage() {
             );
           })()}
 
-          {/* ===== EXPORT BUTTON ===== */}
-          <div className="relative inline-block mb-8 flex justify-end">
-            <button
-              onClick={() => setShowExportMenu(!showExportMenu)}
-              onBlur={() => setTimeout(() => setShowExportMenu(false), 150)}
-              className="inline-flex items-center gap-2 px-5 py-2.5 bg-green-600 text-white rounded-xl text-sm font-medium hover:bg-green-700 transition shadow-sm"
-            >
-              <FileSpreadsheet className="w-4 h-4" />
-              Export Issues
-              <ChevronDown className={`w-4 h-4 transition-transform ${showExportMenu ? 'rotate-180' : ''}`} />
-            </button>
-            {showExportMenu && (
-              <div className="absolute top-full right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-20">
-                <a
-                  href={`/api/exports?scanId=${scan.id}&format=xlsx&type=issues`}
-                  className="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition"
-                >
-                  <FileSpreadsheet className="w-4 h-4 text-green-600" />
-                  Download Excel
-                </a>
-                <a
-                  href={`/api/exports?scanId=${scan.id}&format=csv&type=issues`}
-                  className="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition"
-                >
-                  <FileSpreadsheet className="w-4 h-4 text-blue-600" />
-                  Download CSV
-                </a>
-              </div>
-            )}
-          </div>
-
-          {/* Old severity-based issue lists removed — issues now shown by category above */}
+          {/* Old severity-based issue lists removed — issues now shown by category above.
+              Export controls moved into the unified "Download" menu in the header
+              actions block (consolidates PDF + Excel + CSV + Documentation). */}
 
           {/* ===== AI RECOMMENDATIONS =====
               Skim-first layout: one-sentence headline derived from issue

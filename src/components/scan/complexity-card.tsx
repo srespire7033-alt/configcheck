@@ -16,7 +16,10 @@ const ratingConfig = {
 };
 
 export function ComplexityCard({ complexity }: Props) {
-  const [expanded, setExpanded] = useState(false);
+  // Default expanded — the breakdown is the value of this card. Hiding it
+  // behind a click meant most users never saw which factors were driving
+  // the rating, which is exactly the diagnostic question the card answers.
+  const [expanded, setExpanded] = useState(true);
   const config = ratingConfig[complexity.rating];
 
   // Gauge percentage (cap at 150 for visual)
