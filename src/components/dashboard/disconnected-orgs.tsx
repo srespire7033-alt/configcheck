@@ -36,13 +36,16 @@ export function DisconnectedOrgs({ onReconnect, onForget, refreshKey = 0 }: Prop
     }
   }
 
-  async function handleReconnect() {
-    // Same OAuth flow as a fresh connect — the callback will detect the
-    // matching salesforce_org_id and restore this org's history.
-    const res = await fetch('/api/salesforce/auth-url');
+  async function handleReconnect(orgId: string) {
+    // Same OAuth flow as a fresh connect — but scoped to the org's own
+    // instance URL via ?orgId, so Salesforce doesn't reject the auth as
+    // a cross-org flow (which it does for dev / My Domain orgs when the
+    // OAuth base is login.salesforce.com).
+    const res = await fetch(`/api/salesforce/auth-url?orgId=${orgId}`);
     if (res.ok) {
       const { url } = await res.json();
       window.location.href = url;
+      return;
     }
     onReconnect();
   }
@@ -115,7 +118,7 @@ export function DisconnectedOrgs({ onReconnect, onForget, refreshKey = 0 }: Prop
 
               <div className="flex items-center gap-2 mt-auto">
                 <button
-                  onClick={handleReconnect}
+                  onClick={() => handleReconnect(org.id)}
                   className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
                 >
                   <RotateCw className="w-3.5 h-3.5" />

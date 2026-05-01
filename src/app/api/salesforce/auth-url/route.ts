@@ -1,12 +1,43 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthorizationUrl } from '@/lib/salesforce/client';
+import { createServiceClient } from '@/lib/db/client';
+import { getAuthUser } from '@/lib/auth/get-user';
 
 export const dynamic = 'force-dynamic';
 
-// Default flow — uses server-side env credentials
-export async function GET() {
+// Default flow — uses server-side env credentials.
+// Pass ?orgId=<uuid> when reconnecting a disconnected org so OAuth points
+// at that org's My Domain instead of login.salesforce.com (Salesforce
+// blocks cross-org OAuth flows for external client apps, so a dev org
+// like *.develop.my.salesforce.com must auth against itself).
+export async function GET(request: NextRequest) {
   try {
-    const { url, codeVerifier } = getAuthorizationUrl();
+    const orgId = request.nextUrl.searchParams.get('orgId');
+    let loginUrl: string | undefined;
+    let customClientId: string | undefined;
+
+    if (orgId) {
+      const user = await getAuthUser(request);
+      if (!user) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+      const supabase = createServiceClient();
+      const { data: org } = await supabase
+        .from('organizations')
+        .select('instance_url, sf_client_id, sf_login_url')
+        .eq('id', orgId)
+        .eq('user_id', user.id)
+        .maybeSingle();
+      if (org) {
+        // Prefer the explicitly-stored login URL (custom creds path);
+        // otherwise fall back to the org's instance URL, which is the My
+        // Domain for orgs that have one — exactly what Salesforce wants.
+        loginUrl = org.sf_login_url || org.instance_url || undefined;
+        customClientId = org.sf_client_id || undefined;
+      }
+    }
+
+    const { url, codeVerifier } = getAuthorizationUrl(undefined, customClientId, loginUrl);
 
     const response = NextResponse.json({ url });
     response.cookies.set('sf_code_verifier', codeVerifier, {
