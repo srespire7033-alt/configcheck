@@ -234,7 +234,7 @@ export default function SettingsPage() {
   useEffect(() => {
     async function loadProfile() {
       try {
-        const res = await fetch('/api/auth/me');
+        const res = await fetch('/api/auth/me', { cache: 'no-store' });
         if (res.ok) {
           const data = await res.json();
           setFullName(data.full_name || '');
