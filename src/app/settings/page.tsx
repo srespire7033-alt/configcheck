@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import {
   Save, Upload, X,
   Bell, BellOff, CheckCircle2, Zap,
-  Clock, User, Palette,
+  User, Palette,
   CreditCard, Phone, MapPin, Briefcase, Globe, Mail,
   AlertTriangle, Download, Trash2, AlertCircle, ShieldCheck, Sun, Moon
 } from 'lucide-react';
@@ -160,9 +160,7 @@ export default function SettingsPage() {
   const [notifSettings, setNotifSettings] = useState<NotificationSettings | null>(null);
   const [bulkEmailInput, setBulkEmailInput] = useState('');
   const [testingEmail, setTestingEmail] = useState<string | null>(null);
-  const [newNotifEmail, setNewNotifEmail] = useState('');
   const [notifEmailError, setNotifEmailError] = useState('');
-  const [savingNotifEmails, setSavingNotifEmails] = useState(false);
 
   // Save states per section
   const [savingAccount, setSavingAccount] = useState(false);
@@ -279,12 +277,6 @@ export default function SettingsPage() {
       .catch(() => {});
   }, []);
 
-  async function handleSignOut() {
-    const supabase = createClient();
-    await supabase.auth.signOut();
-    router.push('/login');
-  }
-
   async function handleLogoUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -323,51 +315,6 @@ export default function SettingsPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ company_logo_url: null }),
     });
-  }
-
-  async function addNotificationEmail() {
-    const trimmed = newNotifEmail.trim().toLowerCase();
-    if (!trimmed) return;
-
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(trimmed)) {
-      setNotifEmailError('Please enter a valid email address');
-      return;
-    }
-    if (trimmed === email.toLowerCase()) {
-      setNotifEmailError('This is already your account email');
-      return;
-    }
-    if (notificationEmails.includes(trimmed)) {
-      setNotifEmailError('This email is already added');
-      return;
-    }
-    if (notificationEmails.length >= 5) {
-      setNotifEmailError('Maximum 5 emails allowed');
-      return;
-    }
-
-    const updated = [...notificationEmails, trimmed];
-    setSavingNotifEmails(true);
-    try {
-      const res = await fetch('/api/auth/me', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ notification_emails: updated }),
-      });
-      if (res.ok) {
-        setNotificationEmails(updated);
-        setNewNotifEmail('');
-        setNotifEmailError('');
-      } else {
-        const data = await res.json();
-        setNotifEmailError(data.error || 'Failed to add email');
-      }
-    } catch {
-      setNotifEmailError('Failed to save');
-    } finally {
-      setSavingNotifEmails(false);
-    }
   }
 
   async function persistNotifSettings(next: NotificationSettings) {

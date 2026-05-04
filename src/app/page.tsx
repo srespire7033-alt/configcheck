@@ -15,7 +15,6 @@ import {
   ChevronRight,
   AlertTriangle,
   Target,
-  Quote,
 } from 'lucide-react';
 
 export default function LandingPage() {

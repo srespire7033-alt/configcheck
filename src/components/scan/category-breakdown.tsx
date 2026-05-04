@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { getCategoryLabel, getShortCategoryLabel } from '@/lib/utils';
-import { DollarSign, Percent, Package, GitBranch, Settings, RefreshCw, FileText, Handshake, Variable, ShieldCheck, Code, FileSpreadsheet, SlidersHorizontal, Compass, Layers, Gauge, Network, ChevronRight, GripVertical, Receipt, BookOpen, Landmark, Building2, CircleDollarSign, Scale, BadgeDollarSign, FileCheck, Boxes, Search, Repeat, ListChecks, FileType, Tag, Zap, ArrowDownToLine, Sparkles, Table2, Workflow, Globe, Gauge as GaugeIcon, Hash, Boxes as BoxesIcon, Activity, FileSignature, Clock, Wallet } from 'lucide-react';
+import { DollarSign, Percent, Package, GitBranch, Settings, FileText, Handshake, Variable, ShieldCheck, Code, SlidersHorizontal, Compass, Layers, Gauge, Network, ChevronRight, GripVertical, Receipt, BookOpen, Landmark, Building2, CircleDollarSign, Scale, BadgeDollarSign, FileCheck, Boxes, Search, Repeat, ListChecks, FileType, Tag, Zap, ArrowDownToLine, Sparkles, Table2, Workflow, Globe, Gauge as GaugeIcon, Hash, Boxes as BoxesIcon, Activity, FileSignature, Clock, Wallet } from 'lucide-react';
 import {
   DndContext,
   closestCenter,

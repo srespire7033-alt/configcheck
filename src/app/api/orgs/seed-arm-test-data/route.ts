@@ -111,7 +111,7 @@ export async function POST(request: NextRequest) {
     );
 
     // ❌ ARM-005 negative: bundle with no components
-    const emptyBundleId = await create(
+    await create(
       'Product2',
       {
         Name: 'CC_Test_Empty Bundle',
@@ -150,7 +150,7 @@ export async function POST(request: NextRequest) {
     );
 
     // ❌ ARM-002/ARM-011 negative: TermDefined with no PricingTerm and no SellingFrequencyId
-    const badModelId = await create(
+    await create(
       'ProductSellingModel',
       {
         Name: 'CC_Test_Bad_Term_Model',
