@@ -1,9 +1,9 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Privacy Policy — ConfigCheck',
+  title: 'Privacy Policy — OrgPrism',
   description:
-    'How ConfigCheck handles Salesforce metadata, scan results, and personal data. OAuth-only, read-only, no record-level data leaves your tenant.',
+    'How OrgPrism handles Salesforce metadata, scan results, and personal data. OAuth-only, read-only, no record-level data leaves your tenant.',
   alternates: { canonical: '/privacy' },
 };
 
@@ -14,7 +14,7 @@ export default function PrivacyPage() {
       <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">Last updated: 2026-05-01</p>
 
       <p>
-        ConfigCheck (&ldquo;we&rdquo;, &ldquo;us&rdquo;) provides automated configuration audits for Salesforce Revenue
+        OrgPrism (&ldquo;we&rdquo;, &ldquo;us&rdquo;) provides automated configuration audits for Salesforce Revenue
         Cloud orgs. This policy explains what data we collect, how we use it, who we
         share it with, and how to control it.
       </p>
@@ -26,7 +26,7 @@ export default function PrivacyPage() {
           company name, billing details when you subscribe to a paid plan.
         </li>
         <li>
-          <strong>Salesforce metadata:</strong> when you connect a Salesforce org, ConfigCheck
+          <strong>Salesforce metadata:</strong> when you connect a Salesforce org, OrgPrism
           reads <em>configuration metadata</em> via the Salesforce REST and SOAP APIs &mdash;
           price rules, product definitions, approval rule logic, billing rules, ARM standard
           objects, and similar. We do <strong>not</strong> read customer records, opportunities,
@@ -58,7 +58,7 @@ export default function PrivacyPage() {
 
       <h2>3. AI fix suggestions</h2>
       <p>
-        For findings that include an AI fix suggestion, ConfigCheck sends an
+        For findings that include an AI fix suggestion, OrgPrism sends an
         <strong> anonymised configuration pattern</strong> &mdash; the rule structure,
         not the values &mdash; to Google Gemini for analysis. Record-level data,
         customer names, and PII are never included. Suggestions returned by Gemini
@@ -76,7 +76,7 @@ export default function PrivacyPage() {
 
       <h2>5. Subprocessors</h2>
       <p>
-        ConfigCheck runs on Vercel (hosting), Supabase (managed Postgres + auth),
+        OrgPrism runs on Vercel (hosting), Supabase (managed Postgres + auth),
         Resend (transactional email), and Google Gemini (AI fix suggestions). Each
         subprocessor sees only the minimum data required to do its job; none receive
         record-level Salesforce data.
@@ -95,8 +95,8 @@ export default function PrivacyPage() {
         Depending on your jurisdiction (GDPR, UK GDPR, CCPA, India DPDP Act, etc.)
         you have rights to access, correct, export, and delete your personal data.
         Email{' '}
-        {/* TODO: replace with the live mailbox once configcheck.io is wired up */}
-        <a href="mailto:hello@configcheck.io">hello@configcheck.io</a> with your
+        {/* TODO: replace with the live mailbox once orgprism.app is wired up */}
+        <a href="mailto:hello@orgprism.app">hello@orgprism.app</a> with your
         request and we will respond within 30 days.
       </p>
 
@@ -104,7 +104,7 @@ export default function PrivacyPage() {
       <p>
         Questions or concerns? Reach the founder directly at{' '}
         {/* TODO: replace with the live mailbox */}
-        <a href="mailto:hello@configcheck.io">hello@configcheck.io</a>.
+        <a href="mailto:hello@orgprism.app">hello@orgprism.app</a>.
       </p>
 
       <p className="text-xs text-gray-500 dark:text-gray-500 mt-8 pt-6 border-t border-gray-200 dark:border-gray-800">

@@ -156,7 +156,7 @@ export async function handleOAuthCallback(
  * Salesforce REST API version we connect with.
  *
  * jsforce defaults to v50.0 (Winter '21, October 2020) which is far older
- * than ConfigCheck needs. Most ARM / Revenue Cloud / RLM standard objects
+ * than OrgPrism needs. Most ARM / Revenue Cloud / RLM standard objects
  * were introduced in later releases:
  *   - ProductSellingModel, ProductRelatedComponent  → v57 (Spring '23)
  *   - AttributeDefinition (RLM schema)              → v58 (Summer '23)

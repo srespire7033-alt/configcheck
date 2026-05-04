@@ -61,12 +61,12 @@ export async function sendScanNotification(userId: string, data: ScanNotificatio
   const name = user.full_name || 'there';
 
   // Resend free tier: use onboarding@resend.dev (can only send to account owner email)
-  // Production: use verified domain email (e.g. notifications@configcheck.app)
-  const fromAddress = process.env.EMAIL_FROM || 'ConfigCheck <onboarding@resend.dev>';
+  // Production: use verified domain email (e.g. notifications@orgprism.app)
+  const fromAddress = process.env.EMAIL_FROM || 'OrgPrism <onboarding@resend.dev>';
 
   const subject = data.status === 'completed'
-    ? `ConfigCheck: ${data.orgName} scored ${data.overallScore}/100`
-    : `ConfigCheck: Scan failed for ${data.orgName}`;
+    ? `OrgPrism: ${data.orgName} scored ${data.overallScore}/100`
+    : `OrgPrism: Scan failed for ${data.orgName}`;
 
   const html = data.status === 'completed'
     ? buildCompletedEmail(name, data, appUrl)
@@ -125,9 +125,9 @@ export async function sendWelcomeEmail(userId: string) {
   const resendKey = process.env.RESEND_API_KEY;
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
   const name = user.full_name || 'there';
-  const fromAddress = process.env.EMAIL_FROM || 'ConfigCheck <onboarding@resend.dev>';
+  const fromAddress = process.env.EMAIL_FROM || 'OrgPrism <onboarding@resend.dev>';
 
-  const subject = 'Welcome to ConfigCheck — let\'s audit your first org';
+  const subject = 'Welcome to OrgPrism — let\'s audit your first org';
   const html = buildWelcomeEmail(name, appUrl);
   const text = buildWelcomeEmailText(name, appUrl);
 
@@ -190,7 +190,7 @@ function buildCompletedEmail(name: string, data: ScanNotificationData, appUrl: s
         <table style="width: 100%;">
           <tr>
             <td>
-              <h1 style="color: white; margin: 0; font-size: 20px; font-weight: 700;">⛨ ConfigCheck</h1>
+              <h1 style="color: white; margin: 0; font-size: 20px; font-weight: 700; letter-spacing: -0.01em;">◆ OrgPrism</h1>
               <p style="color: #bfdbfe; margin: 4px 0 0; font-size: 13px;">AI-Driven Config Audits for Salesforce Revenue Cloud</p>
             </td>
             <td style="text-align: right;">
@@ -270,7 +270,7 @@ function buildFailedEmail(name: string, data: ScanNotificationData, appUrl: stri
         <table style="width: 100%;">
           <tr>
             <td>
-              <h1 style="color: white; margin: 0; font-size: 20px; font-weight: 700;">⛨ ConfigCheck</h1>
+              <h1 style="color: white; margin: 0; font-size: 20px; font-weight: 700; letter-spacing: -0.01em;">◆ OrgPrism</h1>
               <p style="color: #fecaca; margin: 4px 0 0; font-size: 13px;">AI-Driven Config Audits for Salesforce Revenue Cloud</p>
             </td>
             <td style="text-align: right;">
@@ -323,7 +323,7 @@ function buildWelcomeEmail(name: string, appUrl: string): string {
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light">
   <meta name="supported-color-schemes" content="light">
-  <title>Welcome to ConfigCheck</title>
+  <title>Welcome to OrgPrism</title>
 </head>
 <body style="margin:0; padding:0; background:#f4f5f7; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; -webkit-font-smoothing:antialiased;">
   <!-- Preheader (hidden preview text in inbox) -->
@@ -344,8 +344,8 @@ function buildWelcomeEmail(name: string, appUrl: string): string {
                   <td style="vertical-align:middle;">
                     <table role="presentation" cellpadding="0" cellspacing="0">
                       <tr>
-                        <td style="background:#5B9BF3; width:32px; height:32px; border-radius:8px; text-align:center; color:#ffffff; font-weight:700; font-size:16px; line-height:32px;">C</td>
-                        <td style="padding-left:10px; vertical-align:middle; font-size:15px; font-weight:600; color:#0f172a; letter-spacing:-0.01em;">ConfigCheck</td>
+                        <td style="background:#1E40AF; width:32px; height:32px; border-radius:8px; text-align:center; color:#ffffff; font-weight:700; font-size:16px; line-height:32px;">◆</td>
+                        <td style="padding-left:10px; vertical-align:middle; font-size:15px; font-weight:600; color:#0f172a; letter-spacing:-0.01em;">OrgPrism</td>
                       </tr>
                     </table>
                   </td>
@@ -362,7 +362,7 @@ function buildWelcomeEmail(name: string, appUrl: string): string {
                 Welcome, ${firstName}.
               </h1>
               <p style="margin:0; font-size:15px; line-height:1.6; color:#475569;">
-                Thanks for signing up for ConfigCheck. You're minutes away from your first AI-driven audit of a Salesforce Revenue Cloud org — the same checks senior CPQ architects run manually, automated end-to-end.
+                Thanks for signing up for OrgPrism. You're minutes away from your first AI-driven audit of a Salesforce Revenue Cloud org — the same checks senior CPQ architects run manually, automated end-to-end.
               </p>
             </td>
           </tr>
@@ -436,9 +436,9 @@ function buildWelcomeEmail(name: string, appUrl: string): string {
           <tr>
             <td style="padding:24px 32px 8px;">
               <p style="margin:0 0 12px; font-size:14px; line-height:1.65; color:#334155;">
-                If anything feels off, or there's a check you wish ConfigCheck ran, just reply to this email — it comes straight to my inbox.
+                If anything feels off, or there's a check you wish OrgPrism ran, just reply to this email — it comes straight to my inbox.
               </p>
-              <p style="margin:0; font-size:14px; color:#0f172a;">— Maulik<br><span style="color:#64748b; font-size:13px;">Founder, ConfigCheck</span></p>
+              <p style="margin:0; font-size:14px; color:#0f172a;">— Maulik<br><span style="color:#64748b; font-size:13px;">Founder, OrgPrism</span></p>
             </td>
           </tr>
 
@@ -447,7 +447,7 @@ function buildWelcomeEmail(name: string, appUrl: string): string {
             <td style="padding:28px 32px 28px;">
               <div style="border-top:1px solid #e2e8f0; padding-top:18px; text-align:center;">
                 <p style="margin:0 0 6px; font-size:12px; color:#94a3b8;">
-                  You're receiving this because you signed up for ConfigCheck.
+                  You're receiving this because you signed up for OrgPrism.
                 </p>
                 <p style="margin:0; font-size:12px; color:#94a3b8;">
                   <a href="${appUrl}/settings" style="color:#64748b; text-decoration:underline;">Manage email preferences</a>
@@ -470,7 +470,7 @@ function buildWelcomeEmailText(name: string, appUrl: string): string {
   const firstName = name.split(' ')[0] || name;
   return `Welcome, ${firstName}.
 
-Thanks for signing up for ConfigCheck. You're minutes away from your first AI-driven audit of a Salesforce Revenue Cloud org — the same checks senior CPQ architects run manually, automated end-to-end.
+Thanks for signing up for OrgPrism. You're minutes away from your first AI-driven audit of a Salesforce Revenue Cloud org — the same checks senior CPQ architects run manually, automated end-to-end.
 
 Connect your first org: ${appUrl}/dashboard
 (Sandbox or production — OAuth, read-only, takes 60 seconds.)
@@ -488,13 +488,13 @@ How it works:
      Export a white-labeled audit with severity, impact, and remediation —
      ready to hand to your client.
 
-If anything feels off, or there's a check you wish ConfigCheck ran, just reply to this email — it comes straight to my inbox.
+If anything feels off, or there's a check you wish OrgPrism ran, just reply to this email — it comes straight to my inbox.
 
 — Maulik
-Founder, ConfigCheck
+Founder, OrgPrism
 
 ---
-You're receiving this because you signed up for ConfigCheck.
+You're receiving this because you signed up for OrgPrism.
 Manage email preferences: ${appUrl}/settings
 Open dashboard: ${appUrl}/dashboard
 `;
@@ -515,9 +515,9 @@ interface InvitationEmailData {
 export async function sendInvitationEmail(data: InvitationEmailData) {
   const resendKey = process.env.RESEND_API_KEY;
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-  const fromAddress = process.env.EMAIL_FROM || 'ConfigCheck <onboarding@resend.dev>';
+  const fromAddress = process.env.EMAIL_FROM || 'OrgPrism <onboarding@resend.dev>';
   const inviteUrl = `${appUrl}/invite/${data.inviteToken}`;
-  const subject = `${data.inviterName} invited you to join ${data.teamName} on ConfigCheck`;
+  const subject = `${data.inviterName} invited you to join ${data.teamName} on OrgPrism`;
   const html = buildInvitationEmail(data, inviteUrl);
   const text = buildInvitationEmailText(data, inviteUrl);
 
@@ -568,7 +568,7 @@ function buildInvitationEmail(data: InvitationEmailData, inviteUrl: string): str
 </head>
 <body style="margin:0; padding:0; background:#f4f5f7; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; -webkit-font-smoothing:antialiased;">
   <div style="display:none; font-size:1px; color:#f4f5f7; line-height:1px; max-height:0; max-width:0; opacity:0; overflow:hidden;">
-    Join ${data.teamName} on ConfigCheck as a ${roleLabel}.
+    Join ${data.teamName} on OrgPrism as a ${roleLabel}.
   </div>
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f5f7; padding:32px 16px;">
     <tr>
@@ -581,8 +581,8 @@ function buildInvitationEmail(data: InvitationEmailData, inviteUrl: string): str
                   <td style="vertical-align:middle;">
                     <table role="presentation" cellpadding="0" cellspacing="0">
                       <tr>
-                        <td style="background:#5B9BF3; width:32px; height:32px; border-radius:8px; text-align:center; color:#ffffff; font-weight:700; font-size:16px; line-height:32px;">C</td>
-                        <td style="padding-left:10px; vertical-align:middle; font-size:15px; font-weight:600; color:#0f172a; letter-spacing:-0.01em;">ConfigCheck</td>
+                        <td style="background:#1E40AF; width:32px; height:32px; border-radius:8px; text-align:center; color:#ffffff; font-weight:700; font-size:16px; line-height:32px;">◆</td>
+                        <td style="padding-left:10px; vertical-align:middle; font-size:15px; font-weight:600; color:#0f172a; letter-spacing:-0.01em;">OrgPrism</td>
                       </tr>
                     </table>
                   </td>
@@ -597,7 +597,7 @@ function buildInvitationEmail(data: InvitationEmailData, inviteUrl: string): str
                 You've been invited to ${data.teamName}.
               </h1>
               <p style="margin:0 0 8px; font-size:15px; line-height:1.6; color:#475569;">
-                <strong style="color:#0f172a;">${data.inviterName}</strong> has invited you to join the <strong style="color:#0f172a;">${data.teamName}</strong> team on ConfigCheck as a <strong style="color:#0f172a;">${roleLabel}</strong>.
+                <strong style="color:#0f172a;">${data.inviterName}</strong> has invited you to join the <strong style="color:#0f172a;">${data.teamName}</strong> team on OrgPrism as a <strong style="color:#0f172a;">${roleLabel}</strong>.
               </p>
               <p style="margin:0; font-size:15px; line-height:1.6; color:#475569;">
                 You'll be able to view scans, share audit reports, and collaborate on remediation work for connected Salesforce orgs.
@@ -615,7 +615,7 @@ function buildInvitationEmail(data: InvitationEmailData, inviteUrl: string): str
                   </td>
                 </tr>
               </table>
-              <p style="margin:10px 0 0; font-size:12px; color:#94a3b8;">If you don't have a ConfigCheck account, you can create one in seconds.</p>
+              <p style="margin:10px 0 0; font-size:12px; color:#94a3b8;">If you don't have a OrgPrism account, you can create one in seconds.</p>
             </td>
           </tr>
           <tr><td style="padding:28px 32px 0;"><div style="height:1px; background:#e2e8f0; line-height:1px; font-size:0;">&nbsp;</div></td></tr>
@@ -641,16 +641,16 @@ function buildInvitationEmailText(data: InvitationEmailData, inviteUrl: string):
   const roleLabel = data.role.charAt(0).toUpperCase() + data.role.slice(1);
   return `You've been invited to ${data.teamName}.
 
-${data.inviterName} has invited you to join the ${data.teamName} team on ConfigCheck as a ${roleLabel}.
+${data.inviterName} has invited you to join the ${data.teamName} team on OrgPrism as a ${roleLabel}.
 
 You'll be able to view scans, share audit reports, and collaborate on remediation work for connected Salesforce orgs.
 
 Accept the invitation: ${inviteUrl}
 
-If you don't have a ConfigCheck account, you can create one in seconds.
+If you don't have a OrgPrism account, you can create one in seconds.
 
 If you didn't expect this invitation, you can safely ignore this email.
 
-— ConfigCheck
+— OrgPrism
 `;
 }

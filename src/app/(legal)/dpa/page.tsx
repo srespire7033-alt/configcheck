@@ -1,9 +1,9 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Data Processing Addendum — ConfigCheck',
+  title: 'Data Processing Addendum — OrgPrism',
   description:
-    'How to request a Data Processing Addendum (DPA) for ConfigCheck — the agreement that governs our processing of your data on your behalf.',
+    'How to request a Data Processing Addendum (DPA) for OrgPrism — the agreement that governs our processing of your data on your behalf.',
   alternates: { canonical: '/dpa' },
 };
 
@@ -22,8 +22,8 @@ export default function DPAPage() {
       <h2>How to request a DPA</h2>
       <p>
         Email{' '}
-        {/* TODO: replace with the live mailbox once configcheck.io is wired up */}
-        <a href="mailto:hello@configcheck.io">hello@configcheck.io</a> with the
+        {/* TODO: replace with the live mailbox once orgprism.app is wired up */}
+        <a href="mailto:hello@orgprism.app">hello@orgprism.app</a> with the
         subject line <em>&ldquo;DPA request&rdquo;</em> and include:
       </p>
       <ul>
@@ -40,7 +40,7 @@ export default function DPAPage() {
 
       <h2>What our standard DPA covers</h2>
       <ul>
-        <li>Roles and responsibilities (you are the controller; ConfigCheck is the processor).</li>
+        <li>Roles and responsibilities (you are the controller; OrgPrism is the processor).</li>
         <li>Categories of personal data processed (account data and Salesforce metadata as described in our <a href="/privacy">Privacy Policy</a>).</li>
         <li>Subprocessor list with notice procedures for changes (current list at <a href="/security">/security</a>).</li>
         <li>Security commitments (encryption in transit and at rest, OAuth-only access, retention limits).</li>

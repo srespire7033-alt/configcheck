@@ -1,9 +1,9 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Security — ConfigCheck',
+  title: 'Security — OrgPrism',
   description:
-    'How ConfigCheck protects your Salesforce metadata, OAuth tokens, and scan results. Read-only OAuth scopes, encryption in transit and at rest, no managed package.',
+    'How OrgPrism protects your Salesforce metadata, OAuth tokens, and scan results. Read-only OAuth scopes, encryption in transit and at rest, no managed package.',
   alternates: { canonical: '/security' },
 };
 
@@ -14,7 +14,7 @@ export default function SecurityPage() {
       <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">Last updated: 2026-05-01</p>
 
       <p>
-        ConfigCheck is designed around the principle of minimum data exposure.
+        OrgPrism is designed around the principle of minimum data exposure.
         We connect to your Salesforce org with read-only OAuth, store nothing
         from your customer records, and let you disconnect at any time.
       </p>
@@ -100,7 +100,7 @@ export default function SecurityPage() {
       <p>
         If you believe you&rsquo;ve found a security issue, please email{' '}
         {/* TODO: replace with the live mailbox; consider a dedicated security@ alias */}
-        <a href="mailto:hello@configcheck.io">hello@configcheck.io</a> with a
+        <a href="mailto:hello@orgprism.app">hello@orgprism.app</a> with a
         description and reproduction steps. We&rsquo;ll acknowledge within 72
         hours, work with you to validate, and deploy a fix as quickly as the
         severity warrants. Please give us reasonable time to remediate before
@@ -109,7 +109,7 @@ export default function SecurityPage() {
 
       <h2>What we are <em>not</em> claiming</h2>
       <p>
-        ConfigCheck is built to SOC 2 standards but does <strong>not</strong>{' '}
+        OrgPrism is built to SOC 2 standards but does <strong>not</strong>{' '}
         currently hold a SOC 2 Type II report. We are not certified ISO 27001 or
         HIPAA compliant. If your procurement requires either, please reach out
         and we&rsquo;ll let you know our roadmap and where we are today.

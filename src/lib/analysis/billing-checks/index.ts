@@ -5,7 +5,7 @@ import { taxRuleChecks } from './tax-rules';
 import { financeBookChecks } from './finance-books';
 import { glRuleChecks } from './gl-rules';
 import { legalEntityChecks } from './legal-entity';
-import { productBillingConfigChecks } from './product-billing-config';
+import { productBillingOrgPrisms } from './product-billing-config';
 import { invoicingChecks } from './invoicing';
 
 export const allBillingChecks: BillingHealthCheck[] = [
@@ -15,6 +15,6 @@ export const allBillingChecks: BillingHealthCheck[] = [
   ...financeBookChecks,
   ...glRuleChecks,
   ...legalEntityChecks,
-  ...productBillingConfigChecks,
+  ...productBillingOrgPrisms,
   ...invoicingChecks,
 ];

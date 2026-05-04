@@ -148,7 +148,7 @@ export function ConnectOrgModal({ isOpen, onClose }: ConnectOrgModalProps) {
               </button>
 
               <p className="text-[11px] text-gray-400 dark:text-gray-500 text-center pt-1">
-                ConfigCheck only requests read-only access to your configuration metadata.
+                OrgPrism only requests read-only access to your configuration metadata.
               </p>
             </div>
           ) : (
@@ -238,7 +238,7 @@ export function ConnectOrgModal({ isOpen, onClose }: ConnectOrgModalProps) {
 
               <p className="flex items-start gap-1.5 text-[11px] text-gray-400 dark:text-gray-500">
                 <ExternalLink className="h-3 w-3 mt-0.5 flex-shrink-0" />
-                Your credentials are encrypted and only used for OAuth with your org. ConfigCheck requests read-only access.
+                Your credentials are encrypted and only used for OAuth with your org. OrgPrism requests read-only access.
               </p>
             </div>
           )}

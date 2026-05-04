@@ -3,7 +3,6 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import {
-  ShieldCheck,
   Zap,
   FileText,
   ArrowRight,
@@ -16,6 +15,7 @@ import {
   AlertTriangle,
   Target,
 } from 'lucide-react';
+import { LogoMark } from '@/components/ui/logo';
 
 export default function LandingPage() {
   const [scrolled, setScrolled] = useState(false);
@@ -54,11 +54,9 @@ export default function LandingPage() {
         }`}
       >
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: '#5B9BF3' }}>
-              <ShieldCheck className="h-5 w-5 text-white" />
-            </div>
-            <span className="text-xl font-bold">ConfigCheck</span>
+          <div className="flex items-center gap-2.5 text-white">
+            <LogoMark size={36} />
+            <span className="text-xl font-bold tracking-tight text-gray-900 dark:text-white">OrgPrism</span>
           </div>
           <div className="hidden md:flex items-center gap-8 text-sm text-gray-600 dark:text-gray-400">
             <a href="#features" className="hover:text-gray-900 dark:hover:text-white transition-colors">Features</a>
@@ -139,8 +137,8 @@ export default function LandingPage() {
             <div className="relative bg-white dark:bg-gray-900/80 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-2xl p-6 md:p-8 backdrop-blur">
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: '#5B9BF3' }}>
-                    <ShieldCheck className="h-5 w-5 text-white" />
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-blue-500">
+                    <Cloud className="h-5 w-5 text-white" />
                   </div>
                   <div className="text-left">
                     <div className="font-semibold text-sm">Acme Corp Sandbox</div>
@@ -241,7 +239,7 @@ export default function LandingPage() {
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">Everything You Need to Audit Revenue Cloud</h2>
             <p className="text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
-              From connecting your org to delivering white-label reports, ConfigCheck handles the entire audit workflow.
+              From connecting your org to delivering white-label reports, OrgPrism handles the entire audit workflow.
             </p>
           </div>
 
@@ -324,7 +322,7 @@ export default function LandingPage() {
                 step: '01',
                 icon: Cloud,
                 title: 'Connect Salesforce',
-                desc: 'Authenticate with OAuth. ConfigCheck uses read-only access to pull Revenue Cloud metadata — no data is modified.',
+                desc: 'Authenticate with OAuth. OrgPrism uses read-only access to pull Revenue Cloud metadata — no data is modified.',
               },
               {
                 step: '02',
@@ -480,13 +478,13 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ═══ WHY CONFIGCHECK ═══ */}
+      {/* ═══ WHY ORGPRISM ═══ */}
       <section className="py-24 bg-white dark:bg-gray-900/30">
         <div className="max-w-7xl mx-auto px-6">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">Built for Revenue Cloud Consultants</h2>
             <p className="text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
-              Stop spending days manually reviewing Revenue Cloud configurations. ConfigCheck does it in seconds.
+              Stop spending days manually reviewing Revenue Cloud configurations. OrgPrism does it in seconds.
             </p>
           </div>
 
@@ -495,7 +493,7 @@ export default function LandingPage() {
             <div className="bg-red-50 dark:bg-red-500/5 rounded-2xl border border-red-200 dark:border-red-500/20 p-8">
               <div className="flex items-center gap-2 text-red-600 dark:text-red-400 font-semibold mb-6">
                 <AlertTriangle className="h-5 w-5" />
-                Without ConfigCheck
+                Without OrgPrism
               </div>
               <ul className="space-y-4">
                 {[
@@ -517,7 +515,7 @@ export default function LandingPage() {
             <div className="bg-green-50 dark:bg-green-500/5 rounded-2xl border border-green-200 dark:border-green-500/20 p-8">
               <div className="flex items-center gap-2 text-green-600 dark:text-green-400 font-semibold mb-6">
                 <CheckCircle className="h-5 w-5" />
-                With ConfigCheck
+                With OrgPrism
               </div>
               <ul className="space-y-4">
                 {[
@@ -551,7 +549,7 @@ export default function LandingPage() {
       <section className="py-24">
         <div className="max-w-2xl mx-auto px-6">
           <div className="text-center mb-10">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">Why I built ConfigCheck</h2>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">Why I built OrgPrism</h2>
           </div>
 
           <div className="bg-gray-50/50 dark:bg-gray-900/30 rounded-2xl border border-gray-200 dark:border-gray-800 p-7 md:p-9">
@@ -562,7 +560,7 @@ export default function LandingPage() {
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src="/maulik.png"
-                  alt="Maulik Thakkar — founder of ConfigCheck"
+                  alt="Maulik Thakkar — founder of OrgPrism"
                   className="w-16 h-16 md:w-20 md:h-20 rounded-full flex-shrink-0 object-cover ring-2 ring-white dark:ring-gray-800 shadow-md"
                   loading="lazy"
                 />
@@ -591,19 +589,19 @@ export default function LandingPage() {
                   What struck me wasn&rsquo;t the bug itself &mdash; every CPQ implementer has lived through one of these. It was that I&rsquo;d seen variations of the same problem across three different orgs in the past year. The misconfiguration patterns were predictable. The detection should have been automated.
                 </p>
                 <p>
-                  ConfigCheck started as a weekend project to catch the configuration patterns I kept tripping over. Today it runs 182 checks across CPQ, Billing, and ARM in under 30 seconds &mdash; the audit I wish I&rsquo;d had the morning that bug ticket landed.
+                  OrgPrism started as a weekend project to catch the configuration patterns I kept tripping over. Today it runs 182 checks across CPQ, Billing, and ARM in under 30 seconds &mdash; the audit I wish I&rsquo;d had the morning that bug ticket landed.
                 </p>
                 <p>
                   If you&rsquo;ve spent a week chasing a CPQ misconfiguration that turned out to be obvious in hindsight, this is for you.{' '}
-                  {/* TODO: replace once configcheck.io is wired up — site is
-                      currently served from configcheck.vercel.app while this
+                  {/* TODO: replace once orgprism.app is wired up — site is
+                      currently served from orgprism.vercel.app while this
                       email points at a domain we don't control yet. */}
                   Reply directly to{' '}
                   <a
-                    href="mailto:hello@configcheck.io"
+                    href="mailto:hello@orgprism.app"
                     className="text-blue-600 dark:text-blue-400 hover:underline"
                   >
-                    hello@configcheck.io
+                    hello@orgprism.app
                   </a>
                   {' '}&mdash; comes straight to my inbox.
                 </p>
@@ -682,11 +680,11 @@ export default function LandingPage() {
                   </li>
                 ))}
               </ul>
-              {/* TODO: replace once configcheck.io is wired up — site is
-                  currently served from configcheck.vercel.app while this
+              {/* TODO: replace once orgprism.app is wired up — site is
+                  currently served from orgprism.vercel.app while this
                   email points at a domain we don't control yet. */}
               <a
-                href="mailto:hello@configcheck.io"
+                href="mailto:hello@orgprism.app"
                 className="block text-center w-full py-2.5 text-sm font-semibold rounded-xl border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
               >
                 Contact Sales
@@ -705,18 +703,18 @@ export default function LandingPage() {
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">Frequently asked questions</h2>
             <p className="text-gray-600 dark:text-gray-400">
-              Common questions from consultants evaluating ConfigCheck.
+              Common questions from consultants evaluating OrgPrism.
             </p>
           </div>
           <div className="space-y-3">
             {[
               {
                 q: 'Is my Salesforce data stored?',
-                a: 'No. ConfigCheck reads metadata via OAuth at scan time only. Scan results (issue summaries, severity, affected record IDs) are stored encrypted in our database. We don\'t replicate your Salesforce records.',
+                a: 'No. OrgPrism reads metadata via OAuth at scan time only. Scan results (issue summaries, severity, affected record IDs) are stored encrypted in our database. We don\'t replicate your Salesforce records.',
               },
               {
                 q: 'Do I need to install a managed package?',
-                a: 'No. ConfigCheck connects via standard OAuth and runs entirely against the Salesforce REST/SOAP APIs. Nothing is installed in your org.',
+                a: 'No. OrgPrism connects via standard OAuth and runs entirely against the Salesforce REST/SOAP APIs. Nothing is installed in your org.',
               },
               {
                 q: 'Which Salesforce editions are supported?',
@@ -728,7 +726,7 @@ export default function LandingPage() {
               },
               {
                 q: 'What happens when the OAuth token expires?',
-                a: 'ConfigCheck auto-refreshes tokens for you. If the user revokes access, we mark the org\'s connection as expired and the next scan will prompt re-authentication.',
+                a: 'OrgPrism auto-refreshes tokens for you. If the user revokes access, we mark the org\'s connection as expired and the next scan will prompt re-authentication.',
               },
               {
                 q: 'How is the AI fix suggestion generated?',
@@ -800,16 +798,14 @@ export default function LandingPage() {
           Expanded from 3 inline links to a 4-column information architecture.
           Every link below routes to a page that resolves (TODO comments
           mark stubs we still need to build). Copyright reframed per
-          Task #18 to remove the boilerplate-y "© 2026 ConfigCheck" line. */}
+          Task #18 to remove the boilerplate-y "© 2026 OrgPrism" line. */}
       <footer className="border-t border-gray-200 dark:border-gray-800 py-16">
         <div className="max-w-7xl mx-auto px-6">
           <div className="grid grid-cols-2 md:grid-cols-5 gap-8 mb-12">
             <div className="col-span-2 md:col-span-1">
-              <div className="flex items-center gap-2.5 mb-4">
-                <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: '#5B9BF3' }}>
-                  <ShieldCheck className="h-4 w-4 text-white" />
-                </div>
-                <span className="text-base font-bold">ConfigCheck</span>
+              <div className="flex items-center gap-2.5 mb-4 text-white">
+                <LogoMark size={32} />
+                <span className="text-base font-bold tracking-tight text-gray-900 dark:text-white">OrgPrism</span>
               </div>
               <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
                 AI-driven config audits for Salesforce Revenue Cloud.
@@ -831,8 +827,8 @@ export default function LandingPage() {
               <ul className="space-y-2 text-sm text-gray-500 dark:text-gray-400">
                 {/* TODO: build /about page */}
                 <li><Link href="/about" className="hover:text-gray-900 dark:hover:text-white transition-colors">About</Link></li>
-                {/* TODO: replace with real domain once configcheck.io is wired up */}
-                <li><a href="mailto:hello@configcheck.io" className="hover:text-gray-900 dark:hover:text-white transition-colors">Contact</a></li>
+                {/* TODO: replace with real domain once orgprism.app is wired up */}
+                <li><a href="mailto:hello@orgprism.app" className="hover:text-gray-900 dark:hover:text-white transition-colors">Contact</a></li>
                 <li><a href="#faq" className="hover:text-gray-900 dark:hover:text-white transition-colors">FAQ</a></li>
               </ul>
             </div>
@@ -859,7 +855,7 @@ export default function LandingPage() {
           </div>
           <div className="pt-8 border-t border-gray-200 dark:border-gray-800 flex flex-col md:flex-row items-center justify-between gap-4">
             <p className="text-sm text-gray-400 dark:text-gray-500">
-              &copy; ConfigCheck. All rights reserved.
+              &copy; OrgPrism. All rights reserved.
             </p>
             <p className="text-sm text-gray-400 dark:text-gray-500">
               Launched 2026 in Vadodara, India.

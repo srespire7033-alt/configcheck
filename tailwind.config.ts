@@ -16,6 +16,14 @@ const config: Config = {
       colors: {
         background: "var(--background)",
         foreground: "var(--foreground)",
+        // OrgPrism brand palette — the four faces of the hollow-hex logo.
+        // Use these tokens (e.g. text-brand-purple) in marketing surfaces and
+        // category accents. Severity colors stay in red/amber/green via
+        // Tailwind defaults to keep the two systems separate.
+        'brand-purple': '#A855F7',
+        'brand-orange': '#F97316',
+        'brand-sky': '#38BDF8',
+        'brand-indigo': '#1E40AF',
       },
     },
   },

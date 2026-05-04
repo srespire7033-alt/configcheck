@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
   }
 
   const resendKey = process.env.RESEND_API_KEY;
-  const fromAddress = process.env.EMAIL_FROM || 'ConfigCheck <onboarding@resend.dev>';
+  const fromAddress = process.env.EMAIL_FROM || 'OrgPrism <onboarding@resend.dev>';
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 
   if (!resendKey) {
@@ -43,10 +43,10 @@ export async function POST(request: NextRequest) {
 
   const html = `<!doctype html><html><body style="font-family:Arial,Helvetica,sans-serif;padding:24px;background:#f6f8fb;">
     <div style="max-width:520px;margin:0 auto;background:#fff;border-radius:12px;padding:32px;border:1px solid #e5e7eb;">
-      <div style="font-size:14px;font-weight:600;color:#5b9bf3;letter-spacing:.04em;text-transform:uppercase;">ConfigCheck</div>
+      <div style="font-size:14px;font-weight:600;color:#5b9bf3;letter-spacing:.04em;text-transform:uppercase;">OrgPrism</div>
       <h1 style="margin:8px 0 16px;font-size:22px;color:#0f172a;">Test notification</h1>
       <p style="color:#475569;font-size:14px;line-height:1.5;">
-        This is a one-time test message from ConfigCheck. If you're seeing this,
+        This is a one-time test message from OrgPrism. If you're seeing this,
         notifications to <strong>${email}</strong> are working correctly. You'll
         receive real notifications here when scans complete or critical issues
         are found.
@@ -68,7 +68,7 @@ export async function POST(request: NextRequest) {
       body: JSON.stringify({
         from: fromAddress,
         to: [email],
-        subject: 'ConfigCheck — test notification',
+        subject: 'OrgPrism — test notification',
         html,
       }),
     });

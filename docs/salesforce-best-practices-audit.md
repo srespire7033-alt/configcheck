@@ -1,6 +1,6 @@
 # Salesforce Best Practices Audit
 
-> Mapping of ConfigCheck's existing checks against three Salesforce reference documents:
+> Mapping of OrgPrism's existing checks against three Salesforce reference documents:
 > - Salesforce CPQ (Spring '26) — 466 pages
 > - Salesforce Billing (Spring '26) — 376 pages
 > - Revenue Cloud Developer Guide (Spring '26) — RLM/ARM, 1100+ pages
@@ -15,7 +15,7 @@ Last updated: 2026-04-30
 | **Salesforce Billing (blng)** | 30+ | ~70% of documented best practices | Cancel-and-rebill workflow, Billing day-of-month consistency, Consumption schedule + amendment rules |
 | **Revenue Cloud / ARM (RLM)** | **51** ✨ | **~60% of documented best practices** | Asset attributes, Constraint Modeling Language (CML), Sharing & search index, Decision-table conditions |
 
-ARM coverage went from **0 → 51 checks across 16 categories** (delivered 2026-04-30). ConfigCheck now covers all three Salesforce revenue product lines: CPQ, Billing, and Revenue Cloud (ARM/RLM).
+ARM coverage went from **0 → 51 checks across 16 categories** (delivered 2026-04-30). OrgPrism now covers all three Salesforce revenue product lines: CPQ, Billing, and Revenue Cloud (ARM/RLM).
 
 **ARM check inventory (51 checks across 16 categories):**
 
@@ -226,7 +226,7 @@ ARM coverage went from **0 → 51 checks across 16 categories** (delivered 2026-
 
 ## Part 3 — ARM (Revenue Cloud / RLM) — Net New Coverage
 
-ConfigCheck currently has **zero** ARM checks. The Revenue Cloud Developer Guide (1,100+ pages) covers entirely different objects than Salesforce CPQ:
+OrgPrism currently has **zero** ARM checks. The Revenue Cloud Developer Guide (1,100+ pages) covers entirely different objects than Salesforce CPQ:
 
 | ARM Concept | RLM Object | Equivalent CPQ Object |
 |---|---|---|

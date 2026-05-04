@@ -1,9 +1,9 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Terms of Service — ConfigCheck',
+  title: 'Terms of Service — OrgPrism',
   description:
-    'Terms governing the use of ConfigCheck, an automated Salesforce Revenue Cloud audit service.',
+    'Terms governing the use of OrgPrism, an automated Salesforce Revenue Cloud audit service.',
   alternates: { canonical: '/terms' },
 };
 
@@ -14,7 +14,7 @@ export default function TermsPage() {
       <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">Last updated: 2026-05-01</p>
 
       <p>
-        These terms govern your use of ConfigCheck (&ldquo;the Service&rdquo;).
+        These terms govern your use of OrgPrism (&ldquo;the Service&rdquo;).
         By creating an account or connecting a Salesforce org, you agree to them.
       </p>
 
@@ -45,7 +45,7 @@ export default function TermsPage() {
 
       <h2>4. Service description &amp; disclaimer</h2>
       <p>
-        ConfigCheck produces automated audits based on configuration metadata. It
+        OrgPrism produces automated audits based on configuration metadata. It
         cannot detect every possible misconfiguration, and findings should be
         verified before remediation. AI fix suggestions are advisory &mdash;
         verify them in a sandbox before applying changes to production.
@@ -89,8 +89,8 @@ export default function TermsPage() {
       <h2>9. Contact</h2>
       <p>
         Questions about these terms? Email{' '}
-        {/* TODO: replace with the live mailbox once configcheck.io is wired up */}
-        <a href="mailto:hello@configcheck.io">hello@configcheck.io</a>.
+        {/* TODO: replace with the live mailbox once orgprism.app is wired up */}
+        <a href="mailto:hello@orgprism.app">hello@orgprism.app</a>.
       </p>
 
       <p className="text-xs text-gray-500 dark:text-gray-500 mt-8 pt-6 border-t border-gray-200 dark:border-gray-800">

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, RefreshCw, Sparkles, Download, FileBarChart, CalendarClock, ShieldCheck, FileSpreadsheet, ChevronDown, ChevronRight, AlertTriangle, AlertCircle, Info, X } from 'lucide-react';
+import { ArrowLeft, RefreshCw, Sparkles, Download, FileBarChart, CalendarClock, Cloud, ShieldCheck, FileSpreadsheet, ChevronDown, ChevronRight, AlertTriangle, AlertCircle, Info, X } from 'lucide-react';
 import { getCategoryLabel, formatTimeAgo } from '@/lib/utils';
 import { groupTopIssues } from '@/lib/analysis/top-issue-grouper';
 import { HealthScore } from '@/components/scan/health-score';
@@ -452,11 +452,8 @@ export default function OrgDetailPage() {
       {org && (
         <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-200 dark:border-gray-800">
           <div className="flex items-center gap-3 min-w-0">
-            <div
-              className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
-              style={{ background: '#5B9BF3' }}
-            >
-              <ShieldCheck className="w-4 h-4 text-white" />
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 bg-blue-500">
+              <Cloud className="w-4 h-4 text-white" />
             </div>
             <div className="min-w-0">
               <p className="text-base font-semibold text-gray-900 dark:text-white truncate">
@@ -567,7 +564,7 @@ export default function OrgDetailPage() {
           )}
 
           {/* Data observed panel — only shown for ARM scans. Surfaces the
-              per-object row counts ConfigCheck observed during the fetch
+              per-object row counts OrgPrism observed during the fetch
               so the user can verify against their org reality. Distinguishes
               "0 rows returned" (object exists, no data) from "object not
               visible to the connected SF user" (license or profile issue). */}

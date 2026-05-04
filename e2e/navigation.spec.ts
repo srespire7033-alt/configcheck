@@ -37,7 +37,7 @@ test.describe('General navigation', () => {
     const title = await page.title();
     // The app should have a meaningful title, not a blank one
     expect(title.length).toBeGreaterThan(0);
-    expect(title).toContain('ConfigCheck');
+    expect(title).toContain('OrgPrism');
   });
 
   test('unauthenticated access to /dashboard redirects to /login', async ({ page }) => {

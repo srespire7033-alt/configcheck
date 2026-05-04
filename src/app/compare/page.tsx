@@ -1,17 +1,18 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
-import { ArrowLeft, ShieldCheck, Check, Minus } from 'lucide-react';
+import { ArrowLeft, Check, Minus } from 'lucide-react';
+import { LogoMark } from '@/components/ui/logo';
 
 export const metadata: Metadata = {
-  title: 'How ConfigCheck compares — ConfigCheck',
+  title: 'How OrgPrism compares — OrgPrism',
   description:
-    'Honest comparison of ConfigCheck vs enterprise Salesforce audit platforms vs manual audits — time to first audit, setup complexity, AI suggestions, per-org pricing.',
+    'Honest comparison of OrgPrism vs enterprise Salesforce audit platforms vs manual audits — time to first audit, setup complexity, AI suggestions, per-org pricing.',
   alternates: { canonical: '/compare' },
 };
 
 interface Row {
   label: string;
-  configcheck: string | { ok: true } | { ok: false };
+  orgprism: string | { ok: true } | { ok: false };
   enterprise: string | { ok: true } | { ok: false };
   manual: string | { ok: true } | { ok: false };
   note?: string;
@@ -20,61 +21,61 @@ interface Row {
 const rows: Row[] = [
   {
     label: 'Time to first audit',
-    configcheck: '~5 minutes (signup → OAuth → scan)',
+    orgprism: '~5 minutes (signup → OAuth → scan)',
     enterprise: '4–8 weeks (procurement, MSA, SOW)',
     manual: '3–5 days per org',
   },
   {
     label: 'Setup complexity',
-    configcheck: 'OAuth consent, no install',
+    orgprism: 'OAuth consent, no install',
     enterprise: 'Managed package install + admin training',
     manual: 'Spreadsheet template, none',
   },
   {
     label: 'Managed package required',
-    configcheck: { ok: false },
+    orgprism: { ok: false },
     enterprise: { ok: true },
     manual: { ok: false },
   },
   {
     label: 'Read-only OAuth scope',
-    configcheck: { ok: true },
+    orgprism: { ok: true },
     enterprise: 'Varies — most require write scopes',
     manual: 'N/A',
   },
   {
     label: 'AI fix suggestions per finding',
-    configcheck: { ok: true },
+    orgprism: { ok: true },
     enterprise: 'Some — quality varies',
     manual: { ok: false },
   },
   {
     label: 'White-label PDF report',
-    configcheck: { ok: true },
+    orgprism: { ok: true },
     enterprise: { ok: true },
     manual: 'Hand-written',
   },
   {
     label: 'Sandbox + Production support',
-    configcheck: { ok: true },
+    orgprism: { ok: true },
     enterprise: { ok: true },
     manual: { ok: true },
   },
   {
     label: 'Per-org pricing',
-    configcheck: 'From $0 (Free) — $49/mo (Pro)',
+    orgprism: 'From $0 (Free) — $49/mo (Pro)',
     enterprise: '$10k–$50k+/year',
     manual: 'Consultant time + opportunity cost',
   },
   {
     label: 'Cancel anytime',
-    configcheck: { ok: true },
+    orgprism: { ok: true },
     enterprise: 'Annual contracts typical',
     manual: 'N/A',
   },
   {
     label: 'Self-serve trial',
-    configcheck: { ok: true, label: '14-day Pro trial, free tier indefinitely' } as unknown as { ok: true },
+    orgprism: { ok: true, label: '14-day Pro trial, free tier indefinitely' } as unknown as { ok: true },
     enterprise: 'Sales-led, gated',
     manual: 'N/A',
   },
@@ -83,7 +84,7 @@ const rows: Row[] = [
 function Cell({
   value,
 }: {
-  value: Row['configcheck'];
+  value: Row['orgprism'];
 }) {
   if (typeof value === 'string') {
     return <span className="text-sm text-gray-700 dark:text-gray-300">{value}</span>;
@@ -109,11 +110,9 @@ export default function ComparePage() {
     <div className="min-h-screen bg-gray-50 dark:bg-[#0b1120] text-gray-900 dark:text-gray-100">
       <header className="border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
         <div className="max-w-5xl mx-auto px-6 py-5 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: '#5B9BF3' }}>
-              <ShieldCheck className="h-5 w-5 text-white" />
-            </div>
-            <span className="text-xl font-bold">ConfigCheck</span>
+          <Link href="/" className="flex items-center gap-2.5 text-white">
+            <LogoMark size={36} />
+            <span className="text-xl font-bold tracking-tight text-gray-900 dark:text-white">OrgPrism</span>
           </Link>
           <Link
             href="/"
@@ -127,9 +126,9 @@ export default function ComparePage() {
 
       <main className="max-w-5xl mx-auto px-6 py-12">
         <div className="mb-12">
-          <h1 className="text-3xl md:text-4xl font-bold mb-3">How ConfigCheck compares</h1>
+          <h1 className="text-3xl md:text-4xl font-bold mb-3">How OrgPrism compares</h1>
           <p className="text-gray-600 dark:text-gray-400 max-w-3xl leading-relaxed">
-            Honest comparison of ConfigCheck against enterprise Salesforce audit
+            Honest comparison of OrgPrism against enterprise Salesforce audit
             platforms and manual audit work. We don&rsquo;t name competitors here
             because (a) their pricing and feature sets change frequently and (b) we
             don&rsquo;t want to misrepresent what they do. The &ldquo;Enterprise
@@ -146,7 +145,7 @@ export default function ComparePage() {
                   &nbsp;
                 </th>
                 <th className="pb-3 pr-6 align-bottom">
-                  <div className="text-base font-bold text-blue-700 dark:text-blue-400">ConfigCheck</div>
+                  <div className="text-base font-bold text-blue-700 dark:text-blue-400">OrgPrism</div>
                   <div className="text-xs text-gray-500 dark:text-gray-400 font-normal">$0–$49/mo &middot; self-serve</div>
                 </th>
                 <th className="pb-3 pr-6 align-bottom">
@@ -166,7 +165,7 @@ export default function ComparePage() {
                     {r.label}
                   </td>
                   <td className="py-4 pr-6 align-top">
-                    <Cell value={r.configcheck} />
+                    <Cell value={r.orgprism} />
                   </td>
                   <td className="py-4 pr-6 align-top">
                     <Cell value={r.enterprise} />
@@ -189,7 +188,7 @@ export default function ComparePage() {
             integration redesign? Manual reviews remain essential for those.
           </p>
           <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-            What ConfigCheck handles is the <em>repetitive checklist portion</em>
+            What OrgPrism handles is the <em>repetitive checklist portion</em>
             {' '}of an audit &mdash; the 182 patterns that show up across every CPQ
             implementation regardless of industry. Run the automated audit first,
             then spend your hours on the architectural questions only a human can

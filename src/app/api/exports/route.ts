@@ -126,7 +126,7 @@ function generateIssuesExport(scan: DBScan, issues: DBIssue[], orgName: string, 
   XLSX.utils.book_append_sheet(wb, ws2, 'Category Scores');
 
   const dateStr = new Date().toISOString().split('T')[0];
-  const filename = `ConfigCheck-${orgName.replace(/\s+/g, '-')}-${dateStr}`;
+  const filename = `OrgPrism-${orgName.replace(/\s+/g, '-')}-${dateStr}`;
 
   if (format === 'csv') {
     const csv = XLSX.utils.sheet_to_csv(ws);

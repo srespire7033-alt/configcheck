@@ -70,7 +70,7 @@ export async function runScanInBackground(
     }
     if (productType !== 'arm' && !detected.cpq && !detected.arm) {
       throw new Error(
-        'No supported product detected in this org. ConfigCheck currently scans Salesforce CPQ ' +
+        'No supported product detected in this org. OrgPrism currently scans Salesforce CPQ ' +
         '(SBQQ), Salesforce Billing (blng), and Revenue Cloud (ARM). Please verify the relevant ' +
         'package is installed or feature enabled, and try reconnecting.'
       );

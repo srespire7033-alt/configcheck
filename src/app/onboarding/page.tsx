@@ -431,7 +431,7 @@ function OnboardingContent() {
                     <User className="h-7 w-7 text-blue-600 dark:text-blue-400" />
                   </div>
                   <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-                    Welcome to ConfigCheck!{' '}
+                    Welcome to OrgPrism!{' '}
                     <span role="img" aria-label="wave">
                       &#x1F44B;
                     </span>

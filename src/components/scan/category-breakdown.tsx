@@ -22,7 +22,7 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import type { CategoryScores } from '@/types';
 
-const STORAGE_KEY = 'configcheck-category-order';
+const STORAGE_KEY = 'orgprism-category-order';
 
 const BILLING_CATEGORIES = new Set([
   'billing_rules', 'rev_rec_rules', 'tax_rules', 'finance_books',

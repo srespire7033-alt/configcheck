@@ -131,7 +131,7 @@ export default function AcceptInvitePage() {
                 You&apos;re Invited!
               </h2>
               <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
-                You&apos;ve been invited to join a team on ConfigCheck
+                You&apos;ve been invited to join a team on OrgPrism
               </p>
 
               {/* Team info card */}

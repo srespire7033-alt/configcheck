@@ -9,14 +9,14 @@ const geistSans = localFont({
   weight: "100 900",
 });
 
-// TODO: replace with the live custom domain once configcheck.io is wired up
-const SITE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://configcheck.vercel.app';
+// TODO: replace with the live custom domain once orgprism.app is wired up
+const SITE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://orgprism.vercel.app';
 const DESCRIPTION =
   'Connect any Salesforce org and run 182 automated CPQ + Billing + ARM health checks with AI fix suggestions in under 30 seconds. Built for Revenue Cloud consultants.';
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
-  title: 'ConfigCheck — Salesforce Revenue Cloud audit in 30 seconds',
+  title: 'OrgPrism — Salesforce Revenue Cloud audit in 30 seconds',
   description: DESCRIPTION,
   keywords: [
     'Salesforce Revenue Cloud audit',
@@ -30,9 +30,9 @@ export const metadata: Metadata = {
     canonical: '/',
   },
   openGraph: {
-    title: 'ConfigCheck — Salesforce Revenue Cloud audit in 30 seconds',
+    title: 'OrgPrism — Salesforce Revenue Cloud audit in 30 seconds',
     description: DESCRIPTION,
-    siteName: 'ConfigCheck',
+    siteName: 'OrgPrism',
     type: 'website',
     url: SITE_URL,
     // TODO: design and host a 1200x630 branded OG card at /og-card.png
@@ -41,13 +41,13 @@ export const metadata: Metadata = {
         url: '/og-card.png',
         width: 1200,
         height: 630,
-        alt: 'ConfigCheck — Salesforce Revenue Cloud audit',
+        alt: 'OrgPrism — Salesforce Revenue Cloud audit',
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'ConfigCheck — Salesforce Revenue Cloud audit in 30 seconds',
+    title: 'OrgPrism — Salesforce Revenue Cloud audit in 30 seconds',
     description: DESCRIPTION,
     // TODO: same image as OG card
     images: ['/og-card.png'],
@@ -92,13 +92,13 @@ export default function RootLayout({
             __html: JSON.stringify({
               '@context': 'https://schema.org',
               '@type': 'SoftwareApplication',
-              name: 'ConfigCheck',
+              name: 'OrgPrism',
               description:
                 'Automated Salesforce Revenue Cloud audit tool. Run 182 health checks across CPQ, Billing, and ARM with AI fix suggestions in under 30 seconds.',
               applicationCategory: 'BusinessApplication',
               applicationSubCategory: 'Salesforce CPQ audit tool',
               operatingSystem: 'Web',
-              url: 'https://configcheck.vercel.app',
+              url: 'https://orgprism.vercel.app',
               offers: [
                 {
                   '@type': 'Offer',

@@ -26,7 +26,7 @@ export function ProductTour({ tourId, steps, onComplete }: ProductTourProps) {
   const tooltipRef = useRef<HTMLDivElement>(null);
   const prevElementRef = useRef<Element | null>(null);
 
-  const storageKey = `configcheck_tour_${tourId}`;
+  const storageKey = `orgprism_tour_${tourId}`;
 
   useEffect(() => {
     const completed = localStorage.getItem(storageKey);

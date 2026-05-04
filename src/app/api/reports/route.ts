@@ -80,7 +80,7 @@ export async function GET(request: NextRequest) {
     return new NextResponse(new Uint8Array(pdfBuffer), {
       headers: {
         'Content-Type': 'application/pdf',
-        'Content-Disposition': `attachment; filename="ConfigCheck-${orgRes.data?.name || 'report'}-${new Date().toISOString().split('T')[0]}.pdf"`,
+        'Content-Disposition': `attachment; filename="OrgPrism-${orgRes.data?.name || 'report'}-${new Date().toISOString().split('T')[0]}.pdf"`,
       },
     });
   } catch (error: unknown) {

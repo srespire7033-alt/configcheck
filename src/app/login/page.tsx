@@ -152,7 +152,7 @@ export default function LoginPage() {
                 ? 'Enter your email and we\'ll send a reset link'
                 : isSignUp
                   ? 'Start auditing Salesforce Revenue Cloud configurations'
-                  : 'Sign in to your ConfigCheck account'}
+                  : 'Sign in to your OrgPrism account'}
             </p>
 
             <form onSubmit={resetMode ? handlePasswordReset : handleSubmit} className="space-y-5">

@@ -521,7 +521,7 @@ export default function SettingsPage() {
       const a = document.createElement('a');
       const dateStr = new Date().toISOString().split('T')[0];
       a.href = url;
-      a.download = `configcheck-data-export-${dateStr}.json`;
+      a.download = `orgprism-data-export-${dateStr}.json`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -746,7 +746,7 @@ export default function SettingsPage() {
                   Light/Dark/System pattern users expect from B2B SaaS,
                   even though we only store the resolved value (no
                   separate "system" preference yet). */}
-              <SectionCard title="Display" description="How ConfigCheck looks across the app.">
+              <SectionCard title="Display" description="How OrgPrism looks across the app.">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                   <div className="flex items-start gap-3">
                     <div className="w-9 h-9 rounded-lg bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center flex-shrink-0">
@@ -1741,7 +1741,7 @@ function UpgradeModal({ currentPlan, onClose }: { currentPlan: string; onClose: 
                   </button>
                 ) : t.id === 'enterprise' ? (
                   <a
-                    href="mailto:hello@configcheck.app?subject=Enterprise%20plan%20enquiry"
+                    href="mailto:hello@orgprism.app?subject=Enterprise%20plan%20enquiry"
                     className="w-full py-2.5 text-sm font-semibold rounded-lg bg-gray-900 dark:bg-white text-white dark:text-gray-900 hover:opacity-90 transition-opacity text-center"
                   >
                     Talk to us
@@ -1857,7 +1857,7 @@ function BrandingPreview({
         {/* Footer */}
         <div className="border-t border-gray-100 px-5 py-2.5 flex items-center justify-between text-[9px] text-gray-500">
           <span>{displayName}</span>
-          <span style={{ color: brandColor, fontWeight: 600 }}>configcheck.app</span>
+          <span style={{ color: brandColor, fontWeight: 600 }}>orgprism.app</span>
           <span>Page 1 of 12</span>
         </div>
       </div>

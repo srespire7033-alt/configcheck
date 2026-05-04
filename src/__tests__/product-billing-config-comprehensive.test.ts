@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { productBillingConfigChecks } from '@/lib/analysis/billing-checks/product-billing-config';
+import { productBillingOrgPrisms } from '@/lib/analysis/billing-checks/product-billing-config';
 import { createCleanBillingData } from './billing-fixtures';
 
-const getCheck = (id: string) => productBillingConfigChecks.find((c) => c.id === id)!;
+const getCheck = (id: string) => productBillingOrgPrisms.find((c) => c.id === id)!;
 
 describe('Product Billing Config — Comprehensive Tests', () => {
   // ═══════════════════════════════════════════════

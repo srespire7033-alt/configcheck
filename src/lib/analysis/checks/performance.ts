@@ -188,7 +188,7 @@ export const performanceChecks: HealthCheck[] = [
         impact: level === 'Very High'
           ? 'Expect significant quote calculation times (10s+). Admin maintenance is complex and error-prone.'
           : 'Quote calculation performance may be impacted. Regular audits recommended.',
-        recommendation: 'Run ConfigCheck regularly to identify dead rules and consolidation opportunities. Consider simplifying pricing logic where possible.',
+        recommendation: 'Run OrgPrism regularly to identify dead rules and consolidation opportunities. Consider simplifying pricing logic where possible.',
         affected_records: [],
       });
 

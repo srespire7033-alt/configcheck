@@ -1,5 +1,6 @@
 import Link from 'next/link';
-import { ArrowLeft, ShieldCheck } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
+import { LogoMark } from '@/components/ui/logo';
 
 /**
  * Shared chrome for /privacy /terms /security /dpa.
@@ -16,14 +17,9 @@ export default function LegalLayout({ children }: { children: React.ReactNode })
     <div className="min-h-screen bg-gray-50 dark:bg-[#0b1120] text-gray-900 dark:text-gray-100">
       <header className="border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
         <div className="max-w-3xl mx-auto px-6 py-5 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2.5">
-            <div
-              className="w-9 h-9 rounded-xl flex items-center justify-center"
-              style={{ background: '#5B9BF3' }}
-            >
-              <ShieldCheck className="h-5 w-5 text-white" />
-            </div>
-            <span className="text-xl font-bold">ConfigCheck</span>
+          <Link href="/" className="flex items-center gap-2.5 text-white">
+            <LogoMark size={36} />
+            <span className="text-xl font-bold tracking-tight text-gray-900 dark:text-white">OrgPrism</span>
           </Link>
           <Link
             href="/"
@@ -68,7 +64,7 @@ export default function LegalLayout({ children }: { children: React.ReactNode })
 
       <footer className="border-t border-gray-200 dark:border-gray-800 py-8 mt-16">
         <div className="max-w-3xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-3 text-sm text-gray-500 dark:text-gray-400">
-          <p>&copy; ConfigCheck. All rights reserved.</p>
+          <p>&copy; OrgPrism. All rights reserved.</p>
           <div className="flex gap-5">
             <Link href="/privacy" className="hover:text-gray-900 dark:hover:text-white transition-colors">
               Privacy

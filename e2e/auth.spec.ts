@@ -15,7 +15,7 @@ test.describe('Authentication flows', () => {
     // Welcome text on the form side
     await expect(page.getByText('Welcome back')).toBeVisible();
     await expect(
-      page.getByText('Sign in to your ConfigCheck account')
+      page.getByText('Sign in to your OrgPrism account')
     ).toBeVisible();
   });
 

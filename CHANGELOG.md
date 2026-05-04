@@ -1,6 +1,6 @@
 # Changelog
 
-All notable, user-facing changes to ConfigCheck are recorded here. Newest release at the top.
+All notable, user-facing changes to OrgPrism are recorded here. Newest release at the top.
 
 Versions use [CalVer](https://calver.org) in `YYYY.MM.DD` form, tagged in git as `vYYYY.MM.DD` (with a trailing `-N` if more than one release happens in a day). Internal refactors and docs-only commits are not listed here — see `git log` for the full history.
 

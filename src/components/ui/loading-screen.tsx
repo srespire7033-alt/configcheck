@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { ShieldCheck } from 'lucide-react';
+import { LogoMark } from '@/components/ui/logo';
 
 // Mix of generic + product-specific messages so users on Billing-only or
 // ARM scans don't see "Brewing your CPQ insights..." as if CPQ were the
@@ -64,8 +64,8 @@ export function LoadingScreen({ message, minimal = false }: LoadingScreenProps) 
   return (
     <div className="flex flex-col items-center justify-center h-64 gap-5">
       <div className="relative">
-        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-teal-500 flex items-center justify-center shadow-lg shadow-blue-500/20">
-          <ShieldCheck className="w-8 h-8 text-white" />
+        <div className="w-16 h-16 rounded-2xl bg-white dark:bg-[#0b1120] flex items-center justify-center shadow-lg shadow-blue-500/20 text-white dark:text-[#0b1120]">
+          <LogoMark size={48} />
         </div>
         <div className="absolute -inset-2 rounded-2xl border-2 border-blue-300/40 dark:border-blue-500/20 animate-ping" style={{ animationDuration: '2s' }} />
       </div>

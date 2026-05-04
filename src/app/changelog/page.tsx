@@ -1,11 +1,12 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
-import { ArrowLeft, ShieldCheck } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
+import { LogoMark } from '@/components/ui/logo';
 
 export const metadata: Metadata = {
-  title: 'Changelog — ConfigCheck',
+  title: 'Changelog — OrgPrism',
   description:
-    'What\'s new in ConfigCheck. Recent additions to the health-check catalog, dashboard improvements, and platform updates.',
+    'What\'s new in OrgPrism. Recent additions to the health-check catalog, dashboard improvements, and platform updates.',
   alternates: { canonical: '/changelog' },
 };
 
@@ -37,7 +38,7 @@ const entries: Entry[] = [
     tag: 'New',
     title: 'Revenue Cloud (ARM) scan support — 51 checks across 16 categories',
     body:
-      'ConfigCheck now scans full Revenue Cloud / RLM orgs, not just CPQ + Billing. ARM coverage spans the entire revenue lifecycle: catalog, selling models, price adjustments, attribute pricing, bundles, pricing procedures, price books, decision tables, context service, rate cards, attributes, assets, contracts, usage management, orchestration (DRO), and cost books.',
+      'OrgPrism now scans full Revenue Cloud / RLM orgs, not just CPQ + Billing. ARM coverage spans the entire revenue lifecycle: catalog, selling models, price adjustments, attribute pricing, bundles, pricing procedures, price books, decision tables, context service, rate cards, attributes, assets, contracts, usage management, orchestration (DRO), and cost books.',
     bullets: [
       'Detects active products without an assigned ProductSellingModel',
       'Flags bundles with impossible quantity ranges (Min > Max)',
@@ -112,11 +113,9 @@ export default function ChangelogPage() {
     <div className="min-h-screen bg-gray-50 dark:bg-[#0b1120] text-gray-900 dark:text-gray-100">
       <header className="border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
         <div className="max-w-3xl mx-auto px-6 py-5 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: '#5B9BF3' }}>
-              <ShieldCheck className="h-5 w-5 text-white" />
-            </div>
-            <span className="text-xl font-bold">ConfigCheck</span>
+          <Link href="/" className="flex items-center gap-2.5 text-white">
+            <LogoMark size={36} />
+            <span className="text-xl font-bold tracking-tight text-gray-900 dark:text-white">OrgPrism</span>
           </Link>
           <Link
             href="/"
@@ -132,10 +131,10 @@ export default function ChangelogPage() {
         <div className="mb-12">
           <h1 className="text-3xl md:text-4xl font-bold mb-3">Changelog</h1>
           <p className="text-gray-600 dark:text-gray-400 leading-relaxed">
-            What&rsquo;s new in ConfigCheck. Subscribe to product updates by emailing{' '}
-            {/* TODO: replace with the live mailbox once configcheck.io is wired up */}
-            <a href="mailto:hello@configcheck.io" className="text-blue-600 dark:text-blue-400 hover:underline">
-              hello@configcheck.io
+            What&rsquo;s new in OrgPrism. Subscribe to product updates by emailing{' '}
+            {/* TODO: replace with the live mailbox once orgprism.app is wired up */}
+            <a href="mailto:hello@orgprism.app" className="text-blue-600 dark:text-blue-400 hover:underline">
+              hello@orgprism.app
             </a>{' '}
             with the subject line &ldquo;changelog&rdquo;.
           </p>

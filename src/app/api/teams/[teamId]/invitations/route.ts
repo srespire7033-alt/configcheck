@@ -115,7 +115,7 @@ export async function POST(request: NextRequest, { params }: { params: { teamId:
       await sendInvitationEmail({
         recipientEmail: email.toLowerCase(),
         inviterName: inviterUser?.full_name || inviterUser?.email || 'A teammate',
-        teamName: team?.name || 'a ConfigCheck team',
+        teamName: team?.name || 'a OrgPrism team',
         role,
         inviteToken: invitation.token,
       });

@@ -1,6 +1,6 @@
 import type { BillingData, BillingHealthCheck, Issue } from '@/types';
 
-export const productBillingConfigChecks: BillingHealthCheck[] = [
+export const productBillingOrgPrisms: BillingHealthCheck[] = [
   {
     id: 'PBC-001',
     name: 'Product Missing Billing Rule',

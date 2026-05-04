@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
-import { ArrowLeft, ShieldCheck, AlertCircle, AlertTriangle, Info } from 'lucide-react';
+import { ArrowLeft, AlertCircle, AlertTriangle, Info } from 'lucide-react';
+import { LogoMark } from '@/components/ui/logo';
 import { allChecks } from '@/lib/analysis/checks';
 import { allBillingChecks } from '@/lib/analysis/billing-checks';
 import { armChecks } from '@/lib/analysis/arm-checks';
@@ -8,9 +9,9 @@ import { getCategoryLabel } from '@/lib/utils';
 import type { IssueSeverity } from '@/types';
 
 export const metadata: Metadata = {
-  title: 'All 182 Health Checks — ConfigCheck',
+  title: 'All 182 Health Checks — OrgPrism',
   description:
-    'The complete inventory of ConfigCheck health checks: 92 Salesforce CPQ + 39 Billing + 51 Revenue Cloud (ARM) — every check name, category, and severity.',
+    'The complete inventory of OrgPrism health checks: 92 Salesforce CPQ + 39 Billing + 51 Revenue Cloud (ARM) — every check name, category, and severity.',
   alternates: { canonical: '/checks' },
 };
 
@@ -143,11 +144,9 @@ export default function ChecksPage() {
     <div className="min-h-screen bg-gray-50 dark:bg-[#0b1120] text-gray-900 dark:text-gray-100">
       <header className="border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
         <div className="max-w-5xl mx-auto px-6 py-5 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: '#5B9BF3' }}>
-              <ShieldCheck className="h-5 w-5 text-white" />
-            </div>
-            <span className="text-xl font-bold">ConfigCheck</span>
+          <Link href="/" className="flex items-center gap-2.5 text-white">
+            <LogoMark size={36} />
+            <span className="text-xl font-bold tracking-tight text-gray-900 dark:text-white">OrgPrism</span>
           </Link>
           <Link
             href="/"
@@ -163,7 +162,7 @@ export default function ChecksPage() {
         <div className="mb-12">
           <h1 className="text-3xl md:text-4xl font-bold mb-3">All 182 health checks</h1>
           <p className="text-gray-600 dark:text-gray-400 max-w-3xl leading-relaxed">
-            Every check ConfigCheck runs across Salesforce CPQ, Billing, and Revenue Cloud (ARM).
+            Every check OrgPrism runs across Salesforce CPQ, Billing, and Revenue Cloud (ARM).
             Severity classifies how serious each finding is &mdash; Critical breaks something at runtime,
             Warning is a misconfiguration smell, Info is a best-practice nudge.
           </p>

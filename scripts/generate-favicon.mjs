@@ -1,21 +1,24 @@
-// Generate favicon from the exact Lucide ShieldCheck SVG icon
-// Blue rounded-rect background with white shield-check — matches the app's branding
+// Generate favicon assets from the OrgPrism brand mark.
+// White rounded-rect background with the four-faced hollow hex prism logo.
+// Run: node scripts/generate-favicon.mjs
 
 import sharp from 'sharp';
 import { writeFileSync } from 'fs';
 
-// Exact Lucide ShieldCheck icon paths on a blue rounded-rect background
+// OrgPrism logo on a white rounded-rect background.
+// We render the prism mark inside a 512×512 canvas with ~80px padding so the
+// silhouette is generous at small sizes. Stroke gaps are pure white to merge
+// with the rounded-rect background — clean at every size.
 const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
-  <rect width="512" height="512" rx="112" fill="#2563eb"/>
-  <g transform="translate(128, 108) scale(10.67)">
-    <path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 .5-.87l7-4a1 1 0 0 1 1 0l7 4A1 1 0 0 1 20 6z"
-          fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-    <path d="m9 12 2 2 4-4"
-          fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect width="512" height="512" rx="112" fill="#ffffff"/>
+  <g transform="translate(80, 80) scale(5.5)">
+    <polygon points="32,4 8,18 20,25 32,18" fill="#A855F7" stroke="#ffffff" stroke-width="0.7" stroke-linejoin="round"/>
+    <polygon points="32,4 32,18 44,25 56,18" fill="#F97316" stroke="#ffffff" stroke-width="0.7" stroke-linejoin="round"/>
+    <polygon points="8,18 8,46 32,60 32,46 20,39 20,25" fill="#38BDF8" stroke="#ffffff" stroke-width="0.7" stroke-linejoin="round"/>
+    <polygon points="56,18 44,25 44,39 32,46 32,60 56,46" fill="#1E40AF" stroke="#ffffff" stroke-width="0.7" stroke-linejoin="round"/>
   </g>
 </svg>`;
 
-// Generate multiple sizes
 const sizes = [
   { size: 32, name: 'favicon-32.png' },
   { size: 16, name: 'favicon-16.png' },
@@ -35,7 +38,12 @@ for (const { size, name } of sizes) {
   console.log(`Generated public/${name} (${size}x${size})`);
 }
 
-// Generate favicon.ico (using 32x32 PNG wrapped in ICO format)
+// Also write the SVG sources so .svg consumers stay in sync.
+writeFileSync('public/favicon.svg', svg);
+writeFileSync('public/apple-touch-icon.svg', svg);
+console.log('Generated public/favicon.svg + public/apple-touch-icon.svg');
+
+// Generate favicon.ico (32x32 PNG wrapped in ICO format).
 const png32 = await sharp(svgBuffer).resize(32, 32).png().toBuffer();
 
 function createICO(pngData, width, height) {
@@ -59,8 +67,7 @@ const ico = createICO(png32, 32, 32);
 writeFileSync('src/app/favicon.ico', ico);
 console.log('Generated src/app/favicon.ico');
 
-// Also save the main PNG for reference
 writeFileSync('public/favicon.png', png32);
 console.log('Generated public/favicon.png');
 
-console.log('\nDone! All favicons generated from Lucide ShieldCheck SVG.');
+console.log('\nDone! All favicons generated from OrgPrism brand mark.');
