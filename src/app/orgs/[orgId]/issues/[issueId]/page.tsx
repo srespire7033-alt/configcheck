@@ -217,15 +217,16 @@ export default function IssueDetailPage() {
         <CardHeader className="bg-purple-50">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-purple-600" />
-              <h3 className="text-sm font-semibold text-purple-900">AI Fix Suggestion</h3>
+              <Sparkles className="h-4 w-4 text-brand-purple" />
+              <h3 className="text-sm font-semibold text-purple-900 dark:text-purple-200">AI Fix Suggestion</h3>
             </div>
             {!issue.ai_fix_suggestion && (
               <button
                 onClick={handleGenerateFix}
                 disabled={generatingFix}
-                className="px-3 py-1 text-xs font-medium text-purple-700 bg-purple-100 rounded-full hover:bg-purple-200 disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-semibold text-white bg-brand-purple rounded-full hover:bg-purple-700 disabled:opacity-50 shadow-sm shadow-brand-purple/30 transition"
               >
+                <Sparkles className="h-3 w-3" />
                 {generatingFix ? 'Generating...' : 'Generate Fix'}
               </button>
             )}

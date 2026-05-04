@@ -449,27 +449,52 @@ export default function OrgDetailPage() {
           product they're in — what they actually need is a quick read of
           which org + environment they're looking at. The strip hands the
           hero space below to the health score and primary metrics. */}
-      {org && (
-        <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-200 dark:border-gray-800">
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 bg-blue-500">
-              <Cloud className="w-4 h-4 text-white" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-base font-semibold text-gray-900 dark:text-white truncate">
-                {org.name}
-              </p>
-              <p className="text-xs text-gray-500 dark:text-gray-400">
-                {org.is_sandbox ? 'Sandbox' : 'Production'} &middot; Connected
-              </p>
+      {org && (() => {
+        // Brand-color strip mirrors the dashboard org-card: instant
+        // visual continuity from "click card → land on this page."
+        // ARM=orange, CPQ+Billing=sky→indigo, single products=their
+        // single color, none-detected=muted gray.
+        const pkgs = org.installed_packages || [];
+        const hasCPQ = pkgs.includes('cpq');
+        const hasBilling = pkgs.includes('billing');
+        const hasARM = pkgs.includes('arm');
+        let stripeClass = 'bg-gray-200 dark:bg-gray-700';
+        if (hasARM && !hasCPQ && !hasBilling) {
+          stripeClass = 'bg-brand-orange';
+        } else if (hasCPQ && hasBilling) {
+          stripeClass = 'bg-gradient-to-r from-brand-sky to-brand-indigo';
+        } else if (hasCPQ) {
+          stripeClass = 'bg-brand-sky';
+        } else if (hasBilling) {
+          stripeClass = 'bg-brand-indigo';
+        } else if (hasARM) {
+          stripeClass = 'bg-gradient-to-r from-brand-purple via-brand-orange to-brand-indigo';
+        }
+        return (
+          <div className="-mx-4 sm:-mx-6 mb-6">
+            <div className={`h-1 ${stripeClass}`} />
+            <div className="px-4 sm:px-6 pt-4 pb-4 flex items-center justify-between border-b border-gray-200 dark:border-gray-800">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 bg-blue-500">
+                  <Cloud className="w-4 h-4 text-white" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-base font-semibold text-gray-900 dark:text-white truncate">
+                    {org.name}
+                  </p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    {org.is_sandbox ? 'Sandbox' : 'Production'} &middot; Connected
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
+                Live
+              </div>
             </div>
           </div>
-          <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
-            <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
-            Live
-          </div>
-        </div>
-      )}
+        );
+      })()}
 
       {!scan ? (
         <div className="bg-white dark:bg-[#111827] rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 text-center py-20">
@@ -936,7 +961,7 @@ export default function OrgDetailPage() {
                         <span className="font-medium text-gray-700 dark:text-gray-300">
                           {resolvedCount}/{total} fixed
                           {acknowledgedCount > 0 && (
-                            <span className="text-blue-600 dark:text-blue-400"> • {acknowledgedCount} ack</span>
+                            <span className="text-brand-indigo dark:text-brand-sky"> • {acknowledgedCount} ack</span>
                           )}
                           {ignoredCount > 0 && (
                             <span className="text-gray-400"> • {ignoredCount} ignored</span>
@@ -954,7 +979,7 @@ export default function OrgDetailPage() {
                         )}
                         {acknowledgedCount > 0 && (
                           <div
-                            className="h-full bg-blue-400 transition-all duration-500"
+                            className="h-full bg-brand-sky transition-all duration-500"
                             style={{ width: `${pct(acknowledgedCount)}%` }}
                             title={`${acknowledgedCount} acknowledged`}
                           />
@@ -1104,7 +1129,7 @@ export default function OrgDetailPage() {
                   <button
                     onClick={handleScan}
                     disabled={scanning}
-                    className="px-3 sm:px-6 py-2.5 sm:py-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-xl font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition flex items-center justify-center gap-2 disabled:opacity-50 text-sm sm:text-base"
+                    className="px-3 sm:px-6 py-2.5 sm:py-3 bg-brand-indigo hover:bg-blue-900 text-white rounded-xl font-medium transition flex items-center justify-center gap-2 disabled:opacity-50 shadow-sm shadow-brand-indigo/30 hover:shadow-brand-indigo/40 text-sm sm:text-base"
                   >
                     <RefreshCw className={`w-4 h-4 sm:w-5 sm:h-5 ${scanning ? 'animate-spin' : ''}`} />
                     {scanning ? 'Scanning...' : 'New Scan'}
@@ -1559,8 +1584,8 @@ export default function OrgDetailPage() {
             <div className="bg-white dark:bg-[#111827] rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 mb-8">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-purple-50 dark:bg-purple-900/30 rounded-xl flex items-center justify-center">
-                    <Sparkles className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+                  <div className="w-10 h-10 bg-brand-purple/10 dark:bg-brand-purple/15 rounded-xl flex items-center justify-center ring-1 ring-brand-purple/20">
+                    <Sparkles className="w-5 h-5 text-brand-purple" />
                   </div>
                   <div>
                     <h3 className="text-lg font-semibold text-gray-900 dark:text-white">AI Remediation Plan</h3>
@@ -1575,7 +1600,7 @@ export default function OrgDetailPage() {
                   <button
                     onClick={handleGenerateRemediationPlan}
                     disabled={remediationLoading}
-                    className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-900/30 hover:bg-purple-100 dark:hover:bg-purple-900/50 rounded-lg transition disabled:opacity-50"
+                    className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-brand-purple dark:text-purple-300 bg-brand-purple/10 dark:bg-brand-purple/15 hover:bg-brand-purple/15 dark:hover:bg-brand-purple/25 rounded-lg transition disabled:opacity-50 ring-1 ring-brand-purple/20"
                   >
                     <RefreshCw className={`w-3.5 h-3.5 ${remediationLoading ? 'animate-spin' : ''}`} />
                     {remediationLoading ? 'Regenerating…' : 'Regenerate'}
@@ -1584,7 +1609,7 @@ export default function OrgDetailPage() {
               </div>
               {remediationLoading && !remediationPlan && (
                 <div>
-                  <p className="text-xs text-purple-600 dark:text-purple-300 mb-3 inline-flex items-center gap-2">
+                  <p className="text-xs text-brand-purple dark:text-purple-300 mb-3 inline-flex items-center gap-2">
                     <Sparkles className="w-3.5 h-3.5 animate-pulse" />
                     Generating prioritised plan&hellip; usually takes 5-10 seconds
                   </p>
@@ -1610,7 +1635,7 @@ export default function OrgDetailPage() {
                   </div>
                   <button
                     onClick={handleGenerateRemediationPlan}
-                    className="px-4 py-2 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700 transition flex-shrink-0"
+                    className="px-4 py-2 bg-brand-purple text-white rounded-lg text-sm font-medium hover:bg-purple-700 transition flex-shrink-0"
                   >
                     Retry
                   </button>

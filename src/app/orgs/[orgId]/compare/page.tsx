@@ -348,19 +348,19 @@ export default function ComparePage() {
             );
           })()}
 
-          {/* AI Drift Insight */}
+          {/* AI Drift Insight — brand-purple to match the AI sub-brand */}
           {(aiInsightLoading || aiInsight) && (
-            <div className="bg-gradient-to-r from-blue-50 to-teal-50 dark:from-blue-900/20 dark:to-teal-900/20 rounded-2xl border border-blue-100 dark:border-blue-800 p-5">
+            <div className="bg-brand-purple/5 dark:bg-brand-purple/10 rounded-2xl border border-brand-purple/20 dark:border-brand-purple/30 p-5">
               <div className="flex items-start gap-3">
-                <div className="w-10 h-10 bg-white dark:bg-gray-800 rounded-xl flex items-center justify-center shadow-sm flex-shrink-0">
-                  <Sparkles className={`w-5 h-5 text-blue-600 dark:text-blue-400 ${aiInsightLoading ? 'animate-pulse' : ''}`} />
+                <div className="w-10 h-10 bg-white dark:bg-gray-800 rounded-xl flex items-center justify-center shadow-sm flex-shrink-0 ring-1 ring-brand-purple/20">
+                  <Sparkles className={`w-5 h-5 text-brand-purple ${aiInsightLoading ? 'animate-pulse' : ''}`} />
                 </div>
                 <div className="flex-1">
                   <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-1">AI Drift Analysis</h3>
                   {aiInsightLoading ? (
                     <div className="space-y-2">
-                      <div className="h-3 bg-blue-100 dark:bg-blue-900/40 rounded w-full animate-pulse" />
-                      <div className="h-3 bg-blue-100 dark:bg-blue-900/40 rounded w-3/4 animate-pulse" />
+                      <div className="h-3 bg-brand-purple/10 dark:bg-brand-purple/20 rounded w-full animate-pulse" />
+                      <div className="h-3 bg-brand-purple/10 dark:bg-brand-purple/20 rounded w-3/4 animate-pulse" />
                     </div>
                   ) : (
                     <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">{aiInsight}</p>
