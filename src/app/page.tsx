@@ -73,7 +73,7 @@ export default function LandingPage() {
             </Link>
             <Link
               href="/login"
-              className="text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-xl transition-all duration-200 shadow-sm shadow-blue-600/30 hover:shadow-md hover:shadow-blue-600/40"
+              className="text-sm font-semibold text-white bg-brand-indigo hover:bg-blue-900 px-4 py-2 rounded-xl transition-all duration-200 shadow-sm shadow-brand-indigo/30 hover:shadow-md hover:shadow-brand-indigo/40"
             >
               Connect a sandbox
             </Link>
@@ -83,11 +83,15 @@ export default function LandingPage() {
 
       {/* ═══ HERO ═══ */}
       <section className="relative pt-32 pb-20 overflow-hidden">
-        {/* Background decoration */}
+        {/* Background decoration — brand color blobs at low opacity create
+            an ambient atmosphere without competing with copy. The four
+            blobs roughly trace the four logo facets (purple, orange, sky,
+            indigo) but blurred so the eye reads them as a single mood. */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1200px] h-[600px] bg-gradient-to-b from-blue-500/8 dark:from-blue-500/5 to-transparent rounded-full blur-3xl" />
-          <div className="absolute top-40 -left-20 w-72 h-72 bg-blue-400/10 rounded-full blur-3xl" />
-          <div className="absolute top-60 -right-20 w-96 h-96 bg-indigo-400/8 rounded-full blur-3xl" />
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1200px] h-[600px] bg-gradient-to-b from-brand-sky/[0.10] dark:from-brand-sky/[0.06] to-transparent rounded-full blur-3xl" />
+          <div className="absolute top-32 -left-20 w-80 h-80 bg-brand-purple/[0.12] dark:bg-brand-purple/[0.08] rounded-full blur-3xl" />
+          <div className="absolute top-52 -right-24 w-96 h-96 bg-brand-indigo/[0.10] dark:bg-brand-indigo/[0.06] rounded-full blur-3xl" />
+          <div className="absolute top-[28rem] left-1/3 w-72 h-72 bg-brand-orange/[0.08] dark:bg-brand-orange/[0.05] rounded-full blur-3xl" />
         </div>
 
         <div className="relative max-w-7xl mx-auto px-6 text-center">
@@ -99,7 +103,7 @@ export default function LandingPage() {
 
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight mb-6 leading-[1.1] max-w-5xl mx-auto">
             The Revenue Cloud audit that doesn&rsquo;t need a{' '}
-            <span className="bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-brand-purple via-brand-sky to-brand-indigo bg-clip-text text-transparent">
               6-week SOW
             </span>
           </h1>
@@ -112,7 +116,7 @@ export default function LandingPage() {
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16">
             <Link
               href="/login"
-              className="inline-flex items-center gap-2 px-7 py-3.5 text-base font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition-all duration-200 shadow-lg shadow-blue-600/25 hover:shadow-xl hover:shadow-blue-600/30 hover:-translate-y-0.5 w-full sm:w-auto justify-center"
+              className="inline-flex items-center gap-2 px-7 py-3.5 text-base font-semibold text-white bg-brand-indigo hover:bg-blue-900 rounded-xl transition-all duration-200 shadow-lg shadow-brand-indigo/25 hover:shadow-xl hover:shadow-brand-indigo/30 hover:-translate-y-0.5 w-full sm:w-auto justify-center"
             >
               Connect a sandbox
               <ArrowRight className="h-5 w-5" />
@@ -338,7 +342,7 @@ export default function LandingPage() {
               },
             ].map((item, i) => (
               <div key={i} className="relative text-center">
-                <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-blue-600 text-white mb-6 shadow-lg shadow-blue-600/20">
+                <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-brand-indigo text-white mb-6 shadow-lg shadow-brand-indigo/20">
                   <item.icon className="h-7 w-7" />
                 </div>
                 <div className="text-xs font-bold text-blue-600 tracking-widest uppercase mb-3">Step {item.step}</div>
@@ -645,7 +649,7 @@ export default function LandingPage() {
 
             {/* Pro */}
             <div className="bg-white dark:bg-gray-900/50 rounded-2xl border-2 border-blue-500 p-8 relative shadow-lg shadow-blue-500/10">
-              <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 bg-blue-600 text-white text-xs font-bold rounded-full">
+              <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 bg-brand-indigo text-white text-xs font-bold rounded-full">
                 MOST POPULAR
               </div>
               <div className="text-sm font-semibold text-blue-600 uppercase tracking-wide mb-2">Pro</div>
@@ -661,7 +665,7 @@ export default function LandingPage() {
               </ul>
               <Link
                 href="/login"
-                className="block text-center w-full py-2.5 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition-colors shadow-sm shadow-blue-600/30"
+                className="block text-center w-full py-2.5 text-sm font-semibold text-white bg-brand-indigo hover:bg-blue-900 rounded-xl transition-colors shadow-sm shadow-brand-indigo/30"
               >
                 Connect a sandbox
               </Link>

@@ -84,9 +84,37 @@ export function OrgCard({ org, onView, onScan, onDisconnect, scanning = false }:
     }
   }
 
+  // Map detected packages to a brand color stripe at the top of the card.
+  // Visual product-type signal — ARM gets orange, CPQ+Billing gets the
+  // sky→indigo gradient (the two blue brand faces), single products get
+  // their respective single color. Empty stays muted gray so a brand-new
+  // connection doesn't shout while detection is still running.
+  const pkgs = org.installed_packages || [];
+  const hasCPQ = pkgs.includes('cpq');
+  const hasBilling = pkgs.includes('billing');
+  const hasARM = pkgs.includes('arm');
+  let stripeClass = 'bg-gray-200 dark:bg-gray-700';
+  if (hasARM && !hasCPQ && !hasBilling) {
+    stripeClass = 'bg-brand-orange';
+  } else if (hasCPQ && hasBilling) {
+    stripeClass = 'bg-gradient-to-r from-brand-sky to-brand-indigo';
+  } else if (hasCPQ) {
+    stripeClass = 'bg-brand-sky';
+  } else if (hasBilling) {
+    stripeClass = 'bg-brand-indigo';
+  } else if (hasARM) {
+    // ARM combined with CPQ or Billing — full 4-color sweep (rare but
+    // signals "everything is here").
+    stripeClass = 'bg-gradient-to-r from-brand-purple via-brand-orange to-brand-indigo';
+  }
+
   return (
     <>
       <div className="group bg-white dark:bg-[#111827] rounded-2xl border border-gray-200 dark:border-gray-700 hover:border-blue-200 dark:hover:border-blue-800 hover:shadow-lg hover:shadow-blue-50 dark:hover:shadow-blue-900/20 transition-all duration-300 overflow-hidden">
+        {/* Brand product-type accent strip at top of card. The
+            `overflow-hidden` on the parent rounds the strip's left/right
+            ends to match the card's 2xl radius. */}
+        <div className={`h-1 ${stripeClass}`} />
         {/* Header */}
         <div className="p-5 pb-4">
           <div className="flex items-start justify-between mb-3">
