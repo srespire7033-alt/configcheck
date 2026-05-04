@@ -29,11 +29,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'organizationId is required' }, { status: 400 });
     }
 
-    // Default to 'cpq' if not specified; validate product type
-    const productType: ProductType = (['cpq', 'cpq_billing', 'arm'] as const).includes(requestedProductType)
-      ? requestedProductType
-      : 'cpq';
-
     const supabase = createServiceClient();
 
     // Get org details (verify ownership)
@@ -46,6 +41,25 @@ export async function POST(request: NextRequest) {
 
     if (orgError || !org) {
       return NextResponse.json({ error: 'Organization not found' }, { status: 404 });
+    }
+
+    // Resolve product type. Honor an explicit caller-provided value when it's
+    // valid; otherwise auto-pick from the org's already-detected packages so a
+    // direct API call doesn't fail on ARM-only orgs (which have nothing in
+    // SBQQ__/blng__ namespaces and used to default to 'cpq' and bail).
+    const VALID: readonly ProductType[] = ['cpq', 'cpq_billing', 'arm'] as const;
+    let productType: ProductType;
+    if (VALID.includes(requestedProductType)) {
+      productType = requestedProductType;
+    } else {
+      const installed: string[] = (org.installed_packages as string[] | null) || [];
+      const hasCPQ = installed.includes('cpq');
+      const hasBilling = installed.includes('billing');
+      const hasARM = installed.includes('arm');
+      if (hasCPQ && hasBilling) productType = 'cpq_billing';
+      else if (hasCPQ) productType = 'cpq';
+      else if (hasARM) productType = 'arm';
+      else productType = 'cpq'; // pre-detection fallback; scan will surface a clear error if neither stack is present
     }
 
     // Check scan quota
