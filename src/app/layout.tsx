@@ -68,9 +68,17 @@ export default function RootLayout({
       <head>
         <script dangerouslySetInnerHTML={{ __html: `
           try {
-            const t = localStorage.getItem('theme');
-            if (t === 'dark' || (!t && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-              document.documentElement.classList.add('dark');
+            // Marketing-only routes always render in light mode. List them
+            // here so the inline pre-hydration script never adds the 'dark'
+            // class for these paths — prevents the dark-mode flash a
+            // logged-in user otherwise sees when bouncing back to the
+            // homepage. Keep in sync with any new public/static pages.
+            var lightOnly = ['/','/security','/privacy','/terms','/dpa','/changelog','/checks','/compare'];
+            if (lightOnly.indexOf(window.location.pathname) === -1) {
+              const t = localStorage.getItem('theme');
+              if (t === 'dark' || (!t && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.classList.add('dark');
+              }
             }
           } catch(e) {}
         `}} />

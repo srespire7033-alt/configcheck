@@ -26,6 +26,23 @@ export default function LandingPage() {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
+  // Force light theme on the public landing page regardless of the user's
+  // saved preference. The marketing surface is designed for light mode only;
+  // a logged-in user who flipped to dark inside the app shouldn't drag that
+  // theme onto the landing when they log out / browse the homepage. We do
+  // NOT touch localStorage — the user's preference is preserved for when
+  // they go back into the app.
+  useEffect(() => {
+    const wasDark = document.documentElement.classList.contains('dark');
+    if (wasDark) document.documentElement.classList.remove('dark');
+    return () => {
+      // Restore on unmount so navigating into /dashboard etc. picks up the
+      // saved preference again.
+      const saved = localStorage.getItem('theme');
+      if (saved === 'dark') document.documentElement.classList.add('dark');
+    };
+  }, []);
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-[#0b1120] text-gray-900 dark:text-gray-100">
       {/* ═══ NAVBAR ═══ */}
