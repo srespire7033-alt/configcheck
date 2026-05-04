@@ -219,6 +219,7 @@ export default function SettingsPage() {
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [exportConfirmOpen, setExportConfirmOpen] = useState(false);
 
   const [usage, setUsage] = useState<{
     total_scans: number;
@@ -501,6 +502,11 @@ export default function SettingsPage() {
   }
 
   async function handleExportData() {
+    // Closes the confirm dialog and triggers the actual download. The dialog
+    // surfaces what the file contains (including potentially-sensitive
+    // Salesforce Connected App credentials for orgs that use custom OAuth
+    // creds) so the user can opt-in knowingly.
+    setExportConfirmOpen(false);
     setIsExporting(true);
     try {
       const res = await fetch('/api/account/export');
@@ -808,7 +814,7 @@ export default function SettingsPage() {
                       </div>
                     </div>
                     <button
-                      onClick={handleExportData}
+                      onClick={() => setExportConfirmOpen(true)}
                       disabled={isExporting}
                       className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0 ml-4"
                     >
@@ -1214,6 +1220,71 @@ export default function SettingsPage() {
           stay in context. Annual toggle saves ~20%. */}
       {upgradeModalOpen && (
         <UpgradeModal currentPlan={plan} onClose={() => setUpgradeModalOpen(false)} />
+      )}
+
+      {/* Export Confirmation Modal — surfaces what's in the file before
+          download so the user knows credentials may be present and can
+          treat the file accordingly. */}
+      {exportConfirmOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            onClick={() => setExportConfirmOpen(false)}
+          />
+          <div className="relative bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 max-w-md w-full p-6">
+            <div className="flex items-start gap-3 mb-4">
+              <div className="w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center flex-shrink-0">
+                <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  Export your data
+                </h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                  The download includes everything we hold about you.
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-3 mb-5 text-sm text-gray-700 dark:text-gray-300">
+              <p>The JSON file will contain:</p>
+              <ul className="list-disc list-inside space-y-1 text-gray-600 dark:text-gray-400 pl-1">
+                <li>Profile, branding, notification settings</li>
+                <li>All connected orgs and their scan history</li>
+                <li>Every issue, finding, and AI fix suggestion</li>
+                <li>Scheduled scan configurations</li>
+              </ul>
+              <div className="mt-3 p-3 rounded-lg bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800/40">
+                <p className="text-xs text-amber-800 dark:text-amber-300 font-medium">
+                  Treat this file as sensitive
+                </p>
+                <p className="text-xs text-amber-700 dark:text-amber-400/90 mt-1">
+                  Orgs you connected with custom Salesforce Connected App
+                  credentials include the OAuth client secret. Anyone with
+                  this file could impersonate that app — store it like a
+                  password (encrypted drive, password manager, or shred
+                  after use).
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2">
+              <button
+                onClick={() => setExportConfirmOpen(false)}
+                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleExportData}
+                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg flex items-center gap-2"
+              >
+                <Download className="w-4 h-4" />
+                Download
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Delete Account Confirmation Modal */}
