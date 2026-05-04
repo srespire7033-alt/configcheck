@@ -5,8 +5,6 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Plus, CheckCircle, AlertCircle, Cloud, GitCompare, RefreshCw } from 'lucide-react';
 import { OrgCard } from '@/components/dashboard/org-card';
 import { DisconnectedOrgs } from '@/components/dashboard/disconnected-orgs';
-import { OnboardingChecklist } from '@/components/dashboard/onboarding-checklist';
-import type { ChecklistProgress } from '@/components/dashboard/onboarding-checklist';
 import { ConnectOrgModal } from '@/components/dashboard/connect-org-modal';
 import { LoadingScreen } from '@/components/ui/loading-screen';
 import type { OrgCardData } from '@/types';
@@ -25,8 +23,6 @@ function DashboardContent() {
     total: number;
     currentOrgName: string;
   } | null>(null);
-  const [checklistProgress, setChecklistProgress] = useState<ChecklistProgress | null>(null);
-  const [checklistDismissed, setChecklistDismissed] = useState(true); // default hidden
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [connectModalOpen, setConnectModalOpen] = useState(false);
 
@@ -64,7 +60,6 @@ function DashboardContent() {
   // (Next.js client-side router cache can serve stale data on back-navigation)
   useEffect(() => {
     fetchOrgs();
-    fetchUserData();
 
     const refetchOnVisible = () => {
       if (document.visibilityState === 'visible') fetchOrgs();
@@ -81,29 +76,6 @@ function DashboardContent() {
       }
     };
   }, []);
-
-  async function fetchUserData() {
-    try {
-      const res = await fetch('/api/auth/me');
-      if (res.ok) {
-        const data = await res.json();
-        if (data.onboarding_completed && !data.checklist_dismissed) {
-          setChecklistDismissed(false);
-          const progress: ChecklistProgress = data.checklist_progress || {
-            profile_completed: !!(data.company_name && data.job_title),
-            org_connected: false,
-            first_scan_run: false,
-            issue_reviewed: false,
-            pdf_generated: false,
-            schedule_created: false,
-          };
-          setChecklistProgress(progress);
-        }
-      }
-    } catch (error) {
-      console.error('Failed to fetch user data:', error);
-    }
-  }
 
   async function fetchOrgs() {
     try {
@@ -128,28 +100,12 @@ function DashboardContent() {
             }).catch((err) => console.error('Background detection failed:', err));
           }
         }
-        // After orgs are loaded, update org_connected and first_scan_run
-        setChecklistProgress((prev) => {
-          if (!prev || data.length === 0) return prev;
-          const updated = { ...prev, org_connected: true };
-          if (data.some((o: OrgCardData) => o.last_scan_at)) updated.first_scan_run = true;
-          return updated;
-        });
       }
     } catch (error) {
       console.error('Failed to fetch orgs:', error);
     } finally {
       setLoading(false);
     }
-  }
-
-  async function handleDismissChecklist() {
-    setChecklistDismissed(true);
-    await fetch('/api/auth/me', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ checklist_dismissed: true }),
-    });
   }
 
   function handleConnectOrg() {
@@ -388,16 +344,6 @@ function DashboardContent() {
             <Plus className="w-4 h-4 rotate-45" />
           </button>
         </div>
-      )}
-
-      {checklistProgress && !checklistDismissed && (
-        <OnboardingChecklist
-          progress={checklistProgress}
-          dismissed={checklistDismissed}
-          onDismiss={handleDismissChecklist}
-          onConnectOrg={handleConnectOrg}
-          firstOrgId={orgs.length > 0 ? orgs[0].id : undefined}
-        />
       )}
 
       <div className="flex items-center justify-between mb-8">
