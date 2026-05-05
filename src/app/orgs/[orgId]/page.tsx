@@ -947,13 +947,16 @@ export default function OrgDetailPage() {
                   </button>
                 </div>
 
-                {/* Resolution Progress — segmented bar (resolved / acknowledged / ignored / open)
-                    plus cross-scan delta so users see the trajectory across scans, not just
-                    the current snapshot. */}
+                {/* Resolution Progress — true progress bar (gray base, fills
+                    green-from-left as issues are resolved). Earlier we used a
+                    4-segment state bar (resolved/ack/ignored/open) but at
+                    0/14 the bar rendered fully amber, which read as "everything
+                    is broken" instead of "nothing fixed yet." The text counts
+                    above already convey ack/ignored, so the bar is now a
+                    single-purpose progress indicator. */}
                 {issues.length > 0 && (() => {
                   const total = issues.length;
-                  const openCount = total - resolvedCount - acknowledgedCount - ignoredCount;
-                  const pct = (n: number) => (total === 0 ? 0 : (n / total) * 100);
+                  const pct = total === 0 ? 0 : (resolvedCount / total) * 100;
                   return (
                     <div className="mt-4">
                       <div className="flex items-center justify-between text-sm mb-1.5">
@@ -968,36 +971,14 @@ export default function OrgDetailPage() {
                           )}
                         </span>
                       </div>
-                      {/* Segmented bar */}
-                      <div className="w-full h-2 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden flex">
-                        {resolvedCount > 0 && (
-                          <div
-                            className="h-full bg-green-500 transition-all duration-500"
-                            style={{ width: `${pct(resolvedCount)}%` }}
-                            title={`${resolvedCount} resolved`}
-                          />
-                        )}
-                        {acknowledgedCount > 0 && (
-                          <div
-                            className="h-full bg-brand-sky transition-all duration-500"
-                            style={{ width: `${pct(acknowledgedCount)}%` }}
-                            title={`${acknowledgedCount} acknowledged`}
-                          />
-                        )}
-                        {ignoredCount > 0 && (
-                          <div
-                            className="h-full bg-gray-400 transition-all duration-500"
-                            style={{ width: `${pct(ignoredCount)}%` }}
-                            title={`${ignoredCount} ignored / not relevant / false positive`}
-                          />
-                        )}
-                        {openCount > 0 && (
-                          <div
-                            className="h-full bg-amber-300 dark:bg-amber-500/60 transition-all duration-500"
-                            style={{ width: `${pct(openCount)}%` }}
-                            title={`${openCount} open`}
-                          />
-                        )}
+                      {/* True progress bar: empty gray base, grows green from
+                          left as users mark issues fixed. */}
+                      <div className="w-full h-2 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-green-500 transition-all duration-500 rounded-full"
+                          style={{ width: `${pct}%` }}
+                          title={`${resolvedCount} of ${total} resolved`}
+                        />
                       </div>
                       {/* Cross-scan delta — only when we have a previous scan to compare to */}
                       {previousScan && (issuesFixedSinceLastScan > 0 || newIssuesSinceLastScan > 0) && (
@@ -1129,7 +1110,7 @@ export default function OrgDetailPage() {
                   <button
                     onClick={handleScan}
                     disabled={scanning}
-                    className="px-3 sm:px-6 py-2.5 sm:py-3 bg-brand-indigo hover:bg-blue-900 text-white rounded-xl font-medium transition flex items-center justify-center gap-2 disabled:opacity-50 shadow-sm shadow-brand-indigo/30 hover:shadow-brand-indigo/40 text-sm sm:text-base"
+                    className="px-3 sm:px-6 py-2.5 sm:py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-medium transition flex items-center justify-center gap-2 disabled:opacity-50 shadow-sm shadow-blue-600/30 hover:shadow-blue-600/40 text-sm sm:text-base"
                   >
                     <RefreshCw className={`w-4 h-4 sm:w-5 sm:h-5 ${scanning ? 'animate-spin' : ''}`} />
                     {scanning ? 'Scanning...' : 'New Scan'}

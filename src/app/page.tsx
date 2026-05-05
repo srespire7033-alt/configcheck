@@ -73,7 +73,7 @@ export default function LandingPage() {
             </Link>
             <Link
               href="/login"
-              className="text-sm font-semibold text-white bg-brand-indigo hover:bg-blue-900 px-4 py-2 rounded-xl transition-all duration-200 shadow-sm shadow-brand-indigo/30 hover:shadow-md hover:shadow-brand-indigo/40"
+              className="text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-xl transition-all duration-200 shadow-sm shadow-blue-600/30 hover:shadow-md hover:shadow-blue-600/40"
             >
               Connect a sandbox
             </Link>
@@ -116,7 +116,7 @@ export default function LandingPage() {
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16">
             <Link
               href="/login"
-              className="inline-flex items-center gap-2 px-7 py-3.5 text-base font-semibold text-white bg-brand-indigo hover:bg-blue-900 rounded-xl transition-all duration-200 shadow-lg shadow-brand-indigo/25 hover:shadow-xl hover:shadow-brand-indigo/30 hover:-translate-y-0.5 w-full sm:w-auto justify-center"
+              className="inline-flex items-center gap-2 px-7 py-3.5 text-base font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition-all duration-200 shadow-lg shadow-blue-600/25 hover:shadow-xl hover:shadow-blue-600/30 hover:-translate-y-0.5 w-full sm:w-auto justify-center"
             >
               Connect a sandbox
               <ArrowRight className="h-5 w-5" />
@@ -342,7 +342,7 @@ export default function LandingPage() {
               },
             ].map((item, i) => (
               <div key={i} className="relative text-center">
-                <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-brand-indigo text-white mb-6 shadow-lg shadow-brand-indigo/20">
+                <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-brand-indigo text-white mb-6 shadow-lg shadow-blue-600/20">
                   <item.icon className="h-7 w-7" />
                 </div>
                 <div className="text-xs font-bold text-blue-600 tracking-widest uppercase mb-3">Step {item.step}</div>
@@ -665,7 +665,7 @@ export default function LandingPage() {
               </ul>
               <Link
                 href="/login"
-                className="block text-center w-full py-2.5 text-sm font-semibold text-white bg-brand-indigo hover:bg-blue-900 rounded-xl transition-colors shadow-sm shadow-brand-indigo/30"
+                className="block text-center w-full py-2.5 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition-colors shadow-sm shadow-blue-600/30"
               >
                 Connect a sandbox
               </Link>
