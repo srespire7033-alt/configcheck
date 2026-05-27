@@ -93,14 +93,23 @@ export default function AdminPage() {
   return (
     <div className="space-y-8">
       {/* Page header */}
-      <div className="flex items-center gap-3">
-        <div className="p-2 bg-blue-600 rounded-lg">
-          <ShieldCheck className="h-6 w-6 text-white" />
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-blue-600 rounded-lg">
+            <ShieldCheck className="h-6 w-6 text-white" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Admin Dashboard</h1>
+            <p className="text-sm text-gray-500 dark:text-gray-400">Platform-wide metrics and user management</p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Admin Dashboard</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400">Platform-wide metrics and user management</p>
-        </div>
+        <a
+          href="/admin/analytics"
+          className="inline-flex items-center gap-2 px-3.5 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors shadow-sm"
+        >
+          <Activity className="h-4 w-4" />
+          Product Analytics
+        </a>
       </div>
 
       {/* Summary cards */}
