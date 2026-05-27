@@ -173,9 +173,56 @@ export async function POST(request: NextRequest) {
     });
   }
 
+  // 400-class. Salesforce often returns 400 for invalid_client_id at the
+  // authorize endpoint with the actual error code in JSON or in an HTML body.
+  // Try to extract a useful signal before falling back to a generic message.
+  if (res.status >= 400 && res.status < 500) {
+    const text = await res.text();
+    // JSON shape: {"error":"invalid_client_id","error_description":"..."}
+    try {
+      const j = JSON.parse(text);
+      if (j.error === 'invalid_client_id' || /client.*identifier/i.test(j.error_description || '')) {
+        return NextResponse.json({
+          ok: false,
+          stage: 'client_id_not_found',
+          message: 'Your Consumer Key isn\'t recognized by this org. Make sure you copied it from the same org you\'re trying to connect, and that you saved the External Client App.',
+        });
+      }
+      if (j.error === 'redirect_uri_mismatch') {
+        return NextResponse.json({
+          ok: false,
+          stage: 'redirect_uri_mismatch',
+          message: `The callback URL on your External Client App doesn't match what OrgPrism expects. Set the Callback URL to: ${SF_REDIRECT_URI}`,
+        });
+      }
+      if (j.error) {
+        return NextResponse.json({
+          ok: false,
+          stage: 'salesforce_oauth_error',
+          message: j.error_description || `Salesforce rejected the request: ${j.error}`,
+          salesforce_error: j.error,
+        });
+      }
+    } catch {
+      // Not JSON — fall through to HTML / generic handling
+    }
+    if (/Client Identifier.*isn't recognized|invalid_client_id/i.test(text)) {
+      return NextResponse.json({
+        ok: false,
+        stage: 'client_id_not_found',
+        message: 'Your Consumer Key isn\'t recognized by this org. Make sure you copied it from the same org you\'re trying to connect, and that you saved the External Client App.',
+      });
+    }
+    return NextResponse.json({
+      ok: false,
+      stage: 'salesforce_http_error',
+      message: `Salesforce returned HTTP ${res.status}. Double-check your Consumer Key and that the External Client App is saved. New ECAs sometimes take 5–10 minutes to propagate after saving.`,
+    });
+  }
+
   return NextResponse.json({
     ok: false,
     stage: 'salesforce_http_error',
-    message: `Salesforce returned HTTP ${res.status}. The ECA settings may not have finished propagating yet — wait 5–10 minutes after saving and try again.`,
+    message: `Salesforce returned HTTP ${res.status}.`,
   });
 }
