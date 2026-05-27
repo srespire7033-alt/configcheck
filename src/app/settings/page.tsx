@@ -589,6 +589,13 @@ export default function SettingsPage() {
             {TABS.map((tab) => {
               const Icon = tab.icon;
               const isActive = activeTab === tab.id;
+              // Per-tab dirty indicator — small amber dot if this tab has
+              // unsaved form changes that the user might lose by switching
+              // away. Pulls from the same useUnsavedChanges hooks the tab-
+              // switch guard already uses.
+              const isDirty =
+                (tab.id === 'account' && profileDirty.isDirty()) ||
+                (tab.id === 'branding' && brandingDirty.isDirty());
               return (
                 <button
                   key={tab.id}
@@ -600,7 +607,13 @@ export default function SettingsPage() {
                   }`}
                 >
                   <Icon className={`w-4 h-4 ${isActive ? 'text-blue-600 dark:text-blue-400' : ''}`} />
-                  {tab.label}
+                  <span className="flex-1 text-left">{tab.label}</span>
+                  {isDirty && (
+                    <span
+                      title="Unsaved changes on this tab"
+                      className="w-2 h-2 rounded-full bg-amber-500 flex-shrink-0"
+                    />
+                  )}
                 </button>
               );
             })}
@@ -1111,9 +1124,12 @@ export default function SettingsPage() {
                     </FormField>
                   </div>
 
-                  {/* Preview column — sticky so it stays in view as the user
-                      scrolls the form. Updates live as fields change. */}
-                  <div className="lg:sticky lg:top-6 self-start w-full">
+                  {/* Preview column — sticky on lg+ so it stays in view as
+                      the user scrolls the form. On narrow screens we cap the
+                      width at max-w-sm + center it, otherwise the aspect-ratio
+                      preview balloons into a giant column that pushes the form
+                      off-screen on phones. */}
+                  <div className="lg:sticky lg:top-6 self-start w-full max-w-sm mx-auto lg:max-w-none">
                     <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">PDF preview</p>
                     <BrandingPreview
                       companyName={companyName}
@@ -1544,6 +1560,49 @@ function SaveBar({
   );
 }
 
+// Small inline radial progress ring — gives a glanceable % alongside the
+// linear bar without taking much space. Used in UsageBar.
+function RadialRing({ percent, color, size = 36, strokeWidth = 4 }: {
+  percent: number;
+  color: string; // tailwind text color class, e.g. 'text-blue-500'
+  size?: number;
+  strokeWidth?: number;
+}) {
+  const radius = (size - strokeWidth) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const offset = circumference - (percent / 100) * circumference;
+  return (
+    <div className="relative flex-shrink-0" style={{ width: size, height: size }}>
+      <svg width={size} height={size} className="transform -rotate-90">
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          fill="none"
+          strokeWidth={strokeWidth}
+          className="text-gray-100 dark:text-gray-800 stroke-current"
+        />
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          fill="none"
+          strokeWidth={strokeWidth}
+          strokeDasharray={circumference}
+          strokeDashoffset={offset}
+          strokeLinecap="round"
+          className={`${color} stroke-current transition-all duration-500`}
+        />
+      </svg>
+      <div className="absolute inset-0 flex items-center justify-center">
+        <span className="text-[10px] font-bold text-gray-700 dark:text-gray-300 tabular-nums">
+          {Math.round(percent)}%
+        </span>
+      </div>
+    </div>
+  );
+}
+
 function UsageBar({
   label,
   description,
@@ -1581,8 +1640,22 @@ function UsageBar({
       ? 'bg-amber-500'
       : color === 'blue' ? 'bg-blue-500' : color === 'purple' ? 'bg-purple-500' : 'bg-green-500';
 
+  // Matching text-color class for the radial ring (text-blue-500 etc) so
+  // the ring's fill arc stays in sync with the linear bar's hue.
+  const ringColor = isOverLimit || isAtLimit
+    ? 'text-red-500'
+    : isNearLimit
+      ? 'text-amber-500'
+      : color === 'blue' ? 'text-blue-500' : color === 'purple' ? 'text-purple-500' : 'text-green-500';
+
   return (
-    <div className="space-y-2.5">
+    <div className="flex items-center gap-4">
+      {/* Radial ring on the left — glanceable %, hidden when unlimited (no
+          meaningful denominator). */}
+      {!isUnlimited && limit !== null && (
+        <RadialRing percent={cappedPercent} color={ringColor} />
+      )}
+      <div className="flex-1 min-w-0 space-y-2.5">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-sm font-medium text-gray-700 dark:text-gray-300">{label}</p>
@@ -1637,6 +1710,7 @@ function UsageBar({
           {limit! - used} remaining{isConcurrent ? '' : ` — resets ${resetDate}`}
         </p>
       )}
+      </div>
     </div>
   );
 }
