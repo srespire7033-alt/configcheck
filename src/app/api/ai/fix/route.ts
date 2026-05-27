@@ -3,6 +3,8 @@ import { createServiceClient } from '@/lib/db/client';
 import { getAuthUser } from '@/lib/auth/get-user';
 import { checkQuota } from '@/lib/quota';
 import { generateFixSuggestion } from '@/lib/ai/gemini';
+import { track } from '@/lib/analytics/track-server';
+import { AnalyticsEvent } from '@/lib/analytics/events';
 
 /**
  * POST /api/ai/fix
@@ -77,6 +79,10 @@ export async function POST(request: NextRequest) {
       .update({ ai_fix_suggestion: suggestion })
       .eq('id', issueId);
 
+    void track(AnalyticsEvent.AI_FIX_USED, {
+      userId: user.id,
+      properties: { check_id: issue.check_id, category: issue.category, severity: issue.severity },
+    });
     return NextResponse.json({ suggestion });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error';

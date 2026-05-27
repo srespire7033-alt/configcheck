@@ -4,6 +4,8 @@ import { createServiceClient } from '@/lib/db/client';
 import { getAuthUser } from '@/lib/auth/get-user';
 import { checkQuota } from '@/lib/quota';
 import { detectInstalledPackages, packageDetectionToArray } from '@/lib/salesforce/detect-packages';
+import { track } from '@/lib/analytics/track-server';
+import { AnalyticsEvent } from '@/lib/analytics/events';
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
@@ -129,6 +131,15 @@ export async function GET(request: NextRequest) {
       });
     }
 
+    void track(AnalyticsEvent.OAUTH_CALLBACK_SUCCESS, {
+      userId: user.id,
+      properties: {
+        is_sandbox: instanceUrl.includes('test.salesforce.com') || instanceUrl.includes('sandbox'),
+        installed_packages: installedPackages,
+        byo_eca: !!customCreds,
+      },
+    });
+
     // Redirect back to onboarding if user hasn't completed it, otherwise dashboard
     const onboardingDone = request.cookies.get('onboarding_completed')?.value === 'true';
     const redirectPath = onboardingDone ? '/dashboard' : '/onboarding';
@@ -143,6 +154,13 @@ export async function GET(request: NextRequest) {
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'OAuth failed';
     console.error('Salesforce OAuth error:', message);
+    void track(AnalyticsEvent.OAUTH_CALLBACK_FAILED, {
+      properties: {
+        // Just the first 80 chars and only the error class — never the
+        // full body which may contain Salesforce-side identifiers.
+        error_class: message.split(':')[0]?.slice(0, 80) ?? 'unknown',
+      },
+    });
     const onboardingDone = request.cookies.get('onboarding_completed')?.value === 'true';
     const redirectPath = onboardingDone ? '/dashboard' : '/onboarding';
     return NextResponse.redirect(

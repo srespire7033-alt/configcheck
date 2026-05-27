@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/db/client';
 import { getAuthUser } from '@/lib/auth/get-user';
+import { track } from '@/lib/analytics/track-server';
+import { AnalyticsEvent } from '@/lib/analytics/events';
 
 export const dynamic = 'force-dynamic';
 
@@ -69,6 +71,11 @@ export async function DELETE(request: NextRequest) {
     console.error('Failed to disconnect org:', updateError);
     return NextResponse.json({ error: 'Failed to disconnect organization' }, { status: 500 });
   }
+
+  void track(AnalyticsEvent.ORG_DISCONNECTED, {
+    userId: user.id,
+    properties: { org_id: orgId },
+  });
 
   return NextResponse.json({ success: true, name: org.name, mode: 'disconnect' });
 }

@@ -4,6 +4,8 @@ import { createServiceClient } from '@/lib/db/client';
 import { getAuthUser } from '@/lib/auth/get-user';
 import { checkQuota } from '@/lib/quota';
 import { runScanInBackground } from '@/lib/scans/run-scan-in-background';
+import { track } from '@/lib/analytics/track-server';
+import { AnalyticsEvent } from '@/lib/analytics/events';
 import type { ProductType } from '@/types';
 
 // Allow up to 180s for scans (Vercel Pro: 300s max, Hobby: 60s max)
@@ -77,6 +79,10 @@ export async function POST(request: NextRequest) {
       .gte('created_at', new Date(Date.now() - 5 * 60 * 1000).toISOString())
       .limit(1);
     if (inflight && inflight.length > 0) {
+      void track(AnalyticsEvent.SCAN_BLOCKED_INFLIGHT, {
+        userId: user.id,
+        properties: { existing_scan_id: inflight[0].id },
+      });
       return NextResponse.json({
         error: 'scan_in_progress',
         message: 'Another scan is already running for your account. Please wait for it to finish before starting a new one.',
@@ -113,6 +119,11 @@ export async function POST(request: NextRequest) {
     if (scanError || !scan) {
       return NextResponse.json({ error: 'Failed to create scan' }, { status: 500 });
     }
+
+    void track(AnalyticsEvent.SCAN_STARTED, {
+      userId: user.id,
+      properties: { product_type: productType, scan_id: scan.id },
+    });
 
     // Use waitUntil to run the scan AFTER the response is sent.
     // This keeps the Vercel function alive for up to maxDuration (180s)

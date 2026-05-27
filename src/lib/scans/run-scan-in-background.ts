@@ -9,6 +9,8 @@ import { runARMAnalysis } from '@/lib/analysis/arm-engine';
 import { generateExecutiveSummary } from '@/lib/ai/gemini';
 import { sendScanNotification } from '@/lib/email/notifications';
 import { detectInstalledPackages, packageDetectionToArray } from '@/lib/salesforce/detect-packages';
+import { track } from '@/lib/analytics/track-server';
+import { AnalyticsEvent } from '@/lib/analytics/events';
 import type { ProductType } from '@/types';
 
 /**
@@ -371,6 +373,18 @@ export async function runScanInBackground(
 
     console.log(`[SCAN ${scanId}] ✅ Completed in ${(totalDurationMs / 1000).toFixed(1)}s — Score: ${result.overall_score}/100`);
 
+    void track(AnalyticsEvent.SCAN_COMPLETED, {
+      userId: org.user_id as string,
+      properties: {
+        scan_id: scanId,
+        product_type: productType,
+        duration_ms: totalDurationMs,
+        overall_score: result.overall_score,
+        issue_count: result.issues.length,
+        critical_count: result.issues.filter((i) => i.severity === 'critical').length,
+      },
+    });
+
     // Step 7: Email notification
     try {
       await sendScanNotification(org.user_id as string, {
@@ -419,6 +433,17 @@ export async function runScanInBackground(
         completed_at: new Date().toISOString(),
       })
       .eq('id', scanId);
+
+    void track(AnalyticsEvent.SCAN_FAILED, {
+      userId: org.user_id as string,
+      properties: {
+        scan_id: scanId,
+        product_type: productType,
+        duration_ms: totalDurationMs,
+        // Just the prefix, never the full message which may contain Salesforce-side IDs
+        error_class: message.split(':')[0]?.slice(0, 80) ?? 'unknown',
+      },
+    });
 
     try {
       await sendScanNotification(org.user_id as string, {

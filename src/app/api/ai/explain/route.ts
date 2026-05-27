@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthUser } from '@/lib/auth/get-user';
 import { generateExplanation } from '@/lib/ai/gemini';
+import { track } from '@/lib/analytics/track-server';
+import { AnalyticsEvent } from '@/lib/analytics/events';
 
 export const dynamic = 'force-dynamic';
 
@@ -30,6 +32,10 @@ export async function POST(request: NextRequest) {
       severity,
     });
 
+    void track(AnalyticsEvent.AI_EXPLAIN_USED, {
+      userId: user.id,
+      properties: { check_id: checkId ?? null, category: category ?? null, severity: severity ?? null },
+    });
     return NextResponse.json({ explanation });
   } catch (error) {
     console.error('AI explain error:', error);

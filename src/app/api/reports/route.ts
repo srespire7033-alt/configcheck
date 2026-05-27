@@ -4,6 +4,8 @@ import { createServiceClient } from '@/lib/db/client';
 import { getAuthUser } from '@/lib/auth/get-user';
 import { checkQuota } from '@/lib/quota';
 import { CPQHealthReport } from '@/lib/report/pdf-generator';
+import { track } from '@/lib/analytics/track-server';
+import { AnalyticsEvent } from '@/lib/analytics/events';
 import React from 'react';
 
 export const dynamic = 'force-dynamic';
@@ -76,6 +78,11 @@ export async function GET(request: NextRequest) {
       organization_id: scan.organization_id,
       metadata: { scan_id: scanId },
     }).then(() => {});
+
+    void track(AnalyticsEvent.PDF_REPORT_DOWNLOADED, {
+      userId: user.id,
+      properties: { scan_id: scanId, bytes: pdfBuffer.length },
+    });
 
     return new NextResponse(new Uint8Array(pdfBuffer), {
       headers: {

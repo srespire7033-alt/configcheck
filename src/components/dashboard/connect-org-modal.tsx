@@ -1,7 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { X, Cloud, Copy, CheckCircle2, ChevronDown, ChevronUp, ShieldCheck } from 'lucide-react';
+import { track } from '@/lib/analytics/track-client';
+import { AnalyticsEvent } from '@/lib/analytics/events';
 
 interface ConnectOrgModalProps {
   isOpen: boolean;
@@ -22,6 +24,15 @@ export function ConnectOrgModal({ isOpen, onClose }: ConnectOrgModalProps) {
   const [showInstructions, setShowInstructions] = useState(false);
   const [showWhy, setShowWhy] = useState(false);
 
+  // Fire one event per modal opening — useful for funnel "opens → submits".
+  useEffect(() => {
+    if (isOpen) {
+      track(AnalyticsEvent.CONNECT_ORG_MODAL_OPENED, {
+        source: typeof window !== 'undefined' ? window.location.pathname : null,
+      });
+    }
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   async function handleConnect() {
@@ -40,6 +51,12 @@ export function ConnectOrgModal({ isOpen, onClose }: ConnectOrgModalProps) {
 
     setConnecting(true);
     setError('');
+    track(AnalyticsEvent.ECA_CREDENTIALS_SUBMITTED, {
+      // No credential values — just whether the user supplied one. The
+      // login URL is sensitive (identifies the customer's org) so we don't
+      // capture even the hostname.
+      has_login_url: !!loginUrl.trim(),
+    });
     try {
       const res = await fetch('/api/salesforce/auth-url', {
         method: 'POST',
