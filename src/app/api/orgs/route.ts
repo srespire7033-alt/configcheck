@@ -130,9 +130,13 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Failed to fetch organizations' }, { status: 500 });
   }
 
-  // Fetch latest scan data for each org from scans table (source of truth)
+  // Fetch latest scan data for each org from scans table (source of truth).
+  // We pick up both the latest and the previous score so the dashboard can
+  // show a delta ("↑5") next to the current score — a recurring monitoring
+  // signal that makes the difference between a one-time audit tool and a
+  // habit-forming product.
   const orgIds = (data || []).map((o) => o.id);
-  const latestScanMap: Record<string, { score: number; timestamp: string }> = {};
+  const latestScanMap: Record<string, { score: number; timestamp: string; previous?: number }> = {};
 
   if (orgIds.length > 0) {
     const { data: scans } = await supabase
@@ -143,13 +147,21 @@ export async function GET(request: NextRequest) {
       .order('created_at', { ascending: false });
 
     if (scans) {
+      // Track how many scans we've already seen per org. First one wins
+      // "latest"; second one is "previous" (used for the delta indicator).
+      const seenPerOrg: Record<string, number> = {};
       for (const scan of scans) {
-        if (!latestScanMap[scan.organization_id]) {
+        const count = seenPerOrg[scan.organization_id] ?? 0;
+        if (count === 0) {
           latestScanMap[scan.organization_id] = {
             score: scan.overall_score,
             timestamp: scan.completed_at || scan.created_at,
           };
+        } else if (count === 1) {
+          const existing = latestScanMap[scan.organization_id];
+          if (existing) existing.previous = scan.overall_score;
         }
+        seenPerOrg[scan.organization_id] = count + 1;
       }
     }
   }
@@ -161,6 +173,7 @@ export async function GET(request: NextRequest) {
       ...org,
       last_scan_score: latestScan?.score ?? org.last_scan_score,
       last_scan_at: latestScan?.timestamp ?? org.last_scan_at,
+      previous_scan_score: latestScan?.previous ?? null,
       critical_count: 0,
     };
   });

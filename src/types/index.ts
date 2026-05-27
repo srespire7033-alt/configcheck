@@ -1194,6 +1194,11 @@ export interface OrgCardData {
   // their own ECA installed inside their org, and refresh works permanently.
   // Dashboard surfaces a migration banner for legacy rows.
   sf_client_id?: string | null;
+  // Score from the scan immediately prior to last_scan_score. Used by the
+  // org card to render a delta indicator ("↑5", "↓3") — the recurring
+  // monitoring signal that turns a one-time audit into a habit-forming
+  // product. Null when the org has only ever been scanned once.
+  previous_scan_score?: number | null;
 }
 
 export interface IssueFilters {

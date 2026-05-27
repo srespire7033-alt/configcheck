@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Cloud, RefreshCw, ArrowRight, AlertTriangle, MoreVertical, Unplug, Clock } from 'lucide-react';
+import { Cloud, RefreshCw, ArrowRight, AlertTriangle, MoreVertical, Unplug, Clock, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import type { OrgCardData } from '@/types';
 import { getScoreColor, formatTimeAgo } from '@/lib/utils';
 
@@ -212,13 +212,39 @@ export function OrgCard({ org, onView, onScan, onDisconnect, scanning = false, s
             </div>
 
             <div className="flex items-center gap-2">
-              {/* Score */}
+              {/* Score with delta indicator. Delta only renders when we have
+                  a previous_scan_score — first-ever scans show just the
+                  number without an "↑0" decoration that would be misleading. */}
               {org.last_scan_score !== null && (
                 <div className="text-right">
                   <div className={`text-2xl font-bold ${getScoreColor(org.last_scan_score)}`}>
                     {org.last_scan_score}
                   </div>
-                  <div className="text-[10px] text-gray-400 font-medium uppercase tracking-wider">/100</div>
+                  {(() => {
+                    const prev = org.previous_scan_score;
+                    if (prev === null || prev === undefined) {
+                      return <div className="text-[10px] text-gray-400 font-medium uppercase tracking-wider">/100</div>;
+                    }
+                    const delta = org.last_scan_score - prev;
+                    if (delta === 0) {
+                      return (
+                        <div className="flex items-center justify-end gap-1 text-[10px] text-gray-500 font-medium" title={`Same as previous scan (${prev}/100)`}>
+                          <Minus className="h-2.5 w-2.5" />
+                          <span>no change</span>
+                        </div>
+                      );
+                    }
+                    const Icon = delta > 0 ? TrendingUp : TrendingDown;
+                    const colorCls = delta > 0
+                      ? 'text-green-600 dark:text-green-400'
+                      : 'text-red-600 dark:text-red-400';
+                    return (
+                      <div className={`flex items-center justify-end gap-1 text-[10px] font-semibold ${colorCls}`} title={`Previous scan: ${prev}/100`}>
+                        <Icon className="h-2.5 w-2.5" />
+                        <span>{delta > 0 ? '+' : ''}{delta} from last</span>
+                      </div>
+                    );
+                  })()}
                 </div>
               )}
 
