@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Plus, CheckCircle, AlertCircle, Cloud, GitCompare, RefreshCw } from 'lucide-react';
+import { Plus, CheckCircle, AlertCircle, Cloud, GitCompare, RefreshCw, LayoutGrid, Rows, X as XIcon } from 'lucide-react';
 import { OrgCard } from '@/components/dashboard/org-card';
 import { DisconnectedOrgs } from '@/components/dashboard/disconnected-orgs';
 import { ConnectOrgModal } from '@/components/dashboard/connect-org-modal';
@@ -31,15 +31,39 @@ function DashboardContent() {
   // localStorage so reopening the dashboard remembers the choice.
   type SortKey = 'recent' | 'score-low' | 'score-high' | 'name';
   const [sortKey, setSortKey] = useState<SortKey>('recent');
+  // View mode — grid (default, visual cards) vs compact (denser cards).
+  type ViewMode = 'grid' | 'compact';
+  const [viewMode, setViewMode] = useState<ViewMode>('grid');
+  // Bulk-select state — set of selected org IDs. When non-empty, a sticky
+  // bottom action bar appears with bulk actions.
+  const [selectedOrgIds, setSelectedOrgIds] = useState<Set<string>>(new Set());
   useEffect(() => {
-    const saved = typeof window !== 'undefined' ? window.localStorage.getItem('orgprism_dashboard_sort') : null;
-    if (saved === 'recent' || saved === 'score-low' || saved === 'score-high' || saved === 'name') {
-      setSortKey(saved);
+    const savedSort = typeof window !== 'undefined' ? window.localStorage.getItem('orgprism_dashboard_sort') : null;
+    if (savedSort === 'recent' || savedSort === 'score-low' || savedSort === 'score-high' || savedSort === 'name') {
+      setSortKey(savedSort);
+    }
+    const savedView = typeof window !== 'undefined' ? window.localStorage.getItem('orgprism_dashboard_view') : null;
+    if (savedView === 'grid' || savedView === 'compact') {
+      setViewMode(savedView);
     }
   }, []);
   function updateSort(next: SortKey) {
     setSortKey(next);
     try { window.localStorage.setItem('orgprism_dashboard_sort', next); } catch {}
+  }
+  function updateView(next: ViewMode) {
+    setViewMode(next);
+    try { window.localStorage.setItem('orgprism_dashboard_view', next); } catch {}
+  }
+  function toggleOrgSelected(id: string) {
+    setSelectedOrgIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+  function clearSelection() {
+    setSelectedOrgIds(new Set());
   }
 
   const successMsg = searchParams.get('success');
@@ -202,6 +226,26 @@ function DashboardContent() {
     if (!confirm(`Scan all ${targets.length} org${targets.length !== 1 ? 's' : ''} sequentially? This may take several minutes.`)) {
       return;
     }
+    await runSequentialScans(targets);
+  }
+
+  // Bulk-scan only the orgs in the selection set. Shares the same sequential
+  // runner as Scan All so the UI banner + abort behaviour is identical.
+  async function handleScanSelected() {
+    const targets = orgs.filter(
+      (o) =>
+        selectedOrgIds.has(o.id) &&
+        (o.connection_status === 'connected' || !o.connection_status)
+    );
+    if (targets.length === 0) return;
+    if (!confirm(`Scan ${targets.length} selected org${targets.length !== 1 ? 's' : ''} sequentially? This may take several minutes.`)) {
+      return;
+    }
+    await runSequentialScans(targets);
+    clearSelection();
+  }
+
+  async function runSequentialScans(targets: OrgCardData[]) {
     for (let i = 0; i < targets.length; i++) {
       const o = targets[i];
       setScanAllProgress({ current: i + 1, total: targets.length, currentOrgName: o.name });
@@ -371,17 +415,41 @@ function DashboardContent() {
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           {orgs.length >= 2 && (
-            <select
-              value={sortKey}
-              onChange={(e) => updateSort(e.target.value as SortKey)}
-              title="Sort organizations"
-              className="px-3 py-2 text-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-700 dark:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600 transition cursor-pointer"
-            >
-              <option value="recent">Sort: recently scanned</option>
-              <option value="score-low">Sort: score (low first)</option>
-              <option value="score-high">Sort: score (high first)</option>
-              <option value="name">Sort: name (A→Z)</option>
-            </select>
+            <>
+              <select
+                value={sortKey}
+                onChange={(e) => updateSort(e.target.value as SortKey)}
+                title="Sort organizations"
+                className="px-3 py-2 text-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-700 dark:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600 transition cursor-pointer"
+              >
+                <option value="recent">Sort: recently scanned</option>
+                <option value="score-low">Sort: score (low first)</option>
+                <option value="score-high">Sort: score (high first)</option>
+                <option value="name">Sort: name (A→Z)</option>
+              </select>
+              {/* View toggle — grid (default, visual) vs compact (denser). Compact
+                  uses 4 columns at xl breakpoint instead of 3, smaller gap. */}
+              <div className="inline-flex bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+                <button
+                  onClick={() => updateView('grid')}
+                  className={`p-2 transition ${viewMode === 'grid' ? 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white' : 'text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}`}
+                  title="Grid view"
+                  aria-label="Grid view"
+                  aria-pressed={viewMode === 'grid'}
+                >
+                  <LayoutGrid className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => updateView('compact')}
+                  className={`p-2 transition ${viewMode === 'compact' ? 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white' : 'text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}`}
+                  title="Compact view"
+                  aria-label="Compact view"
+                  aria-pressed={viewMode === 'compact'}
+                >
+                  <Rows className="w-4 h-4" />
+                </button>
+              </div>
+            </>
           )}
           {orgs.length >= 1 && (
             <button
@@ -528,7 +596,11 @@ function DashboardContent() {
           </div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className={
+          viewMode === 'compact'
+            ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4'
+            : 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'
+        }>
           {(() => {
             // Sort a shallow copy so we don't mutate the canonical state.
             // Null last_scan_at / last_scan_score sort to the end consistently
@@ -564,6 +636,9 @@ function DashboardContent() {
               onScan={() => handleScan(org.id)}
               onDisconnect={() => fetchOrgs()}
               scanning={scanningOrg === org.id}
+              selectable={orgs.length >= 2}
+              selected={selectedOrgIds.has(org.id)}
+              onToggleSelect={() => toggleOrgSelected(org.id)}
             />
           ))}
 
@@ -587,6 +662,35 @@ function DashboardContent() {
       )}
 
       <DisconnectedOrgs onReconnect={() => fetchOrgs()} onForget={() => fetchOrgs()} refreshKey={orgsRefreshKey} />
+
+      {/* Bulk-action toolbar — appears when 1+ orgs are selected via the
+          checkbox on each card. Sticks to the bottom of the viewport so the
+          user can see selected counts + take action without scrolling back
+          to the top. Disable scan button while a batch is running so the
+          user can't kick off overlapping batches. */}
+      {selectedOrgIds.size > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 flex items-center gap-3 px-4 py-3 bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 max-w-[calc(100%-2rem)]">
+          <span className="text-sm font-semibold text-gray-900 dark:text-white whitespace-nowrap">
+            {selectedOrgIds.size} selected
+          </span>
+          <div className="h-6 w-px bg-gray-200 dark:bg-gray-700" />
+          <button
+            onClick={handleScanSelected}
+            disabled={!!scanAllProgress || !!scanningOrg}
+            className="inline-flex items-center gap-2 px-4 py-1.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg disabled:opacity-60 disabled:cursor-not-allowed transition"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+            Scan selected
+          </button>
+          <button
+            onClick={clearSelection}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition"
+          >
+            <XIcon className="w-3.5 h-3.5" />
+            Clear
+          </button>
+        </div>
+      )}
     </div>
   );
 }
