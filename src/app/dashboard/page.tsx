@@ -26,6 +26,22 @@ function DashboardContent() {
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [connectModalOpen, setConnectModalOpen] = useState(false);
 
+  // Sort order for the org grid. Default "recent" = recently scanned first,
+  // which surfaces the orgs the user is actively working on. Persists in
+  // localStorage so reopening the dashboard remembers the choice.
+  type SortKey = 'recent' | 'score-low' | 'score-high' | 'name';
+  const [sortKey, setSortKey] = useState<SortKey>('recent');
+  useEffect(() => {
+    const saved = typeof window !== 'undefined' ? window.localStorage.getItem('orgprism_dashboard_sort') : null;
+    if (saved === 'recent' || saved === 'score-low' || saved === 'score-high' || saved === 'name') {
+      setSortKey(saved);
+    }
+  }, []);
+  function updateSort(next: SortKey) {
+    setSortKey(next);
+    try { window.localStorage.setItem('orgprism_dashboard_sort', next); } catch {}
+  }
+
   const successMsg = searchParams.get('success');
   const errorMsg = searchParams.get('error');
   // Workspace-switch confirmation banner — set by TeamSwitcher when the user
@@ -346,14 +362,27 @@ function DashboardContent() {
         </div>
       )}
 
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-start justify-between mb-6 gap-4 flex-wrap">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Your Organizations</h1>
           <p className="text-gray-500 dark:text-gray-400 mt-1">
             Connect Salesforce orgs to scan their Revenue Cloud configuration
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          {orgs.length >= 2 && (
+            <select
+              value={sortKey}
+              onChange={(e) => updateSort(e.target.value as SortKey)}
+              title="Sort organizations"
+              className="px-3 py-2 text-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-700 dark:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600 transition cursor-pointer"
+            >
+              <option value="recent">Sort: recently scanned</option>
+              <option value="score-low">Sort: score (low first)</option>
+              <option value="score-high">Sort: score (high first)</option>
+              <option value="name">Sort: name (A→Z)</option>
+            </select>
+          )}
           {orgs.length >= 1 && (
             <button
               onClick={handleScanAll}
@@ -377,6 +406,48 @@ function DashboardContent() {
           )}
         </div>
       </div>
+
+      {/* Portfolio summary strip — appears once the user has 2+ orgs (a "portfolio"
+          rather than a single org). Glanceable health-of-everything before
+          diving into individual org cards. */}
+      {orgs.length >= 2 && (() => {
+        const scannedOrgs = orgs.filter((o) => o.last_scan_score !== null);
+        const totalCritical = orgs.reduce((acc, o) => acc + (o.critical_count || 0), 0);
+        const orgsWithCritical = orgs.filter((o) => (o.critical_count || 0) > 0).length;
+        const avgScore = scannedOrgs.length > 0
+          ? Math.round(scannedOrgs.reduce((a, o) => a + (o.last_scan_score || 0), 0) / scannedOrgs.length)
+          : null;
+        const avgColor = avgScore === null
+          ? 'text-gray-400'
+          : avgScore >= 90 ? 'text-green-600'
+          : avgScore >= 75 ? 'text-lime-600'
+          : avgScore >= 60 ? 'text-amber-600'
+          : avgScore >= 40 ? 'text-orange-600'
+          : 'text-red-600';
+        return (
+          <div className="mb-6 flex items-center gap-4 md:gap-8 px-5 py-4 bg-white dark:bg-gray-900/60 rounded-xl border border-gray-200 dark:border-gray-800 flex-wrap">
+            <div className="flex items-center gap-2">
+              <span className="text-2xl font-bold text-gray-900 dark:text-white">{orgs.length}</span>
+              <span className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">orgs</span>
+            </div>
+            <div className="h-8 w-px bg-gray-200 dark:bg-gray-700 hidden md:block" />
+            <div className="flex items-center gap-2">
+              <span className={`text-2xl font-bold ${avgColor}`}>{avgScore !== null ? avgScore : '—'}</span>
+              <span className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">avg score</span>
+            </div>
+            <div className="h-8 w-px bg-gray-200 dark:bg-gray-700 hidden md:block" />
+            <div className="flex items-center gap-2">
+              <span className={`text-2xl font-bold ${orgsWithCritical > 0 ? 'text-red-600' : 'text-gray-400'}`}>{orgsWithCritical}</span>
+              <span className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">{orgsWithCritical === 1 ? 'org with critical' : 'orgs with critical'}</span>
+            </div>
+            <div className="h-8 w-px bg-gray-200 dark:bg-gray-700 hidden md:block" />
+            <div className="flex items-center gap-2">
+              <span className={`text-2xl font-bold ${totalCritical > 0 ? 'text-red-600' : 'text-gray-400'}`}>{totalCritical}</span>
+              <span className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">critical findings</span>
+            </div>
+          </div>
+        );
+      })()}
 
       {scanAllProgress && (
         <div className="mb-6 flex items-center gap-3 p-4 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900/50 rounded-xl">
@@ -417,7 +488,7 @@ function DashboardContent() {
               {
                 step: '2',
                 title: 'Run a health scan',
-                desc: 'We probe 176 checks across 41 categories: price rules, bundles, approvals, billing, ARM and more.',
+                desc: 'We probe 182 checks across 45 categories: price rules, bundles, approvals, billing, ARM and more.',
               },
               {
                 step: '3',
@@ -458,7 +529,34 @@ function DashboardContent() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {orgs.map((org) => (
+          {(() => {
+            // Sort a shallow copy so we don't mutate the canonical state.
+            // Null last_scan_at / last_scan_score sort to the end consistently
+            // (unscanned orgs feel "least fresh" / "least known").
+            const sorted = [...orgs];
+            if (sortKey === 'recent') {
+              sorted.sort((a, b) => {
+                const at = a.last_scan_at ? new Date(a.last_scan_at).getTime() : 0;
+                const bt = b.last_scan_at ? new Date(b.last_scan_at).getTime() : 0;
+                return bt - at;
+              });
+            } else if (sortKey === 'score-low') {
+              sorted.sort((a, b) => {
+                const av = a.last_scan_score ?? Number.MAX_SAFE_INTEGER;
+                const bv = b.last_scan_score ?? Number.MAX_SAFE_INTEGER;
+                return av - bv;
+              });
+            } else if (sortKey === 'score-high') {
+              sorted.sort((a, b) => {
+                const av = a.last_scan_score ?? -1;
+                const bv = b.last_scan_score ?? -1;
+                return bv - av;
+              });
+            } else if (sortKey === 'name') {
+              sorted.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
+            }
+            return sorted;
+          })().map((org) => (
             <OrgCard
               key={org.id}
               org={org}

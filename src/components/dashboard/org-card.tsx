@@ -250,7 +250,7 @@ export function OrgCard({ org, onView, onScan, onDisconnect, scanning = false }:
               onClick={onView}
               className="flex items-center justify-center gap-1 px-3 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 dark:text-gray-300 dark:bg-gray-800 dark:hover:bg-gray-700 rounded-xl transition-colors"
             >
-              View
+              Open
               <ArrowRight className="h-3.5 w-3.5" />
             </button>
           )}
