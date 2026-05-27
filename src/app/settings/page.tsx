@@ -36,6 +36,9 @@ interface NotifEventDef {
   defaultInApp: boolean;
 }
 
+// Common events shown by default — the 3 most-actionable for any user.
+const COMMON_EVENT_IDS: NotifEventId[] = ['scan_completed', 'critical_issue_found', 'plan_limit_reached'];
+
 const NOTIF_EVENTS: NotifEventDef[] = [
   { id: 'scan_completed', label: 'Scan completed', description: 'Any scan finishes with a score.', defaultEmail: true, defaultInApp: true },
   { id: 'scan_failed', label: 'Scan failed', description: 'A scan errored before producing a score.', defaultEmail: true, defaultInApp: true },
@@ -159,6 +162,10 @@ export default function SettingsPage() {
   // means "not yet customized" — defaults apply via DEFAULT_NOTIF_EVENTS.
   const [notifSettings, setNotifSettings] = useState<NotificationSettings | null>(null);
   const [bulkEmailInput, setBulkEmailInput] = useState('');
+  // Notification matrix split — show 3 common events expanded by default,
+  // hide the other 5 behind "Show advanced events" so new users aren't
+  // overwhelmed by 8 rows at first glance.
+  const [showAdvancedEvents, setShowAdvancedEvents] = useState(false);
   const [testingEmail, setTestingEmail] = useState<string | null>(null);
   const [notifEmailError, setNotifEmailError] = useState('');
 
@@ -439,7 +446,7 @@ export default function SettingsPage() {
       setTimezone(next.timezone);
       setSavedProfileSnapshot(next);
       setSavedAccount(true);
-      setTimeout(() => setSavedAccount(false), 3000);
+      setTimeout(() => setSavedAccount(false), 6000);
     } catch {
       alert('Failed to save account settings. Please try again.');
     } finally { setSavingAccount(false); }
@@ -465,7 +472,7 @@ export default function SettingsPage() {
       setBrandingColor(next.brandingColor);
       setSavedBrandingSnapshot(next);
       setSavedBranding(true);
-      setTimeout(() => setSavedBranding(false), 3000);
+      setTimeout(() => setSavedBranding(false), 6000);
     } catch {
       alert('Failed to save branding settings. Please try again.');
     } finally { setSavingBranding(false); }
@@ -798,6 +805,39 @@ export default function SettingsPage() {
               not one mis-click away from the Profile form. */}
           {activeTab === 'privacy' && (
             <div className="space-y-6">
+              {/* Account-stats strip — gives weight to the destructive actions
+                  below. "You have 6 months of data and 120 scans here" is
+                  more sobering than just an Export and Delete pair of buttons. */}
+              {(memberSince || usage) && (
+                <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-gradient-to-br from-blue-50/40 to-indigo-50/30 dark:from-blue-900/10 dark:to-indigo-900/10 px-6 py-5">
+                  <p className="text-xs uppercase tracking-wider font-semibold text-gray-500 dark:text-gray-400 mb-3">Your account at a glance</p>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    {memberSince && (
+                      <div>
+                        <p className="text-[11px] uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-0.5">Member since</p>
+                        <p className="text-sm font-semibold text-gray-900 dark:text-white">{memberSince}</p>
+                      </div>
+                    )}
+                    {usage && (
+                      <div>
+                        <p className="text-[11px] uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-0.5">All-time scans</p>
+                        <p className="text-sm font-semibold text-gray-900 dark:text-white">{usage.total_scans}</p>
+                      </div>
+                    )}
+                    {usage && (
+                      <div>
+                        <p className="text-[11px] uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-0.5">Connected orgs</p>
+                        <p className="text-sm font-semibold text-gray-900 dark:text-white">{usage.connected_orgs}</p>
+                      </div>
+                    )}
+                    <div>
+                      <p className="text-[11px] uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-0.5">Plan</p>
+                      <p className="text-sm font-semibold text-gray-900 dark:text-white capitalize">{plan}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <SectionCard title="Your Data" description="Export everything we have about you, or remove your account.">
                 <div className="space-y-4">
                   {/* Export Data */}
@@ -1120,26 +1160,38 @@ export default function SettingsPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {NOTIF_EVENTS.map((evt, i) => {
-                        const pref = getEventPref(notifSettings, evt);
-                        return (
-                          <tr key={evt.id} className={i > 0 ? 'border-t border-gray-100 dark:border-gray-800' : ''}>
-                            <td className="px-4 py-3">
-                              <p className="text-sm font-medium text-gray-900 dark:text-white">{evt.label}</p>
-                              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{evt.description}</p>
-                            </td>
-                            <td className="px-3 py-3 text-center">
-                              <MatrixToggle checked={pref.email} onChange={() => toggleEventChannel(evt.id, 'email')} />
-                            </td>
-                            <td className="px-3 py-3 text-center">
-                              <MatrixToggle checked={pref.in_app} onChange={() => toggleEventChannel(evt.id, 'in_app')} />
-                            </td>
-                          </tr>
-                        );
-                      })}
+                      {NOTIF_EVENTS
+                        .filter((evt) => showAdvancedEvents || COMMON_EVENT_IDS.includes(evt.id))
+                        .map((evt, i) => {
+                          const pref = getEventPref(notifSettings, evt);
+                          return (
+                            <tr key={evt.id} className={i > 0 ? 'border-t border-gray-100 dark:border-gray-800' : ''}>
+                              <td className="px-4 py-3">
+                                <p className="text-sm font-medium text-gray-900 dark:text-white">{evt.label}</p>
+                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{evt.description}</p>
+                              </td>
+                              <td className="px-3 py-3 text-center">
+                                <MatrixToggle checked={pref.email} onChange={() => toggleEventChannel(evt.id, 'email')} />
+                              </td>
+                              <td className="px-3 py-3 text-center">
+                                <MatrixToggle checked={pref.in_app} onChange={() => toggleEventChannel(evt.id, 'in_app')} />
+                              </td>
+                            </tr>
+                          );
+                        })}
                     </tbody>
                   </table>
                 </div>
+                {/* Toggle to reveal advanced events (scan failed, scheduled
+                    scan ran, weekly summary, plan limit approaching, billing
+                    update). Hidden by default — new users see 3 rows, not 8. */}
+                <button
+                  type="button"
+                  onClick={() => setShowAdvancedEvents(!showAdvancedEvents)}
+                  className="mt-3 inline-flex items-center gap-1.5 text-xs font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors"
+                >
+                  {showAdvancedEvents ? '− Hide advanced events' : `+ Show ${NOTIF_EVENTS.length - COMMON_EVENT_IDS.length} advanced events`}
+                </button>
               </SectionCard>
 
               <SectionCard title="Recipients" description="Who receives email notifications, in addition to your account email. Send a test to verify a new address actually receives mail.">
