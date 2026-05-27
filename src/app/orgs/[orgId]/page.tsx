@@ -285,6 +285,20 @@ export default function OrgDetailPage() {
         const statusRes = await fetch(`/api/scans?scanId=${scanId}`);
         const scanData = await statusRes.json();
         if (scanData.status === 'completed' || scanData.status === 'failed') {
+          // AI summary now runs AFTER status='completed' is durably set —
+          // if metadata.ai_summary_status is still 'pending', keep polling
+          // (at the same 3s cadence) so the UI picks up the real summary
+          // without requiring a manual reload. Caps at maxPolls so a stuck
+          // Gemini call doesn't poll forever.
+          const aiPending =
+            scanData.status === 'completed' &&
+            (scanData.metadata as { ai_summary_status?: string } | null)?.ai_summary_status === 'pending';
+          if (aiPending && pollCount < maxPolls) {
+            // Still waiting on AI — refresh visible data so the user at
+            // least sees issues + score, then continue polling.
+            fetchData();
+            return;
+          }
           if (pollIntervalRef.current) {
             clearInterval(pollIntervalRef.current);
             pollIntervalRef.current = null;

@@ -275,25 +275,11 @@ export async function runScanInBackground(
       };
     }
 
-    // Step 4: Generate AI summary
-    console.log(`[SCAN ${scanId}] Generating AI summary...`);
-    const aiStart = Date.now();
-    try {
-      result.summary = await generateExecutiveSummary(
-        result.issues,
-        result.category_scores,
-        result.overall_score,
-        {
-          totalPriceRules: cpqDataTotals.priceRules,
-          totalProducts: cpqDataTotals.products,
-          totalQuoteLines: cpqDataTotals.quoteLines,
-        }
-      );
-      console.log(`[SCAN ${scanId}] AI summary generated in ${Date.now() - aiStart}ms`);
-    } catch (aiError) {
-      console.error(`[SCAN ${scanId}] AI summary failed:`, aiError);
-      result.summary = `Health score: ${result.overall_score}/100. Found ${result.issues.length} issue(s).`;
-    }
+    // AI summary generation is intentionally deferred to AFTER issues are
+    // saved and the scan is marked completed. Gemini can be slow (5-30s) or
+    // outright fail/rate-limit, and we don't want a wobble in their API to
+    // throw away an otherwise-successful scan. The user sees results
+    // immediately; the AI summary fills in shortly after.
 
     // Step 5: Save issues
     const issuesToInsert = result.issues.map((issue) => ({
@@ -353,7 +339,11 @@ export async function runScanInBackground(
         status: 'completed',
         overall_score: result.overall_score,
         category_scores: result.category_scores,
-        summary: result.summary,
+        // Placeholder summary written immediately so the scan-detail UI
+        // has something to show. The real Gemini-generated summary
+        // overwrites this below once it's done — UI polls for the
+        // summary field to update.
+        summary: `Health score: ${result.overall_score}/100. Found ${result.issues.length} issue(s). Detailed insights are being generated…`,
         total_issues: result.issues.length,
         critical_count: result.issues.filter((i) => i.severity === 'critical').length,
         warning_count: result.issues.filter((i) => i.severity === 'warning').length,
@@ -366,12 +356,72 @@ export async function runScanInBackground(
           data_fetched: dataFetchedMeta,
           query_failures: queryFailuresMeta.length > 0 ? queryFailuresMeta : null,
           query_outcomes: Object.keys(queryOutcomesMeta).length > 0 ? queryOutcomesMeta : null,
+          ai_summary_status: 'pending',
         },
         completed_at: new Date().toISOString(),
       })
       .eq('id', scanId);
 
     console.log(`[SCAN ${scanId}] ✅ Completed in ${(totalDurationMs / 1000).toFixed(1)}s — Score: ${result.overall_score}/100`);
+
+    // Generate the AI summary AFTER the scan is durably marked completed.
+    // A Gemini outage at this point only means the summary text is
+    // missing — issues, score, and metadata are already safe. Wrapped in
+    // its own try/catch so a failure doesn't surface to the user; the
+    // metadata.ai_summary_status field carries the state for diagnosis.
+    const aiStart = Date.now();
+    try {
+      console.log(`[SCAN ${scanId}] Generating AI summary (post-save)...`);
+      const aiSummary = await generateExecutiveSummary(
+        result.issues,
+        result.category_scores,
+        result.overall_score,
+        {
+          totalPriceRules: cpqDataTotals.priceRules,
+          totalProducts: cpqDataTotals.products,
+          totalQuoteLines: cpqDataTotals.quoteLines,
+        }
+      );
+      result.summary = aiSummary;
+      await supabase
+        .from('scans')
+        .update({
+          summary: aiSummary,
+          metadata: {
+            revenue_summary: result.revenue_summary || null,
+            complexity: result.complexity || null,
+            product_type: productType,
+            data_fetched: dataFetchedMeta,
+            query_failures: queryFailuresMeta.length > 0 ? queryFailuresMeta : null,
+            query_outcomes: Object.keys(queryOutcomesMeta).length > 0 ? queryOutcomesMeta : null,
+            ai_summary_status: 'completed',
+            ai_summary_duration_ms: Date.now() - aiStart,
+          },
+        })
+        .eq('id', scanId);
+      console.log(`[SCAN ${scanId}] AI summary generated in ${Date.now() - aiStart}ms`);
+    } catch (aiError) {
+      const aiMsg = aiError instanceof Error ? aiError.message : 'Unknown AI error';
+      console.error(`[SCAN ${scanId}] AI summary failed (non-fatal):`, aiMsg);
+      // Fall back to a deterministic summary so the UI never shows the
+      // "being generated…" placeholder forever.
+      await supabase
+        .from('scans')
+        .update({
+          summary: `Health score: ${result.overall_score}/100. Found ${result.issues.length} issue(s). AI insights couldn't be generated for this scan.`,
+          metadata: {
+            revenue_summary: result.revenue_summary || null,
+            complexity: result.complexity || null,
+            product_type: productType,
+            data_fetched: dataFetchedMeta,
+            query_failures: queryFailuresMeta.length > 0 ? queryFailuresMeta : null,
+            query_outcomes: Object.keys(queryOutcomesMeta).length > 0 ? queryOutcomesMeta : null,
+            ai_summary_status: 'failed',
+            ai_summary_error: aiMsg.slice(0, 200),
+          },
+        })
+        .eq('id', scanId);
+    }
 
     void track(AnalyticsEvent.SCAN_COMPLETED, {
       userId: org.user_id as string,
