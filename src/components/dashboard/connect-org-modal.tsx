@@ -73,6 +73,19 @@ export function ConnectOrgModal({ isOpen, onClose, targetOrg = null }: ConnectOr
       setError('Please enter your Salesforce login URL');
       return;
     }
+    // Guard against the most expensive mistake: pasting the generic
+    // Salesforce gateway as the login URL for a BYO-ECA connect. The
+    // gateway can't route token refreshes to a Local-distribution ECA,
+    // and the failure mode is subtle — the initial OAuth works, but
+    // every refresh after the first ~2 hours dies with "External client
+    // app is not installed in this org". By the time the customer notices
+    // they have to reconnect, which is exactly what BYO-ECA was supposed
+    // to fix.
+    const normalizedUrl = loginUrl.trim().toLowerCase();
+    if (normalizedUrl === 'https://login.salesforce.com' || normalizedUrl === 'https://test.salesforce.com') {
+      setError('That looks like the generic Salesforce gateway URL. For BYO-ECA you need your org\'s My Domain URL — find it in Setup → My Domain (looks like https://yourcompany.my.salesforce.com).');
+      return;
+    }
 
     setConnecting(true);
     setError('');

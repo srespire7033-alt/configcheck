@@ -250,11 +250,28 @@ export async function createRefreshableConnection(
   // Build the per-org OAuth credentials once and reuse them on every
   // createConnection call below so jsforce's auto-refresh hook always
   // talks to Salesforce with the right client_id.
+  //
+  // BYO-ECA tokens MUST be refreshed against the org's own My Domain —
+  // not against the generic `login.salesforce.com` gateway. ECAs are
+  // installed Local to a specific org, so the gateway can't route the
+  // refresh request to the right org and returns "External client app is
+  // not installed in this org". If the stored sf_login_url is the
+  // generic gateway (legacy data from an early connect when the modal
+  // didn't warn about this), fall back to instance_url which IS the
+  // org's My Domain.
+  function safeLoginUrl(): string | null {
+    const stored = (org.sf_login_url as string | null | undefined) ?? null;
+    const isGenericGateway = !stored || stored.startsWith('https://login.salesforce.com') || stored.startsWith('https://test.salesforce.com');
+    if (isGenericGateway && typeof org.instance_url === 'string' && org.instance_url.includes('.my.salesforce.com')) {
+      return org.instance_url;
+    }
+    return stored;
+  }
   const orgOAuth = org.sf_client_id && org.sf_client_secret
     ? {
         clientId: org.sf_client_id as string,
         clientSecret: org.sf_client_secret as string,
-        loginUrl: (org.sf_login_url as string | null | undefined) ?? null,
+        loginUrl: safeLoginUrl(),
       }
     : null;
 
@@ -291,7 +308,7 @@ export async function createRefreshableConnection(
         org.refresh_token,
         org.sf_client_id || undefined,
         org.sf_client_secret || undefined,
-        org.sf_login_url || undefined
+        safeLoginUrl() || undefined
       );
       if (newTokens) {
         await persistRefreshedToken(orgId, newTokens.accessToken);
