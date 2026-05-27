@@ -13,6 +13,64 @@ export interface ARMScanResult {
 }
 
 /**
+ * Defaults any missing array field on ARMData to []. The data fetcher
+ * (queries-arm.ts) sometimes returns incomplete payloads — Revenue Cloud
+ * RLM SOQL queries can fail piecemeal (INVALID_TYPE on a newer entity, an
+ * IP-restricted object, etc.) and the per-failure recovery skips the
+ * affected field rather than the whole scan. Individual checks then crash
+ * with "TypeError: Cannot read properties of undefined (reading 'filter')"
+ * and produce zero findings — a silent false-negative for the customer.
+ *
+ * Normalising once at the engine entry point lets all 150+ ARM checks
+ * assume the arrays exist, removes 150 sites of defensive `?? []` clutter,
+ * and surfaces missing fields as an explicit empty array (which the
+ * checks correctly handle as "nothing of this type exists in the org").
+ */
+function normalizeARMData(data: ARMData): ARMData {
+  // Every field on ARMData is an array; build a Proxy-free shallow object
+  // with empty-array fallbacks per key. Keeping this list in sync with
+  // the ARMData interface — TypeScript will catch new fields at the
+  // assignment site because the return type is ARMData.
+  const safe = { ...(data ?? {}) } as Record<string, unknown>;
+  for (const key of Object.keys(safe)) {
+    if (!Array.isArray(safe[key])) safe[key] = [];
+  }
+  // Also ensure every field the type declares is present, even if absent
+  // on the input. Done by iterating the known field names below — kept as
+  // a single source of truth so a typo can't silently leave a hole.
+  const REQUIRED_FIELDS: ReadonlyArray<keyof ARMData> = [
+    'products', 'sellingModels', 'sellingModelOptions',
+    'priceAdjustmentSchedules', 'priceAdjustmentTiers', 'attributeBasedAdjRules',
+    'productRelatedComponents', 'priceBooks',
+    'productCategories', 'productCategoryProducts',
+    'pricingProcedures', 'decisionTables', 'contextDefinitions',
+    'rateCards', 'rateCardEntries',
+    'attributeDefinitions', 'attributeCategories', 'attributePicklistValues',
+    'assets', 'assetStatePeriods', 'assetRelationships',
+    'contracts', 'contractItemPrices',
+    'unitOfMeasureClasses', 'usageResources', 'productUsageGrants',
+    'fulfillmentStepDefinitions', 'fulfillmentStepDefinitionGroups',
+    'productFulfillmentScenarios', 'fulfillmentTaskAssignmentRules',
+    'costBooks', 'costBookEntries',
+    'pricebookEntries',
+    'taxTreatments', 'taxEngines', 'taxPolicies', 'taxTreatmentItems',
+    'billingPolicies', 'billingTreatments',
+    'billingArrangements', 'billingArrangementLines',
+    'billingMilestonePlans', 'billingMilestonePlanItems',
+    'paymentRetryRuleSets',
+    'generalLedgerAccounts', 'generalLedgerAcctAsgntRules',
+    'accountingPeriods', 'legalEntityAccountingPeriods',
+    'documentClauseSets', 'documentClauses',
+    'productQualifications', 'productRampSegments',
+    'fulfillmentStepDependencyDefs',
+  ];
+  for (const key of REQUIRED_FIELDS) {
+    if (!Array.isArray(safe[key as string])) safe[key as string] = [];
+  }
+  return safe as unknown as ARMData;
+}
+
+/**
  * Run all ARM (Revenue Cloud) health checks against fetched RLM data
  * and return scored results. Mirrors runAnalysis (CPQ) and runBillingAnalysis.
  *
@@ -26,11 +84,14 @@ export async function runARMAnalysis(
   const startTime = Date.now();
   const allIssues: Issue[] = [];
   const suppressedSet = new Set(suppressedCheckIds);
+  // Single defensive shim so every check downstream can safely .filter,
+  // .map, and for-of without null-guarding individually.
+  const safeData = normalizeARMData(data);
 
   for (const check of armChecks) {
     if (suppressedSet.has(check.id)) continue;
     try {
-      const issues = await check.run(data);
+      const issues = await check.run(safeData);
       allIssues.push(...issues);
     } catch (error) {
       console.error(`[ARM] Check ${check.id} failed:`, error);
