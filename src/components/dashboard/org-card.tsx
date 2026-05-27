@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Cloud, RefreshCw, ArrowRight, AlertTriangle, MoreVertical, Unplug } from 'lucide-react';
+import { Cloud, RefreshCw, ArrowRight, AlertTriangle, MoreVertical, Unplug, Clock } from 'lucide-react';
 import type { OrgCardData } from '@/types';
 import { getScoreColor, formatTimeAgo } from '@/lib/utils';
 
@@ -122,6 +122,23 @@ export function OrgCard({ org, onView, onScan, onDisconnect, scanning = false, s
             `overflow-hidden` on the parent rounds the strip's left/right
             ends to match the card's 2xl radius. */}
         <div className={`h-1 ${stripeClass}`} />
+        {/* Legacy-connection migration nudge. Shown only for orgs connected
+            via the shared platform External Client App (sf_client_id is null).
+            Those connections lose their refresh token roughly every 2 hours
+            because Salesforce blocks cross-org refresh — the user has to
+            reconnect daily. Once they reconnect with their own ECA, the row
+            gets sf_client_id populated and this banner disappears. */}
+        {!org.sf_client_id && org.connection_status === 'connected' && !org.disconnected_at && (
+          <div className="flex items-center justify-between gap-3 px-5 py-2 bg-amber-50 dark:bg-amber-900/20 border-b border-amber-200/70 dark:border-amber-800/40">
+            <div className="flex items-start gap-2 min-w-0">
+              <Clock className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
+              <p className="text-[11px] leading-snug text-amber-800 dark:text-amber-300">
+                <span className="font-medium">Legacy connection.</span>{' '}
+                Disconnect and reconnect using your own External Client App to stop daily expirations.
+              </p>
+            </div>
+          </div>
+        )}
         {/* Header */}
         <div className="p-5 pb-4">
           <div className="flex items-start justify-between mb-3">

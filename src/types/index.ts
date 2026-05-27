@@ -1187,6 +1187,13 @@ export interface OrgCardData {
   critical_count: number;
   installed_packages?: string[];
   disconnected_at?: string | null;
+  // When null, the org was connected via the shared platform External Client
+  // App — that app lives in our publisher org and Salesforce blocks its
+  // refresh tokens from working cross-org, so connections expire every ~2h
+  // and the user has to reconnect daily. When non-null, the customer brought
+  // their own ECA installed inside their org, and refresh works permanently.
+  // Dashboard surfaces a migration banner for legacy rows.
+  sf_client_id?: string | null;
 }
 
 export interface IssueFilters {
