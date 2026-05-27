@@ -1,9 +1,13 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { X, Cloud, Copy, CheckCircle2, ChevronDown, ChevronUp, ShieldCheck } from 'lucide-react';
+import { X, Cloud, Copy, CheckCircle2, ChevronDown, ChevronUp, ShieldCheck, PlayCircle, Loader2, AlertCircle } from 'lucide-react';
 import { track } from '@/lib/analytics/track-client';
 import { AnalyticsEvent } from '@/lib/analytics/events';
+
+// Optional Loom video showing the ECA setup walkthrough. Set this env var
+// after recording the walkthrough Loom; until then, the slot stays hidden.
+const LOOM_VIDEO_ID = process.env.NEXT_PUBLIC_LOOM_ECA_VIDEO_ID;
 
 interface ConnectOrgModalProps {
   isOpen: boolean;
@@ -23,6 +27,13 @@ export function ConnectOrgModal({ isOpen, onClose }: ConnectOrgModalProps) {
   const [copied, setCopied] = useState(false);
   const [showInstructions, setShowInstructions] = useState(false);
   const [showWhy, setShowWhy] = useState(false);
+  // Test-credentials state machine. `testing` while the request is in
+  // flight; `testResult` carries the {ok, message} payload from the
+  // /api/salesforce/test-credentials endpoint. Cleared whenever the user
+  // edits any of the three fields so they're not staring at a stale "OK"
+  // banner from credentials they've since changed.
+  const [testing, setTesting] = useState(false);
+  const [testResult, setTestResult] = useState<{ ok: boolean; message: string } | null>(null);
 
   // Fire one event per modal opening — useful for funnel "opens → submits".
   useEffect(() => {
@@ -86,6 +97,41 @@ export function ConnectOrgModal({ isOpen, onClose }: ConnectOrgModalProps) {
     setTimeout(() => setCopied(false), 2000);
   }
 
+  async function handleTest() {
+    setTesting(true);
+    setTestResult(null);
+    setError('');
+    try {
+      const res = await fetch('/api/salesforce/test-credentials', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          clientId: clientId.trim(),
+          loginUrl: loginUrl.trim().replace(/\/+$/, ''),
+        }),
+      });
+      const data = await res.json();
+      setTestResult({
+        ok: !!data.ok,
+        message: data.message || (data.ok ? 'Credentials look good.' : 'Validation failed.'),
+      });
+    } catch {
+      setTestResult({
+        ok: false,
+        message: 'Could not reach OrgPrism to run the test. Check your connection and try again.',
+      });
+    } finally {
+      setTesting(false);
+    }
+  }
+
+  // Clear the stale test result whenever the user edits any of the three
+  // credentials fields — otherwise a green "Credentials look good" badge
+  // could mislead them after they've changed the input.
+  function setClientIdAndReset(v: string) { setClientId(v); setError(''); setTestResult(null); }
+  function setClientSecretAndReset(v: string) { setClientSecret(v); setError(''); setTestResult(null); }
+  function setLoginUrlAndReset(v: string) { setLoginUrl(v); setError(''); setTestResult(null); }
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
@@ -111,6 +157,27 @@ export function ConnectOrgModal({ isOpen, onClose }: ConnectOrgModalProps) {
 
         {/* Body */}
         <div className="px-6 py-5 overflow-y-auto space-y-4">
+          {/* Walkthrough video — only renders when NEXT_PUBLIC_LOOM_ECA_VIDEO_ID
+              is set. Saves the user 5+ minutes of reading by showing them
+              exactly which Salesforce screens to click. Aspect ratio locked
+              to 16:9 via the padding-top trick. */}
+          {LOOM_VIDEO_ID && (
+            <div className="rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 bg-black">
+              <div className="relative w-full" style={{ paddingTop: '56.25%' }}>
+                <iframe
+                  src={`https://www.loom.com/embed/${LOOM_VIDEO_ID}?hide_owner=true&hide_share=true&hide_title=true`}
+                  className="absolute inset-0 w-full h-full"
+                  allowFullScreen
+                  title="External Client App setup walkthrough"
+                />
+              </div>
+              <div className="px-3 py-2 bg-gray-50 dark:bg-gray-800/50 border-t border-gray-200 dark:border-gray-700 flex items-center gap-2 text-[11px] text-gray-600 dark:text-gray-400">
+                <PlayCircle className="h-3.5 w-3.5 text-blue-500" />
+                Watch the 90-second walkthrough before you start
+              </div>
+            </div>
+          )}
+
           {/* Why expander */}
           <button
             type="button"
@@ -208,7 +275,7 @@ export function ConnectOrgModal({ isOpen, onClose }: ConnectOrgModalProps) {
             <input
               type="text"
               value={clientId}
-              onChange={(e) => { setClientId(e.target.value); setError(''); }}
+              onChange={(e) => setClientIdAndReset(e.target.value)}
               placeholder="3MVG9pRzvMkjMb6..."
               className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
             />
@@ -222,7 +289,7 @@ export function ConnectOrgModal({ isOpen, onClose }: ConnectOrgModalProps) {
             <input
               type="password"
               value={clientSecret}
-              onChange={(e) => { setClientSecret(e.target.value); setError(''); }}
+              onChange={(e) => setClientSecretAndReset(e.target.value)}
               placeholder="Enter consumer secret"
               className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
             />
@@ -236,7 +303,7 @@ export function ConnectOrgModal({ isOpen, onClose }: ConnectOrgModalProps) {
             <input
               type="url"
               value={loginUrl}
-              onChange={(e) => { setLoginUrl(e.target.value); setError(''); }}
+              onChange={(e) => setLoginUrlAndReset(e.target.value)}
               placeholder="https://yourcompany.my.salesforce.com"
               className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
             />
@@ -249,6 +316,25 @@ export function ConnectOrgModal({ isOpen, onClose }: ConnectOrgModalProps) {
             Your credentials are encrypted at rest and only used to refresh access tokens against your org. OrgPrism requests read-only API scope — we can&apos;t modify any data in your Salesforce.
           </p>
 
+          {/* Test-credentials result. Green when valid, amber when something
+              is wrong before the user wastes the full OAuth round-trip. */}
+          {testResult && (
+            <div
+              className={`flex items-start gap-2 px-3.5 py-2.5 rounded-lg border text-sm ${
+                testResult.ok
+                  ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800/50 text-green-800 dark:text-green-300'
+                  : 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800/50 text-amber-800 dark:text-amber-300'
+              }`}
+            >
+              {testResult.ok ? (
+                <CheckCircle2 className="h-4 w-4 mt-0.5 flex-shrink-0" />
+              ) : (
+                <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+              )}
+              <span className="leading-snug">{testResult.message}</span>
+            </div>
+          )}
+
           {/* Error */}
           {error && (
             <div className="px-3.5 py-2.5 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50 text-sm text-red-700 dark:text-red-400">
@@ -258,12 +344,28 @@ export function ConnectOrgModal({ isOpen, onClose }: ConnectOrgModalProps) {
         </div>
 
         {/* Footer */}
-        <div className="flex justify-end gap-3 px-6 py-4 border-t border-gray-100 dark:border-gray-700/60 bg-gray-50 dark:bg-gray-800/30">
+        <div className="flex flex-wrap items-center justify-end gap-3 px-6 py-4 border-t border-gray-100 dark:border-gray-700/60 bg-gray-50 dark:bg-gray-800/30">
           <button
             onClick={onClose}
             className="px-4 py-2.5 text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
           >
             Cancel
+          </button>
+          {/* Test button — requires Consumer Key + Login URL but NOT the
+              Secret (we never send the secret over this endpoint). Disabled
+              while testing or connecting. */}
+          <button
+            onClick={handleTest}
+            disabled={testing || connecting || !clientId.trim() || !loginUrl.trim()}
+            className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-blue-700 dark:text-blue-300 bg-white dark:bg-gray-800 border border-blue-300 dark:border-blue-700 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/30 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            title="Validate without going through the full OAuth flow"
+          >
+            {testing ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <ShieldCheck className="h-3.5 w-3.5" />
+            )}
+            {testing ? 'Testing…' : 'Test credentials'}
           </button>
           <button
             onClick={handleConnect}
