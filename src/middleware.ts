@@ -16,6 +16,7 @@ const PUBLIC_EXACT = new Set([
   '/security',
   '/dpa',
   '/changelog',
+  '/status',
   '/robots.txt',
   '/sitemap.xml',
 ]);

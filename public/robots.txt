@@ -5,6 +5,7 @@ Allow: /terms
 Allow: /security
 Allow: /dpa
 Allow: /changelog
+Allow: /status
 Disallow: /dashboard
 Disallow: /onboarding
 Disallow: /settings
