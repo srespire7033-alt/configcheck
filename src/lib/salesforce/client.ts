@@ -33,12 +33,27 @@ export function getStoredCodeVerifier(): string | null {
   return v;
 }
 
-function getOAuth2() {
+/**
+ * Build an OAuth2 instance for jsforce's auto-refresh path. When the caller
+ * supplies custom credentials (BYO-ECA — the customer's own External Client
+ * App lives inside their org), use those — otherwise fall back to the
+ * platform's shared env-var creds.
+ *
+ * This is CRITICAL for the BYO-ECA model. Without per-org creds here, every
+ * BYO-ECA scan eventually fails: the manual refresh path works fine, but
+ * once jsforce's internal `Connection` is handed back to the scan engine,
+ * its OWN auto-refresh hook tries to refresh the token using whatever
+ * OAuth2 was bolted on at construction time. Passing the platform OAuth2
+ * means jsforce calls Salesforce with the platform's client_id, which the
+ * customer's org doesn't have installed — yielding "External client app
+ * is not installed in this org".
+ */
+function getOAuth2(custom?: { clientId: string; clientSecret: string; loginUrl?: string | null }) {
   return new OAuth2({
-    clientId: SF_CLIENT_ID,
-    clientSecret: SF_CLIENT_SECRET,
+    clientId: custom?.clientId || SF_CLIENT_ID,
+    clientSecret: custom?.clientSecret || SF_CLIENT_SECRET,
     redirectUri: SF_REDIRECT_URI,
-    loginUrl: SF_LOGIN_URL,
+    loginUrl: custom?.loginUrl || SF_LOGIN_URL,
   });
 }
 
@@ -182,10 +197,18 @@ export function createConnection(
   instanceUrl: string,
   accessToken: string,
   refreshToken: string,
-  orgId?: string
+  orgId?: string,
+  // Optional per-org OAuth credentials. When the org was connected via
+  // BYO-ECA (customer's own External Client App), pass these so jsforce's
+  // internal auto-refresh hook calls Salesforce with the customer's
+  // client_id rather than the platform's. Without this, long-running scans
+  // hit a hidden second token refresh that fails with "External client
+  // app is not installed in this org" — exactly the bug we thought
+  // BYO-ECA had fixed.
+  oauthCreds?: { clientId: string; clientSecret: string; loginUrl?: string | null } | null
 ): Connection {
   const conn = new Connection({
-    oauth2: getOAuth2(),
+    oauth2: getOAuth2(oauthCreds ?? undefined),
     instanceUrl,
     accessToken,
     refreshToken,
@@ -224,11 +247,23 @@ export async function createRefreshableConnection(
     throw new Error('Organization not found');
   }
 
+  // Build the per-org OAuth credentials once and reuse them on every
+  // createConnection call below so jsforce's auto-refresh hook always
+  // talks to Salesforce with the right client_id.
+  const orgOAuth = org.sf_client_id && org.sf_client_secret
+    ? {
+        clientId: org.sf_client_id as string,
+        clientSecret: org.sf_client_secret as string,
+        loginUrl: (org.sf_login_url as string | null | undefined) ?? null,
+      }
+    : null;
+
   const conn = createConnection(
     org.instance_url,
     org.access_token,
     org.refresh_token,
-    orgId
+    orgId,
+    orgOAuth
   );
 
   // Test the connection; if expired, attempt manual refresh (15s timeout)
@@ -236,7 +271,21 @@ export async function createRefreshableConnection(
     await withTimeout(conn.query('SELECT Id FROM Organization LIMIT 1'), 15000, 'Salesforce connection test');
   } catch (err: any) {
     const msg = err?.message || '';
-    if (msg.includes('INVALID_SESSION_ID') || msg.includes('Session expired') || msg.includes('401') || msg.includes('timed out')) {
+    // Broad set of "token needs refreshing" signatures. jsforce wraps the
+    // upstream Salesforce error and depending on the failure point the
+    // wording varies: INVALID_SESSION_ID from SOQL paths, "Session expired"
+    // from the older REST shim, "Unable to refresh session" when jsforce's
+    // own auto-refresh fails (this is the one we hit when the OAuth2
+    // attached to the Connection has stale or wrong client_id — the bug
+    // that motivated this catch list expansion).
+    if (
+      msg.includes('INVALID_SESSION_ID') ||
+      msg.includes('Session expired') ||
+      msg.includes('Unable to refresh session') ||
+      msg.includes('expired access') ||
+      msg.includes('401') ||
+      msg.includes('timed out')
+    ) {
       console.log('Token expired for org', orgId, '— attempting refresh');
       const newTokens = await refreshAccessToken(
         org.refresh_token,
@@ -247,7 +296,7 @@ export async function createRefreshableConnection(
       if (newTokens) {
         await persistRefreshedToken(orgId, newTokens.accessToken);
         return {
-          conn: createConnection(org.instance_url, newTokens.accessToken, org.refresh_token, orgId),
+          conn: createConnection(org.instance_url, newTokens.accessToken, org.refresh_token, orgId, orgOAuth),
           org: { ...org, access_token: newTokens.accessToken },
         };
       }

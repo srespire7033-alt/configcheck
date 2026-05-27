@@ -59,11 +59,23 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Organization not found' }, { status: 404 });
     }
 
-    // Create Salesforce connection
+    // Create Salesforce connection. Pass per-org BYO-ECA credentials so
+    // jsforce auto-refresh uses the customer's own client_id (otherwise
+    // an in-flight token expiry mid-fix would fail with "External client
+    // app is not installed in this org").
+    const orgOAuth = (org.sf_client_id as string | null) && (org.sf_client_secret as string | null)
+      ? {
+          clientId: org.sf_client_id as string,
+          clientSecret: org.sf_client_secret as string,
+          loginUrl: (org.sf_login_url as string | null | undefined) ?? null,
+        }
+      : null;
     const conn = createConnection(
       org.instance_url as string,
       org.access_token as string,
-      org.refresh_token as string
+      org.refresh_token as string,
+      org.id as string,
+      orgOAuth
     );
 
     // Apply the fix

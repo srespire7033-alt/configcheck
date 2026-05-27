@@ -45,8 +45,21 @@ export async function GET(request: NextRequest) {
     // Exchange code for tokens
     const { accessToken, refreshToken, instanceUrl, orgId } = await handleOAuthCallback(code, codeVerifier, customCreds);
 
-    // Detect CPQ version
-    const conn = createConnection(instanceUrl, accessToken, refreshToken);
+    // Detect CPQ version. We pass the per-org creds (when this is a BYO-ECA
+    // connect) so that any auto-refresh during package detection uses the
+    // customer's client_id rather than the platform's — same reason as
+    // createRefreshableConnection.
+    const conn = createConnection(
+      instanceUrl,
+      accessToken,
+      refreshToken,
+      undefined,
+      customCreds ? {
+        clientId: customCreds.clientId,
+        clientSecret: customCreds.clientSecret,
+        loginUrl: customCreds.loginUrl ?? null,
+      } : null
+    );
     const cpqVersion = await getCPQPackageVersion(conn);
 
     // Detect installed packages (CPQ, Billing, ARM)

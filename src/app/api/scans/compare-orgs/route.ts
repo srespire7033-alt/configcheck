@@ -75,9 +75,18 @@ export async function POST(request: NextRequest) {
     const orgA = orgAResult.data;
     const orgB = orgBResult.data;
 
-    // Fetch CPQ data from both orgs in parallel
-    const connA = createConnection(orgA.instance_url, orgA.access_token, orgA.refresh_token);
-    const connB = createConnection(orgB.instance_url, orgB.access_token, orgB.refresh_token);
+    // Fetch CPQ data from both orgs in parallel. Per-org BYO-ECA creds
+    // pass through so jsforce's auto-refresh uses each customer's own
+    // client_id (avoids the "External client app is not installed in this
+    // org" error mid-comparison).
+    const oauthA = orgA.sf_client_id && orgA.sf_client_secret
+      ? { clientId: orgA.sf_client_id, clientSecret: orgA.sf_client_secret, loginUrl: orgA.sf_login_url ?? null }
+      : null;
+    const oauthB = orgB.sf_client_id && orgB.sf_client_secret
+      ? { clientId: orgB.sf_client_id, clientSecret: orgB.sf_client_secret, loginUrl: orgB.sf_login_url ?? null }
+      : null;
+    const connA = createConnection(orgA.instance_url, orgA.access_token, orgA.refresh_token, orgA.id, oauthA);
+    const connB = createConnection(orgB.instance_url, orgB.access_token, orgB.refresh_token, orgB.id, oauthB);
 
     const [dataA, dataB] = await Promise.all([
       fetchAllCPQData(connA),
