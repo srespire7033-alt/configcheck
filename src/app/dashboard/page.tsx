@@ -25,6 +25,9 @@ function DashboardContent() {
   } | null>(null);
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [connectModalOpen, setConnectModalOpen] = useState(false);
+  // When set, the connect modal renders in migration mode so the user
+  // knows which legacy org they're replacing. Cleared on close.
+  const [migrationTarget, setMigrationTarget] = useState<{ id: string; name: string } | null>(null);
 
   // Sort order for the org grid. Default "recent" = recently scanned first,
   // which surfaces the orgs the user is actively working on. Persists in
@@ -344,7 +347,11 @@ function DashboardContent() {
 
   return (
     <div>
-      <ConnectOrgModal isOpen={connectModalOpen} onClose={() => setConnectModalOpen(false)} />
+      <ConnectOrgModal
+        isOpen={connectModalOpen}
+        onClose={() => { setConnectModalOpen(false); setMigrationTarget(null); }}
+        targetOrg={migrationTarget}
+      />
 
       {/* Workspace-switch confirmation banner */}
       {switchedLabel && !switchedDismissed && (
@@ -639,6 +646,10 @@ function DashboardContent() {
               selectable={orgs.length >= 2}
               selected={selectedOrgIds.has(org.id)}
               onToggleSelect={() => toggleOrgSelected(org.id)}
+              onMigrate={() => {
+                setMigrationTarget({ id: org.id, name: org.name });
+                setConnectModalOpen(true);
+              }}
             />
           ))}
 

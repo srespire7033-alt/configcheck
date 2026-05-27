@@ -18,9 +18,13 @@ interface OrgCardProps {
   selectable?: boolean;
   selected?: boolean;
   onToggleSelect?: () => void;
+  // Fires when the user clicks the "Migrate" button on the legacy banner.
+  // The dashboard opens the connect modal in migration mode so the user
+  // can paste their own ECA credentials in place of the shared platform one.
+  onMigrate?: () => void;
 }
 
-export function OrgCard({ org, onView, onScan, onDisconnect, scanning = false, selectable = false, selected = false, onToggleSelect }: OrgCardProps) {
+export function OrgCard({ org, onView, onScan, onDisconnect, scanning = false, selectable = false, selected = false, onToggleSelect, onMigrate }: OrgCardProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
@@ -134,9 +138,20 @@ export function OrgCard({ org, onView, onScan, onDisconnect, scanning = false, s
               <Clock className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
               <p className="text-[11px] leading-snug text-amber-800 dark:text-amber-300">
                 <span className="font-medium">Legacy connection.</span>{' '}
-                Disconnect and reconnect using your own External Client App to stop daily expirations.
+                Refresh tokens expire daily — migrate to your own External Client App for a permanent connection.
               </p>
             </div>
+            {onMigrate && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onMigrate();
+                }}
+                className="flex-shrink-0 inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold text-white bg-amber-600 hover:bg-amber-700 dark:bg-amber-500 dark:hover:bg-amber-400 rounded-md transition-colors"
+              >
+                Migrate now
+              </button>
+            )}
           </div>
         )}
         {/* Header */}

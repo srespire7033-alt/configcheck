@@ -12,13 +12,26 @@ const LOOM_VIDEO_ID = process.env.NEXT_PUBLIC_LOOM_ECA_VIDEO_ID;
 interface ConnectOrgModalProps {
   isOpen: boolean;
   onClose: () => void;
+  /**
+   * When set, the modal renders in "migrate this org" mode: header
+   * advertises the org name so the user knows which Salesforce org to
+   * paste credentials for, and analytics fires with a `migration: true`
+   * tag so we can measure migration funnel separately from net-new connects.
+   *
+   * The OAuth callback handles the actual row update — it matches by
+   * (salesforce_org_id, user_id) regardless of disconnected_at, so a
+   * successful OAuth with new BYO creds against the same SF org will
+   * UPDATE the existing row with sf_client_id/sf_client_secret and clear
+   * disconnected_at. No explicit disconnect call needed.
+   */
+  targetOrg?: { id: string; name: string } | null;
 }
 
 const CALLBACK_URL = typeof window !== 'undefined'
   ? `${window.location.origin}/api/salesforce/callback`
   : '';
 
-export function ConnectOrgModal({ isOpen, onClose }: ConnectOrgModalProps) {
+export function ConnectOrgModal({ isOpen, onClose, targetOrg = null }: ConnectOrgModalProps) {
   const [clientId, setClientId] = useState('');
   const [clientSecret, setClientSecret] = useState('');
   const [loginUrl, setLoginUrl] = useState('');
@@ -40,9 +53,10 @@ export function ConnectOrgModal({ isOpen, onClose }: ConnectOrgModalProps) {
     if (isOpen) {
       track(AnalyticsEvent.CONNECT_ORG_MODAL_OPENED, {
         source: typeof window !== 'undefined' ? window.location.pathname : null,
+        migration: !!targetOrg,
       });
     }
-  }, [isOpen]);
+  }, [isOpen, targetOrg]);
 
   if (!isOpen) return null;
 
@@ -67,6 +81,7 @@ export function ConnectOrgModal({ isOpen, onClose }: ConnectOrgModalProps) {
       // login URL is sensitive (identifies the customer's org) so we don't
       // capture even the hostname.
       has_login_url: !!loginUrl.trim(),
+      migration: !!targetOrg,
     });
     try {
       const res = await fetch('/api/salesforce/auth-url', {
@@ -139,13 +154,20 @@ export function ConnectOrgModal({ isOpen, onClose }: ConnectOrgModalProps) {
       <div className="relative bg-white dark:bg-[#111827] rounded-2xl shadow-xl border border-gray-100 dark:border-gray-700/60 w-full max-w-lg mx-4 overflow-hidden max-h-[90vh] flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-700/60">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0">
               <Cloud className="h-4 w-4 text-blue-600 dark:text-blue-400" />
             </div>
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-              Connect Salesforce Org
-            </h2>
+            <div className="min-w-0">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white truncate">
+                {targetOrg ? 'Migrate to your own ECA' : 'Connect Salesforce Org'}
+              </h2>
+              {targetOrg && (
+                <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                  Replacing connection for <span className="font-medium text-gray-700 dark:text-gray-300">{targetOrg.name}</span>
+                </p>
+              )}
+            </div>
           </div>
           <button
             onClick={onClose}
@@ -157,6 +179,18 @@ export function ConnectOrgModal({ isOpen, onClose }: ConnectOrgModalProps) {
 
         {/* Body */}
         <div className="px-6 py-5 overflow-y-auto space-y-4">
+          {/* Migration-mode hint. Reminds the user this is replacing an
+              existing connection, and that they should paste creds for THIS
+              specific Salesforce org — pasting creds from a different org
+              would attach a different salesforce_org_id and create a new
+              row rather than updating the legacy one. */}
+          {targetOrg && (
+            <div className="px-3.5 py-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/50 text-xs text-amber-900 dark:text-amber-200 leading-relaxed">
+              <p className="font-semibold mb-1">You&apos;re migrating <span className="font-bold">{targetOrg.name}</span> to your own External Client App.</p>
+              <p>Create an ECA inside this org (the same one currently connected to OrgPrism) and paste its Consumer Key + Secret below. After OAuth completes, the legacy connection will be replaced in place — scan history is preserved.</p>
+            </div>
+          )}
+
           {/* Walkthrough video — only renders when NEXT_PUBLIC_LOOM_ECA_VIDEO_ID
               is set. Saves the user 5+ minutes of reading by showing them
               exactly which Salesforce screens to click. Aspect ratio locked
