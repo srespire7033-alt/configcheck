@@ -1,19 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { waitUntil } from '@vercel/functions';
 import { createServiceClient } from '@/lib/db/client';
 import { getAuthUser } from '@/lib/auth/get-user';
 import { checkQuota } from '@/lib/quota';
+import { runScanInBackground } from '@/lib/scans/run-scan-in-background';
 import { track } from '@/lib/analytics/track-server';
 import { AnalyticsEvent } from '@/lib/analytics/events';
 import type { ProductType } from '@/types';
 
-// POST now just enqueues — the actual scan runs in /api/cron/process-queue.
-// Previously scans ran via waitUntil() inside the POST function, which
-// shared the Vercel function's 180s lifetime with the HTTP response. That
-// architecture meant: scan failures couldn't outlive the function, parallel
-// scans starved each other for the same event loop, and we couldn't retry.
-// Now POST returns in <1s and a Vercel Cron worker drains the queue
-// serially. See /api/cron/process-queue for the worker.
-export const maxDuration = 30;
+// Vercel function lifetime cap. On Hobby this silently caps at 60s; on Pro
+// it can go to 300. Scans run in waitUntil() below — they share this
+// lifetime with the HTTP response, so anything past maxDuration is killed.
+// We also have a latent queue-worker architecture at
+// /api/cron/process-queue ready to activate when the project moves to Pro
+// (where minute-frequency crons are allowed); see commit history.
+export const maxDuration = 60;
 
 /**
  * POST /api/scans
@@ -129,9 +130,23 @@ export async function POST(request: NextRequest) {
       properties: { product_type: productType, scan_id: scan.id },
     });
 
-    // Scan is now sitting in the queue (status='pending'). The cron worker
-    // at /api/cron/process-queue picks it up within ~60s and runs it.
-    // Client polls GET /api/scans?scanId=xxx for status transitions.
+    // Run the scan in the background via waitUntil — keeps the Vercel
+    // function alive until the scan finishes, up to maxDuration. Client
+    // polls GET /api/scans?scanId=xxx for status transitions.
+    waitUntil(
+      runScanInBackground(scan.id, org, productType).catch(async (error) => {
+        console.error('[SCAN] Scan execution failed:', error);
+        const svc = createServiceClient();
+        const failUpdate = {
+          status: 'failed',
+          error_message: error instanceof Error ? error.message : 'Scan failed unexpectedly',
+          completed_at: new Date().toISOString(),
+        };
+        const { error: updateErr } = await svc.from('scans').update(failUpdate).eq('id', scan.id);
+        if (updateErr) console.error('[SCAN] Failed to mark scan as failed:', updateErr);
+      })
+    );
+
     return NextResponse.json({ scanId: scan.id, status: 'pending' });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error';
