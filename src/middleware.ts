@@ -1,13 +1,46 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
+// Paths that anyone (signed in or not) can hit.
+// - Legal: privacy / terms / DPA / security must be readable without an account
+//   for GDPR/CCPA compliance and so prospects can review before signup.
+// - Marketing: pricing / demo / changelog are sales surfaces — locking them
+//   behind auth kills conversion.
+// - Crawler files: robots.txt + sitemap.xml — search engines never sign in.
+// - OAuth callbacks: Salesforce / Supabase redirect here pre-session.
+const PUBLIC_EXACT = new Set([
+  '/',
+  '/privacy',
+  '/terms',
+  '/security',
+  '/dpa',
+  '/pricing',
+  '/changelog',
+  '/demo',
+  '/robots.txt',
+  '/sitemap.xml',
+]);
+const PUBLIC_PREFIX = [
+  '/api/salesforce/callback',
+  '/auth/callback',
+  '/login',  // includes /login subroutes (forgot-password, etc.)
+];
+
+function isPublicPath(pathname: string): boolean {
+  if (PUBLIC_EXACT.has(pathname)) return true;
+  for (const prefix of PUBLIC_PREFIX) {
+    if (pathname.startsWith(prefix)) return true;
+  }
+  return false;
+}
+
 export async function middleware(request: NextRequest) {
-  // Skip auth check for public routes
-  if (
-    request.nextUrl.pathname === '/' ||
-    request.nextUrl.pathname.startsWith('/api/salesforce/callback') ||
-    request.nextUrl.pathname.startsWith('/auth/callback')
-  ) {
+  const pathname = request.nextUrl.pathname;
+
+  // Truly public — no session check, no redirects. Legal pages, marketing,
+  // crawler files, OAuth callbacks. /login is handled separately below
+  // because a signed-in user there should bounce to /dashboard.
+  if (isPublicPath(pathname) && !pathname.startsWith('/login')) {
     return NextResponse.next({ request });
   }
 
@@ -37,14 +70,20 @@ export async function middleware(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   // Logged-in user visiting /login → redirect to dashboard
-  if (user && request.nextUrl.pathname === '/login') {
+  if (user && pathname.startsWith('/login')) {
     const url = request.nextUrl.clone();
     url.pathname = '/dashboard';
     return NextResponse.redirect(url);
   }
 
-  // Not logged in and not on /login → redirect to login
-  if (!user && !request.nextUrl.pathname.startsWith('/login')) {
+  // Anonymous user on /login → let them through (it's a public route from
+  // here on; nothing to do).
+  if (!user && pathname.startsWith('/login')) {
+    return supabaseResponse;
+  }
+
+  // Not logged in on a protected route → bounce to /login.
+  if (!user) {
     const url = request.nextUrl.clone();
     url.pathname = '/login';
     return NextResponse.redirect(url);

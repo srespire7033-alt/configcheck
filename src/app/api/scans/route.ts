@@ -62,6 +62,28 @@ export async function POST(request: NextRequest) {
       else productType = 'cpq'; // pre-detection fallback; scan will surface a clear error if neither stack is present
     }
 
+    // Per-user serial gate. Running multiple scans concurrently on the same
+    // Vercel function instance starves the event loop for the issues-batch
+    // insert (and Gemini API calls), so all sibling scans die at the 60s
+    // timeout boundary with "Failed to save issues (batch 1)". The dashboard
+    // already runs Scan-all sequentially, but multi-tab users and direct API
+    // clients can still trigger the storm. We reject overlapping scans here
+    // with 409 so callers know to wait — quota is NOT consumed for rejects.
+    const { data: inflight } = await supabase
+      .from('scans')
+      .select('id')
+      .eq('user_id', user.id)
+      .in('status', ['pending', 'running'])
+      .gte('created_at', new Date(Date.now() - 5 * 60 * 1000).toISOString())
+      .limit(1);
+    if (inflight && inflight.length > 0) {
+      return NextResponse.json({
+        error: 'scan_in_progress',
+        message: 'Another scan is already running for your account. Please wait for it to finish before starting a new one.',
+        existingScanId: inflight[0].id,
+      }, { status: 409 });
+    }
+
     // Check scan quota
     const quota = await checkQuota(user.id, 'scans');
     if (!quota.allowed) {

@@ -18,7 +18,7 @@ const mockCreateServiceClient = vi.mocked(createServiceClient);
 
 function createChainMock(result: { data: any; error: any }) {
   const chain: any = {};
-  for (const method of ['select', 'insert', 'update', 'delete', 'eq', 'gte', 'order', 'limit']) {
+  for (const method of ['select', 'insert', 'update', 'delete', 'eq', 'gte', 'in', 'order', 'limit']) {
     chain[method] = vi.fn().mockReturnValue(chain);
   }
   chain.single = vi.fn().mockResolvedValue(result);

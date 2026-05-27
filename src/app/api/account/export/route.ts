@@ -40,9 +40,26 @@ export async function GET(request: NextRequest) {
 
     const orgIds = organizations?.map((org) => org.id) ?? [];
 
-    // Strip sensitive tokens from organizations
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const sanitizedOrgs = (organizations ?? []).map(({ access_token, refresh_token, ...rest }) => rest);
+    // Strip ALL sensitive credentials from organizations before exporting.
+    // - access_token / refresh_token: Salesforce session credentials
+    // - sf_client_id / sf_client_secret: the customer's OAuth Consumer Key
+    //   and Consumer Secret for their External Client App. The secret is a
+    //   bearer credential that never expires unless rotated — leaking it
+    //   into a downloadable JSON would let anyone holding the file
+    //   impersonate the customer's OAuth app indefinitely.
+    // - sf_login_url: paired with the above and not user-facing data.
+    const sanitizedOrgs = (organizations ?? []).map((org) => {
+      const {
+        access_token: _at,
+        refresh_token: _rt,
+        sf_client_id: _ci,
+        sf_client_secret: _cs,
+        sf_login_url: _lu,
+        ...safe
+      } = org;
+      void _at; void _rt; void _ci; void _cs; void _lu;
+      return safe;
+    });
 
     // Fetch scans
     const { data: scans } = await supabase
