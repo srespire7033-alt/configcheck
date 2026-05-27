@@ -1,15 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { waitUntil } from '@vercel/functions';
 import { createServiceClient } from '@/lib/db/client';
 import { getAuthUser } from '@/lib/auth/get-user';
 import { checkQuota } from '@/lib/quota';
-import { runScanInBackground } from '@/lib/scans/run-scan-in-background';
 import { track } from '@/lib/analytics/track-server';
 import { AnalyticsEvent } from '@/lib/analytics/events';
 import type { ProductType } from '@/types';
 
-// Allow up to 180s for scans (Vercel Pro: 300s max, Hobby: 60s max)
-export const maxDuration = 180;
+// POST now just enqueues — the actual scan runs in /api/cron/process-queue.
+// Previously scans ran via waitUntil() inside the POST function, which
+// shared the Vercel function's 180s lifetime with the HTTP response. That
+// architecture meant: scan failures couldn't outlive the function, parallel
+// scans starved each other for the same event loop, and we couldn't retry.
+// Now POST returns in <1s and a Vercel Cron worker drains the queue
+// serially. See /api/cron/process-queue for the worker.
+export const maxDuration = 30;
 
 /**
  * POST /api/scans
@@ -125,25 +129,9 @@ export async function POST(request: NextRequest) {
       properties: { product_type: productType, scan_id: scan.id },
     });
 
-    // Use waitUntil to run the scan AFTER the response is sent.
-    // This keeps the Vercel function alive for up to maxDuration (180s)
-    // while the scan runs in the background.
-    waitUntil(
-      runScanInBackground(scan.id, org, productType).catch(async (error) => {
-        console.error('[SCAN] Scan execution failed:', error);
-        const svc = createServiceClient();
-        const failUpdate = {
-          status: 'failed',
-          error_message: error instanceof Error ? error.message : 'Scan failed unexpectedly',
-          completed_at: new Date().toISOString(),
-        };
-        // Update regardless of current status to prevent scans stuck in running/pending
-        const { error: updateErr } = await svc.from('scans').update(failUpdate).eq('id', scan.id);
-        if (updateErr) console.error('[SCAN] Failed to mark scan as failed:', updateErr);
-      })
-    );
-
-    // Return scanId immediately — client starts polling right away
+    // Scan is now sitting in the queue (status='pending'). The cron worker
+    // at /api/cron/process-queue picks it up within ~60s and runs it.
+    // Client polls GET /api/scans?scanId=xxx for status transitions.
     return NextResponse.json({ scanId: scan.id, status: 'pending' });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error';

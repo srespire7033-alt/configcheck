@@ -5,7 +5,10 @@
   "regions": ["bom1"],
   "functions": {
     "src/app/api/scans/route.ts": {
-      "maxDuration": 120
+      "maxDuration": 30
+    },
+    "src/app/api/cron/process-queue/route.ts": {
+      "maxDuration": 290
     },
     "src/app/api/reports/route.ts": {
       "maxDuration": 60
@@ -18,6 +21,10 @@
     {
       "path": "/api/cron/run-scans",
       "schedule": "0 6 * * *"
+    },
+    {
+      "path": "/api/cron/process-queue",
+      "schedule": "* * * * *"
     }
   ],
   "headers": [
