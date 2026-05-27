@@ -144,5 +144,11 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
+  // The matcher includes a handful of API routes (orgs|scans|issues|reports|ai)
+  // because they need Supabase session resolution in middleware. Every OTHER
+  // API path — analytics ingress, cron workers, salesforce callbacks, etc. —
+  // handles its own auth (Bearer tokens for cron, custom logic for callbacks)
+  // and must NOT be redirected to /login by the unauth gate below. The
+  // negative lookahead keeps those paths out of middleware entirely.
   matcher: ['/((?!_next/static|_next/image|favicon.ico|api/(?!orgs|scans|issues|reports|ai)).*)'],
 };
