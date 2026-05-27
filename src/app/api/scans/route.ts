@@ -146,7 +146,12 @@ export async function POST(request: NextRequest) {
  */
 export async function GET(request: NextRequest) {
   const scanId = request.nextUrl.searchParams.get('scanId');
-  const orgId = request.nextUrl.searchParams.get('orgId');
+  // Accept both `orgId` (legacy) and `organizationId` (the POST endpoint's
+  // param name) — keeping both keeps existing callers working while letting
+  // new code stay consistent with POST.
+  const orgId =
+    request.nextUrl.searchParams.get('orgId') ||
+    request.nextUrl.searchParams.get('organizationId');
 
   const supabase = createServiceClient();
 
@@ -183,5 +188,5 @@ export async function GET(request: NextRequest) {
     });
   }
 
-  return NextResponse.json({ error: 'scanId or orgId required' }, { status: 400 });
+  return NextResponse.json({ error: 'scanId or organizationId required' }, { status: 400 });
 }

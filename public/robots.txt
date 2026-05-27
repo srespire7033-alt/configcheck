@@ -1,0 +1,17 @@
+User-agent: *
+Allow: /
+Allow: /privacy
+Allow: /terms
+Allow: /security
+Allow: /dpa
+Allow: /changelog
+Disallow: /dashboard
+Disallow: /onboarding
+Disallow: /settings
+Disallow: /team
+Disallow: /orgs
+Disallow: /compare-orgs
+Disallow: /api/
+Disallow: /invite/
+
+Sitemap: https://orgprism.vercel.app/sitemap.xml

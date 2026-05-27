@@ -4,8 +4,9 @@ import { NextResponse, type NextRequest } from 'next/server';
 // Paths that anyone (signed in or not) can hit.
 // - Legal: privacy / terms / DPA / security must be readable without an account
 //   for GDPR/CCPA compliance and so prospects can review before signup.
-// - Marketing: pricing / demo / changelog are sales surfaces — locking them
-//   behind auth kills conversion.
+// - Marketing: changelog is a sales surface — locking it behind auth kills
+//   conversion. (pricing/demo are linked but live on the homepage today;
+//   add their entries here if/when standalone pages ship.)
 // - Crawler files: robots.txt + sitemap.xml — search engines never sign in.
 // - OAuth callbacks: Salesforce / Supabase redirect here pre-session.
 const PUBLIC_EXACT = new Set([
@@ -14,9 +15,7 @@ const PUBLIC_EXACT = new Set([
   '/terms',
   '/security',
   '/dpa',
-  '/pricing',
   '/changelog',
-  '/demo',
   '/robots.txt',
   '/sitemap.xml',
 ]);

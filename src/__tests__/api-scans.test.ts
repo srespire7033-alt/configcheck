@@ -239,7 +239,7 @@ describe('GET /api/scans', () => {
     expect(res.status).toBe(400);
 
     const body = await res.json();
-    expect(body.error).toBe('scanId or orgId required');
+    expect(body.error).toBe('scanId or organizationId required');
   });
 
   it('returns 500 when orgId query fails with error', async () => {
