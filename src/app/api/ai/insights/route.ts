@@ -89,9 +89,24 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ insight });
       } catch (aiError) {
         const status = (aiError as { status?: number }).status;
+        const message = (aiError as { message?: string }).message || '';
+        const isRateLimit = status === 429 || /rate.?limit|RESOURCE_EXHAUSTED/i.test(message);
+        console.error('[ai/insights scan-diff] failed:', { status, message: message.slice(0, 200) });
+        if (status === 503) {
+          return NextResponse.json(
+            { error: 'AI service is temporarily overloaded. Please try again in 10 seconds.' },
+            { status: 503 }
+          );
+        }
+        if (isRateLimit) {
+          return NextResponse.json(
+            { error: 'AI rate limit hit. Wait 60 seconds and click Retry.' },
+            { status: 429 }
+          );
+        }
         return NextResponse.json(
-          { error: status === 503 ? 'AI service is temporarily overloaded. Please try again in a few seconds.' : 'Failed to generate drift analysis.' },
-          { status: status === 503 ? 503 : 500 }
+          { error: 'Failed to generate drift analysis.' },
+          { status: 500 }
         );
       }
     }
@@ -133,9 +148,26 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ plan });
       } catch (aiError) {
         const status = (aiError as { status?: number }).status;
+        const message = (aiError as { message?: string }).message || '';
+        const isRateLimit = status === 429 || /rate.?limit|RESOURCE_EXHAUSTED/i.test(message);
+        // Log the actual cause server-side so we can diagnose patterns —
+        // the client error is intentionally less detailed.
+        console.error('[ai/insights remediation-plan] failed:', { status, message: message.slice(0, 200) });
+        if (status === 503) {
+          return NextResponse.json(
+            { error: 'AI service is temporarily overloaded. Please try again in 10 seconds.' },
+            { status: 503 }
+          );
+        }
+        if (isRateLimit) {
+          return NextResponse.json(
+            { error: 'AI rate limit hit. The remediation plan failed because we made too many AI calls in a short window. Wait 60 seconds and click Retry.' },
+            { status: 429 }
+          );
+        }
         return NextResponse.json(
-          { error: status === 503 ? 'AI service is temporarily overloaded. Please try again in a few seconds.' : 'Failed to generate remediation plan.' },
-          { status: status === 503 ? 503 : 500 }
+          { error: 'Failed to generate remediation plan. Click Retry — if the problem persists this scan may be too large for AI analysis.' },
+          { status: 500 }
         );
       }
     }

@@ -11,17 +11,32 @@ function getModel() {
 }
 
 /**
- * Retry wrapper for Gemini API calls (handles 503 overload)
+ * Retry wrapper for Gemini API calls. Handles three transient failure
+ * modes that all hit in production:
+ *   503 — model overloaded (Gemini's "try again" response under load)
+ *   429 — rate limited (gemini-2.5-flash free tier is 10 RPM; a scan that
+ *         finishes 4+ AI calls back-to-back blows past it)
+ *   network — transient ECONNRESET/fetch failed/ETIMEDOUT blips
+ *
+ * Exponential backoff with jitter so concurrent retries don't synchronize.
+ * The 2/5/10s ladder respects the free-tier 6-second-per-request budget.
  */
-async function withRetry<T>(fn: () => Promise<T>, maxRetries = 2): Promise<T> {
+async function withRetry<T>(fn: () => Promise<T>, maxRetries = 3): Promise<T> {
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
       return await fn();
     } catch (error: unknown) {
       const status = (error as { status?: number }).status;
-      if (status === 503 && attempt < maxRetries) {
-        // Wait 2s, 4s before retrying
-        await new Promise((r) => setTimeout(r, (attempt + 1) * 2000));
+      const message = (error as { message?: string }).message || '';
+      const isRetryable =
+        status === 503 ||
+        status === 429 ||
+        /rate.?limit|RESOURCE_EXHAUSTED|fetch failed|ECONNRESET|ETIMEDOUT/i.test(message);
+      if (isRetryable && attempt < maxRetries) {
+        const delays = [2000, 5000, 10000];
+        const wait = delays[attempt] + Math.floor(Math.random() * 500);
+        console.warn(`[gemini] retryable error (status=${status}, attempt=${attempt + 1}/${maxRetries}) — waiting ${wait}ms`);
+        await new Promise((r) => setTimeout(r, wait));
         continue;
       }
       throw error;

@@ -179,7 +179,7 @@ describe('/api/ai/insights', () => {
       const json = await res.json();
 
       expect(res.status).toBe(503);
-      expect(json.error).toBe('AI service is temporarily overloaded. Please try again in a few seconds.');
+      expect(json.error).toBe('AI service is temporarily overloaded. Please try again in 10 seconds.');
     });
 
     it('returns 500 on general AI error', async () => {
@@ -280,7 +280,7 @@ describe('/api/ai/insights', () => {
       const json = await res.json();
 
       expect(res.status).toBe(503);
-      expect(json.error).toBe('AI service is temporarily overloaded. Please try again in a few seconds.');
+      expect(json.error).toBe('AI service is temporarily overloaded. Please try again in 10 seconds.');
     });
 
     it('returns 500 on general AI error for remediation', async () => {
@@ -294,7 +294,7 @@ describe('/api/ai/insights', () => {
       const json = await res.json();
 
       expect(res.status).toBe(500);
-      expect(json.error).toBe('Failed to generate remediation plan.');
+      expect(json.error).toBe('Failed to generate remediation plan. Click Retry — if the problem persists this scan may be too large for AI analysis.');
     });
   });
 });
