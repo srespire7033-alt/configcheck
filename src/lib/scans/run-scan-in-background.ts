@@ -438,7 +438,10 @@ export async function runScanInBackground(
     try {
       await throttleAi(org.user_id as string);
       console.log(`[SCAN ${scanId}] Generating remediation plan (pre-cache)...`);
-      const plan = await generateRemediationPlan(result.issues, result.overall_score);
+      // Pre-generation fails fast — retries would push us past Vercel's 60s
+      // function lifetime. If Gemini 429s here, the user's on-demand
+      // /api/ai/insights path still has full retry-with-backoff.
+      const plan = await generateRemediationPlan(result.issues, result.overall_score, { noRetry: true });
       if (plan) {
         await supabase
           .from('scans')

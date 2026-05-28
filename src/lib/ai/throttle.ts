@@ -19,12 +19,15 @@ import { createServiceClient } from '@/lib/db/client';
  * extra call (still safely inside the 10 RPM budget given the 6s default
  * gap).
  *
- * Default gap: 6 seconds = 10 RPM ceiling. Override with `minGapMs` for
- * Tier 1 customers if/when we activate billing — they can run at 1 RPS.
+ * Default gap: 7.5 seconds = 8 RPM (20% headroom under Gemini's free-tier
+ * 10 RPM hard cap). The rolling-window nature of Gemini's rate-limiter
+ * means a strict 6s gap occasionally still trips 429s — 7.5s leaves room
+ * for jitter, cold-start latency, and any other shared-key consumers.
+ * Override with `minGapMs` for Tier 1 customers later (1 RPS-friendly).
  *
  * Skipped entirely in test environments so unit tests don't sleep.
  */
-export async function throttleAi(userId: string | null | undefined, minGapMs = 6000): Promise<void> {
+export async function throttleAi(userId: string | null | undefined, minGapMs = 7500): Promise<void> {
   if (!userId) return;
   if (process.env.NODE_ENV === 'test') return;
 

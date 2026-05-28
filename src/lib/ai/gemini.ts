@@ -228,11 +228,17 @@ Be direct and specific. No markdown headers. Plain text only.`;
 }
 
 /**
- * Generate a prioritized remediation plan across all issues
+ * Generate a prioritized remediation plan across all issues.
+ *
+ * `noRetry=true` is for the scan engine's pre-generation path — failing
+ * fast there is preferable to retry-with-backoff pushing the Vercel
+ * function past its 60s budget and killing the process before any plan
+ * can be saved. The user-facing /api/ai/insights endpoint keeps retries.
  */
 export async function generateRemediationPlan(
   issues: Issue[],
-  overallScore: number
+  overallScore: number,
+  options: { noRetry?: boolean } = {}
 ): Promise<string> {
   const issueList = issues
     .filter((i) => i.severity !== 'info')
@@ -259,7 +265,12 @@ Keep it practical and actionable. No fluff. Format as plain text with clear sect
 
   try {
     const model = getModel();
-    const result = await withRetry(() => model.generateContent(prompt));
+    // noRetry path: single attempt, fail fast. Used by the scan engine's
+    // pre-generation step so a Gemini 429 can't stack retries past the
+    // Vercel 60s function lifetime and kill the entire scan process.
+    const result = options.noRetry
+      ? await model.generateContent(prompt)
+      : await withRetry(() => model.generateContent(prompt));
     return result.response.text() || '';
   } catch (error) {
     console.error('Gemini remediation plan error:', error);

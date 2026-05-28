@@ -6,6 +6,10 @@ import { generateScanDiffInsights, generateRemediationPlan } from '@/lib/ai/gemi
 import { throttleAi } from '@/lib/ai/throttle';
 
 export const dynamic = 'force-dynamic';
+// Allow ~60s so retry-with-backoff (2s+5s+10s = 17s of waits plus 3 × ~10s
+// Gemini calls = ~47s worst case) can complete inside one function lifetime.
+// Default Hobby cap on routes without maxDuration is only 10s.
+export const maxDuration = 60;
 
 /**
  * POST /api/ai/insights
