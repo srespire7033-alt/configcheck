@@ -57,6 +57,68 @@ export const armChecks: ARMHealthCheck[] = [
   },
 
   // ─────────────────────────────────────────────────────────────────
+  // ARM-002b: Active product with no pricing path at all
+  //
+  // Even in Revenue Cloud / RLM, a Product2 is unsellable if it has
+  // ZERO pricing attached: no PricebookEntry, no RateCardEntry, no
+  // active ProductSellingModelOption with downstream pricing. Pure
+  // catalog records that exist but can't be priced are orphan
+  // configuration — they pollute pickers and break quote creation
+  // when accidentally added.
+  //
+  // Distinct from ARM-001 (no selling model): a product CAN have a
+  // selling model and still be unsellable if it lacks any price
+  // attached. This check catches that gap.
+  // ─────────────────────────────────────────────────────────────────
+  {
+    id: 'ARM-002b',
+    name: 'Active Product With No Pricing Path',
+    category: 'arm_product_catalog',
+    severity: 'critical',
+    description:
+      'Active products that have no PricebookEntry AND no RateCardEntry — they cannot be priced',
+    run: async (data: ARMData): Promise<Issue[]> => {
+      // Set of Product2Ids that have at least one active PricebookEntry
+      const productsWithPbe = new Set(
+        data.pricebookEntries
+          .filter((e) => e.IsActive !== false) // null counts as active
+          .map((e) => e.Product2Id)
+      );
+      // Set of Product2Ids that have at least one RateCardEntry
+      const productsWithRce = new Set(
+        data.rateCardEntries
+          .filter((e) => !!e.Product2Id)
+          .map((e) => e.Product2Id as string)
+      );
+      const orphans = data.products.filter(
+        (p) => p.IsActive && !productsWithPbe.has(p.Id) && !productsWithRce.has(p.Id)
+      );
+      if (orphans.length === 0) return [];
+      return [
+        {
+          check_id: 'ARM-002b',
+          category: 'arm_product_catalog',
+          severity: 'critical',
+          title: `${orphans.length} active product(s) with no pricing path`,
+          description: `${orphans.length} active product(s) have neither a PricebookEntry nor a RateCardEntry — they cannot be priced by any Revenue Cloud mechanism. Examples: ${orphans
+            .slice(0, 3)
+            .map((p) => `"${p.Name}"`)
+            .join(', ')}.`,
+          impact:
+            'These products will fail at quote-line creation with "no price found" errors and pollute product pickers with non-functional entries.',
+          recommendation:
+            'For each product: create a PricebookEntry on the Standard Pricebook (for fixed pricing) OR a RateCardEntry (for usage-based pricing). If the product is genuinely retired, deactivate it via IsActive=false.',
+          affected_records: orphans.slice(0, 25).map((p) => ({
+            id: p.Id,
+            name: p.Name,
+            type: 'Product2',
+          })),
+        },
+      ];
+    },
+  },
+
+  // ─────────────────────────────────────────────────────────────────
   // ARM-002: Selling model with no billing frequency
   // ─────────────────────────────────────────────────────────────────
   {
