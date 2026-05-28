@@ -3,6 +3,7 @@ import { createServiceClient } from '@/lib/db/client';
 import { getAuthUser } from '@/lib/auth/get-user';
 import { checkQuota } from '@/lib/quota';
 import { generateScanDiffInsights, generateRemediationPlan } from '@/lib/ai/gemini';
+import { throttleAi } from '@/lib/ai/throttle';
 
 export const dynamic = 'force-dynamic';
 
@@ -53,6 +54,8 @@ export async function POST(request: NextRequest) {
       }
 
       try {
+        // Server-side throttle keeps bursts within Gemini free-tier 10 RPM.
+        await throttleAi(user.id);
         const insight = await generateScanDiffInsights(
           prevScore,
           newScore,
@@ -128,6 +131,8 @@ export async function POST(request: NextRequest) {
       }
 
       try {
+        // Server-side throttle keeps bursts within Gemini free-tier 10 RPM.
+        await throttleAi(user.id);
         const plan = await generateRemediationPlan(issues, overallScore);
 
         // Log AI usage (fire-and-forget)

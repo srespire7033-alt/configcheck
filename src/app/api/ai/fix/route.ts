@@ -3,6 +3,7 @@ import { createServiceClient } from '@/lib/db/client';
 import { getAuthUser } from '@/lib/auth/get-user';
 import { checkQuota } from '@/lib/quota';
 import { generateFixSuggestion } from '@/lib/ai/gemini';
+import { throttleAi } from '@/lib/ai/throttle';
 import { track } from '@/lib/analytics/track-server';
 import { AnalyticsEvent } from '@/lib/analytics/events';
 
@@ -49,6 +50,8 @@ export async function POST(request: NextRequest) {
 
     let suggestion: string;
     try {
+      // Server-side throttle keeps bursts within Gemini free-tier 10 RPM.
+      await throttleAi(user.id);
       suggestion = await generateFixSuggestion({
         check_id: issue.check_id,
         category: issue.category,

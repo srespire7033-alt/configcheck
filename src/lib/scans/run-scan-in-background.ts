@@ -6,7 +6,8 @@ import { fetchAllARMData, getARMQueryFailures, getARMQueryOutcomes } from '@/lib
 import { runAnalysis } from '@/lib/analysis/engine';
 import { runBillingAnalysis } from '@/lib/analysis/billing-engine';
 import { runARMAnalysis } from '@/lib/analysis/arm-engine';
-import { generateExecutiveSummary } from '@/lib/ai/gemini';
+import { generateExecutiveSummary, generateRemediationPlan } from '@/lib/ai/gemini';
+import { throttleAi } from '@/lib/ai/throttle';
 import { sendScanNotification } from '@/lib/email/notifications';
 import { detectInstalledPackages, packageDetectionToArray } from '@/lib/salesforce/detect-packages';
 import { track } from '@/lib/analytics/track-server';
@@ -371,6 +372,10 @@ export async function runScanInBackground(
     // metadata.ai_summary_status field carries the state for diagnosis.
     const aiStart = Date.now();
     try {
+      // Throttle even though this is the first AI call of the scan —
+      // covers the case where the user manually clicked AI Explain or AI
+      // Fix on the previous scan moments before this one finished.
+      await throttleAi(org.user_id as string);
       console.log(`[SCAN ${scanId}] Generating AI summary (post-save)...`);
       const aiSummary = await generateExecutiveSummary(
         result.issues,
@@ -421,6 +426,31 @@ export async function runScanInBackground(
           },
         })
         .eq('id', scanId);
+    }
+
+    // Strategy A — pre-generate the remediation plan during the scan's
+    // deferred AI phase so it's already cached when the user opens the
+    // scan detail page. Combined with throttleAi() this gives the call a
+    // ~6s gap from the executive summary above, keeping bursts inside
+    // Gemini's free-tier 10 RPM. Failure is non-fatal: ai_remediation_plan
+    // stays null and the UI's "Generate" / "Retry" CTA still works.
+    const planStart = Date.now();
+    try {
+      await throttleAi(org.user_id as string);
+      console.log(`[SCAN ${scanId}] Generating remediation plan (pre-cache)...`);
+      const plan = await generateRemediationPlan(result.issues, result.overall_score);
+      if (plan) {
+        await supabase
+          .from('scans')
+          .update({ ai_remediation_plan: plan })
+          .eq('id', scanId);
+        console.log(`[SCAN ${scanId}] Remediation plan generated in ${Date.now() - planStart}ms`);
+      }
+    } catch (planErr) {
+      const msg = planErr instanceof Error ? planErr.message : 'Unknown plan error';
+      console.error(`[SCAN ${scanId}] Remediation plan failed (non-fatal):`, msg);
+      // Don't write a fallback — the UI will surface a "Generate" CTA and
+      // the user can retry on-demand. Pre-generation is a nice-to-have.
     }
 
     void track(AnalyticsEvent.SCAN_COMPLETED, {

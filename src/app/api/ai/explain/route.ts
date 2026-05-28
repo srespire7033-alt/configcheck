@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthUser } from '@/lib/auth/get-user';
 import { generateExplanation } from '@/lib/ai/gemini';
+import { throttleAi } from '@/lib/ai/throttle';
 import { track } from '@/lib/analytics/track-server';
 import { AnalyticsEvent } from '@/lib/analytics/events';
 
@@ -23,6 +24,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'title and description are required' }, { status: 400 });
     }
 
+    // Server-side throttle keeps bursts within Gemini free-tier 10 RPM.
+    await throttleAi(user.id);
     const explanation = await generateExplanation({
       title,
       description,
