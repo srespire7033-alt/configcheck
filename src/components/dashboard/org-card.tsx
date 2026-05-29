@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { Cloud, RefreshCw, ArrowRight, AlertTriangle, MoreVertical, Unplug, Clock, TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { TOTAL_CHECKS } from '@/lib/analysis/constants';
 import type { OrgCardData } from '@/types';
 import { getScoreColor, formatTimeAgo } from '@/lib/utils';
 
@@ -60,7 +61,7 @@ export function OrgCard({ org, onView, onScan, onDisconnect, scanning = false, s
     'Connecting to Salesforce…',
     'Detecting installed packages…',
     'Fetching configuration data…',
-    'Running 176 health checks…',
+    `Running ${TOTAL_CHECKS} health checks…`,
     'Generating AI summary…',
   ];
 

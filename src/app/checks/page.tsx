@@ -5,13 +5,14 @@ import { LogoMark } from '@/components/ui/logo';
 import { allChecks } from '@/lib/analysis/checks';
 import { allBillingChecks } from '@/lib/analysis/billing-checks';
 import { armChecks } from '@/lib/analysis/arm-checks';
+import { TOTAL_CHECKS } from '@/lib/analysis/constants';
 import { getCategoryLabel } from '@/lib/utils';
 import type { IssueSeverity } from '@/types';
 
 export const metadata: Metadata = {
-  title: 'All 182 Health Checks — OrgPrism',
+  title: `All ${TOTAL_CHECKS} Health Checks — OrgPrism`,
   description:
-    'The complete inventory of OrgPrism health checks: 92 Salesforce CPQ + 39 Billing + 51 Revenue Cloud (ARM) — every check name, category, and severity.',
+    `The complete inventory of OrgPrism health checks: ${allChecks.length} Salesforce CPQ + ${allBillingChecks.length} Billing + ${armChecks.length} Revenue Cloud (ARM) — every check name, category, and severity.`,
   alternates: { canonical: '/checks' },
 };
 
@@ -160,7 +161,7 @@ export default function ChecksPage() {
 
       <main className="max-w-5xl mx-auto px-6 py-12">
         <div className="mb-12">
-          <h1 className="text-3xl md:text-4xl font-bold mb-3">All 182 health checks</h1>
+          <h1 className="text-3xl md:text-4xl font-bold mb-3">All {TOTAL_CHECKS} health checks</h1>
           <p className="text-gray-600 dark:text-gray-400 max-w-3xl leading-relaxed">
             Every check OrgPrism runs across Salesforce CPQ, Billing, and Revenue Cloud (ARM).
             Severity classifies how serious each finding is &mdash; Critical breaks something at runtime,

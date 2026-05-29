@@ -7,6 +7,7 @@ import { OrgCard } from '@/components/dashboard/org-card';
 import { DisconnectedOrgs } from '@/components/dashboard/disconnected-orgs';
 import { ConnectOrgModal } from '@/components/dashboard/connect-org-modal';
 import { LoadingScreen } from '@/components/ui/loading-screen';
+import { TOTAL_CHECKS, TOTAL_CATEGORIES } from '@/lib/analysis/constants';
 import type { OrgCardData } from '@/types';
 
 function DashboardContent() {
@@ -563,7 +564,7 @@ function DashboardContent() {
               {
                 step: '2',
                 title: 'Run a health scan',
-                desc: 'We probe 182 checks across 45 categories: price rules, bundles, approvals, billing, ARM and more.',
+                desc: `We probe ${TOTAL_CHECKS} checks across ${TOTAL_CATEGORIES} categories: price rules, bundles, approvals, billing, ARM and more.`,
               },
               {
                 step: '3',

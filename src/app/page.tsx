@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import { TOTAL_CHECKS, TOTAL_CATEGORIES } from '@/lib/analysis/constants';
 import {
   Zap,
   FileText,
@@ -98,7 +99,7 @@ export default function LandingPage() {
           {/* Eyebrow tag — names the wedge in 5 words */}
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 text-blue-700 dark:text-blue-400 text-sm font-medium mb-8">
             <Sparkles className="h-4 w-4" />
-            Beta &middot; 182 checks &middot; OAuth read-only
+            Beta &middot; {TOTAL_CHECKS} checks &middot; OAuth read-only
           </div>
 
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight mb-6 leading-[1.1] max-w-5xl mx-auto">
@@ -109,7 +110,7 @@ export default function LandingPage() {
           </h1>
 
           <p className="text-lg md:text-xl text-gray-600 dark:text-gray-400 max-w-3xl mx-auto mb-10 leading-relaxed">
-            Connect your Salesforce org, get 182 CPQ + Billing + ARM health checks with AI fix
+            Connect your Salesforce org, get {TOTAL_CHECKS} CPQ + Billing + ARM health checks with AI fix
             suggestions in under 30 seconds. Built for consultants who quote audits in days, not quarters.
           </p>
 
@@ -197,12 +198,12 @@ export default function LandingPage() {
           {/* Stats */}
           <div className="flex items-center justify-center gap-8 md:gap-16 text-center flex-wrap">
             <div>
-              <div className="text-3xl font-bold text-blue-600">182</div>
+              <div className="text-3xl font-bold text-blue-600">{TOTAL_CHECKS}</div>
               <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">Health Checks</div>
             </div>
             <div className="w-px h-10 bg-gray-200 dark:bg-gray-700" />
             <div>
-              <div className="text-3xl font-bold text-blue-600">45</div>
+              <div className="text-3xl font-bold text-blue-600">{TOTAL_CATEGORIES}</div>
               <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">Categories</div>
             </div>
             <div className="w-px h-10 bg-gray-200 dark:bg-gray-700" />
@@ -257,8 +258,8 @@ export default function LandingPage() {
               },
               {
                 icon: Zap,
-                title: '182 Automated Health Checks',
-                desc: 'Price rules, discount schedules, products, approval rules, QCP scripts, billing rules, ARM selling models, bundles, rate cards, contracts &mdash; 45 categories scanned automatically.',
+                title: `${TOTAL_CHECKS} Automated Health Checks`,
+                desc: `Price rules, discount schedules, products, approval rules, QCP scripts, billing rules, ARM selling models, bundles, rate cards, contracts — ${TOTAL_CATEGORIES} categories scanned automatically.`,
                 color: 'amber',
               },
               {
@@ -363,7 +364,7 @@ export default function LandingPage() {
       <section id="checks" className="py-24">
         <div className="max-w-7xl mx-auto px-6">
           <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">182 Health Checks Across CPQ, Billing &amp; ARM</h2>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">{TOTAL_CHECKS} Health Checks Across CPQ, Billing &amp; ARM</h2>
             <p className="text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
               Every critical Revenue Cloud configuration area is covered. Issues are classified as Critical, Warning, or Info.
             </p>
@@ -475,7 +476,7 @@ export default function LandingPage() {
               href="/checks"
               className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-xl border border-gray-200 dark:border-gray-700 transition-all"
             >
-              View all 182 checks across 45 categories
+              View all {TOTAL_CHECKS} checks across {TOTAL_CATEGORIES} categories
               <ArrowRight className="h-4 w-4" />
             </Link>
           </div>
@@ -593,7 +594,7 @@ export default function LandingPage() {
                   What struck me wasn&rsquo;t the bug itself &mdash; every CPQ implementer has lived through one of these. It was that I&rsquo;d seen variations of the same problem across three different orgs in the past year. The misconfiguration patterns were predictable. The detection should have been automated.
                 </p>
                 <p>
-                  OrgPrism started as a weekend project to catch the configuration patterns I kept tripping over. Today it runs 182 checks across CPQ, Billing, and ARM in under 30 seconds &mdash; the audit I wish I&rsquo;d had the morning that bug ticket landed.
+                  OrgPrism started as a weekend project to catch the configuration patterns I kept tripping over. Today it runs {TOTAL_CHECKS} checks across CPQ, Billing, and ARM in under 30 seconds &mdash; the audit I wish I&rsquo;d had the morning that bug ticket landed.
                 </p>
                 <p>
                   If you&rsquo;ve spent a week chasing a CPQ misconfiguration that turned out to be obvious in hindsight, this is for you.{' '}
@@ -775,7 +776,7 @@ export default function LandingPage() {
             <div className="relative z-10">
               <h2 className="text-3xl md:text-4xl font-bold mb-4">Ready to audit your first Revenue Cloud org?</h2>
               <p className="text-blue-100 text-lg mb-8 max-w-xl mx-auto">
-                Connect a sandbox in 60 seconds. 182 health checks. AI fix suggestions. White-label reports.
+                Connect a sandbox in 60 seconds. {TOTAL_CHECKS} health checks. AI fix suggestions. White-label reports.
               </p>
               <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
                 <Link

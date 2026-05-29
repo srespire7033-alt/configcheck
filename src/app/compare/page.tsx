@@ -2,6 +2,7 @@ import Link from 'next/link';
 import type { Metadata } from 'next';
 import { ArrowLeft, Check, Minus } from 'lucide-react';
 import { LogoMark } from '@/components/ui/logo';
+import { TOTAL_CHECKS } from '@/lib/analysis/constants';
 
 export const metadata: Metadata = {
   title: 'How OrgPrism compares — OrgPrism',
@@ -189,7 +190,7 @@ export default function ComparePage() {
           </p>
           <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
             What OrgPrism handles is the <em>repetitive checklist portion</em>
-            {' '}of an audit &mdash; the 182 patterns that show up across every CPQ
+            {' '}of an audit &mdash; the {TOTAL_CHECKS} patterns that show up across every CPQ
             implementation regardless of industry. Run the automated audit first,
             then spend your hours on the architectural questions only a human can
             answer.

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
 import { ThemeProvider } from "@/components/theme-provider";
+import { TOTAL_CHECKS } from "@/lib/analysis/constants";
 import "./globals.css";
 
 const geistSans = localFont({
@@ -12,7 +13,7 @@ const geistSans = localFont({
 // TODO: replace with the live custom domain once orgprism.app is wired up
 const SITE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://orgprism.vercel.app';
 const DESCRIPTION =
-  'Connect any Salesforce org and run 182 automated CPQ + Billing + ARM health checks with AI fix suggestions in under 30 seconds. Built for Revenue Cloud consultants.';
+  `Connect any Salesforce org and run ${TOTAL_CHECKS} automated CPQ + Billing + ARM health checks with AI fix suggestions in under 30 seconds. Built for Revenue Cloud consultants.`;
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -94,7 +95,7 @@ export default function RootLayout({
               '@type': 'SoftwareApplication',
               name: 'OrgPrism',
               description:
-                'Automated Salesforce Revenue Cloud audit tool. Run 182 health checks across CPQ, Billing, and ARM with AI fix suggestions in under 30 seconds.',
+                `Automated Salesforce Revenue Cloud audit tool. Run ${TOTAL_CHECKS} health checks across CPQ, Billing, and ARM with AI fix suggestions in under 30 seconds.`,
               applicationCategory: 'BusinessApplication',
               applicationSubCategory: 'Salesforce CPQ audit tool',
               operatingSystem: 'Web',
@@ -135,7 +136,7 @@ export default function RootLayout({
               },
               featureList: [
                 'Read-only OAuth connection to any Salesforce org',
-                '182 automated health checks across CPQ, Billing, and ARM',
+                `${TOTAL_CHECKS} automated health checks across CPQ, Billing, and ARM`,
                 'AI-powered fix suggestions per finding',
                 'White-label PDF audit reports',
                 'Scheduled scans with email notifications',

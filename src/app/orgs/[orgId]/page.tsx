@@ -17,6 +17,7 @@ import { ScheduleModal } from '@/components/schedule/schedule-modal';
 import { ScheduleList } from '@/components/schedule/schedule-list';
 import { ScoreTrend } from '@/components/scan/score-trend';
 import { ScoreFormulaTooltip } from '@/components/scan/score-formula-tooltip';
+import { TOTAL_CHECKS } from '@/lib/analysis/constants';
 import type { DBScan, DBIssue, DBOrganization, DBScanSchedule, RevenueRiskSummary, ComplexityBreakdown, ProductType } from '@/types';
 import { getProductTypeLabel } from '@/lib/utils';
 
@@ -1485,7 +1486,7 @@ export default function OrgDetailPage() {
             // issues centred on Y..." pattern.
             const headline =
               critCount === 0 && warnCount === 0 && infoCount === 0
-                ? 'Your org is clean across all 182 health checks.'
+                ? `Your org is clean across all ${TOTAL_CHECKS} health checks.`
                 : critCount > 0
                 ? `Your org has ${critCount} critical issue${critCount !== 1 ? 's' : ''}${
                     topCats.length > 0
