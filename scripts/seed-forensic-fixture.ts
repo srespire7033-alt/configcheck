@@ -214,25 +214,28 @@ async function main() {
     `SELECT Id, Name FROM SBQQ__PriceRule__c WHERE Name = '${priceRuleName.replace(/'/g, "\\'")}' LIMIT 1`,
     'PriceRule lookup'
   );
+  // Per-component idempotency, not all-or-nothing. A failed prior run
+  // could have created the rule but bailed before conditions/actions —
+  // we re-check each child independently and only create what's missing.
   let priceRuleId: string;
   if (existingRules.length > 0) {
     priceRuleId = existingRules[0].Id;
-    console.log(`  ✓ Already exists: ${priceRuleId}`);
+    console.log(`  ✓ Rule already exists: ${priceRuleId}`);
   } else {
-    // Note: SBQQ__Description__c was removed from SBQQ__PriceRule__c in
-    // newer CPQ packages. The rule is identifiable by Name alone — the
-    // description was nice-to-have for telling fixture rules apart in
-    // Setup but isn't required for the engine.
     priceRuleId = await sfCreate('SBQQ__PriceRule__c', {
       Name: priceRuleName,
       SBQQ__Active__c: true,
       SBQQ__EvaluationEvent__c: 'On Calculate',
       SBQQ__ConditionsMet__c: 'All',
     }, 'Renewal Floor Pricing');
+  }
 
-    // Name is auto-numbered on PriceCondition / PriceAction in newer CPQ
-    // versions (Setup → Object Manager shows it as auto-number). Don't
-    // try to set it — Salesforce assigns one on insert.
+  // Ensure the renewal-type condition exists on this rule.
+  const existingConditions = await sfQuery<IdRef>(
+    `SELECT Id FROM SBQQ__PriceCondition__c WHERE SBQQ__Rule__c = '${priceRuleId}' AND SBQQ__Field__c = 'SBQQ__Type__c' LIMIT 1`,
+    'PriceCondition check'
+  );
+  if (existingConditions.length === 0) {
     await sfCreate('SBQQ__PriceCondition__c', {
       SBQQ__Rule__c: priceRuleId,
       SBQQ__Object__c: 'Quote',
@@ -240,12 +243,23 @@ async function main() {
       SBQQ__Operator__c: 'equals',
       SBQQ__Value__c: 'Renewal',
     }, 'When renewal type');
+  } else {
+    console.log(`  ✓ Condition already exists: ${existingConditions[0].Id}`);
+  }
 
+  // Ensure the NetPrice-overwriting action exists on this rule.
+  const existingActions = await sfQuery<IdRef>(
+    `SELECT Id FROM SBQQ__PriceAction__c WHERE SBQQ__Rule__c = '${priceRuleId}' AND SBQQ__TargetField__c = 'SBQQ__NetPrice__c' LIMIT 1`,
+    'PriceAction check'
+  );
+  if (existingActions.length === 0) {
     await sfCreate('SBQQ__PriceAction__c', {
       SBQQ__Rule__c: priceRuleId,
       SBQQ__TargetField__c: 'SBQQ__NetPrice__c',
       SBQQ__Formula__c: 'SBQQ__Quantity__c * SBQQ__ListPrice__c',
     }, 'Strip uplift');
+  } else {
+    console.log(`  ✓ Action already exists: ${existingActions[0].Id}`);
   }
 
   // ─── 2. Create the 10 Contracts + Subscriptions + renewal QuoteLines ─
