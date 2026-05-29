@@ -569,9 +569,14 @@ async function seedPromoFixtures(
         SBQQ__EndDate__c: '2025-06-01',
       }, `Promo Quote ${line.customerName}`);
 
+      // Promo lines are new-business quotes, not renewals — no link
+      // back to a Subscription needed. The DSC-FOR-001 detector queries
+      // QuoteLine → DiscountSchedule directly. We still create a
+      // Subscription record above so the overall fixture data shape
+      // matches a real signed promo deal.
+      void subId;
       await sfCreate('SBQQ__QuoteLine__c', {
         SBQQ__Quote__c: quoteId,
-        SBQQ__Subscription__c: subId,
         SBQQ__Product__c: productId,
         SBQQ__DiscountSchedule__c: scheduleId,
         SBQQ__Discount__c: discountPct,
