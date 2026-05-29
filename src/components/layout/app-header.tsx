@@ -1,6 +1,6 @@
 'use client';
 
-import { LayoutDashboard, Settings, Sun, Moon, Users } from 'lucide-react';
+import { LayoutDashboard, Settings, Sun, Moon, Users, GitMerge } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
@@ -15,6 +15,7 @@ export function AppHeader() {
 
   const navLinks = [
     { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { href: '/portfolio', label: 'Portfolio', icon: GitMerge },
     { href: '/team', label: 'Team', icon: Users },
     { href: '/settings', label: 'Settings', icon: Settings },
   ];
