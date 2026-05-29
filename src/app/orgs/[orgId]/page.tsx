@@ -12,6 +12,7 @@ import { GroupedIssueList } from '@/components/issues/grouped-issue-list';
 import { IssueDetailModal } from '@/components/issues/issue-detail-modal';
 import { SeverityModal } from '@/components/issues/severity-modal';
 import { RevenueRiskCard } from '@/components/scan/revenue-risk-card';
+import { RevenueLeakageCard, type RevenueLeakageData } from '@/components/scan/revenue-leakage-card';
 import { ComplexityCard } from '@/components/scan/complexity-card';
 import { ScheduleModal } from '@/components/schedule/schedule-modal';
 import { ScheduleList } from '@/components/schedule/schedule-list';
@@ -1424,6 +1425,22 @@ export default function OrgDetailPage() {
                 scans={sameTypeScans}
                 onViewHistory={() => router.push(`/orgs/${orgId}/history`)}
               />
+            );
+          })()}
+
+          {/* ===== REVENUE LEAKAGE (NEW — TechTorch ask) =====
+              Headline $ number derived from org's actual SF data + per-
+              check formulas with recoverability + LTV multipliers. Sits
+              ABOVE the older revenue-risk card because this is the
+              consultant-deliverable headline. */}
+          {(() => {
+            const meta = scan.metadata as Record<string, unknown> | null;
+            const leakage = meta?.revenue_leakage as RevenueLeakageData | undefined;
+            if (!leakage) return null;
+            return (
+              <div className="mb-8">
+                <RevenueLeakageCard leakage={leakage} />
+              </div>
             );
           })()}
 
