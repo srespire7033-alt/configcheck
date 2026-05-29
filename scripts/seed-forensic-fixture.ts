@@ -62,7 +62,8 @@ import { resolve } from 'path';
   }
 })();
 
-import { createRefreshableConnection } from '@/lib/salesforce/client';
+import { createClient } from '@supabase/supabase-js';
+import jsforce from 'jsforce';
 
 const FIXTURE_TAG = '[ORGPRISM_FORENSIC_FIXTURE_v1]';
 
@@ -93,7 +94,36 @@ async function main() {
   }
 
   console.log(`Connecting to org ${orgUuid}...`);
-  const { conn } = await createRefreshableConnection(orgUuid);
+
+  // Bypass the refreshable wrapper — it adds auto-refresh hooks that can
+  // hang silently on Node 24 / jsforce v3 if the token's stale. For a
+  // one-shot script we just want bare jsforce against the stored token.
+  // If the token is expired we'll get a fast 401 and the user reconnects.
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL;
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!supabaseUrl || !supabaseKey) {
+    console.error('Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY in .env.local');
+    process.exit(1);
+  }
+  const supabase = createClient(supabaseUrl, supabaseKey);
+  const { data: org, error: orgErr } = await supabase
+    .from('organizations')
+    .select('instance_url, access_token, refresh_token, sf_login_url, sf_client_id, sf_client_secret')
+    .eq('id', orgUuid)
+    .single();
+  if (orgErr || !org) {
+    console.error(`Failed to load org ${orgUuid} from Supabase:`, orgErr?.message ?? 'not found');
+    process.exit(1);
+  }
+  if (!org.access_token) {
+    console.error(`Org ${orgUuid} has no access token. Connect/reconnect in OrgPrism first.`);
+    process.exit(1);
+  }
+  const conn = new jsforce.Connection({
+    instanceUrl: org.instance_url,
+    accessToken: org.access_token,
+    version: '60.0',
+  });
   console.log(`Connected on ${conn.instanceUrl}`);
 
   // ─── 0. Sanity check the connection with a trivial query.
