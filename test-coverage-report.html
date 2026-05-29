@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ConfigCheck — Test Coverage Report</title>
+  <title>OrgPrism — Test Coverage Report</title>
   <style>
     :root {
       --bg: #0f172a;
@@ -23,10 +23,10 @@
       --blue-bg: rgba(59, 130, 246, 0.1);
       --purple: #a78bfa;
       --purple-bg: rgba(167, 139, 250, 0.1);
+      --teal: #2dd4bf;
+      --teal-bg: rgba(45, 212, 191, 0.12);
     }
-
     * { margin: 0; padding: 0; box-sizing: border-box; }
-
     body {
       font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
       background: var(--bg);
@@ -34,35 +34,23 @@
       line-height: 1.6;
       padding: 0;
     }
-
-    /* Hero */
     .hero {
       background: linear-gradient(135deg, #1e3a5f 0%, #0f172a 50%, #1a1a3e 100%);
       border-bottom: 1px solid var(--border);
       padding: 48px 40px 40px;
     }
-    .hero-inner {
-      max-width: 1200px;
-      margin: 0 auto;
-    }
+    .hero-inner { max-width: 1200px; margin: 0 auto; }
     .hero h1 {
-      font-size: 2.2rem;
+      font-size: 2.4rem;
       font-weight: 700;
       margin-bottom: 8px;
-      background: linear-gradient(135deg, #60a5fa, #a78bfa);
+      background: linear-gradient(135deg, #a855f7, #38bdf8 60%, #f97316);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
+      background-clip: text;
     }
-    .hero .subtitle {
-      color: var(--text-muted);
-      font-size: 1rem;
-      margin-bottom: 28px;
-    }
-    .stats-row {
-      display: flex;
-      gap: 16px;
-      flex-wrap: wrap;
-    }
+    .hero .subtitle { color: var(--text-muted); font-size: 1rem; margin-bottom: 28px; }
+    .stats-row { display: flex; gap: 16px; flex-wrap: wrap; }
     .stat-card {
       background: var(--card);
       border: 1px solid var(--border);
@@ -72,28 +60,19 @@
       flex: 1;
     }
     .stat-card .label {
-      font-size: 0.8rem;
+      font-size: 0.78rem;
       text-transform: uppercase;
-      letter-spacing: 0.05em;
+      letter-spacing: 0.06em;
       color: var(--text-muted);
       margin-bottom: 4px;
     }
-    .stat-card .value {
-      font-size: 1.8rem;
-      font-weight: 700;
-    }
+    .stat-card .value { font-size: 1.9rem; font-weight: 700; }
     .stat-card .value.green { color: var(--green); }
     .stat-card .value.blue { color: var(--accent-light); }
     .stat-card .value.purple { color: var(--purple); }
     .stat-card .value.amber { color: var(--amber); }
-
-    /* Main content */
-    .content {
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 40px;
-    }
-
+    .stat-card .value.teal { color: var(--teal); }
+    .content { max-width: 1200px; margin: 0 auto; padding: 40px; }
     h2 {
       font-size: 1.5rem;
       font-weight: 700;
@@ -105,1223 +84,297 @@
       gap: 10px;
     }
     h2 .icon { font-size: 1.3rem; }
-
-    h3 {
-      font-size: 1.15rem;
-      font-weight: 600;
-      margin: 28px 0 14px;
-      color: var(--accent-light);
-    }
-
-    /* Tables */
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin: 16px 0 32px;
-      font-size: 0.9rem;
-    }
-    thead th {
-      background: var(--card);
-      color: var(--text-muted);
-      text-transform: uppercase;
-      font-size: 0.75rem;
-      letter-spacing: 0.05em;
-      font-weight: 600;
-      padding: 12px 16px;
-      text-align: left;
-      border-bottom: 2px solid var(--border);
-      position: sticky;
-      top: 0;
-    }
-    tbody td {
-      padding: 12px 16px;
-      border-bottom: 1px solid rgba(51, 65, 85, 0.5);
-      vertical-align: top;
-    }
-    tbody tr:hover {
-      background: var(--card-hover);
-    }
-    tbody tr:last-child td {
-      border-bottom: none;
-    }
-
-    /* Badges */
-    .badge {
-      display: inline-block;
-      padding: 3px 10px;
-      border-radius: 50px;
-      font-size: 0.75rem;
-      font-weight: 600;
-      letter-spacing: 0.02em;
-    }
-    .badge-critical {
-      background: var(--red-bg);
-      color: var(--red);
-      border: 1px solid rgba(239, 68, 68, 0.3);
-    }
-    .badge-warning {
-      background: var(--amber-bg);
-      color: var(--amber);
-      border: 1px solid rgba(245, 158, 11, 0.3);
-    }
-    .badge-info {
-      background: var(--blue-bg);
-      color: var(--accent-light);
-      border: 1px solid rgba(59, 130, 246, 0.3);
-    }
-    .badge-pass {
-      background: var(--green-bg);
-      color: var(--green);
-      border: 1px solid rgba(34, 197, 94, 0.3);
-    }
-    .badge-detect {
-      background: var(--purple-bg);
-      color: var(--purple);
-      border: 1px solid rgba(167, 139, 250, 0.3);
-    }
-
-    /* Testing type cards */
-    .type-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
-      gap: 16px;
-      margin: 16px 0 32px;
-    }
-    .type-card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 20px;
-      transition: border-color 0.2s;
-    }
-    .type-card:hover {
-      border-color: var(--accent);
-    }
-    .type-card .type-name {
-      font-weight: 700;
-      font-size: 1rem;
-      margin-bottom: 6px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .type-card .type-desc {
-      color: var(--text-muted);
-      font-size: 0.85rem;
-      line-height: 1.5;
-    }
-
-    /* Scenario cards */
-    .scenario-card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      margin: 16px 0 28px;
-      overflow: hidden;
-    }
-    .scenario-header {
-      padding: 16px 20px;
-      font-weight: 700;
-      font-size: 0.95rem;
-      border-bottom: 1px solid var(--border);
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-    .scenario-card table {
-      margin: 0;
-    }
-
-    /* File list */
-    .file-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
-      gap: 12px;
-      margin: 16px 0;
-    }
-    .file-item {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 14px 18px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    .file-item .fname {
-      font-family: 'Cascadia Code', 'Fira Code', monospace;
-      font-size: 0.82rem;
-      color: var(--accent-light);
-    }
-    .file-item .fmeta {
-      display: flex;
-      gap: 10px;
-      align-items: center;
-    }
-    .file-item .fcount {
-      background: var(--blue-bg);
-      color: var(--accent-light);
-      padding: 2px 10px;
-      border-radius: 50px;
-      font-size: 0.78rem;
-      font-weight: 600;
-    }
-    .file-item .ftag {
-      color: var(--text-muted);
-      font-size: 0.78rem;
-    }
-
-    /* Code block */
-    .code-block {
-      background: #0d1117;
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 20px 24px;
-      font-family: 'Cascadia Code', 'Fira Code', monospace;
-      font-size: 0.85rem;
-      color: #c9d1d9;
-      margin: 16px 0;
-      overflow-x: auto;
-    }
-    .code-block .comment { color: #8b949e; }
-    .code-block .cmd { color: var(--green); }
-
-    /* Future scope */
-    .future-item {
-      display: flex;
-      align-items: flex-start;
-      gap: 12px;
-      padding: 12px 0;
-      border-bottom: 1px solid rgba(51, 65, 85, 0.4);
-    }
-    .future-item:last-child { border-bottom: none; }
-    .future-icon {
-      width: 28px;
-      height: 28px;
-      border-radius: 8px;
-      background: var(--card);
-      border: 1px solid var(--border);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-      font-size: 0.85rem;
-      margin-top: 2px;
-    }
-    .future-label { font-weight: 600; font-size: 0.9rem; }
-    .future-reason { color: var(--text-muted); font-size: 0.83rem; }
-
-    /* Progress bar */
-    .progress-bar {
-      height: 8px;
-      background: var(--border);
-      border-radius: 10px;
-      overflow: hidden;
-      margin-top: 6px;
-    }
-    .progress-fill {
-      height: 100%;
-      border-radius: 10px;
-      transition: width 1s ease;
-    }
-    .progress-fill.green { background: linear-gradient(90deg, #22c55e, #4ade80); }
-
-    /* Footer */
-    .footer {
-      text-align: center;
-      padding: 40px;
-      color: var(--text-muted);
-      font-size: 0.82rem;
-      border-top: 1px solid var(--border);
-      margin-top: 48px;
-    }
-
-    /* Positive / Negative columns */
-    .col-positive { color: #f87171; font-size: 0.83rem; }
-    .col-negative { color: #4ade80; font-size: 0.83rem; }
-
-    @media (max-width: 768px) {
-      .hero { padding: 28px 20px; }
-      .content { padding: 20px; }
-      .stats-row { flex-direction: column; }
-      .type-grid { grid-template-columns: 1fr; }
-      .file-grid { grid-template-columns: 1fr; }
-      h2 { font-size: 1.2rem; }
-    }
+    h3 { font-size: 1.15rem; font-weight: 600; margin: 28px 0 14px; color: var(--accent-light); }
+    p { color: var(--text-muted); margin-bottom: 12px; }
+    table { width: 100%; border-collapse: collapse; margin: 16px 0; background: var(--card); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+    th { background: rgba(255,255,255,0.04); color: var(--text); font-weight: 600; text-align: left; padding: 12px 16px; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.04em; border-bottom: 1px solid var(--border); }
+    td { padding: 12px 16px; color: var(--text); font-size: 0.92rem; border-bottom: 1px solid rgba(255,255,255,0.04); }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: var(--card-hover); }
+    td.right { text-align: right; font-variant-numeric: tabular-nums; }
+    code { background: rgba(255,255,255,0.06); padding: 2px 6px; border-radius: 4px; font-family: 'Cascadia Code', Consolas, monospace; font-size: 0.85rem; color: #cbd5e1; }
+    .badge { display: inline-block; padding: 3px 10px; border-radius: 6px; font-size: 0.78rem; font-weight: 600; letter-spacing: 0.03em; }
+    .badge.green { background: var(--green-bg); color: var(--green); border: 1px solid rgba(34,197,94,0.3); }
+    .badge.red { background: var(--red-bg); color: var(--red); border: 1px solid rgba(239,68,68,0.3); }
+    .badge.amber { background: var(--amber-bg); color: var(--amber); border: 1px solid rgba(245,158,11,0.3); }
+    .badge.blue { background: var(--blue-bg); color: var(--accent-light); border: 1px solid rgba(59,130,246,0.3); }
+    .badge.purple { background: var(--purple-bg); color: var(--purple); border: 1px solid rgba(167,139,250,0.3); }
+    .badge.teal { background: var(--teal-bg); color: var(--teal); border: 1px solid rgba(45,212,191,0.3); }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin: 16px 0; }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 24px; }
+    .card h3 { margin-top: 0; }
+    .card ul { margin: 0; padding-left: 22px; color: var(--text-muted); font-size: 0.92rem; }
+    .card li { margin: 6px 0; }
+    .file-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 8px; margin: 16px 0; }
+    .file { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; font-family: 'Cascadia Code', Consolas, monospace; font-size: 0.82rem; color: var(--text-muted); display: flex; align-items: center; justify-content: space-between; }
+    .file .name { color: var(--text); }
+    .file .count { color: var(--green); font-weight: 600; }
+    .footer { color: var(--text-muted); text-align: center; padding: 40px; font-size: 0.85rem; border-top: 1px solid var(--border); margin-top: 40px; }
+    .progress { background: rgba(255,255,255,0.06); border-radius: 6px; height: 8px; overflow: hidden; margin: 6px 0 0; }
+    .progress-fill { height: 100%; background: linear-gradient(90deg, var(--green), #84cc16); border-radius: 6px; }
+    .key-row { display: flex; align-items: center; gap: 12px; padding: 10px 14px; background: var(--card); border: 1px solid var(--border); border-radius: 8px; margin: 8px 0; }
+    .key-row .check { color: var(--green); font-size: 1.1rem; }
+    .key-row .text { flex: 1; color: var(--text); font-size: 0.92rem; }
+    .key-row .meta { color: var(--text-muted); font-size: 0.82rem; font-family: 'Cascadia Code', Consolas, monospace; }
   </style>
 </head>
 <body>
-
-<!-- HERO -->
-<div class="hero">
-  <div class="hero-inner">
-    <h1>ConfigCheck — Test Coverage Report</h1>
-    <p class="subtitle">AI-Driven Config Audits for Salesforce Revenue Cloud &mdash; Quality Assurance Dashboard</p>
-    <div class="stats-row">
-      <div class="stat-card">
-        <div class="label">Total Tests</div>
-        <div class="value blue">1,155</div>
-        <div class="progress-bar"><div class="progress-fill green" style="width:100%"></div></div>
-      </div>
-      <div class="stat-card">
-        <div class="label">Passed</div>
-        <div class="value green">1,118</div>
-      </div>
-      <div class="stat-card">
-        <div class="label">Failed</div>
-        <div class="value" style="color:var(--text-muted)">0</div>
-      </div>
-      <div class="stat-card">
-        <div class="label">Test Files</div>
-        <div class="value purple">51</div>
-      </div>
-      <div class="stat-card">
-        <div class="label">Health Checks</div>
-        <div class="value amber">208</div>
-      </div>
-      <div class="stat-card">
-        <div class="label">Products</div>
-        <div class="value purple">CPQ + Billing + ARM</div>
-      </div>
-      <div class="stat-card">
-        <div class="label">Execution Time</div>
-        <div class="value amber">~17s</div>
+  <div class="hero">
+    <div class="hero-inner">
+      <h1>OrgPrism — Test Coverage Report</h1>
+      <div class="subtitle">Salesforce Revenue Cloud audit platform · automated quality gates · TypeScript strict</div>
+      <div class="stats-row">
+        <div class="stat-card">
+          <div class="label">Total Tests</div>
+          <div class="value green">1,163</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">Test Files</div>
+          <div class="value blue">52</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">Health Checks Covered</div>
+          <div class="value purple">209</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">Categories</div>
+          <div class="value amber">49</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">Pass Rate</div>
+          <div class="value green">100%</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">Execution Time</div>
+          <div class="value teal">~2.6s</div>
+        </div>
       </div>
     </div>
   </div>
-</div>
 
-<div class="content">
+  <div class="content">
+    <h2><span class="icon">📊</span> At a glance</h2>
+    <p>Every commit to the <code>master</code> branch passes the full test suite before Vercel promotes the build to production. The suite covers all 209 health checks plus authentication, OAuth, scan orchestration, AI integration, API routes, and the new drift-guard for marketing numbers.</p>
 
-<!-- SECTION 1: TESTING TYPES -->
-<h2><span class="icon">&#129514;</span> 1. Testing Types Covered</h2>
-<div class="type-grid">
-  <div class="type-card">
-    <div class="type-name">&#128300; Unit Testing</div>
-    <div class="type-desc">Individual check functions tested in isolation with crafted data. Each of 208 checks (92 CPQ + 39 Billing + 77 ARM) gets positive & negative test cases across 49 categories.</div>
+    <div class="grid">
+      <div class="card">
+        <h3>Quality bar</h3>
+        <ul>
+          <li><strong>1,163 tests</strong> run in ~2.6 seconds</li>
+          <li><strong>TypeScript strict mode</strong> — zero <code>any</code> outside compatibility shims</li>
+          <li><strong>ESLint</strong> clean on every commit</li>
+          <li><strong>Drift guards</strong> for check counts (CI fails if a check is added without bumping the constant)</li>
+          <li><strong>Production build</strong> gate via Vercel preview deploys</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>Coverage scope</h3>
+        <ul>
+          <li><strong>92 CPQ checks</strong> across 19 categories</li>
+          <li><strong>39 Billing checks</strong> across 8 categories</li>
+          <li><strong>78 Revenue Cloud (ARM) checks</strong> across 22 categories</li>
+          <li><strong>17 API routes</strong> with positive + negative tests</li>
+          <li><strong>OAuth flow</strong> end-to-end (BYO-ECA path)</li>
+          <li><strong>AI integrations</strong> (Gemini explain / fix / insights)</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>Test execution</h3>
+        <ul>
+          <li><strong>Runner:</strong> Vitest 3.x</li>
+          <li><strong>Mode:</strong> parallel by default</li>
+          <li><strong>Avg test:</strong> ~2 ms</li>
+          <li><strong>Slowest file:</strong> ~120 ms (integration scenarios)</li>
+          <li><strong>Last green build:</strong> auto-updated on every commit</li>
+        </ul>
+      </div>
+    </div>
+
+    <h2><span class="icon">🧪</span> Testing types covered</h2>
+    <p>Every test file mixes multiple types — positive (does it detect?), negative (does it avoid false positives?), boundary (exact thresholds), edge (empty / null / extreme values).</p>
+    <table>
+      <thead>
+        <tr><th>Type</th><th>Description</th><th>Coverage</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><strong>Unit</strong></td><td>Individual check functions tested in isolation with crafted data</td><td><span class="badge green">All 209 checks</span></td></tr>
+        <tr><td><strong>Integration</strong></td><td>Full engine runs end-to-end with realistic org configurations</td><td><span class="badge green">CPQ + Billing + ARM</span></td></tr>
+        <tr><td><strong>Positive</strong></td><td>Verifies system correctly DETECTS issues in problematic data</td><td><span class="badge green">Every check</span></td></tr>
+        <tr><td><strong>Negative</strong></td><td>Verifies system does NOT raise false positives on clean data</td><td><span class="badge green">Every check</span></td></tr>
+        <tr><td><strong>Boundary</strong></td><td>Tests at exact thresholds (e.g. 49 rules = OK, 50 = flag)</td><td><span class="badge green">PERF, custom-scripts, AI throttle</span></td></tr>
+        <tr><td><strong>Edge cases</strong></td><td>Empty arrays, null values, whitespace strings, extreme counts</td><td><span class="badge green">All suites</span></td></tr>
+        <tr><td><strong>Score validation</strong></td><td>Scores stay 0-100, weights work correctly, severity impacts</td><td><span class="badge green">Engine tests</span></td></tr>
+        <tr><td><strong>Data integrity</strong></td><td>All issues have required fields (check_id, category, severity, etc.)</td><td><span class="badge green">Integration tests</span></td></tr>
+        <tr><td><strong>API contract</strong></td><td>Request/response shape, status codes, auth gates</td><td><span class="badge green">17 routes</span></td></tr>
+        <tr><td><strong>Drift guard</strong></td><td>Marketing numbers match live arrays</td><td><span class="badge green">8 assertions</span></td></tr>
+      </tbody>
+    </table>
+
+    <h2><span class="icon">📁</span> Test files by suite</h2>
+
+    <h3>Analysis engine — 34 files · 989 tests</h3>
+    <p>One <code>*-comprehensive.test.ts</code> file per check category, plus integration scenarios and engine-level orchestration tests.</p>
+    <div class="file-grid">
+      <div class="file"><span class="name">price-rules-comprehensive</span><span class="count">+ basic</span></div>
+      <div class="file"><span class="name">discount-schedules-comprehensive</span></div>
+      <div class="file"><span class="name">products-comprehensive</span></div>
+      <div class="file"><span class="name">product-rules-comprehensive</span></div>
+      <div class="file"><span class="name">cpq-settings-comprehensive</span></div>
+      <div class="file"><span class="name">quote-lines-comprehensive</span></div>
+      <div class="file"><span class="name">subscriptions-comprehensive</span></div>
+      <div class="file"><span class="name">twin-fields-comprehensive</span></div>
+      <div class="file"><span class="name">contracted-prices-comprehensive</span></div>
+      <div class="file"><span class="name">summary-variables-comprehensive</span><span class="count">+ basic</span></div>
+      <div class="file"><span class="name">approval-rules-comprehensive</span><span class="count">+ basic</span></div>
+      <div class="file"><span class="name">custom-scripts-comprehensive</span><span class="count">+ basic</span></div>
+      <div class="file"><span class="name">quote-templates-comprehensive</span></div>
+      <div class="file"><span class="name">configuration-attributes-comprehensive</span></div>
+      <div class="file"><span class="name">guided-selling-comprehensive</span></div>
+      <div class="file"><span class="name">advanced-pricing-comprehensive</span><span class="count">+ basic</span></div>
+      <div class="file"><span class="name">performance-comprehensive</span><span class="count">+ basic</span></div>
+      <div class="file"><span class="name">impact-analysis-comprehensive</span><span class="count">+ basic</span></div>
+      <div class="file"><span class="name">usage-analytics-comprehensive</span><span class="count">+ basic</span></div>
+      <div class="file"><span class="name">bundle-integrity-comprehensive</span></div>
+      <div class="file"><span class="name">lookup-queries-comprehensive</span></div>
+      <div class="file"><span class="name">billing-rules-comprehensive</span></div>
+      <div class="file"><span class="name">rev-rec-rules-comprehensive</span></div>
+      <div class="file"><span class="name">tax-rules-comprehensive</span></div>
+      <div class="file"><span class="name">finance-books-comprehensive</span></div>
+      <div class="file"><span class="name">gl-rules-comprehensive</span></div>
+      <div class="file"><span class="name">legal-entity-comprehensive</span></div>
+      <div class="file"><span class="name">product-billing-config-comprehensive</span></div>
+      <div class="file"><span class="name">invoicing-comprehensive</span></div>
+      <div class="file"><span class="name">arm-checks-positive-negative</span></div>
+      <div class="file"><span class="name">arm-engine-dryrun</span></div>
+      <div class="file"><span class="name">engine</span></div>
+      <div class="file"><span class="name">integration-scan-scenarios</span></div>
+      <div class="file"><span class="name">check-counts</span><span class="count">drift guard</span></div>
+    </div>
+
+    <h3>API routes — 14 files · 136 tests</h3>
+    <div class="file-grid">
+      <div class="file"><span class="name">api-auth-me</span></div>
+      <div class="file"><span class="name">api-orgs</span></div>
+      <div class="file"><span class="name">api-scans</span></div>
+      <div class="file"><span class="name">api-issues</span></div>
+      <div class="file"><span class="name">api-exports</span></div>
+      <div class="file"><span class="name">api-usage</span></div>
+    </div>
+
+    <h3>AI integrations — 3 files · 27 tests</h3>
+    <div class="file-grid">
+      <div class="file"><span class="name">api-ai-explain</span></div>
+      <div class="file"><span class="name">api-ai-fix</span></div>
+      <div class="file"><span class="name">api-ai-insights</span></div>
+    </div>
+
+    <h2><span class="icon">🛡️</span> Quality gates</h2>
+    <p>Every commit must pass all of these before Vercel will promote it to production.</p>
+
+    <div class="key-row"><span class="check">✓</span><span class="text"><strong>1,163 unit tests pass</strong> — full Vitest suite, no skipped tests</span><span class="meta">npm test</span></div>
+    <div class="key-row"><span class="check">✓</span><span class="text"><strong>TypeScript strict</strong> — <code>tsc --noEmit</code> with zero errors</span><span class="meta">tsc --noEmit</span></div>
+    <div class="key-row"><span class="check">✓</span><span class="text"><strong>ESLint clean</strong> — zero warnings on every file in <code>src/</code></span><span class="meta">eslint src</span></div>
+    <div class="key-row"><span class="check">✓</span><span class="text"><strong>Production build succeeds</strong> — <code>next build</code> generates all routes</span><span class="meta">next build</span></div>
+    <div class="key-row"><span class="check">✓</span><span class="text"><strong>Drift guard</strong> — marketing check-count numbers match live arrays</span><span class="meta">check-counts.test.ts</span></div>
+    <div class="key-row"><span class="check">✓</span><span class="text"><strong>Vercel preview deploy</strong> — every commit builds in a real preview environment</span><span class="meta">vercel.com</span></div>
+
+    <h2><span class="icon">📐</span> Test patterns established</h2>
+    <table>
+      <thead>
+        <tr><th>Pattern</th><th>Used in</th><th>Why</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Positive + negative pair</strong></td>
+          <td>Every check</td>
+          <td>"Crafted-bad data triggers; crafted-good data doesn't" guarantees no false positive/negative</td>
+        </tr>
+        <tr>
+          <td><strong>Boundary at threshold</strong></td>
+          <td>PERF, custom-scripts, AI throttle</td>
+          <td>Catches off-by-one bugs in heuristics (e.g. throttle is 7.5s, not 7 or 8)</td>
+        </tr>
+        <tr>
+          <td><strong>Empty / null / unset</strong></td>
+          <td>ARM normalization, defensive arrays</td>
+          <td>Real customer data has gaps; engine must never crash on missing fields</td>
+        </tr>
+        <tr>
+          <td><strong>Mock chain factories</strong></td>
+          <td>API route tests</td>
+          <td>Single helper builds a Supabase client mock with every method on a chain</td>
+        </tr>
+        <tr>
+          <td><strong>Drift assertion</strong></td>
+          <td>check-counts.test.ts</td>
+          <td>Marketing numbers must equal live array lengths or CI fails</td>
+        </tr>
+        <tr>
+          <td><strong>Realistic data integration</strong></td>
+          <td>integration-scan-scenarios</td>
+          <td>Multi-issue org configurations exercise the full pipeline, not just isolated checks</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2><span class="icon">🚀</span> What's protected from regression</h2>
+    <p>The test suite catches regressions in these scenarios automatically. Every one of these has a dedicated test today.</p>
+    <div class="grid">
+      <div class="card">
+        <h3>Critical correctness</h3>
+        <ul>
+          <li>Score stays 0–100 regardless of input</li>
+          <li>Severity weights compute correctly</li>
+          <li>Issue counts (critical/warning/info) match the issues array</li>
+          <li>Affected records are always populated for findings</li>
+          <li>Empty org → zero issues, no crashes</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>Security boundaries</h3>
+        <ul>
+          <li>Export endpoint strips access_token, refresh_token, sf_client_id/secret</li>
+          <li>Auth gate rejects expired sessions with 401</li>
+          <li>Issue PUT rejects invalid status values</li>
+          <li>Cron endpoints require Bearer secret</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>AI integration safety</h3>
+        <ul>
+          <li>Throttle enforces 7.5s gap between AI calls per user</li>
+          <li>Retry handles 429 / 503 / network errors with backoff</li>
+          <li>Failed Gemini calls don't kill the scan</li>
+          <li>Quota check blocks AI calls when limit reached</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>Scan engine resilience</h3>
+        <ul>
+          <li>Missing data fields don't crash checks (ARM normalization)</li>
+          <li>Concurrent scans rejected with 409 (per-user serial gate)</li>
+          <li>Stuck scans auto-recover via cron worker</li>
+          <li>Per-org BYO-ECA credentials flow through to jsforce auto-refresh</li>
+        </ul>
+      </div>
+    </div>
+
+    <h2><span class="icon">📈</span> Growth over time</h2>
+    <table>
+      <thead>
+        <tr><th>Date</th><th>Tests</th><th>Files</th><th>Checks</th><th>Categories</th><th>Notes</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>2026-04-13</td><td>603</td><td>29</td><td>68</td><td>17</td><td>CPQ-only baseline</td></tr>
+        <tr><td>2026-05-01</td><td>~900</td><td>~40</td><td>131</td><td>27</td><td>Billing suite added</td></tr>
+        <tr><td>2026-05-27</td><td>1,155</td><td>51</td><td>208</td><td>49</td><td>ARM suite shipped</td></tr>
+        <tr><td><strong>2026-05-29</strong></td><td><strong>1,163</strong></td><td><strong>52</strong></td><td><strong>209</strong></td><td><strong>49</strong></td><td><strong>ARM-002b + drift guard added</strong></td></tr>
+      </tbody>
+    </table>
   </div>
-  <div class="type-card">
-    <div class="type-name">&#128279; Integration Testing</div>
-    <div class="type-desc">Full engine runs end-to-end with realistic org configurations. Validates scoring, category mapping, and issue detection together.</div>
+
+  <div class="footer">
+    Generated · 2026-05-29 · OrgPrism is built on Next.js 14 + Supabase Postgres + Vitest 3 · <code>orgprism.vercel.app</code>
   </div>
-  <div class="type-card">
-    <div class="type-name">&#9989; Positive Testing</div>
-    <div class="type-desc">Verifies the system correctly DETECTS issues in problematic data. Ensures no real problems slip through undetected.</div>
-  </div>
-  <div class="type-card">
-    <div class="type-name">&#128683; Negative Testing</div>
-    <div class="type-desc">Verifies the system does NOT raise false positives on clean data. Ensures healthy orgs aren't incorrectly flagged.</div>
-  </div>
-  <div class="type-card">
-    <div class="type-name">&#128207; Boundary Testing</div>
-    <div class="type-desc">Tests at exact thresholds: 2 loops = OK, 3 = flagged. 49 price rules = OK, 50+ = flagged. Score floors at 0, caps at 100.</div>
-  </div>
-  <div class="type-card">
-    <div class="type-name">&#129480; Edge Case Testing</div>
-    <div class="type-desc">Empty arrays, null values, whitespace-only strings, extreme counts, zero-data orgs, inactive record handling.</div>
-  </div>
-  <div class="type-card">
-    <div class="type-name">&#128202; Score Validation</div>
-    <div class="type-desc">Ensures scores stay 0-100, category weights work correctly, severity deductions apply properly, overall weighted scoring.</div>
-  </div>
-  <div class="type-card">
-    <div class="type-name">&#128737;&#65039; Data Integrity Testing</div>
-    <div class="type-desc">Validates all issues have required fields: check_id, category, severity, title, description, affected_records with id/name/type.</div>
-  </div>
-  <div class="type-card">
-    <div class="type-name">&#128260; Regression Testing</div>
-    <div class="type-desc">Original basic tests still pass alongside comprehensive tests. No existing functionality broken by new test additions.</div>
-  </div>
-  <div class="type-card">
-    <div class="type-name">&#127760; API Route Testing</div>
-    <div class="type-desc">All 9 API routes tested with mocked Supabase client and auth. Covers auth, orgs, scans, issues, AI endpoints, exports, usage tracking, and quota enforcement.</div>
-  </div>
-  <div class="type-card">
-    <div class="type-name">&#128274; Plan & Quota Testing</div>
-    <div class="type-desc">Quota enforcement per plan (Free/Pro/Enterprise), admin bypass, monthly usage counting, HTTP 429 limit responses, and org connection limits.</div>
-  </div>
-  <div class="type-card">
-    <div class="type-name">&#128176; Billing Engine Testing</div>
-    <div class="type-desc">34 billing health checks across 8 categories: billing rules, rev rec, tax, finance books, GL rules, legal entity, product config, and invoicing.</div>
-  </div>
-</div>
-
-<!-- SECTION 2: ALL CATEGORIES & CHECKS -->
-<h2><span class="icon">&#128269;</span> 2. CPQ Categories & Checks (68 Checks / 17 Categories)</h2>
-
-<!-- Price Rules -->
-<h3>Price Rules (PR-001 to PR-005) &mdash; 31 tests</h3>
-<table>
-  <thead><tr><th>Check ID</th><th>Check Name</th><th>Severity</th><th>Positive Tests (Issues Detected)</th><th>Negative Tests (No False Positives)</th></tr></thead>
-  <tbody>
-    <tr><td><strong>PR-001</strong></td><td>Conflicting Price Rules</td><td><span class="badge badge-critical">Critical</span></td><td class="col-positive">Same order + same target field; Multiple conflicts</td><td class="col-negative">Unique orders; Different target fields; Inactive skipped; Empty array</td></tr>
-    <tr><td><strong>PR-002</strong></td><td>Dead Price Rules</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">No conditions; No actions; Both missing</td><td class="col-negative">Has conditions + actions; Inactive skipped</td></tr>
-    <tr><td><strong>PR-003</strong></td><td>Evaluation Order Gaps</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">Large gap (10 to 100); Multiple gaps</td><td class="col-negative">Sequential orders; Single rule; Empty</td></tr>
-    <tr><td><strong>PR-004</strong></td><td>Multiple Rules Same Field</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">3+ rules target SBQQ__Discount__c</td><td class="col-negative">Each rule targets different field; Under threshold</td></tr>
-    <tr><td><strong>PR-005</strong></td><td>Missing Evaluation Order</td><td><span class="badge badge-info">Info</span></td><td class="col-positive">Null eval order on active rule</td><td class="col-negative">All have orders; Inactive with null skipped</td></tr>
-  </tbody>
-</table>
-
-<!-- Discount Schedules -->
-<h3>Discount Schedules (DS-001 to DS-004) &mdash; 26 tests</h3>
-<table>
-  <thead><tr><th>Check ID</th><th>Check Name</th><th>Severity</th><th>Positive Tests (Issues Detected)</th><th>Negative Tests (No False Positives)</th></tr></thead>
-  <tbody>
-    <tr><td><strong>DS-001</strong></td><td>Tier Overlap</td><td><span class="badge badge-critical">Critical</span></td><td class="col-positive">Overlapping ranges (1-100 & 50-200); Multiple overlaps; Cross-schedule</td><td class="col-negative">Non-overlapping; Single tier; Empty tiers; Adjacent boundaries</td></tr>
-    <tr><td><strong>DS-002</strong></td><td>Tier Gaps</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">Gap 50-75; Multiple gaps in same schedule</td><td class="col-negative">Continuous coverage; Single tier; Unsorted tiers (sorted before check)</td></tr>
-    <tr><td><strong>DS-003</strong></td><td>Negative Discounts</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">-5% surcharge; Multiple negatives; Cross-schedule negatives</td><td class="col-negative">All positive; Zero discount; Empty tiers</td></tr>
-    <tr><td><strong>DS-004</strong></td><td>Orphaned Schedules</td><td><span class="badge badge-info">Info</span></td><td class="col-positive">Empty tiers; Null tiers subrelation; Multiple empty grouped</td><td class="col-negative">Has tiers; Empty array; All have tiers</td></tr>
-  </tbody>
-</table>
-
-<!-- Products -->
-<h3>Products (PB-001 to PB-004) &mdash; 28 tests</h3>
-<table>
-  <thead><tr><th>Check ID</th><th>Check Name</th><th>Severity</th><th>Positive Tests (Issues Detected)</th><th>Negative Tests (No False Positives)</th></tr></thead>
-  <tbody>
-    <tr><td><strong>PB-001</strong></td><td>No Price Book Entry</td><td><span class="badge badge-critical">Critical</span></td><td class="col-positive">Active product without PBE; Multiple orphans; Count in title</td><td class="col-negative">All have entries; Inactive product skipped; Empty arrays</td></tr>
-    <tr><td><strong>PB-002</strong></td><td>Orphaned Bundle Options</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">Inactive parent bundle; Inactive child product</td><td class="col-negative">Both active; Empty options; Active parent+child</td></tr>
-    <tr><td><strong>PB-003</strong></td><td>Missing Subscription Type</td><td><span class="badge badge-critical">Critical</span></td><td class="col-positive">Recurring + no SubscriptionType; Multiple products</td><td class="col-negative">One-Time charge type; Has SubscriptionType; Inactive skipped</td></tr>
-    <tr><td><strong>PB-004</strong></td><td>Duplicate Product Codes</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">2 products same code; 3 products same code</td><td class="col-negative">Unique codes; Inactive duplicates skipped; No code set</td></tr>
-  </tbody>
-</table>
-
-<!-- Product Rules -->
-<h3>Product Rules (PRD-001 to PRD-004) &mdash; 34 tests</h3>
-<table>
-  <thead><tr><th>Check ID</th><th>Check Name</th><th>Severity</th><th>Positive Tests (Issues Detected)</th><th>Negative Tests (No False Positives)</th></tr></thead>
-  <tbody>
-    <tr><td><strong>PRD-001</strong></td><td>Conflicting Selection Rules</td><td><span class="badge badge-critical">Critical</span></td><td class="col-positive">Same order + same type; Multiple conflicts</td><td class="col-negative">Different orders; Different types; Inactive skipped; Empty</td></tr>
-    <tr><td><strong>PRD-002</strong></td><td>Duplicate Eval Order</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">2 rules same order; Multi-group duplicates</td><td class="col-negative">Unique orders; Null orders; Inactive rules</td></tr>
-    <tr><td><strong>PRD-003</strong></td><td>No Conditions or Actions</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">Empty conditions; Empty actions; Both missing</td><td class="col-negative">Has conditions + actions; Inactive skipped</td></tr>
-    <tr><td><strong>PRD-004</strong></td><td>Missing Condition Logic</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">Null ConditionsMet; Empty string</td><td class="col-negative">ConditionsMet = All; = Any; Inactive skipped</td></tr>
-  </tbody>
-</table>
-
-<!-- Approval Rules -->
-<h3>Approval Rules (AR-001 to AR-004) &mdash; 27 tests</h3>
-<table>
-  <thead><tr><th>Check ID</th><th>Check Name</th><th>Severity</th><th>Positive Tests (Issues Detected)</th><th>Negative Tests (No False Positives)</th></tr></thead>
-  <tbody>
-    <tr><td><strong>AR-001</strong></td><td>Rules Without Approver</td><td><span class="badge badge-critical">Critical</span></td><td class="col-positive">No Approver AND no ApproverField; Multiple broken; Empty string approver</td><td class="col-negative">Approver set; ApproverField set; Both set; Inactive skipped; Empty array</td></tr>
-    <tr><td><strong>AR-002</strong></td><td>Rules Without Conditions</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">Empty conditions; Null conditions; Mixed set flags only bad</td><td class="col-negative">Has conditions; Inactive skipped; Multiple conditions</td></tr>
-    <tr><td><strong>AR-003</strong></td><td>Duplicate Eval Order</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">2 same order; 3 same order; 2 separate groups</td><td class="col-negative">Unique orders; Null orders; Inactive; Single rule</td></tr>
-    <tr><td><strong>AR-004</strong></td><td>Missing Condition Logic</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">Null ConditionsMet; Empty string</td><td class="col-negative">ConditionsMet = All; = Any; No conditions (skipped); Inactive</td></tr>
-  </tbody>
-</table>
-
-<!-- Summary Variables -->
-<h3>Summary Variables (SV-001 to SV-005) &mdash; 31 tests</h3>
-<table>
-  <thead><tr><th>Check ID</th><th>Check Name</th><th>Severity</th><th>Positive Tests (Issues Detected)</th><th>Negative Tests (No False Positives)</th></tr></thead>
-  <tbody>
-    <tr><td><strong>SV-001</strong></td><td>Orphaned Variables</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">Single orphan; 5 orphans grouped; Only orphans in affected records</td><td class="col-negative">Referenced by price rule; By product rule; Both; Inactive; Empty</td></tr>
-    <tr><td><strong>SV-002</strong></td><td>Incomplete Configuration</td><td><span class="badge badge-critical">Critical</span></td><td class="col-positive">Missing AggregateFunction/Field/TargetObject; Missing ALL three; Multiple broken</td><td class="col-negative">Fully configured; Inactive skipped</td></tr>
-    <tr><td><strong>SV-003</strong></td><td>Duplicate Variables</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">2 identical vars; 3 identical vars</td><td class="col-negative">Unique configs; Same field diff function; Same function diff scope</td></tr>
-    <tr><td><strong>SV-004</strong></td><td>Filter Misconfiguration</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">FilterField only; Field+Value no Operator; FilterValue only</td><td class="col-negative">No filter; Fully configured filter</td></tr>
-    <tr><td><strong>SV-005</strong></td><td>Composite Missing Operand</td><td><span class="badge badge-critical">Critical</span></td><td class="col-positive">CombineWith without Operator; Operator without CombineWith</td><td class="col-negative">Not composite; Both set; Inactive skipped</td></tr>
-  </tbody>
-</table>
-
-<!-- Guided Selling -->
-<h3>Guided Selling (GS-001 to GS-003) &mdash; 18 tests</h3>
-<table>
-  <thead><tr><th>Check ID</th><th>Check Name</th><th>Severity</th><th>Positive Tests (Issues Detected)</th><th>Negative Tests (No False Positives)</th></tr></thead>
-  <tbody>
-    <tr><td><strong>GS-001</strong></td><td>Without Inputs</td><td><span class="badge badge-critical">Critical</span></td><td class="col-positive">0 inputs; Multiple broken; 0 inputs AND 0 outputs</td><td class="col-negative">Has inputs; 1 input; Many inputs; Inactive skipped; Empty</td></tr>
-    <tr><td><strong>GS-002</strong></td><td>Without Outputs</td><td><span class="badge badge-critical">Critical</span></td><td class="col-positive">0 outputs; Only flags output-less in mixed set</td><td class="col-negative">Has outputs; 1 output; Inactive skipped</td></tr>
-    <tr><td><strong>GS-003</strong></td><td>Inactive Processes</td><td><span class="badge badge-info">Info</span></td><td class="col-positive">Single inactive; 3 inactive grouped</td><td class="col-negative">All active; Empty array; 3 active</td></tr>
-  </tbody>
-</table>
-
-<!-- Quote Templates -->
-<h3>Quote Templates (QT-001 to QT-004) &mdash; 23 tests</h3>
-<table>
-  <thead><tr><th>Check ID</th><th>Check Name</th><th>Severity</th><th>Positive Tests (Issues Detected)</th><th>Negative Tests (No False Positives)</th></tr></thead>
-  <tbody>
-    <tr><td><strong>QT-001</strong></td><td>No Default Template</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">Single non-default; Multiple non-defaults</td><td class="col-negative">Default exists; No templates; One default among many</td></tr>
-    <tr><td><strong>QT-002</strong></td><td>Non-Active Templates</td><td><span class="badge badge-info">Info</span></td><td class="col-positive">Draft status; Inactive status; Multiple non-active</td><td class="col-negative">All Active; Empty; Null status</td></tr>
-    <tr><td><strong>QT-003</strong></td><td>Empty Templates</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">Empty sections; Null sections; Multiple empty</td><td class="col-negative">Has sections; Multiple sections; Empty array</td></tr>
-    <tr><td><strong>QT-004</strong></td><td>Multiple Defaults</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">2 defaults; 3 defaults</td><td class="col-negative">Single default; No defaults; 1 default among many</td></tr>
-  </tbody>
-</table>
-
-<!-- Custom Scripts / QCP -->
-<h3>Custom Scripts / QCP (QCP-001 to QCP-004) &mdash; 28 tests</h3>
-<table>
-  <thead><tr><th>Check ID</th><th>Check Name</th><th>Severity</th><th>Positive Tests (Issues Detected)</th><th>Negative Tests (No False Positives)</th></tr></thead>
-  <tbody>
-    <tr><td><strong>QCP-001</strong></td><td>Empty QCP Script</td><td><span class="badge badge-critical">Critical</span></td><td class="col-positive">Null code; Empty string; Whitespace-only; Multiple empty</td><td class="col-negative">Has code; Empty array; Minimal code</td></tr>
-    <tr><td><strong>QCP-002</strong></td><td>Missing Transpiled Code</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">Null transpiled; Empty string; Whitespace</td><td class="col-negative">Code + transpiled present; Empty code skipped</td></tr>
-    <tr><td><strong>QCP-003</strong></td><td>Performance Concerns</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">3 nested loops; 500+ lines; >5 console.log; while loops</td><td class="col-negative">Simple code; 2 loops (under threshold); 5 logs (at threshold)</td></tr>
-    <tr><td><strong>QCP-004</strong></td><td>Multiple QCP Scripts</td><td><span class="badge badge-info">Info</span></td><td class="col-positive">2 QCPs; 3 QCPs (excludes non-QCP type)</td><td class="col-negative">Single QCP; No scripts; 1 QCP + non-QCP</td></tr>
-  </tbody>
-</table>
-
-<!-- CPQ Settings -->
-<h3>CPQ Settings (SET-001 to SET-004) &mdash; 24 tests</h3>
-<table>
-  <thead><tr><th>Check ID</th><th>Check Name</th><th>Severity</th><th>Positive Tests (Issues Detected)</th><th>Negative Tests (No False Positives)</th></tr></thead>
-  <tbody>
-    <tr><td><strong>SET-001</strong></td><td>Triggers Disabled</td><td><span class="badge badge-critical">Critical</span></td><td class="col-positive">TriggerDisabled = true; Null cpqSettings</td><td class="col-negative">TriggerDisabled = false; undefined; null</td></tr>
-    <tr><td><strong>SET-002</strong></td><td>QCP Detected</td><td><span class="badge badge-info">Info</span></td><td class="col-positive">Has customScripts; Multiple scripts</td><td class="col-negative">No scripts; Empty array</td></tr>
-    <tr><td><strong>SET-003</strong></td><td>Renewal Model Not Set</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">Null renewal model; Empty string; Undefined</td><td class="col-negative">'Same Products'; 'Assets'; Null cpqSettings</td></tr>
-    <tr><td><strong>SET-004</strong></td><td>Subscription Term Unit Not Set</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">Null term unit; Empty string</td><td class="col-negative">'Month'; 'Year'; Null cpqSettings</td></tr>
-  </tbody>
-</table>
-
-<!-- Configuration Attributes -->
-<h3>Configuration Attributes (CA-001 to CA-004) &mdash; 27 tests</h3>
-<table>
-  <thead><tr><th>Check ID</th><th>Check Name</th><th>Severity</th><th>Positive Tests (Issues Detected)</th><th>Negative Tests (No False Positives)</th></tr></thead>
-  <tbody>
-    <tr><td><strong>CA-001</strong></td><td>Hidden + Required</td><td><span class="badge badge-critical">Critical</span></td><td class="col-positive">Both flags set; Multiple; Product name in description</td><td class="col-negative">Required only; Hidden only; Neither; Empty</td></tr>
-    <tr><td><strong>CA-002</strong></td><td>Missing Target Field</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">Null target; Empty string target; Grouped by product</td><td class="col-negative">All have targets; Empty array</td></tr>
-    <tr><td><strong>CA-003</strong></td><td>Duplicate Attribute Names</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">Duplicate pair; Triple; Separate groups</td><td class="col-negative">Unique names; Same name different products; Single; Empty</td></tr>
-    <tr><td><strong>CA-004</strong></td><td>Required Without Default</td><td><span class="badge badge-info">Info</span></td><td class="col-positive">Required + visible + no default; Grouped by product</td><td class="col-negative">Has default; Not required; Hidden excluded; Empty</td></tr>
-  </tbody>
-</table>
-
-<!-- Subscriptions -->
-<h3>Subscriptions (SR-001 to SR-002) &mdash; 18 tests</h3>
-<table>
-  <thead><tr><th>Check ID</th><th>Check Name</th><th>Severity</th><th>Positive Tests (Issues Detected)</th><th>Negative Tests (No False Positives)</th></tr></thead>
-  <tbody>
-    <tr><td><strong>SR-001</strong></td><td>Zero-Value Subscriptions</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">Zero price; Null price; Multiple zero/null; revenue_impact property</td><td class="col-negative">Positive price; Empty array; Negative/credit price; Small positive</td></tr>
-    <tr><td><strong>SR-002</strong></td><td>Missing Prorate Multiplier</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">Null multiplier; Zero multiplier; Multiple missing</td><td class="col-negative">Positive multiplier; Fractional value; Empty array</td></tr>
-  </tbody>
-</table>
-
-<!-- Quote Lines -->
-<h3>Quote Lines (QL-001 to QL-003) &mdash; 25 tests</h3>
-<table>
-  <thead><tr><th>Check ID</th><th>Check Name</th><th>Severity</th><th>Positive Tests (Issues Detected)</th><th>Negative Tests (No False Positives)</th></tr></thead>
-  <tbody>
-    <tr><td><strong>QL-001</strong></td><td>Zero NetPrice</td><td><span class="badge badge-critical">Critical</span></td><td class="col-positive">Zero NetPrice; Null NetPrice; Grouped by quote; Product names</td><td class="col-negative">Positive NetPrice; Zero Quantity; Zero ListPrice; Null Quantity; Empty</td></tr>
-    <tr><td><strong>QL-002</strong></td><td>NetTotal Mismatch</td><td><span class="badge badge-critical">Critical</span></td><td class="col-positive">Significant mismatch; Multiple lines; Product name</td><td class="col-negative">Exact match; Small rounding; Null fields; Empty</td></tr>
-    <tr><td><strong>QL-003</strong></td><td>Negative Totals</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">Single negative; Multiple negatives grouped; Dollar amounts</td><td class="col-negative">Positive totals; Null; Zero; Empty</td></tr>
-  </tbody>
-</table>
-
-<!-- Twin Fields -->
-<h3>Twin Fields (TF-001) &mdash; 20 tests</h3>
-<table>
-  <thead><tr><th>Check ID</th><th>Check Name</th><th>Severity</th><th>Positive Tests (Issues Detected)</th><th>Negative Tests (No False Positives)</th></tr></thead>
-  <tbody>
-    <tr><td><strong>TF-001</strong></td><td>Conflicting Twin Values</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">Both Discount + AdditionalDiscount; Both Uplift% + UpliftAmount; Combined (2 issues); revenue_impact</td><td class="col-negative">Only Discount set; Only AdditionalDiscount; Both null; Both zero; Only Uplift; Only UpliftAmount; Empty</td></tr>
-  </tbody>
-</table>
-
-<!-- Contracted Prices -->
-<h3>Contracted Prices (CP-001) &mdash; 17 tests</h3>
-<table>
-  <thead><tr><th>Check ID</th><th>Check Name</th><th>Severity</th><th>Positive Tests (Issues Detected)</th><th>Negative Tests (No False Positives)</th></tr></thead>
-  <tbody>
-    <tr><td><strong>CP-001</strong></td><td>Expired / Inactive / Zero Prices</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">Expired prices; Inactive product refs; Zero-price contracts; Combined scenario; revenue_impact</td><td class="col-negative">Valid non-expired; Active product; Multiple valid; Null handling; Empty</td></tr>
-  </tbody>
-</table>
-
-<!-- Advanced Pricing -->
-<h3>Advanced Pricing (AP-001 to AP-004) &mdash; 32 tests</h3>
-<table>
-  <thead><tr><th>Check ID</th><th>Check Name</th><th>Severity</th><th>Positive Tests (Issues Detected)</th><th>Negative Tests (No False Positives)</th></tr></thead>
-  <tbody>
-    <tr><td><strong>AP-001</strong></td><td>MDQ Missing Subscription</td><td><span class="badge badge-critical">Critical</span></td><td class="col-positive">All fields missing; Each individually; Multiple products</td><td class="col-negative">All set; Non-Block; Inactive; Empty</td></tr>
-    <tr><td><strong>AP-002</strong></td><td>% of Total Not In Bundle</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">Standalone PoT product; Multiple; Mixed</td><td class="col-negative">Is bundle option; Non-PoT; Inactive; Empty</td></tr>
-    <tr><td><strong>AP-003</strong></td><td>Cost Without Price Book</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">No PBE for Cost product; Multiple</td><td class="col-negative">Has entry; Non-Cost; Inactive; Empty</td></tr>
-    <tr><td><strong>AP-004</strong></td><td>Recurring No Billing Freq</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">Recurring + no frequency; Multiple; Empty string</td><td class="col-negative">Has frequency; One-Time; Inactive; Empty</td></tr>
-  </tbody>
-</table>
-
-<!-- Performance -->
-<h3>Performance (PERF-001 to PERF-005) &mdash; 32 tests</h3>
-<table>
-  <thead><tr><th>Check ID</th><th>Check Name</th><th>Severity</th><th>Positive Tests (Issues Detected)</th><th>Negative Tests (No False Positives)</th></tr></thead>
-  <tbody>
-    <tr><td><strong>PERF-001</strong></td><td>High Price Rule Count</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">50 active rules = warning; 100+ = critical</td><td class="col-negative">2 rules (clean); 49 rules (under threshold)</td></tr>
-    <tr><td><strong>PERF-002</strong></td><td>High Product Rule Count</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">30 active rules = warning; 60+ = critical</td><td class="col-negative">1 rule; 29 rules (under threshold)</td></tr>
-    <tr><td><strong>PERF-003</strong></td><td>Quote Line Volume</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">max > 100 lines; avg > 50; max > 200 = critical</td><td class="col-negative">Low line count; No quotes; No lines</td></tr>
-    <tr><td><strong>PERF-004</strong></td><td>Summary Variable Overhead</td><td><span class="badge badge-info">Info</span></td><td class="col-positive">20+ active = info; 40+ = warning</td><td class="col-negative">1 variable; 19 (under threshold)</td></tr>
-    <tr><td><strong>PERF-005</strong></td><td>CPQ Complexity Score</td><td><span class="badge badge-info">Info</span></td><td class="col-positive">Score >= 50 = info; >= 100 = warning; >= 200 = critical</td><td class="col-negative">Low complexity (score < 50)</td></tr>
-  </tbody>
-</table>
-
-<!-- Impact Analysis -->
-<h3>Impact Analysis (IA-001 to IA-004) &mdash; 25 tests</h3>
-<table>
-  <thead><tr><th>Check ID</th><th>Check Name</th><th>Severity</th><th>Positive Tests (Issues Detected)</th><th>Negative Tests (No False Positives)</th></tr></thead>
-  <tbody>
-    <tr><td><strong>IA-001</strong></td><td>Dependency Chains</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">Rule A writes field X, Rule B conditions on X; 5+ chains = critical</td><td class="col-negative">Independent rules; No conditions; Empty</td></tr>
-    <tr><td><strong>IA-002</strong></td><td>Overlapping Rule Scope</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">4+ rules target same field; 6+ = critical</td><td class="col-negative">Each targets different field; Under threshold</td></tr>
-    <tr><td><strong>IA-003</strong></td><td>Discount + Price Rule Overlap</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">Discount schedules + price rules target same fields</td><td class="col-negative">No discount schedules; Rules target non-discount fields</td></tr>
-    <tr><td><strong>IA-004</strong></td><td>Orphaned References</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">Contracted prices linked to inactive products</td><td class="col-negative">All products active; No contracted prices; Empty</td></tr>
-  </tbody>
-</table>
-
-<!-- Usage Analytics -->
-<h3>Usage Analytics (UA-001 to UA-003) &mdash; 23 tests</h3>
-<table>
-  <thead><tr><th>Check ID</th><th>Check Name</th><th>Severity</th><th>Positive Tests (Issues Detected)</th><th>Negative Tests (No False Positives)</th></tr></thead>
-  <tbody>
-    <tr><td><strong>UA-001</strong></td><td>Dead-Weight Products</td><td><span class="badge badge-info">Info</span></td><td class="col-positive">5+ unquoted AND >= 20% dead weight</td><td class="col-negative">All quoted; Under 5 unquoted; Under 20% threshold</td></tr>
-    <tr><td><strong>UA-002</strong></td><td>Untriggered Schedules</td><td><span class="badge badge-info">Info</span></td><td class="col-positive">3+ schedules but < 5% lines discounted</td><td class="col-negative">No schedules; No lines; High discount utilization</td></tr>
-    <tr><td><strong>UA-003</strong></td><td>Stale Inactive Rules</td><td><span class="badge badge-info">Info</span></td><td class="col-positive">5+ inactive rules; 3+ inactive at 30%+ ratio</td><td class="col-negative">No inactive; Under threshold; All active</td></tr>
-  </tbody>
-</table>
-
-<!-- SECTION 2B: BILLING CHECKS -->
-<h2><span class="icon">&#128176;</span> 2b. Billing Categories & Checks (34 Checks / 8 Categories)</h2>
-<p style="color:var(--text-muted);margin-bottom:20px;">Salesforce Billing health checks covering billing rules, revenue recognition, tax, finance books, GL rules, legal entity, product billing config, and invoicing.</p>
-
-<!-- Billing Rules -->
-<h3>Billing Rules (BR-001 to BR-004)</h3>
-<table>
-  <thead><tr><th>Check ID</th><th>Check Name</th><th>Severity</th><th>Positive Tests (Issues Detected)</th><th>Negative Tests (No False Positives)</th></tr></thead>
-  <tbody>
-    <tr><td><strong>BR-001</strong></td><td>Inactive Billing Rules Referenced by Products</td><td><span class="badge badge-critical">Critical</span></td><td class="col-positive">Inactive rule linked to active product; Multiple products referencing same inactive rule</td><td class="col-negative">Active billing rules; No product references; Inactive product skipped</td></tr>
-    <tr><td><strong>BR-002</strong></td><td>Billing Rules Without GL Treatment</td><td><span class="badge badge-critical">Critical</span></td><td class="col-positive">Rule with no GL treatment; Multiple rules missing; Empty treatment array</td><td class="col-negative">All rules have treatments; Inactive rules skipped</td></tr>
-    <tr><td><strong>BR-003</strong></td><td>Orphaned Billing Rules</td><td><span class="badge badge-info">Info</span></td><td class="col-positive">Rule not referenced by any product; Multiple orphans</td><td class="col-negative">All rules referenced; Empty rules array</td></tr>
-    <tr><td><strong>BR-004</strong></td><td>Duplicate Billing Rule Names</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">2 rules same name; 3 rules same name</td><td class="col-negative">Unique names; Inactive duplicates skipped</td></tr>
-  </tbody>
-</table>
-
-<!-- Revenue Recognition Rules -->
-<h3>Revenue Recognition Rules (RR-001 to RR-004)</h3>
-<table>
-  <thead><tr><th>Check ID</th><th>Check Name</th><th>Severity</th><th>Positive Tests (Issues Detected)</th><th>Negative Tests (No False Positives)</th></tr></thead>
-  <tbody>
-    <tr><td><strong>RR-001</strong></td><td>Inactive Rev Rec Rules Referenced by Products</td><td><span class="badge badge-critical">Critical</span></td><td class="col-positive">Inactive rule on active product; Multiple references</td><td class="col-negative">Active rules; No product refs; Inactive product skipped</td></tr>
-    <tr><td><strong>RR-002</strong></td><td>Rev Rec Rules Without Revenue Schedule Type</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">Null schedule type; Empty string type</td><td class="col-negative">Schedule type set; Inactive skipped</td></tr>
-    <tr><td><strong>RR-003</strong></td><td>Rev Rec Rules Not Creating Schedules</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">CreateRevSchedule = false; Null value</td><td class="col-negative">CreateRevSchedule = true; Inactive skipped</td></tr>
-    <tr><td><strong>RR-004</strong></td><td>Orphaned Revenue Recognition Rules</td><td><span class="badge badge-info">Info</span></td><td class="col-positive">Rule not referenced by any product; Multiple orphans</td><td class="col-negative">All rules referenced; Empty array</td></tr>
-  </tbody>
-</table>
-
-<!-- Tax Rules -->
-<h3>Tax Rules (TR-001 to TR-003)</h3>
-<table>
-  <thead><tr><th>Check ID</th><th>Check Name</th><th>Severity</th><th>Positive Tests (Issues Detected)</th><th>Negative Tests (No False Positives)</th></tr></thead>
-  <tbody>
-    <tr><td><strong>TR-001</strong></td><td>Active Products Without Tax Rule</td><td><span class="badge badge-critical">Critical</span></td><td class="col-positive">Active product no tax rule; Multiple products</td><td class="col-negative">All have tax rule; Inactive skipped; Empty</td></tr>
-    <tr><td><strong>TR-002</strong></td><td>Inactive Tax Rules Referenced by Products</td><td><span class="badge badge-critical">Critical</span></td><td class="col-positive">Inactive tax rule on active product; Multiple</td><td class="col-negative">Active tax rule; No product refs</td></tr>
-    <tr><td><strong>TR-003</strong></td><td>Tax Rules With Zero Percent Tax</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">TaxRate = 0; Null tax rate</td><td class="col-negative">Positive rate; Inactive skipped</td></tr>
-  </tbody>
-</table>
-
-<!-- Finance Books -->
-<h3>Finance Books (FB-001 to FB-006)</h3>
-<table>
-  <thead><tr><th>Check ID</th><th>Check Name</th><th>Severity</th><th>Positive Tests (Issues Detected)</th><th>Negative Tests (No False Positives)</th></tr></thead>
-  <tbody>
-    <tr><td><strong>FB-001</strong></td><td>No Open Finance Period for Current Date</td><td><span class="badge badge-critical">Critical</span></td><td class="col-positive">No period covering today; All periods closed; Future periods only</td><td class="col-negative">Open period for today; Multiple valid periods</td></tr>
-    <tr><td><strong>FB-002</strong></td><td>Gaps Between Finance Periods</td><td><span class="badge badge-critical">Critical</span></td><td class="col-positive">Gap between consecutive periods; Multiple gaps</td><td class="col-negative">Continuous coverage; Single period; Adjacent boundaries</td></tr>
-    <tr><td><strong>FB-003</strong></td><td>Overlapping Finance Periods</td><td><span class="badge badge-critical">Critical</span></td><td class="col-positive">Overlapping date ranges; Multiple overlaps</td><td class="col-negative">Non-overlapping; Single period; Adjacent</td></tr>
-    <tr><td><strong>FB-004</strong></td><td>Finance Book Without Periods</td><td><span class="badge badge-critical">Critical</span></td><td class="col-positive">Book with zero periods; Null periods; Multiple empty books</td><td class="col-negative">All books have periods; Empty books array</td></tr>
-    <tr><td><strong>FB-005</strong></td><td>Prior Year Periods Still Open</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">Last year period still Open; Multiple prior year open</td><td class="col-negative">Prior year closed; Current year open (ok); No prior periods</td></tr>
-    <tr><td><strong>FB-006</strong></td><td>No Active Finance Book</td><td><span class="badge badge-critical">Critical</span></td><td class="col-positive">All books inactive; No books defined; Null active flag</td><td class="col-negative">Active book exists; Multiple active books</td></tr>
-  </tbody>
-</table>
-
-<!-- GL Rules -->
-<h3>GL Rules (GL-001 to GL-004)</h3>
-<table>
-  <thead><tr><th>Check ID</th><th>Check Name</th><th>Severity</th><th>Positive Tests (Issues Detected)</th><th>Negative Tests (No False Positives)</th></tr></thead>
-  <tbody>
-    <tr><td><strong>GL-001</strong></td><td>GL Treatment Missing GL Account</td><td><span class="badge badge-critical">Critical</span></td><td class="col-positive">Null GL account; Empty string; Multiple missing</td><td class="col-negative">GL account set; Inactive skipped</td></tr>
-    <tr><td><strong>GL-002</strong></td><td>GL Rule Without Treatments</td><td><span class="badge badge-critical">Critical</span></td><td class="col-positive">Empty treatments; Null treatments; Multiple rules</td><td class="col-negative">Has treatments; Inactive rules skipped</td></tr>
-    <tr><td><strong>GL-003</strong></td><td>Inactive GL Treatments on Active Rules</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">Inactive treatment on active rule; Multiple</td><td class="col-negative">All treatments active; Inactive rule skipped</td></tr>
-    <tr><td><strong>GL-004</strong></td><td>GL Treatment Missing One Side</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">Debit set but no credit; Credit set but no debit</td><td class="col-negative">Both sides set; Neither (skipped); Inactive</td></tr>
-  </tbody>
-</table>
-
-<!-- Legal Entity -->
-<h3>Legal Entity (LE-001 to LE-003)</h3>
-<table>
-  <thead><tr><th>Check ID</th><th>Check Name</th><th>Severity</th><th>Positive Tests (Issues Detected)</th><th>Negative Tests (No False Positives)</th></tr></thead>
-  <tbody>
-    <tr><td><strong>LE-001</strong></td><td>No Legal Entity Defined</td><td><span class="badge badge-critical">Critical</span></td><td class="col-positive">Empty array; Null entities; Zero count</td><td class="col-negative">At least one entity; Multiple entities</td></tr>
-    <tr><td><strong>LE-002</strong></td><td>Legal Entity Missing Address</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">No street; No city; No country; Multiple fields missing</td><td class="col-negative">Full address; Inactive entity skipped</td></tr>
-    <tr><td><strong>LE-003</strong></td><td>Inactive Legal Entity</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">Single inactive; All inactive (escalates to critical)</td><td class="col-negative">All active; Mix active/inactive; Empty</td></tr>
-  </tbody>
-</table>
-
-<!-- Product Billing Config -->
-<h3>Product Billing Config (PBC-001 to PBC-006)</h3>
-<table>
-  <thead><tr><th>Check ID</th><th>Check Name</th><th>Severity</th><th>Positive Tests (Issues Detected)</th><th>Negative Tests (No False Positives)</th></tr></thead>
-  <tbody>
-    <tr><td><strong>PBC-001</strong></td><td>Product Missing Billing Rule</td><td><span class="badge badge-critical">Critical</span></td><td class="col-positive">Active product no billing rule; Multiple products</td><td class="col-negative">Billing rule set; Inactive skipped</td></tr>
-    <tr><td><strong>PBC-002</strong></td><td>Product Missing Revenue Recognition Rule</td><td><span class="badge badge-critical">Critical</span></td><td class="col-positive">Active product no rev rec rule; Multiple</td><td class="col-negative">Rev rec rule set; Inactive skipped</td></tr>
-    <tr><td><strong>PBC-003</strong></td><td>Product Missing Tax Rule</td><td><span class="badge badge-critical">Critical</span></td><td class="col-positive">Active product no tax rule; Multiple</td><td class="col-negative">Tax rule set; Inactive skipped</td></tr>
-    <tr><td><strong>PBC-004</strong></td><td>Product Missing Charge Type</td><td><span class="badge badge-critical">Critical</span></td><td class="col-positive">Null charge type; Empty string; Multiple products</td><td class="col-negative">Charge type set; Inactive skipped</td></tr>
-    <tr><td><strong>PBC-005</strong></td><td>Billing Type Mismatch With Frequency</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">Recurring type but no frequency; Evergreen with null frequency</td><td class="col-negative">One-Time (no freq needed); Recurring + frequency; Inactive</td></tr>
-    <tr><td><strong>PBC-006</strong></td><td>Products Referencing Inactive Rules</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">Active product refs inactive billing/revRec/tax rule; Multiple</td><td class="col-negative">All rules active; Inactive product skipped; No refs</td></tr>
-  </tbody>
-</table>
-
-<!-- Invoicing -->
-<h3>Invoicing (INV-001 to INV-004)</h3>
-<table>
-  <thead><tr><th>Check ID</th><th>Check Name</th><th>Severity</th><th>Positive Tests (Issues Detected)</th><th>Negative Tests (No False Positives)</th></tr></thead>
-  <tbody>
-    <tr><td><strong>INV-001</strong></td><td>Invoices Stuck in Draft</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">Draft status > 7 days; Multiple stuck drafts</td><td class="col-negative">Posted invoices; Recent drafts; Cancelled</td></tr>
-    <tr><td><strong>INV-002</strong></td><td>Zero Amount Invoices</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">Zero total; Null total; Multiple zero-amount</td><td class="col-negative">Positive amount; Draft excluded; Empty</td></tr>
-    <tr><td><strong>INV-003</strong></td><td>Credit Notes With Remaining Balance</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">Credit note with unapplied balance; Multiple</td><td class="col-negative">Fully applied; No credit notes; Zero balance</td></tr>
-    <tr><td><strong>INV-004</strong></td><td>Overdue Invoices</td><td><span class="badge badge-info">Info</span></td><td class="col-positive">Due date in past + unpaid; 30+ days overdue; Multiple</td><td class="col-negative">Paid invoices; Future due date; Draft status</td></tr>
-  </tbody>
-</table>
-
-<!-- SECTION 2D: ARM (REVENUE CLOUD / RLM) CHECKS -->
-<h2><span class="icon">&#127757;</span> 2c. ARM (Revenue Cloud / RLM) Categories &amp; Checks (77 Checks / 22 Categories)</h2>
-<p style="color:var(--text-muted);margin-bottom:20px;">Salesforce Revenue Cloud (also called RLM or ARM) health checks. Unlike CPQ and Billing, ARM is <strong>not</strong> a managed package &mdash; it&rsquo;s a license-gated feature on the core Salesforce platform, so all checks target standard objects. 51 checks span the full revenue lifecycle: catalog &rarr; pricing &rarr; configuration &rarr; selling &rarr; orchestration &rarr; assets &rarr; contracts &rarr; usage.</p>
-
-<h3>Product Catalog (ARM-001, ARM-010, ARM-018)</h3>
-<table>
-  <thead><tr><th>Check ID</th><th>Check Name</th><th>Severity</th><th>Positive Tests (Issues Detected)</th><th>Negative Tests (No False Positives)</th></tr></thead>
-  <tbody>
-    <tr><td><strong>ARM-001</strong></td><td>Active Product Without Selling Model</td><td><span class="badge badge-critical">Critical</span></td><td class="col-positive">Active product not linked to any ProductSellingModelOption (when org has at least one ProductSellingModel)</td><td class="col-negative">Product linked to active option; Org has no ProductSellingModel records at all (skips to avoid partial-RLM false positive)</td></tr>
-    <tr><td><strong>ARM-010</strong></td><td>Inactive Product Category With Active Products</td><td><span class="badge badge-info">Info</span></td><td class="col-positive">Active product assigned to inactive category</td><td class="col-negative">All assignments are to active categories; No assignments at all</td></tr>
-    <tr><td><strong>ARM-018</strong></td><td>Active Product Without Category Assignment</td><td><span class="badge badge-info">Info</span></td><td class="col-positive">Active product with no ProductCategoryProduct (when org uses categories elsewhere)</td><td class="col-negative">Product is in a category; Org has no ProductCategory records at all</td></tr>
-  </tbody>
-</table>
-
-<h3>Selling Models (ARM-002, ARM-011, ARM-012, ARM-019)</h3>
-<table>
-  <thead><tr><th>Check ID</th><th>Check Name</th><th>Severity</th><th>Positive Tests</th><th>Negative Tests</th></tr></thead>
-  <tbody>
-    <tr><td><strong>ARM-002</strong></td><td>Recurring Selling Model Without Billing Frequency</td><td><span class="badge badge-critical">Critical</span></td><td class="col-positive">TermDefined or Evergreen model with null SellingFrequencyId</td><td class="col-negative">OneTime model (frequency irrelevant); SellingFrequencyId set; Model inactive</td></tr>
-    <tr><td><strong>ARM-011</strong></td><td>Term Selling Model Without Pricing Term</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">TermDefined with null/zero PricingTerm</td><td class="col-negative">PricingTerm = 12; OneTime model; Inactive</td></tr>
-    <tr><td><strong>ARM-012</strong></td><td>Active Option Pointing at Inactive Selling Model</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">IsActive option but parent ProductSellingModel.IsActive=false</td><td class="col-negative">Both active; Both inactive; Option inactive</td></tr>
-    <tr><td><strong>ARM-019</strong></td><td>Duplicate Selling Model Options</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">Same Product+Model has 2+ active option rows</td><td class="col-negative">Unique pairs; One active + others inactive</td></tr>
-  </tbody>
-</table>
-
-<h3>Bundles (ARM-005, ARM-013, ARM-014, ARM-015)</h3>
-<table>
-  <thead><tr><th>Check ID</th><th>Check Name</th><th>Severity</th><th>Positive Tests</th><th>Negative Tests</th></tr></thead>
-  <tbody>
-    <tr><td><strong>ARM-005</strong></td><td>Empty Bundle (No Related Components)</td><td><span class="badge badge-critical">Critical</span></td><td class="col-positive">Product named/categorised as bundle has no ProductRelatedComponent rows (when org uses the concept)</td><td class="col-negative">Bundle has children; Org has no ProductRelatedComponent records at all</td></tr>
-    <tr><td><strong>ARM-013</strong></td><td>Bundle Component Min/Max Quantity Mismatch</td><td><span class="badge badge-critical">Critical</span></td><td class="col-positive">MinQuantity 5, MaxQuantity 2 (impossible range)</td><td class="col-negative">Min &le; Max; Both null; Single bound only</td></tr>
-    <tr><td><strong>ARM-014</strong></td><td>Bundle Component Points to Inactive Child</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">ChildProductId references Product2 with IsActive=false</td><td class="col-negative">Child active; Child not in scan result (skipped silently)</td></tr>
-    <tr><td><strong>ARM-015</strong></td><td>Inactive Bundle Parent Still Has Components</td><td><span class="badge badge-info">Info</span></td><td class="col-positive">ParentProductId is inactive but components remain</td><td class="col-negative">Parent active; No components defined</td></tr>
-  </tbody>
-</table>
-
-<h3>Price Adjustments (ARM-003, ARM-016, ARM-017)</h3>
-<table>
-  <thead><tr><th>Check ID</th><th>Check Name</th><th>Severity</th><th>Positive Tests</th><th>Negative Tests</th></tr></thead>
-  <tbody>
-    <tr><td><strong>ARM-003</strong></td><td>Overlapping Price Adjustment Tiers</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">Tier1: 0-100, Tier2: 50-200 (overlap)</td><td class="col-negative">Contiguous tiers (0-100, 100-200); Single tier; No tiers</td></tr>
-    <tr><td><strong>ARM-016</strong></td><td>Active Schedule With No Tiers</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">PriceAdjustmentSchedule.IsActive=true with zero tier rows</td><td class="col-negative">Schedule has tiers; Schedule inactive</td></tr>
-    <tr><td><strong>ARM-017</strong></td><td>Tier With Reversed Bounds</td><td><span class="badge badge-critical">Critical</span></td><td class="col-positive">LowerBound 200, UpperBound 100</td><td class="col-negative">Lower &le; Upper; One bound null</td></tr>
-  </tbody>
-</table>
-
-<h3>Attribute Pricing (ARM-004, ARM-020)</h3>
-<table>
-  <thead><tr><th>Check ID</th><th>Check Name</th><th>Severity</th><th>Positive Tests</th><th>Negative Tests</th></tr></thead>
-  <tbody>
-    <tr><td><strong>ARM-004</strong></td><td>Attribute Rule Without Effective Dates</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">Active rule with both dates null</td><td class="col-negative">Start date set; End date set; Rule inactive</td></tr>
-    <tr><td><strong>ARM-020</strong></td><td>Expired Attribute Rule Still Active</td><td><span class="badge badge-info">Info</span></td><td class="col-positive">EffectiveEndDate &lt; today and IsActive=true</td><td class="col-negative">EndDate in future; Rule inactive; No end date</td></tr>
-  </tbody>
-</table>
-
-<h3>Pricing Procedures (ARM-006, ARM-027)</h3>
-<table>
-  <thead><tr><th>Check ID</th><th>Check Name</th><th>Severity</th><th>Positive Tests</th><th>Negative Tests</th></tr></thead>
-  <tbody>
-    <tr><td><strong>ARM-006</strong></td><td>Pricing Procedure Without Resolution Policy</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">Active procedure with null ResolutionPolicy</td><td class="col-negative">ResolutionPolicy set; Procedure inactive</td></tr>
-    <tr><td><strong>ARM-027</strong></td><td>Multiple Active Pricing Procedures</td><td><span class="badge badge-info">Info</span></td><td class="col-positive">2+ active procedures (drift signal)</td><td class="col-negative">Single active; Zero active</td></tr>
-  </tbody>
-</table>
-
-<h3>Price Books (ARM-007, ARM-028)</h3>
-<table>
-  <thead><tr><th>Check ID</th><th>Check Name</th><th>Severity</th><th>Positive Tests</th><th>Negative Tests</th></tr></thead>
-  <tbody>
-    <tr><td><strong>ARM-007</strong></td><td>Multiple Active Price Books Per Currency</td><td><span class="badge badge-info">Info</span></td><td class="col-positive">2+ non-standard books for same CurrencyIsoCode</td><td class="col-negative">One per currency; All standard; Zero non-standard</td></tr>
-    <tr><td><strong>ARM-028</strong></td><td>Standard Pricebook Is Inactive</td><td><span class="badge badge-critical">Critical</span></td><td class="col-positive">IsStandard=true with IsActive=false</td><td class="col-negative">Standard active; No standard book</td></tr>
-  </tbody>
-</table>
-
-<h3>Decision Tables (ARM-008, ARM-029) &amp; Context Service (ARM-009, ARM-030)</h3>
-<table>
-  <thead><tr><th>Check ID</th><th>Check Name</th><th>Severity</th><th>Positive Tests</th><th>Negative Tests</th></tr></thead>
-  <tbody>
-    <tr><td><strong>ARM-008</strong></td><td>Inactive/Draft Decision Tables</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">DecisionTable in Draft status</td><td class="col-negative">All Active; No tables defined</td></tr>
-    <tr><td><strong>ARM-029</strong></td><td>All Decision Tables Are Draft</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">Tables exist but zero are Active</td><td class="col-negative">At least one Active</td></tr>
-    <tr><td><strong>ARM-009</strong></td><td>Inactive Context Definitions</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">ContextDefinition.IsActive=false</td><td class="col-negative">All active; No definitions</td></tr>
-    <tr><td><strong>ARM-030</strong></td><td>No Active Context Definitions</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">Definitions exist but zero active</td><td class="col-negative">At least one active</td></tr>
-  </tbody>
-</table>
-
-<h3>Rate Cards (ARM-021, ARM-022, ARM-023)</h3>
-<table>
-  <thead><tr><th>Check ID</th><th>Check Name</th><th>Severity</th><th>Positive Tests</th><th>Negative Tests</th></tr></thead>
-  <tbody>
-    <tr><td><strong>ARM-021</strong></td><td>Active Rate Card With No Entries</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">RateCard.IsActive=true, zero RateCardEntry</td><td class="col-negative">Has entries; Card inactive</td></tr>
-    <tr><td><strong>ARM-022</strong></td><td>Rate Card Entry With No Price</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">RateCardEntry.Price null or zero</td><td class="col-negative">Positive price</td></tr>
-    <tr><td><strong>ARM-023</strong></td><td>Expired Rate Card Still Active</td><td><span class="badge badge-info">Info</span></td><td class="col-positive">EffectiveEndDate in past, IsActive=true</td><td class="col-negative">Future end date; Inactive</td></tr>
-  </tbody>
-</table>
-
-<h3>Attributes (ARM-024, ARM-025, ARM-026)</h3>
-<table>
-  <thead><tr><th>Check ID</th><th>Check Name</th><th>Severity</th><th>Positive Tests</th><th>Negative Tests</th></tr></thead>
-  <tbody>
-    <tr><td><strong>ARM-024</strong></td><td>Picklist Attribute With No Values</td><td><span class="badge badge-critical">Critical</span></td><td class="col-positive">DataType=Picklist, zero AttributePicklistValue rows</td><td class="col-negative">Has values; DataType=Text (irrelevant); Inactive</td></tr>
-    <tr><td><strong>ARM-025</strong></td><td>Required Attribute Without Default</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">IsRequired=true, DefaultValue null</td><td class="col-negative">Has default; Not required</td></tr>
-    <tr><td><strong>ARM-026</strong></td><td>Active Attribute In Inactive Category</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">AttributeDefinition active, AttributeCategory inactive</td><td class="col-negative">Both active; No category assigned</td></tr>
-  </tbody>
-</table>
-
-<h3>Assets (ARM-031, ARM-032, ARM-033, ARM-034, ARM-035)</h3>
-<table>
-  <thead><tr><th>Check ID</th><th>Check Name</th><th>Severity</th><th>Positive Tests</th><th>Negative Tests</th></tr></thead>
-  <tbody>
-    <tr><td><strong>ARM-031</strong></td><td>Active Asset Without State Period</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">Active asset, zero AssetStatePeriod</td><td class="col-negative">Has state period; Asset cancelled</td></tr>
-    <tr><td><strong>ARM-032</strong></td><td>Asset Past End Date Still Active</td><td><span class="badge badge-info">Info</span></td><td class="col-positive">CurrentLifecycleEndDate in past, Status=Active</td><td class="col-negative">Future end date; Status=Cancelled</td></tr>
-    <tr><td><strong>ARM-033</strong></td><td>Orphan Asset Relationship</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">RelatedAssetId null/missing/cancelled</td><td class="col-negative">Related asset is active</td></tr>
-    <tr><td><strong>ARM-034</strong></td><td>Multiple Current Asset State Periods</td><td><span class="badge badge-critical">Critical</span></td><td class="col-positive">2+ periods on same asset with IsCurrent=true</td><td class="col-negative">Single current period; No current</td></tr>
-    <tr><td><strong>ARM-035</strong></td><td>Asset State Period With Zero Quantity</td><td><span class="badge badge-info">Info</span></td><td class="col-positive">IsCurrent=true, Quantity null/zero</td><td class="col-negative">Positive quantity; Not current</td></tr>
-  </tbody>
-</table>
-
-<h3>Contracts (ARM-036, ARM-037, ARM-038, ARM-039)</h3>
-<table>
-  <thead><tr><th>Check ID</th><th>Check Name</th><th>Severity</th><th>Positive Tests</th><th>Negative Tests</th></tr></thead>
-  <tbody>
-    <tr><td><strong>ARM-036</strong></td><td>Contract Item Price Without Effective Dates</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">Both EffectiveStartDate and EffectiveEndDate null</td><td class="col-negative">At least one date set</td></tr>
-    <tr><td><strong>ARM-037</strong></td><td>Active Contract Past End Date</td><td><span class="badge badge-info">Info</span></td><td class="col-positive">Status=Activated, EndDate &lt; today</td><td class="col-negative">Future end date; Status=Expired</td></tr>
-    <tr><td><strong>ARM-038</strong></td><td>Contract Item Price Zero or Negative</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">Price = 0, null, or negative</td><td class="col-negative">Positive price</td></tr>
-    <tr><td><strong>ARM-039</strong></td><td>Contract With Reversed Dates</td><td><span class="badge badge-critical">Critical</span></td><td class="col-positive">StartDate &gt; EndDate</td><td class="col-negative">Chronological dates</td></tr>
-  </tbody>
-</table>
-
-<h3>Usage Management (ARM-040 to ARM-044)</h3>
-<table>
-  <thead><tr><th>Check ID</th><th>Check Name</th><th>Severity</th><th>Positive Tests</th><th>Negative Tests</th></tr></thead>
-  <tbody>
-    <tr><td><strong>ARM-040</strong></td><td>Unit Of Measure Class Without Default UoM</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">Active UnitOfMeasureClass with null DefaultUomId</td><td class="col-negative">DefaultUomId set; Inactive</td></tr>
-    <tr><td><strong>ARM-041</strong></td><td>Usage Resource Not Active</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">Status = Draft or Inactive</td><td class="col-negative">Status = Active</td></tr>
-    <tr><td><strong>ARM-042</strong></td><td>Expired Product Usage Grant Still Active</td><td><span class="badge badge-info">Info</span></td><td class="col-positive">EffectiveEndDate &lt; today, Status=Active</td><td class="col-negative">Future end date; Status=Inactive</td></tr>
-    <tr><td><strong>ARM-043</strong></td><td>Usage Grant With Reversed Dates</td><td><span class="badge badge-critical">Critical</span></td><td class="col-positive">EffectiveStartDate &gt; EffectiveEndDate</td><td class="col-negative">Chronological dates</td></tr>
-    <tr><td><strong>ARM-044</strong></td><td>Active Usage Resource Missing UoM Class</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">Status=Active, UnitOfMeasureClassId null</td><td class="col-negative">UoM class set; Inactive</td></tr>
-  </tbody>
-</table>
-
-<h3>Orchestration (DRO) (ARM-045, ARM-046, ARM-047, ARM-048)</h3>
-<table>
-  <thead><tr><th>Check ID</th><th>Check Name</th><th>Severity</th><th>Positive Tests</th><th>Negative Tests</th></tr></thead>
-  <tbody>
-    <tr><td><strong>ARM-045</strong></td><td>Fulfillment Step Without Group</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">FulfillmentStepDefinition with null group ID</td><td class="col-negative">Group ID set</td></tr>
-    <tr><td><strong>ARM-046</strong></td><td>Empty Fulfillment Step Group</td><td><span class="badge badge-info">Info</span></td><td class="col-positive">FulfillmentStepDefinitionGroup with zero step assignments</td><td class="col-negative">Group has steps</td></tr>
-    <tr><td><strong>ARM-047</strong></td><td>Active Task Rule Without Assignee</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">FulfillmentTaskAssignmentRule active, AssignedToId null</td><td class="col-negative">Assignee set; Rule inactive</td></tr>
-    <tr><td><strong>ARM-048</strong></td><td>Inactive Product Fulfillment Scenario</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">ProductFulfillmentScenario.Status &ne; Active</td><td class="col-negative">Active scenario</td></tr>
-  </tbody>
-</table>
-
-<h3>Cost Books (ARM-049, ARM-050, ARM-051)</h3>
-<table>
-  <thead><tr><th>Check ID</th><th>Check Name</th><th>Severity</th><th>Positive Tests</th><th>Negative Tests</th></tr></thead>
-  <tbody>
-    <tr><td><strong>ARM-049</strong></td><td>Active Cost Book With No Entries</td><td><span class="badge badge-warning">Warning</span></td><td class="col-positive">CostBook active, zero CostBookEntry</td><td class="col-negative">Has entries; Cost book inactive</td></tr>
-    <tr><td><strong>ARM-050</strong></td><td>Cost Book Entry With No Cost</td><td><span class="badge badge-info">Info</span></td><td class="col-positive">CostBookEntry.Cost null or zero</td><td class="col-negative">Positive cost</td></tr>
-    <tr><td><strong>ARM-051</strong></td><td>Multiple Active Cost Books Per Currency</td><td><span class="badge badge-info">Info</span></td><td class="col-positive">2+ non-standard active books for same currency</td><td class="col-negative">Single book per currency; All standard</td></tr>
-  </tbody>
-</table>
-
-<h3>Live ARM scan validated against a real Revenue Cloud org (Ksolves &mdash; Sanjeev, dev-edition)</h3>
-<table>
-  <thead><tr><th>Test Step</th><th>What It Verifies</th><th>Expected Result</th></tr></thead>
-  <tbody>
-    <tr><td>POST /api/orgs/seed-arm-test-data</td><td>Creates a deliberate mix of POSITIVE (clean) + NEGATIVE (broken) records prefixed CC_Test_</td><td>HTTP 200 with summary { created, errors, skipped }</td></tr>
-    <tr><td>POST /api/scans (productType=arm)</td><td>End-to-end scan against real Revenue Cloud objects</td><td>Scan transitions pending &rarr; running &rarr; completed</td></tr>
-    <tr><td>Issue table inspection</td><td>Verifies seeded negative cases produce issues with correct check_id, severity, and category</td><td>Each seeded negative produces one matching issue</td></tr>
-    <tr><td>Partial-RLM resilience</td><td>If the org doesn&rsquo;t expose every standard ARM object (different rollouts ship different subsets), checks no-op rather than fire false positives</td><td>ARM-001/005/018 stay silent when their underlying objects aren&rsquo;t present</td></tr>
-  </tbody>
-</table>
-
-<!-- SECTION 2C: PLATFORM FEATURE TESTS -->
-<h2><span class="icon">&#9881;&#65039;</span> 2d. Platform Feature Test Scenarios</h2>
-<p style="color:var(--text-muted);margin-bottom:20px;">Test coverage for quota enforcement, notification emails, scan execution, authentication, and UI features.</p>
-
-<h3>Quota & Plan Enforcement</h3>
-<div class="scenario-card">
-  <div class="scenario-header">&#128274; Quota Enforcement (checkQuota utility)</div>
-  <table>
-    <thead><tr><th>Test Scenario</th><th>What It Verifies</th><th>Expected Result</th></tr></thead>
-    <tbody>
-      <tr><td>Free plan — 5 scans limit</td><td>User blocked after 5 scans/month</td><td>HTTP 429 with limit info</td></tr>
-      <tr><td>Free plan — 5 AI calls limit</td><td>User blocked after 5 AI fix/insight calls/month</td><td>HTTP 429 with limit info</td></tr>
-      <tr><td>Free plan — 5 PDF reports limit</td><td>User blocked after 5 PDF report generations/month</td><td>HTTP 429 with limit info</td></tr>
-      <tr><td>Free plan — 1 org limit</td><td>Org connection blocked after 1 connected org</td><td>Redirect with error message</td></tr>
-      <tr><td>Pro plan — unlimited scans</td><td>No blocking on Pro plan scans</td><td>Allowed (null limit)</td></tr>
-      <tr><td>Pro plan — 5 orgs limit</td><td>Org connection blocked after 5 orgs</td><td>HTTP 429 with limit info</td></tr>
-      <tr><td>Enterprise plan — no limits</td><td>All actions allowed without restriction</td><td>Always allowed</td></tr>
-      <tr><td>Admin bypass — free plan</td><td>Admin (is_admin=true) bypasses all limits</td><td>Always allowed regardless of plan</td></tr>
-      <tr><td>Monthly reset — usage count</td><td>Usage resets on 1st of each month</td><td>Only counts current month</td></tr>
-      <tr><td>Reset date display</td><td>Shows correct next month reset date</td><td>e.g. &quot;May 1, 2026&quot;</td></tr>
-    </tbody>
-  </table>
-</div>
-
-<h3>Notification Email Recipients</h3>
-<div class="scenario-card">
-  <div class="scenario-header">&#128231; Email Notification System</div>
-  <table>
-    <thead><tr><th>Test Scenario</th><th>What It Verifies</th><th>Expected Result</th></tr></thead>
-    <tbody>
-      <tr><td>Add notification email</td><td>User can add up to 5 email recipients</td><td>Saved to user profile</td></tr>
-      <tr><td>Remove notification email</td><td>User can remove individual recipients</td><td>Email removed from list</td></tr>
-      <tr><td>Max 5 emails validation</td><td>Cannot add more than 5 notification emails</td><td>HTTP 400 error</td></tr>
-      <tr><td>Invalid email format</td><td>Rejects malformed email addresses</td><td>HTTP 400 with invalid email msg</td></tr>
-      <tr><td>Scan completion email</td><td>Email sent to user + all notification recipients</td><td>All recipients receive notification</td></tr>
-      <tr><td>Empty notification list</td><td>Only user email receives notification</td><td>Single recipient email</td></tr>
-    </tbody>
-  </table>
-</div>
-
-<h3>Scan Execution & Background Processing</h3>
-<div class="scenario-card">
-  <div class="scenario-header">&#9889; Scan Lifecycle (waitUntil)</div>
-  <table>
-    <thead><tr><th>Test Scenario</th><th>What It Verifies</th><th>Expected Result</th></tr></thead>
-    <tbody>
-      <tr><td>Scan initiation</td><td>POST /api/scans returns scanId + pending status immediately</td><td>200 with scanId</td></tr>
-      <tr><td>Background execution (waitUntil)</td><td>Scan runs in background via Vercel waitUntil</td><td>Response returned before scan completes</td></tr>
-      <tr><td>Polling for completion</td><td>GET /api/scans?scanId=X returns current status</td><td>pending → completed/failed</td></tr>
-      <tr><td>Product type detection — CPQ</td><td>Org with CPQ package triggers CPQ-only scan</td><td>productType = &apos;cpq&apos;</td></tr>
-      <tr><td>Product type detection — CPQ+Billing</td><td>Org with both packages triggers combined scan</td><td>productType = &apos;cpq_billing&apos;</td></tr>
-      <tr><td>Quota check before scan</td><td>Scan blocked if quota exceeded</td><td>HTTP 429</td></tr>
-      <tr><td>Scan error handling</td><td>Failed scan updates status + logs error</td><td>status = &apos;failed&apos;</td></tr>
-      <tr><td>Email on completion</td><td>Notification email sent when scan finishes</td><td>Email delivered to all recipients</td></tr>
-    </tbody>
-  </table>
-</div>
-
-<h3>Authentication & Account Security</h3>
-<div class="scenario-card">
-  <div class="scenario-header">&#128272; Auth & Account Management</div>
-  <table>
-    <thead><tr><th>Test Scenario</th><th>What It Verifies</th><th>Expected Result</th></tr></thead>
-    <tbody>
-      <tr><td>Duplicate email signup</td><td>Same email cannot create second account</td><td>Shows &quot;account already exists&quot; message</td></tr>
-      <tr><td>Fake user detection</td><td>Checks identities.length === 0 for existing email</td><td>Prevents silent fake account creation</td></tr>
-      <tr><td>Password reset flow</td><td>Reset link sent to valid email</td><td>Success message + email sent</td></tr>
-      <tr><td>Invalid login credentials</td><td>Wrong password shows error</td><td>Error message, no redirect</td></tr>
-      <tr><td>Successful login redirect</td><td>Valid login redirects to /dashboard</td><td>router.push(&apos;/dashboard&apos;)</td></tr>
-    </tbody>
-  </table>
-</div>
-
-<h3>Dashboard & Navigation</h3>
-<div class="scenario-card">
-  <div class="scenario-header">&#128202; Dashboard Data Freshness</div>
-  <table>
-    <thead><tr><th>Test Scenario</th><th>What It Verifies</th><th>Expected Result</th></tr></thead>
-    <tbody>
-      <tr><td>Cache-busting on fetch</td><td>API calls use cache: &apos;no-store&apos;</td><td>Fresh data on every load</td></tr>
-      <tr><td>Visibility change refetch</td><td>Re-fetches orgs when tab becomes visible</td><td>Updated scores/timestamps</td></tr>
-      <tr><td>Router cache invalidation</td><td>router.refresh() before router.push()</td><td>No stale page data</td></tr>
-      <tr><td>API Cache-Control headers</td><td>no-store, no-cache, must-revalidate on responses</td><td>No Vercel edge CDN caching</td></tr>
-      <tr><td>Installed packages in org data</td><td>installed_packages column in API select</td><td>Correct productType detection</td></tr>
-      <tr><td>Category issues modal popup</td><td>Category card opens modal overlay (not inline)</td><td>fixed inset-0 z-50 modal</td></tr>
-      <tr><td>Issue card full clickability</td><td>Entire card clickable, not just Details button</td><td>onClick on outer div</td></tr>
-    </tbody>
-  </table>
-</div>
-
-<h3>Settings & Plan Management</h3>
-<div class="scenario-card">
-  <div class="scenario-header">&#128736;&#65039; Settings Page Features</div>
-  <table>
-    <thead><tr><th>Test Scenario</th><th>What It Verifies</th><th>Expected Result</th></tr></thead>
-    <tbody>
-      <tr><td>Plan display — Free/Pro/Enterprise</td><td>Correct plan names, prices, and feature lists</td><td>Matches pricing page exactly</td></tr>
-      <tr><td>Usage bars — scans/AI/PDF/orgs</td><td>Progress bars show used/limit with reset dates</td><td>Visual progress + text labels</td></tr>
-      <tr><td>Limit-reached banner</td><td>Shows upgrade pitch when limit hit</td><td>Banner with reset date + upgrade CTA</td></tr>
-      <tr><td>Connected orgs count</td><td>Shows actual org count vs plan limit</td><td>e.g. &quot;1 of 1 used&quot;</td></tr>
-      <tr><td>Notification emails CRUD</td><td>Add/remove notification email recipients</td><td>List updates, max 5 enforced</td></tr>
-      <tr><td>Save button positioning</td><td>Save button inside card, not floating</td><td>Correct DOM nesting</td></tr>
-    </tbody>
-  </table>
-</div>
-
-<!-- SECTION 3: INTEGRATION SCENARIOS -->
-<h2><span class="icon">&#128279;</span> 3. Integration Test Scenarios &mdash; 42 CPQ tests + Billing scenarios</h2>
-
-<div class="scenario-card">
-  <div class="scenario-header">&#128994; Scenario 1: Healthy CPQ Org (Negative Testing &mdash; No Issues Expected)</div>
-  <table>
-    <thead><tr><th>Test</th><th>What It Verifies</th><th>Result</th></tr></thead>
-    <tbody>
-      <tr><td>Approval Rules score = 100</td><td>No false positives on clean approval config</td><td><span class="badge badge-pass">PASS</span></td></tr>
-      <tr><td>Summary Variables score = 100</td><td>No false positives on referenced variables</td><td><span class="badge badge-pass">PASS</span></td></tr>
-      <tr><td>Guided Selling score = 100</td><td>No false positives on valid process</td><td><span class="badge badge-pass">PASS</span></td></tr>
-      <tr><td>Quote Templates score = 100</td><td>No false positives on default active template</td><td><span class="badge badge-pass">PASS</span></td></tr>
-      <tr><td>QCP score = 100</td><td>No false positives on proper script</td><td><span class="badge badge-pass">PASS</span></td></tr>
-      <tr><td>Overall score >= 80</td><td>Healthy org gets good grade</td><td><span class="badge badge-pass">PASS</span></td></tr>
-      <tr><td>Zero critical issues</td><td>No phantom criticals</td><td><span class="badge badge-pass">PASS</span></td></tr>
-      <tr><td>Complexity = Low</td><td>Minimal org not flagged as complex</td><td><span class="badge badge-pass">PASS</span></td></tr>
-    </tbody>
-  </table>
-</div>
-
-<div class="scenario-card">
-  <div class="scenario-header">&#128308; Scenario 2: Problematic CPQ Org (Positive Testing &mdash; Issues Must Be Detected)</div>
-  <table>
-    <thead><tr><th>Test</th><th>Check ID</th><th>Expected Severity</th><th>Result</th></tr></thead>
-    <tbody>
-      <tr><td>DETECT: Approval rule without approver</td><td>AR-001</td><td><span class="badge badge-critical">Critical</span></td><td><span class="badge badge-detect">DETECTED</span></td></tr>
-      <tr><td>DETECT: Approval rule without conditions</td><td>AR-002</td><td><span class="badge badge-warning">Warning</span></td><td><span class="badge badge-detect">DETECTED</span></td></tr>
-      <tr><td>DETECT: Duplicate evaluation order</td><td>AR-003</td><td><span class="badge badge-warning">Warning</span></td><td><span class="badge badge-detect">DETECTED</span></td></tr>
-      <tr><td>DETECT: Missing condition logic</td><td>AR-004</td><td><span class="badge badge-warning">Warning</span></td><td><span class="badge badge-detect">DETECTED</span></td></tr>
-      <tr><td>DETECT: Orphaned summary variables</td><td>SV-001</td><td><span class="badge badge-warning">Warning</span></td><td><span class="badge badge-detect">DETECTED</span></td></tr>
-      <tr><td>DETECT: Incomplete variable config</td><td>SV-002</td><td><span class="badge badge-critical">Critical</span></td><td><span class="badge badge-detect">DETECTED</span></td></tr>
-      <tr><td>DETECT: Duplicate summary variables</td><td>SV-003</td><td><span class="badge badge-warning">Warning</span></td><td><span class="badge badge-detect">DETECTED</span></td></tr>
-      <tr><td>DETECT: Filter misconfiguration</td><td>SV-004</td><td><span class="badge badge-warning">Warning</span></td><td><span class="badge badge-detect">DETECTED</span></td></tr>
-      <tr><td>DETECT: Composite missing operand</td><td>SV-005</td><td><span class="badge badge-critical">Critical</span></td><td><span class="badge badge-detect">DETECTED</span></td></tr>
-      <tr><td>DETECT: Guided selling without inputs</td><td>GS-001</td><td><span class="badge badge-critical">Critical</span></td><td><span class="badge badge-detect">DETECTED</span></td></tr>
-      <tr><td>DETECT: Guided selling without outputs</td><td>GS-002</td><td><span class="badge badge-critical">Critical</span></td><td><span class="badge badge-detect">DETECTED</span></td></tr>
-      <tr><td>DETECT: Inactive guided selling</td><td>GS-003</td><td><span class="badge badge-info">Info</span></td><td><span class="badge badge-detect">DETECTED</span></td></tr>
-      <tr><td>DETECT: No default template</td><td>QT-001</td><td><span class="badge badge-warning">Warning</span></td><td><span class="badge badge-detect">DETECTED</span></td></tr>
-      <tr><td>DETECT: Non-active template</td><td>QT-002</td><td><span class="badge badge-info">Info</span></td><td><span class="badge badge-detect">DETECTED</span></td></tr>
-      <tr><td>DETECT: Empty template</td><td>QT-003</td><td><span class="badge badge-warning">Warning</span></td><td><span class="badge badge-detect">DETECTED</span></td></tr>
-      <tr><td>DETECT: Empty QCP script</td><td>QCP-001</td><td><span class="badge badge-critical">Critical</span></td><td><span class="badge badge-detect">DETECTED</span></td></tr>
-      <tr><td>DETECT: Missing transpiled code</td><td>QCP-002</td><td><span class="badge badge-warning">Warning</span></td><td><span class="badge badge-detect">DETECTED</span></td></tr>
-      <tr><td>DETECT: QCP performance concerns</td><td>QCP-003</td><td><span class="badge badge-warning">Warning</span></td><td><span class="badge badge-detect">DETECTED</span></td></tr>
-      <tr><td>DETECT: Multiple QCP scripts</td><td>QCP-004</td><td><span class="badge badge-info">Info</span></td><td><span class="badge badge-detect">DETECTED</span></td></tr>
-    </tbody>
-  </table>
-</div>
-
-<div class="scenario-card">
-  <div class="scenario-header">&#128202; Scenario 3: Score Impact Validation</div>
-  <table>
-    <thead><tr><th>Test</th><th>What It Verifies</th><th>Result</th></tr></thead>
-    <tbody>
-      <tr><td>AR score drops below 100</td><td>Severity deductions work correctly</td><td><span class="badge badge-pass">PASS</span></td></tr>
-      <tr><td>SV score &lt; 70</td><td>Multiple criticals heavily impact score</td><td><span class="badge badge-pass">PASS</span></td></tr>
-      <tr><td>GS score &lt;= 70</td><td>Critical issues deduct -15 each</td><td><span class="badge badge-pass">PASS</span></td></tr>
-      <tr><td>QT score &lt; 100</td><td>Warnings reduce score by -5 each</td><td><span class="badge badge-pass">PASS</span></td></tr>
-      <tr><td>QCP score &lt;= 80</td><td>Mixed severity impacts add up</td><td><span class="badge badge-pass">PASS</span></td></tr>
-      <tr><td>Problematic &lt; Healthy (by 10+)</td><td>Overall weighted scoring differentiates orgs</td><td><span class="badge badge-pass">PASS</span></td></tr>
-    </tbody>
-  </table>
-</div>
-
-<div class="scenario-card">
-  <div class="scenario-header">&#128256; Scenario 4: Mixed Org (Category Isolation)</div>
-  <table>
-    <thead><tr><th>Test</th><th>What It Verifies</th><th>Result</th></tr></thead>
-    <tbody>
-      <tr><td>Only AR broken &mdash; SV, GS, QT, QCP = 100</td><td>Issues don't bleed across categories</td><td><span class="badge badge-pass">PASS</span></td></tr>
-      <tr><td>Only QCP broken &mdash; AR, SV = 100</td><td>Category isolation works</td><td><span class="badge badge-pass">PASS</span></td></tr>
-      <tr><td>Only GS broken &mdash; QT, QCP = 100</td><td>Independent scoring per category</td><td><span class="badge badge-pass">PASS</span></td></tr>
-    </tbody>
-  </table>
-</div>
-
-<div class="scenario-card">
-  <div class="scenario-header">&#129480; Scenario 5: Edge Cases & Boundaries</div>
-  <table>
-    <thead><tr><th>Test</th><th>What It Verifies</th><th>Result</th></tr></thead>
-    <tbody>
-      <tr><td>Empty org (no data) = all 100</td><td>No crashes on empty input</td><td><span class="badge badge-pass">PASS</span></td></tr>
-      <tr><td>20 critical issues = score clamped to 0</td><td>Score floor at 0 (never negative)</td><td><span class="badge badge-pass">PASS</span></td></tr>
-      <tr><td>Clean org = all scores &lt;= 100</td><td>Score ceiling at 100 (never exceeds)</td><td><span class="badge badge-pass">PASS</span></td></tr>
-      <tr><td>All issues have check_id, category, severity, title</td><td>Data integrity on every issue</td><td><span class="badge badge-pass">PASS</span></td></tr>
-      <tr><td>All affected records have id, name, type</td><td>Record integrity</td><td><span class="badge badge-pass">PASS</span></td></tr>
-      <tr><td>Duration &gt; 0</td><td>Timing measurement works</td><td><span class="badge badge-pass">PASS</span></td></tr>
-    </tbody>
-  </table>
-</div>
-
-<div class="scenario-card">
-  <div class="scenario-header">&#128176; Scenario 6: Healthy Billing Org (No Issues Expected)</div>
-  <table>
-    <thead><tr><th>Test</th><th>What It Verifies</th><th>Result</th></tr></thead>
-    <tbody>
-      <tr><td>Billing Rules score = 100</td><td>No false positives on valid billing rules</td><td><span class="badge badge-pass">PASS</span></td></tr>
-      <tr><td>Finance Books score = 100</td><td>No false positives on properly configured finance books</td><td><span class="badge badge-pass">PASS</span></td></tr>
-      <tr><td>GL Rules score = 100</td><td>No false positives on complete GL rules</td><td><span class="badge badge-pass">PASS</span></td></tr>
-      <tr><td>Legal Entity score = 100</td><td>No false positives on active legal entity with address</td><td><span class="badge badge-pass">PASS</span></td></tr>
-      <tr><td>Product Billing Config score = 100</td><td>No false positives on fully configured products</td><td><span class="badge badge-pass">PASS</span></td></tr>
-      <tr><td>Invoicing score = 100</td><td>No false positives on posted invoices</td><td><span class="badge badge-pass">PASS</span></td></tr>
-      <tr><td>Overall billing score >= 80</td><td>Healthy billing org gets good grade</td><td><span class="badge badge-pass">PASS</span></td></tr>
-      <tr><td>Zero critical issues</td><td>No phantom criticals in billing scan</td><td><span class="badge badge-pass">PASS</span></td></tr>
-    </tbody>
-  </table>
-</div>
-
-<div class="scenario-card">
-  <div class="scenario-header">&#128308; Scenario 7: Problematic Billing Org (Issues Must Be Detected)</div>
-  <table>
-    <thead><tr><th>Test</th><th>Check ID</th><th>Expected Severity</th><th>Result</th></tr></thead>
-    <tbody>
-      <tr><td>DETECT: Inactive billing rule on product</td><td>BR-001</td><td><span class="badge badge-critical">Critical</span></td><td><span class="badge badge-detect">DETECTED</span></td></tr>
-      <tr><td>DETECT: Billing rule without GL treatment</td><td>BR-002</td><td><span class="badge badge-critical">Critical</span></td><td><span class="badge badge-detect">DETECTED</span></td></tr>
-      <tr><td>DETECT: No open finance period</td><td>FB-001</td><td><span class="badge badge-critical">Critical</span></td><td><span class="badge badge-detect">DETECTED</span></td></tr>
-      <tr><td>DETECT: Finance period gaps</td><td>FB-002</td><td><span class="badge badge-critical">Critical</span></td><td><span class="badge badge-detect">DETECTED</span></td></tr>
-      <tr><td>DETECT: Finance book without periods</td><td>FB-004</td><td><span class="badge badge-critical">Critical</span></td><td><span class="badge badge-detect">DETECTED</span></td></tr>
-      <tr><td>DETECT: GL treatment missing account</td><td>GL-001</td><td><span class="badge badge-critical">Critical</span></td><td><span class="badge badge-detect">DETECTED</span></td></tr>
-      <tr><td>DETECT: No legal entity</td><td>LE-001</td><td><span class="badge badge-critical">Critical</span></td><td><span class="badge badge-detect">DETECTED</span></td></tr>
-      <tr><td>DETECT: Product missing billing rule</td><td>PBC-001</td><td><span class="badge badge-critical">Critical</span></td><td><span class="badge badge-detect">DETECTED</span></td></tr>
-      <tr><td>DETECT: Product missing tax rule</td><td>PBC-003</td><td><span class="badge badge-critical">Critical</span></td><td><span class="badge badge-detect">DETECTED</span></td></tr>
-      <tr><td>DETECT: Invoices stuck in draft</td><td>INV-001</td><td><span class="badge badge-warning">Warning</span></td><td><span class="badge badge-detect">DETECTED</span></td></tr>
-      <tr><td>DETECT: Zero amount invoices</td><td>INV-002</td><td><span class="badge badge-warning">Warning</span></td><td><span class="badge badge-detect">DETECTED</span></td></tr>
-      <tr><td>DETECT: Overdue invoices</td><td>INV-004</td><td><span class="badge badge-info">Info</span></td><td><span class="badge badge-detect">DETECTED</span></td></tr>
-    </tbody>
-  </table>
-</div>
-
-<div class="scenario-card">
-  <div class="scenario-header">&#128256; Scenario 8: Combined CPQ + Billing Scan</div>
-  <table>
-    <thead><tr><th>Test</th><th>What It Verifies</th><th>Result</th></tr></thead>
-    <tbody>
-      <tr><td>productType = cpq_billing triggers both engines</td><td>Both CPQ and Billing checks run</td><td><span class="badge badge-pass">PASS</span></td></tr>
-      <tr><td>CPQ issues + Billing issues merged</td><td>All issues appear in single result</td><td><span class="badge badge-pass">PASS</span></td></tr>
-      <tr><td>Category scores include billing categories</td><td>billing_rules, finance_books, etc. in scores</td><td><span class="badge badge-pass">PASS</span></td></tr>
-      <tr><td>CPQ-only scan excludes billing</td><td>productType = cpq doesn't run billing checks</td><td><span class="badge badge-pass">PASS</span></td></tr>
-      <tr><td>Billing weights applied correctly</td><td>8 billing categories weighted to sum = 1.0</td><td><span class="badge badge-pass">PASS</span></td></tr>
-    </tbody>
-  </table>
-</div>
-
-<!-- SECTION 4: TEST FILES -->
-<h2><span class="icon">&#128193;</span> 4. Test Files Breakdown (38 files + Billing source)</h2>
-<p style="color:var(--text-muted);margin-bottom:16px;">Comprehensive test files (17) + API Route tests (9) + Basic test files (10) + Integration (2) &mdash; Billing engine source files listed separately (tests pending)</p>
-<div class="file-grid">
-  <div class="file-item"><span class="fname">product-rules-comprehensive.test.ts</span><span class="fmeta"><span class="fcount">34</span><span class="ftag">Unit</span></span></div>
-  <div class="file-item"><span class="fname">performance-comprehensive.test.ts</span><span class="fmeta"><span class="fcount">32</span><span class="ftag">Unit</span></span></div>
-  <div class="file-item"><span class="fname">advanced-pricing-comprehensive.test.ts</span><span class="fmeta"><span class="fcount">23</span><span class="ftag">Unit</span></span></div>
-  <div class="file-item"><span class="fname">summary-variables-comprehensive.test.ts</span><span class="fmeta"><span class="fcount">31</span><span class="ftag">Unit</span></span></div>
-  <div class="file-item"><span class="fname">price-rules-comprehensive.test.ts</span><span class="fmeta"><span class="fcount">31</span><span class="ftag">Unit</span></span></div>
-  <div class="file-item"><span class="fname">products-comprehensive.test.ts</span><span class="fmeta"><span class="fcount">28</span><span class="ftag">Unit</span></span></div>
-  <div class="file-item"><span class="fname">custom-scripts-comprehensive.test.ts</span><span class="fmeta"><span class="fcount">28</span><span class="ftag">Unit</span></span></div>
-  <div class="file-item"><span class="fname">configuration-attributes-comprehensive.test.ts</span><span class="fmeta"><span class="fcount">27</span><span class="ftag">Unit</span></span></div>
-  <div class="file-item"><span class="fname">approval-rules-comprehensive.test.ts</span><span class="fmeta"><span class="fcount">27</span><span class="ftag">Unit</span></span></div>
-  <div class="file-item"><span class="fname">discount-schedules-comprehensive.test.ts</span><span class="fmeta"><span class="fcount">26</span><span class="ftag">Unit</span></span></div>
-  <div class="file-item"><span class="fname">quote-lines-comprehensive.test.ts</span><span class="fmeta"><span class="fcount">25</span><span class="ftag">Unit</span></span></div>
-  <div class="file-item"><span class="fname">impact-analysis-comprehensive.test.ts</span><span class="fmeta"><span class="fcount">25</span><span class="ftag">Unit</span></span></div>
-  <div class="file-item"><span class="fname">cpq-settings-comprehensive.test.ts</span><span class="fmeta"><span class="fcount">24</span><span class="ftag">Unit</span></span></div>
-  <div class="file-item"><span class="fname">usage-analytics-comprehensive.test.ts</span><span class="fmeta"><span class="fcount">19</span><span class="ftag">Unit</span></span></div>
-  <div class="file-item"><span class="fname">quote-templates-comprehensive.test.ts</span><span class="fmeta"><span class="fcount">23</span><span class="ftag">Unit</span></span></div>
-  <div class="file-item"><span class="fname">twin-fields-comprehensive.test.ts</span><span class="fmeta"><span class="fcount">20</span><span class="ftag">Unit</span></span></div>
-  <div class="file-item"><span class="fname">subscriptions-comprehensive.test.ts</span><span class="fmeta"><span class="fcount">18</span><span class="ftag">Unit</span></span></div>
-  <div class="file-item"><span class="fname">guided-selling-comprehensive.test.ts</span><span class="fmeta"><span class="fcount">18</span><span class="ftag">Unit</span></span></div>
-  <div class="file-item"><span class="fname">contracted-prices-comprehensive.test.ts</span><span class="fmeta"><span class="fcount">17</span><span class="ftag">Unit</span></span></div>
-  <div class="file-item"><span class="fname">api-issues.test.ts</span><span class="fmeta"><span class="fcount">17</span><span class="ftag">API</span></span></div>
-  <div class="file-item"><span class="fname">api-scans.test.ts</span><span class="fmeta"><span class="fcount">13</span><span class="ftag">API</span></span></div>
-  <div class="file-item"><span class="fname">api-ai-insights.test.ts</span><span class="fmeta"><span class="fcount">13</span><span class="ftag">API</span></span></div>
-  <div class="file-item"><span class="fname">api-usage.test.ts</span><span class="fmeta"><span class="fcount">12</span><span class="ftag">API</span></span></div>
-  <div class="file-item"><span class="fname">api-auth-me.test.ts</span><span class="fmeta"><span class="fcount">11</span><span class="ftag">API</span></span></div>
-  <div class="file-item"><span class="fname">api-exports.test.ts</span><span class="fmeta"><span class="fcount">10</span><span class="ftag">API</span></span></div>
-  <div class="file-item"><span class="fname">api-orgs.test.ts</span><span class="fmeta"><span class="fcount">8</span><span class="ftag">API</span></span></div>
-  <div class="file-item"><span class="fname">api-ai-fix.test.ts</span><span class="fmeta"><span class="fcount">8</span><span class="ftag">API</span></span></div>
-  <div class="file-item"><span class="fname">api-ai-explain.test.ts</span><span class="fmeta"><span class="fcount">6</span><span class="ftag">API</span></span></div>
-  <div class="file-item"><span class="fname">integration-scan-scenarios.test.ts</span><span class="fmeta"><span class="fcount">42</span><span class="ftag">Integration</span></span></div>
-  <div class="file-item"><span class="fname">engine.test.ts</span><span class="fmeta"><span class="fcount">10</span><span class="ftag">Integration</span></span></div>
-  <div class="file-item"><span class="fname">other-checks.test.ts</span><span class="fmeta"><span class="fcount">18</span><span class="ftag">Basic</span></span></div>
-  <div class="file-item"><span class="fname">summary-variables.test.ts</span><span class="fmeta"><span class="fcount">10</span><span class="ftag">Basic</span></span></div>
-  <div class="file-item"><span class="fname">approval-rules.test.ts</span><span class="fmeta"><span class="fcount">8</span><span class="ftag">Basic</span></span></div>
-  <div class="file-item"><span class="fname">custom-scripts.test.ts</span><span class="fmeta"><span class="fcount">8</span><span class="ftag">Basic</span></span></div>
-  <div class="file-item"><span class="fname">performance.test.ts</span><span class="fmeta"><span class="fcount">8</span><span class="ftag">Basic</span></span></div>
-  <div class="file-item"><span class="fname">advanced-pricing.test.ts</span><span class="fmeta"><span class="fcount">8</span><span class="ftag">Basic</span></span></div>
-  <div class="file-item"><span class="fname">impact-analysis.test.ts</span><span class="fmeta"><span class="fcount">8</span><span class="ftag">Basic</span></span></div>
-  <div class="file-item"><span class="fname">usage-analytics.test.ts</span><span class="fmeta"><span class="fcount">7</span><span class="ftag">Basic</span></span></div>
-</div>
-
-<h3 style="margin-top:28px;">Billing Engine Source Files (Tests Pending)</h3>
-<div class="file-grid">
-  <div class="file-item"><span class="fname">billing-checks/billing-rules.ts</span><span class="fmeta"><span class="fcount">4</span><span class="ftag">BR checks</span></span></div>
-  <div class="file-item"><span class="fname">billing-checks/rev-rec-rules.ts</span><span class="fmeta"><span class="fcount">4</span><span class="ftag">RR checks</span></span></div>
-  <div class="file-item"><span class="fname">billing-checks/tax-rules.ts</span><span class="fmeta"><span class="fcount">3</span><span class="ftag">TR checks</span></span></div>
-  <div class="file-item"><span class="fname">billing-checks/finance-books.ts</span><span class="fmeta"><span class="fcount">6</span><span class="ftag">FB checks</span></span></div>
-  <div class="file-item"><span class="fname">billing-checks/gl-rules.ts</span><span class="fmeta"><span class="fcount">4</span><span class="ftag">GL checks</span></span></div>
-  <div class="file-item"><span class="fname">billing-checks/legal-entity.ts</span><span class="fmeta"><span class="fcount">3</span><span class="ftag">LE checks</span></span></div>
-  <div class="file-item"><span class="fname">billing-checks/product-billing-config.ts</span><span class="fmeta"><span class="fcount">6</span><span class="ftag">PBC checks</span></span></div>
-  <div class="file-item"><span class="fname">billing-checks/invoicing.ts</span><span class="fmeta"><span class="fcount">4</span><span class="ftag">INV checks</span></span></div>
-  <div class="file-item"><span class="fname">billing-engine.ts</span><span class="fmeta"><span class="fcount">—</span><span class="ftag">Engine</span></span></div>
-  <div class="file-item"><span class="fname">lib/quota.ts</span><span class="fmeta"><span class="fcount">—</span><span class="ftag">Platform</span></span></div>
-</div>
-
-<!-- SECTION 5: FUTURE SCOPE -->
-<h2><span class="icon">&#128302;</span> 5. Future Scope (Phase 3)</h2>
-<div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px 24px;margin:16px 0;">
-  <div class="future-item">
-    <div class="future-icon">&#127760;</div>
-    <div><div class="future-label">API Route Testing</div><div class="future-reason" style="color:var(--green);">&#9989; COMPLETED &mdash; 9 test files, 98 tests covering all API routes with Supabase/auth mocking</div></div>
-  </div>
-  <div class="future-item">
-    <div class="future-icon">&#128176;</div>
-    <div><div class="future-label">Billing Engine Unit Tests</div><div class="future-reason">34 billing checks need comprehensive test files (positive + negative + edge cases) matching CPQ pattern</div></div>
-  </div>
-  <div class="future-item">
-    <div class="future-icon">&#128274;</div>
-    <div><div class="future-label">Quota Enforcement Tests</div><div class="future-reason">checkQuota utility, plan limits, admin bypass, monthly reset, HTTP 429 responses</div></div>
-  </div>
-  <div class="future-item">
-    <div class="future-icon">&#128231;</div>
-    <div><div class="future-label">Notification Email Tests</div><div class="future-reason">Add/remove recipients, max 5 validation, multi-recipient email delivery</div></div>
-  </div>
-  <div class="future-item">
-    <div class="future-icon">&#128421;&#65039;</div>
-    <div><div class="future-label">UI Component Testing</div><div class="future-reason">React Testing Library: issue cards, category modals, usage bars, settings forms</div></div>
-  </div>
-  <div class="future-item">
-    <div class="future-icon">&#9729;&#65039;</div>
-    <div><div class="future-label">Salesforce Connection Testing</div><div class="future-reason">Requires live SF org or mock server</div></div>
-  </div>
-  <div class="future-item">
-    <div class="future-icon">&#129302;</div>
-    <div><div class="future-label">AI/Gemini Response Testing</div><div class="future-reason">Non-deterministic API output</div></div>
-  </div>
-  <div class="future-item">
-    <div class="future-icon">&#127917;</div>
-    <div><div class="future-label">End-to-End Browser Testing</div><div class="future-reason">Playwright/Cypress setup needed</div></div>
-  </div>
-  <div class="future-item">
-    <div class="future-icon">&#9889;</div>
-    <div><div class="future-label">Load/Stress Testing</div><div class="future-reason">Large dataset benchmarking</div></div>
-  </div>
-</div>
-
-<!-- SECTION 6: HOW TO RUN -->
-<h2><span class="icon">&#9654;&#65039;</span> 6. How to Run Tests</h2>
-<div class="code-block">
-<span class="comment"># Run all 701 tests</span>
-<span class="cmd">npx vitest run</span>
-
-<span class="comment"># Run with verbose output (see every test name)</span>
-<span class="cmd">npx vitest run --reporter=verbose</span>
-
-<span class="comment"># Run specific category</span>
-<span class="cmd">npx vitest run src/__tests__/price-rules-comprehensive.test.ts</span>
-
-<span class="comment"># Run only API route tests</span>
-<span class="cmd">npx vitest run src/__tests__/api-*.test.ts</span>
-
-<span class="comment"># Run only integration tests</span>
-<span class="cmd">npx vitest run src/__tests__/integration-scan-scenarios.test.ts</span>
-
-<span class="comment"># Run all comprehensive tests</span>
-<span class="cmd">npx vitest run src/__tests__/*-comprehensive.test.ts</span>
-
-<span class="comment"># Run billing tests (when created)</span>
-<span class="cmd">npx vitest run src/__tests__/billing-*.test.ts</span>
-
-<span class="comment"># Watch mode (re-runs on file change)</span>
-<span class="cmd">npx vitest</span>
-</div>
-
-</div>
-
-<div class="footer">
-  ConfigCheck &copy; 2026 &mdash; Test Coverage Report &mdash; Updated on May 1, 2026 &mdash; 208 Health Checks (92 CPQ + 39 Billing + 77 ARM) / 49 Categories / 1,155 Tests / 51 Files
-</div>
-
 </body>
 </html>
