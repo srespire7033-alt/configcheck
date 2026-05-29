@@ -332,9 +332,14 @@ async function main() {
       ? def.originalPrice                   // Price Rule wiped uplift
       : def.originalPrice * (1 + fraction); // Clean uplift applied
 
+    // SBQQ__RenewedSubscription__c is the canonical field linking a
+    // renewal quote line back to the subscription it renews. Some older
+    // installs also expose SBQQ__Subscription__c on QuoteLine; the
+    // documented + reliable field is RenewedSubscription. Our detector
+    // queries this same field — they MUST stay in sync.
     await sfCreate('SBQQ__QuoteLine__c', {
       SBQQ__Quote__c: quoteId,
-      SBQQ__Subscription__c: subId,
+      SBQQ__RenewedSubscription__c: subId,
       SBQQ__Product__c: productId,
       SBQQ__Quantity__c: def.quantity,
       SBQQ__ListPrice__c: def.originalPrice,

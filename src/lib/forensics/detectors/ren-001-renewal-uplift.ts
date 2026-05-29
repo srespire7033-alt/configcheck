@@ -9,7 +9,7 @@
  *      from the last 24 months (Bulk API — these can be tens of thousands
  *      of rows on a serious customer).
  *   2. For each renewal quote line, find its originating subscription
- *      (SBQQ__Subscription__c) and through it the original Contract +
+ *      (SBQQ__RenewedSubscription__c) and through it the original Contract +
  *      uplift entitlement.
  *   3. Compute:
  *        entitled = originalPrice × (1 + upliftPct)
@@ -42,7 +42,7 @@ interface RenewalLineRow {
   'SBQQ__Quote__r.Name': string;
   'SBQQ__Quote__r.SBQQ__Type__c': string;
   'SBQQ__Quote__r.CurrencyIsoCode': string;
-  SBQQ__Subscription__c: string;
+  SBQQ__RenewedSubscription__c: string;
   SBQQ__Product__c: string;
   'SBQQ__Product__r.Name': string;
   SBQQ__NetPrice__c: string;
@@ -81,13 +81,13 @@ const REN_001: ForensicDetector = {
         Id, Name,
         SBQQ__Quote__c, SBQQ__Quote__r.Name,
         SBQQ__Quote__r.SBQQ__Type__c, SBQQ__Quote__r.CurrencyIsoCode,
-        SBQQ__Subscription__c,
+        SBQQ__RenewedSubscription__c,
         SBQQ__Product__c, SBQQ__Product__r.Name,
         SBQQ__NetPrice__c, SBQQ__Quantity__c
       FROM SBQQ__QuoteLine__c
       WHERE SBQQ__Quote__r.SBQQ__Type__c = 'Renewal'
         AND CreatedDate >= ${sinceIso.replace('Z', 'Z')}
-        AND SBQQ__Subscription__c != null
+        AND SBQQ__RenewedSubscription__c != null
     `;
 
     const linesRes = await bulkQuery<RenewalLineRow>(ctx.conn, renewalLinesQuery, {
@@ -106,7 +106,7 @@ const REN_001: ForensicDetector = {
     }
 
     // 2. Pull the linked Subscriptions to get the original price + contract uplift.
-    const subscriptionIds = Array.from(new Set(linesRes.records.map((r) => r.SBQQ__Subscription__c).filter(Boolean)));
+    const subscriptionIds = Array.from(new Set(linesRes.records.map((r) => r.SBQQ__RenewedSubscription__c).filter(Boolean)));
     const subscriptionsBySubId = new Map<string, SubscriptionRow>();
     if (subscriptionIds.length > 0) {
       // Chunk to 1000 — Bulk API can handle more but the IN clause has
@@ -119,7 +119,7 @@ const REN_001: ForensicDetector = {
             SBQQ__Contract__c, SBQQ__Contract__r.ContractNumber,
             SBQQ__Contract__r.SBQQ__RenewalUpliftRate__c,
             SBQQ__NetPrice__c, SBQQ__Quantity__c
-          FROM SBQQ__Subscription__c
+          FROM SBQQ__RenewedSubscription__c
           WHERE Id IN (${chunk.map((id) => `'${id}'`).join(',')})
         `;
         const subRes = await bulkQuery<SubscriptionRow>(ctx.conn, subQuery);
@@ -130,7 +130,7 @@ const REN_001: ForensicDetector = {
     // 3. Reconcile.
     const findings: DetectorResult[] = [];
     for (const line of linesRes.records) {
-      const sub = subscriptionsBySubId.get(line.SBQQ__Subscription__c);
+      const sub = subscriptionsBySubId.get(line.SBQQ__RenewedSubscription__c);
       if (!sub) continue; // Orphaned line — flagged by a different detector (ORD-FOR-002)
 
       const upliftPctRaw = sub['SBQQ__Contract__r.SBQQ__RenewalUpliftRate__c'];
@@ -178,7 +178,7 @@ const REN_001: ForensicDetector = {
           name: line['SBQQ__Quote__r.Name'],
         },
         {
-          type: 'SBQQ__Subscription__c',
+          type: 'SBQQ__RenewedSubscription__c',
           id: sub.Id,
           name: sub.Name,
           financials: {
