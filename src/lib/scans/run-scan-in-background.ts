@@ -15,6 +15,40 @@ import { calculateRevenueLeakage, resolveAssumptions, type RevenueAssumptions } 
 import { track } from '@/lib/analytics/track-server';
 import { AnalyticsEvent } from '@/lib/analytics/events';
 import type { ProductType } from '@/types';
+import type { SupabaseClient } from '@supabase/supabase-js';
+
+/**
+ * Patch a scan's metadata JSONB column by reading the current value,
+ * shallow-merging the patch on top, and writing back. Optional sibling
+ * columns (`extra`) are written in the same UPDATE.
+ *
+ * Why read-modify-write instead of `metadata: { ...new }`:
+ * Postgres JSONB updates REPLACE the whole column. Building the object
+ * from a subset of fields silently drops anything the caller doesn't
+ * re-pass. That's how `revenue_leakage` was disappearing — the post-
+ * scan AI summary write rebuilt metadata without it.
+ *
+ * Safety: the scan row only ever gets written by a single background
+ * worker (this module), so there's no concurrent-writer race. If that
+ * ever changes, swap this for `jsonb_set` on the Postgres side.
+ */
+async function patchScanMetadata(
+  supabase: SupabaseClient,
+  scanId: string,
+  patch: Record<string, unknown>,
+  extra: Record<string, unknown> = {}
+) {
+  const { data: current } = await supabase
+    .from('scans')
+    .select('metadata')
+    .eq('id', scanId)
+    .single();
+  const merged = { ...(current?.metadata ?? {}), ...patch };
+  await supabase
+    .from('scans')
+    .update({ metadata: merged, ...extra })
+    .eq('id', scanId);
+}
 
 /**
  * Run a health-check scan end-to-end against a Salesforce org and write
@@ -298,9 +332,11 @@ export async function runScanInBackground(
     // Opportunity / Quote / Order are all unreadable the engine returns
     // null impacts and a "system defaults" note in the audit.
     let leakageBreakdown: ReturnType<typeof calculateRevenueLeakage> | null = null;
+    let leakageCurrency: string | null = null;
     try {
       console.log(`[SCAN ${scanId}] Fetching revenue baseline + calculating leakage...`);
       const baseline = await fetchRevenueBaseline(conn);
+      leakageCurrency = baseline.currency_iso_code || null;
       const orgAssumptions = (org as { revenue_assumptions?: Partial<RevenueAssumptions> | null }).revenue_assumptions ?? null;
       // User-level defaults aren't on the org row — fetch them explicitly.
       // Falls back to system defaults if unreadable.
@@ -421,6 +457,10 @@ export async function runScanInBackground(
                 audit: leakageBreakdown.audit,
               }
             : null,
+          // Currency stored at the scan level so the dashboard card, PDF,
+          // and portfolio aggregate all format $ consistently — even if
+          // the org's currency changes later.
+          currency_iso_code: leakageCurrency,
         },
         completed_at: new Date().toISOString(),
       })
@@ -451,44 +491,27 @@ export async function runScanInBackground(
         }
       );
       result.summary = aiSummary;
-      await supabase
-        .from('scans')
-        .update({
-          summary: aiSummary,
-          metadata: {
-            revenue_summary: result.revenue_summary || null,
-            complexity: result.complexity || null,
-            product_type: productType,
-            data_fetched: dataFetchedMeta,
-            query_failures: queryFailuresMeta.length > 0 ? queryFailuresMeta : null,
-            query_outcomes: Object.keys(queryOutcomesMeta).length > 0 ? queryOutcomesMeta : null,
-            ai_summary_status: 'completed',
-            ai_summary_duration_ms: Date.now() - aiStart,
-          },
-        })
-        .eq('id', scanId);
+      // Read-modify-write so we PATCH metadata instead of REPLACING it.
+      // Replacing here is what caused revenue_leakage to disappear from
+      // the dashboard ~5-15s after the scan completed — the AI summary
+      // write was rebuilding metadata from scratch without it.
+      // Single-writer per scan (this background process), so no TOCTOU.
+      await patchScanMetadata(supabase, scanId, {
+        ai_summary_status: 'completed',
+        ai_summary_duration_ms: Date.now() - aiStart,
+      }, { summary: aiSummary });
       console.log(`[SCAN ${scanId}] AI summary generated in ${Date.now() - aiStart}ms`);
     } catch (aiError) {
       const aiMsg = aiError instanceof Error ? aiError.message : 'Unknown AI error';
       console.error(`[SCAN ${scanId}] AI summary failed (non-fatal):`, aiMsg);
       // Fall back to a deterministic summary so the UI never shows the
       // "being generated…" placeholder forever.
-      await supabase
-        .from('scans')
-        .update({
-          summary: `Health score: ${result.overall_score}/100. Found ${result.issues.length} issue(s). AI insights couldn't be generated for this scan.`,
-          metadata: {
-            revenue_summary: result.revenue_summary || null,
-            complexity: result.complexity || null,
-            product_type: productType,
-            data_fetched: dataFetchedMeta,
-            query_failures: queryFailuresMeta.length > 0 ? queryFailuresMeta : null,
-            query_outcomes: Object.keys(queryOutcomesMeta).length > 0 ? queryOutcomesMeta : null,
-            ai_summary_status: 'failed',
-            ai_summary_error: aiMsg.slice(0, 200),
-          },
-        })
-        .eq('id', scanId);
+      await patchScanMetadata(supabase, scanId, {
+        ai_summary_status: 'failed',
+        ai_summary_error: aiMsg.slice(0, 200),
+      }, {
+        summary: `Health score: ${result.overall_score}/100. Found ${result.issues.length} issue(s). AI insights couldn't be generated for this scan.`,
+      });
     }
 
     // Strategy A — pre-generate the remediation plan during the scan's
