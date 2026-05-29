@@ -30,10 +30,34 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { organizationId, productType: requestedProductType } = await request.json();
+    const { organizationId, productType: requestedProductType, portfolioRunId } = await request.json();
 
     if (!organizationId) {
       return NextResponse.json({ error: 'organizationId is required' }, { status: 400 });
+    }
+
+    // Portfolio runs bypass the serial gate AND the per-call quota check
+    // because the orchestrator validates both up-front in a single
+    // transaction-shaped block before fanning out. Without this bypass, a
+    // 5-org portfolio run would 409 on scans 2-5 (serial gate) and double-
+    // count quota. We verify the run actually belongs to the caller before
+    // honoring the bypass.
+    let isPortfolioRun = false;
+    if (portfolioRunId) {
+      const svc = createServiceClient();
+      const { data: run } = await svc
+        .from('portfolio_runs')
+        .select('id, user_id, status')
+        .eq('id', portfolioRunId)
+        .eq('user_id', user.id)
+        .single();
+      if (!run) {
+        return NextResponse.json({ error: 'portfolio_run not found or not owned' }, { status: 403 });
+      }
+      if (run.status !== 'pending' && run.status !== 'running') {
+        return NextResponse.json({ error: 'portfolio_run is no longer accepting scans' }, { status: 409 });
+      }
+      isPortfolioRun = true;
     }
 
     const supabase = createServiceClient();
@@ -76,38 +100,50 @@ export async function POST(request: NextRequest) {
     // already runs Scan-all sequentially, but multi-tab users and direct API
     // clients can still trigger the storm. We reject overlapping scans here
     // with 409 so callers know to wait — quota is NOT consumed for rejects.
-    const { data: inflight } = await supabase
-      .from('scans')
-      .select('id')
-      .eq('user_id', user.id)
-      .in('status', ['pending', 'running'])
-      .gte('created_at', new Date(Date.now() - 5 * 60 * 1000).toISOString())
-      .limit(1);
-    if (inflight && inflight.length > 0) {
-      void track(AnalyticsEvent.SCAN_BLOCKED_INFLIGHT, {
-        userId: user.id,
-        properties: { existing_scan_id: inflight[0].id },
-      });
-      return NextResponse.json({
-        error: 'scan_in_progress',
-        message: 'Another scan is already running for your account. Please wait for it to finish before starting a new one.',
-        existingScanId: inflight[0].id,
-      }, { status: 409 });
+    //
+    // Portfolio runs skip this gate because each scan spawns in its OWN
+    // function instance (the orchestrator fires N fetches), not the same
+    // one. Per-user Gemini throttle still serializes AI bursts naturally.
+    if (!isPortfolioRun) {
+      const { data: inflight } = await supabase
+        .from('scans')
+        .select('id')
+        .eq('user_id', user.id)
+        .in('status', ['pending', 'running'])
+        .gte('created_at', new Date(Date.now() - 5 * 60 * 1000).toISOString())
+        .limit(1);
+      if (inflight && inflight.length > 0) {
+        void track(AnalyticsEvent.SCAN_BLOCKED_INFLIGHT, {
+          userId: user.id,
+          properties: { existing_scan_id: inflight[0].id },
+        });
+        return NextResponse.json({
+          error: 'scan_in_progress',
+          message: 'Another scan is already running for your account. Please wait for it to finish before starting a new one.',
+          existingScanId: inflight[0].id,
+        }, { status: 409 });
+      }
     }
 
-    // Check scan quota
-    const quota = await checkQuota(user.id, 'scans');
-    if (!quota.allowed) {
-      return NextResponse.json({
-        error: 'scan_limit_reached',
-        message: `You've used all ${quota.limit} scans for this month. Your limit resets on ${quota.resetDate}.`,
-        limit: quota.limit,
-        used: quota.used,
-        resetDate: quota.resetDate,
-      }, { status: 429 });
+    // Quota: portfolio runs validate quota up-front in the orchestrator,
+    // so a per-call check here would double-count. Single-org scans
+    // continue to check normally.
+    if (!isPortfolioRun) {
+      const quota = await checkQuota(user.id, 'scans');
+      if (!quota.allowed) {
+        return NextResponse.json({
+          error: 'scan_limit_reached',
+          message: `You've used all ${quota.limit} scans for this month. Your limit resets on ${quota.resetDate}.`,
+          limit: quota.limit,
+          used: quota.used,
+          resetDate: quota.resetDate,
+        }, { status: 429 });
+      }
     }
 
-    // Create scan record (pending)
+    // Create scan record (pending). When part of a portfolio run, tag the
+    // metadata with the run id so the polling endpoint can resolve scan
+    // status by run without an extra join.
     const { data: scan, error: scanError } = await supabase
       .from('scans')
       .insert({
@@ -117,6 +153,7 @@ export async function POST(request: NextRequest) {
         scan_type: 'full',
         product_type: productType,
         started_at: new Date().toISOString(),
+        metadata: isPortfolioRun ? { portfolio_run_id: portfolioRunId } : {},
       })
       .select()
       .single();

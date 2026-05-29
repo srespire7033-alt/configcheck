@@ -159,7 +159,7 @@ export async function POST(request: NextRequest) {
     const user = await getAuthUser(request);
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const { organizationIds } = await request.json();
+    const { organizationIds, scanIds: pinnedScanIds } = await request.json();
     if (!Array.isArray(organizationIds) || organizationIds.length < 2) {
       return NextResponse.json(
         { error: 'Provide at least 2 organizationIds to compare' },
@@ -172,6 +172,13 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+    // Optional: caller (typically the portfolio-run progress page) can pin
+    // the exact scan IDs to read for each org. Without this, an independent
+    // scan racing the portfolio run could shift the "latest" pointer and
+    // contaminate the comparison.
+    const pinnedScanIdSet: Set<string> | null = Array.isArray(pinnedScanIds) && pinnedScanIds.length > 0
+      ? new Set(pinnedScanIds.filter((s: unknown): s is string => typeof s === 'string'))
+      : null;
 
     const supabase = createServiceClient();
 
@@ -192,9 +199,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Latest completed scan per org. DISTINCT ON (Postgres) picks the most
-    // recent scan per organization_id when ordered by created_at desc.
-    const { data: scans } = await supabase
+    // Pick the scans to read. Default: most recent completed scan per
+    // org (the legacy behavior). When pinnedScanIdSet is provided (from a
+    // portfolio run), we restrict to those exact scan IDs — protects the
+    // comparison from racing background scans on the same orgs.
+    let scansQuery = supabase
       .from('scans')
       .select(
         'organization_id, overall_score, total_issues, critical_count, warning_count, info_count, category_scores, metadata, completed_at, created_at'
@@ -202,6 +211,10 @@ export async function POST(request: NextRequest) {
       .eq('status', 'completed')
       .in('organization_id', organizationIds)
       .order('created_at', { ascending: false });
+    if (pinnedScanIdSet) {
+      scansQuery = scansQuery.in('id', Array.from(pinnedScanIdSet));
+    }
+    const { data: scans } = await scansQuery;
 
     const latestByOrg = new Map<string, ScanRow>();
     for (const s of (scans ?? []) as ScanRow[]) {
@@ -230,13 +243,18 @@ export async function POST(request: NextRequest) {
         latestScanByOrgId.set(s.organization_id, s.id);
       }
     }
-    // The select didn't include id; re-query scan IDs.
-    const { data: scanIdRows } = await supabase
+    // The select didn't include id; re-query scan IDs. Same pinning rule
+    // as above so the issue-bucket counts come from the same scans.
+    let scanIdsQuery = supabase
       .from('scans')
       .select('id, organization_id, created_at')
       .eq('status', 'completed')
       .in('organization_id', organizationIds)
       .order('created_at', { ascending: false });
+    if (pinnedScanIdSet) {
+      scanIdsQuery = scanIdsQuery.in('id', Array.from(pinnedScanIdSet));
+    }
+    const { data: scanIdRows } = await scanIdsQuery;
     const latestScanIds = new Map<string, string>();
     for (const row of (scanIdRows ?? []) as Array<{ id: string; organization_id: string }>) {
       if (!latestScanIds.has(row.organization_id)) latestScanIds.set(row.organization_id, row.id);

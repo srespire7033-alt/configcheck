@@ -28,6 +28,8 @@ export const AnalyticsEvent = {
   SCAN_COMPLETED: 'scan_completed',
   SCAN_FAILED: 'scan_failed',
   SCAN_BLOCKED_INFLIGHT: 'scan_blocked_inflight', // 409 from per-user gate
+  PORTFOLIO_RUN_STARTED: 'portfolio_run_started',
+  PORTFOLIO_RUN_COMPLETED: 'portfolio_run_completed',
 
   // ── Engagement: AI + reports ──────────────────────────────────────────
   AI_EXPLAIN_USED: 'ai_explain_used',
