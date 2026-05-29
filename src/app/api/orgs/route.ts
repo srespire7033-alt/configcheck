@@ -136,12 +136,15 @@ export async function GET(request: NextRequest) {
   // signal that makes the difference between a one-time audit tool and a
   // habit-forming product.
   const orgIds = (data || []).map((o) => o.id);
-  const latestScanMap: Record<string, { score: number; timestamp: string; previous?: number }> = {};
+  const latestScanMap: Record<
+    string,
+    { score: number; timestamp: string; previous?: number; criticalCount: number }
+  > = {};
 
   if (orgIds.length > 0) {
     const { data: scans } = await supabase
       .from('scans')
-      .select('organization_id, overall_score, completed_at, created_at')
+      .select('organization_id, overall_score, completed_at, created_at, critical_count')
       .in('organization_id', orgIds)
       .eq('status', 'completed')
       .order('created_at', { ascending: false });
@@ -149,6 +152,10 @@ export async function GET(request: NextRequest) {
     if (scans) {
       // Track how many scans we've already seen per org. First one wins
       // "latest"; second one is "previous" (used for the delta indicator).
+      // critical_count comes off the scan row directly — the scan engine
+      // populates it when it persists the issue batch, so this is the
+      // canonical "how bad is this org right now" number for the portfolio
+      // summary strip on the dashboard.
       const seenPerOrg: Record<string, number> = {};
       for (const scan of scans) {
         const count = seenPerOrg[scan.organization_id] ?? 0;
@@ -156,6 +163,7 @@ export async function GET(request: NextRequest) {
           latestScanMap[scan.organization_id] = {
             score: scan.overall_score,
             timestamp: scan.completed_at || scan.created_at,
+            criticalCount: (scan as { critical_count?: number }).critical_count ?? 0,
           };
         } else if (count === 1) {
           const existing = latestScanMap[scan.organization_id];
@@ -174,7 +182,11 @@ export async function GET(request: NextRequest) {
       last_scan_score: latestScan?.score ?? org.last_scan_score,
       last_scan_at: latestScan?.timestamp ?? org.last_scan_at,
       previous_scan_score: latestScan?.previous ?? null,
-      critical_count: 0,
+      // Real critical_count from the latest completed scan. Previously
+      // hardcoded to 0, which made the dashboard's portfolio summary
+      // strip ("X orgs with critical · Y critical findings") always
+      // report zero regardless of what the scans actually found.
+      critical_count: latestScan?.criticalCount ?? 0,
     };
   });
 
