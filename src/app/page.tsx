@@ -2,7 +2,16 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { TOTAL_CHECKS, TOTAL_CATEGORIES } from '@/lib/analysis/constants';
+import {
+  TOTAL_CHECKS,
+  TOTAL_CATEGORIES,
+  CPQ_CHECKS_COUNT,
+  BILLING_CHECKS_COUNT,
+  ARM_CHECKS_COUNT,
+  CPQ_CATEGORIES_COUNT,
+  BILLING_CATEGORIES_COUNT,
+  ARM_CATEGORIES_COUNT,
+} from '@/lib/analysis/constants';
 import {
   Zap,
   FileText,
@@ -379,8 +388,8 @@ export default function LandingPage() {
               {
                 product: 'Salesforce CPQ',
                 badge: 'CPQ',
-                count: 92,
-                categories: 21,
+                count: CPQ_CHECKS_COUNT,
+                categories: CPQ_CATEGORIES_COUNT,
                 accent: 'blue',
                 examples: [
                   'Detects price rules with conflicting conditions on the same field',
@@ -392,8 +401,8 @@ export default function LandingPage() {
               {
                 product: 'Salesforce Billing',
                 badge: 'Billing',
-                count: 39,
-                categories: 8,
+                count: BILLING_CHECKS_COUNT,
+                categories: BILLING_CATEGORIES_COUNT,
                 accent: 'purple',
                 examples: [
                   'Catches finance books with no period covering today',
@@ -405,8 +414,8 @@ export default function LandingPage() {
               {
                 product: 'Revenue Cloud (ARM)',
                 badge: 'ARM',
-                count: 51,
-                categories: 16,
+                count: ARM_CHECKS_COUNT,
+                categories: ARM_CATEGORIES_COUNT,
                 accent: 'teal',
                 examples: [
                   'Detects active products without an assigned selling model',
