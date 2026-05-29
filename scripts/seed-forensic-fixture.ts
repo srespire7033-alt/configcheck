@@ -518,20 +518,25 @@ async function seedPromoFixtures(
   let createdLines = 0;
   let totalLeakage = 0;
 
+  // Contract.Description is a long-text-area and can't be filtered in
+  // SOQL, so we pre-pull all fixture contracts once and check membership
+  // against an in-memory set. Same pattern the REN-001 seed uses.
+  const existingPromoContracts = await sfQuery<{ Id: string; Description: string | null }>(
+    `SELECT Id, Description FROM Contract WHERE AccountId = '${accountId}' LIMIT 200`,
+    'existing fixture Contracts (for promo)'
+  );
+  const existingPromoCustomers = new Set(
+    existingPromoContracts
+      .map((r) => r.Description?.split(':')[1]?.trim())
+      .filter((s): s is string => !!s)
+  );
+
   for (const [scheduleId, lineList, discountPct, subCaseLabel] of [
     [expiredScheduleId, expiredLines, expiredScheduleDiscount, 'expired'],
     [nullEndScheduleId, nullEndLines, nullEndScheduleDiscount, 'null-end'],
   ] as Array<[string, PromoLine[], number, string]>) {
     for (const line of lineList) {
-      // Skip if this customer's subscription is already present.
-      // Marker is the subscription's display Name (auto-numbered),
-      // so really we check by Contract description in CONTRACT_FOR_PROMO
-      // form. Cheapest: try create, skip on duplicate by querying first.
-      const contractCheck = await sfQuery<{ Id: string }>(
-        `SELECT Id FROM Contract WHERE AccountId = '${accountId}' AND Description = '${fixtureTag}: ${line.customerName}' LIMIT 1`,
-        `Contract check ${line.customerName}`
-      );
-      if (contractCheck.length > 0) {
+      if (existingPromoCustomers.has(line.customerName)) {
         console.log(`  ⏭  ${line.customerName} — already exists, skipping`);
         continue;
       }
