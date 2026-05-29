@@ -182,10 +182,12 @@ export function RevenueLeakageCard({ leakage, verified, orgId, currency = 'USD' 
         {verified && verified.top_findings.length > 0 && orgId && (
           <div className="mb-5">
             <p className="text-xs font-semibold uppercase tracking-wide text-green-700 dark:text-green-400 mb-2 flex items-center gap-1.5">
-              ✓ Verified findings ({verified.finding_count})
+              {verified.top_findings.length < verified.finding_count
+                ? `✓ Top ${verified.top_findings.length} of ${verified.finding_count} verified findings`
+                : `✓ Verified findings (${verified.finding_count})`}
             </p>
             <div className="space-y-1.5">
-              {verified.top_findings.slice(0, 5).map((f) => (
+              {verified.top_findings.map((f) => (
                 <a
                   key={f.id}
                   href={`/orgs/${orgId}/forensics/${f.id}`}
