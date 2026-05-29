@@ -170,119 +170,137 @@ async function main() {
     process.exit(1);
   }
 
+  // Helpers — every conn call from here on is wrapped so a stall is
+  // impossible. Each prints elapsed ms on success so we can see where
+  // the org is slow if anything weird shows up.
+  type CreateResult = { success: boolean; id?: string; errors?: unknown };
+  async function sfCreate(sobjectName: string, fields: Record<string, unknown>, label: string): Promise<string> {
+    const start = Date.now();
+    process.stdout.write(`  > Create ${sobjectName} (${label})... `);
+    const res = (await withTimeout(
+      Promise.resolve(conn.sobject(sobjectName).create(fields)) as Promise<CreateResult>,
+      60_000,
+      `${sobjectName}.create ${label}`
+    )) as CreateResult;
+    if (!res.success) {
+      console.log(`FAILED (${Date.now() - start}ms)`);
+      throw new Error(`${sobjectName} create failed (${label}): ${JSON.stringify(res)}`);
+    }
+    console.log(`✓ ${res.id} (${Date.now() - start}ms)`);
+    return res.id as string;
+  }
+  type QueryRecords<T> = { records: T[] };
+  async function sfQuery<T>(soql: string, label: string): Promise<T[]> {
+    const start = Date.now();
+    process.stdout.write(`  > Query (${label})... `);
+    // jsforce's generic constraint trips on our row types; we treat the
+    // result as untyped at this seam and cast on the way out.
+    const r = (await withTimeout(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      Promise.resolve(conn.query(soql) as any) as Promise<QueryRecords<T>>,
+      30_000,
+      `query ${label}`
+    )) as QueryRecords<T>;
+    console.log(`${r.records.length} row(s) (${Date.now() - start}ms)`);
+    return r.records;
+  }
+
   // ─── 1. Ensure the offending Price Rule exists ──────────────────────
-  const priceRuleName = 'Renewal Floor Pricing — Forensic Fixture';
+  // Use a regular hyphen (not em-dash) in the Name. Some CPQ orgs have
+  // validation rules on Name fields that choke on non-ASCII.
+  const priceRuleName = 'Renewal Floor Pricing - Forensic Fixture';
   console.log(`\n[1/4] Ensuring Price Rule "${priceRuleName}"...`);
-  const rulesStart = Date.now();
-  const existingRules = await withTimeout(
-    Promise.resolve(
-      conn.query<IdRef & { Name: string }>(
-        `SELECT Id, Name FROM SBQQ__PriceRule__c WHERE Name = '${priceRuleName.replace(/'/g, "\\'")}' LIMIT 1`
-      )
-    ),
-    30_000,
-    'price rule lookup'
+  const existingRules = await sfQuery<IdRef & { Name: string }>(
+    `SELECT Id, Name FROM SBQQ__PriceRule__c WHERE Name = '${priceRuleName.replace(/'/g, "\\'")}' LIMIT 1`,
+    'PriceRule lookup'
   );
-  console.log(`  Lookup took ${Date.now() - rulesStart}ms, found ${existingRules.records.length} matching rule(s).`);
   let priceRuleId: string;
-  if (existingRules.records.length > 0) {
-    priceRuleId = existingRules.records[0].Id;
+  if (existingRules.length > 0) {
+    priceRuleId = existingRules[0].Id;
     console.log(`  ✓ Already exists: ${priceRuleId}`);
   } else {
-    const ruleRes = await conn.sobject('SBQQ__PriceRule__c').create({
+    priceRuleId = await sfCreate('SBQQ__PriceRule__c', {
       Name: priceRuleName,
       SBQQ__Active__c: true,
       SBQQ__EvaluationEvent__c: 'On Calculate',
       SBQQ__ConditionsMet__c: 'All',
-      SBQQ__Description__c: `${FIXTURE_TAG} Intentionally suppresses renewal uplift. Created to demonstrate Class C attribution.`,
-    });
-    if (!ruleRes.success) throw new Error(`Failed to create Price Rule: ${JSON.stringify(ruleRes)}`);
-    priceRuleId = ruleRes.id;
-    console.log(`  + Created: ${priceRuleId}`);
+      SBQQ__Description__c: `${FIXTURE_TAG} Intentionally suppresses renewal uplift.`,
+    }, 'Renewal Floor Pricing');
 
-    // Condition: SBQQ__Quote__c.SBQQ__Type__c = 'Renewal'
-    await conn.sobject('SBQQ__PriceCondition__c').create({
+    await sfCreate('SBQQ__PriceCondition__c', {
       Name: 'When renewal type',
       SBQQ__Rule__c: priceRuleId,
       SBQQ__Object__c: 'Quote',
       SBQQ__Field__c: 'SBQQ__Type__c',
       SBQQ__Operator__c: 'equals',
       SBQQ__Value__c: 'Renewal',
-    });
+    }, 'When renewal type');
 
-    // Action: SBQQ__NetPrice__c = SBQQ__Quantity__c * SBQQ__ListPrice__c
-    // (Ignores the contracted uplift — that's the conflict.)
-    await conn.sobject('SBQQ__PriceAction__c').create({
+    await sfCreate('SBQQ__PriceAction__c', {
       Name: 'Strip uplift on renewal',
       SBQQ__Rule__c: priceRuleId,
       SBQQ__TargetField__c: 'SBQQ__NetPrice__c',
       SBQQ__Formula__c: 'SBQQ__Quantity__c * SBQQ__ListPrice__c',
-    });
-    console.log(`    + Added Condition + Action`);
+    }, 'Strip uplift');
   }
 
   // ─── 2. Create the 10 Contracts + Subscriptions + renewal QuoteLines ─
-  console.log(`\n[2/4] Seeding ${CONTRACTS.length} contracts + subscriptions + renewal quote lines...`);
+  console.log(`\n[2/4] Seeding ${CONTRACTS.length} contracts...`);
 
-  // Pick an Account to hang everything off of. If none exists, create a fixture one.
   let fixtureAccountId: string;
-  const acctQ = await conn.query<IdRef>(
-    `SELECT Id FROM Account WHERE Name = 'OrgPrism Forensic Fixture Co' LIMIT 1`
+  const acctRows = await sfQuery<IdRef>(
+    `SELECT Id FROM Account WHERE Name = 'OrgPrism Forensic Fixture Co' LIMIT 1`,
+    'Account lookup'
   );
-  if (acctQ.records.length > 0) {
-    fixtureAccountId = acctQ.records[0].Id;
+  if (acctRows.length > 0) {
+    fixtureAccountId = acctRows[0].Id;
   } else {
-    const acctRes = await conn.sobject('Account').create({
+    fixtureAccountId = await sfCreate('Account', {
       Name: 'OrgPrism Forensic Fixture Co',
-      Description: `${FIXTURE_TAG}`,
-    });
-    if (!acctRes.success) throw new Error(`Failed to create fixture Account: ${JSON.stringify(acctRes)}`);
-    fixtureAccountId = acctRes.id;
+      Description: FIXTURE_TAG,
+    }, 'fixture Account');
   }
 
-  // Need a Product to reference. Use first active.
-  const prodQ = await conn.query<IdRef & { Name: string }>(
-    `SELECT Id, Name FROM Product2 WHERE IsActive = TRUE LIMIT 1`
+  const prodRows = await sfQuery<IdRef & { Name: string }>(
+    `SELECT Id, Name FROM Product2 WHERE IsActive = TRUE LIMIT 1`,
+    'Product2 lookup'
   );
-  if (prodQ.records.length === 0) {
-    throw new Error('No active Product2 found in this org. Create at least one product manually, then re-run.');
+  if (prodRows.length === 0) {
+    throw new Error('No active Product2 found in this org. Create one in Setup, then re-run.');
   }
-  const productId = prodQ.records[0].Id;
-  const productName = prodQ.records[0].Name;
-  console.log(`  Using Product2: ${productName} (${productId})`);
+  const productId = prodRows[0].Id;
+  console.log(`  Using Product2: ${prodRows[0].Name} (${productId})`);
 
-  // Check existing fixture contracts
-  const existingContractsQ = await conn.query<IdRef & { ContractNumber: string; Description: string }>(
-    `SELECT Id, ContractNumber, Description FROM Contract WHERE Description LIKE '%${FIXTURE_TAG}%' LIMIT 100`
+  const existingContracts = await sfQuery<IdRef & { Description: string }>(
+    `SELECT Id, Description FROM Contract WHERE Description LIKE '%${FIXTURE_TAG}%' LIMIT 100`,
+    'existing fixture Contracts'
   );
-  const existingContractNumbers = new Set(existingContractsQ.records.map((r) => r.Description.split(':')[1]?.trim()));
+  const existingContractCustomers = new Set(
+    existingContracts.map((r) => r.Description.split(':')[1]?.trim())
+  );
   let createdContracts = 0;
   let skippedContracts = 0;
 
   for (const def of CONTRACTS) {
     const marker = `${FIXTURE_TAG}: ${def.customerName}`;
-    if (existingContractNumbers.has(def.customerName)) {
+    if (existingContractCustomers.has(def.customerName)) {
+      console.log(`  ⏭  ${def.customerName} — already exists, skipping`);
       skippedContracts++;
       continue;
     }
 
-    // Contract with uplift entitlement.
-    const contractRes = await conn.sobject('Contract').create({
+    console.log(`\n  ${def.customerName} (${def.isLeaky ? 'LEAKY' : 'clean'}, ${def.upliftPct}% × ${def.quantity} units @ ${def.originalPrice}):`);
+
+    const contractId = await sfCreate('Contract', {
       AccountId: fixtureAccountId,
       StartDate: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
       ContractTerm: 12,
-      Status: 'Activated',
+      Status: 'Draft',
       Description: marker,
       SBQQ__RenewalUpliftRate__c: def.upliftPct,
-    });
-    if (!contractRes.success) {
-      console.warn(`  ✗ Contract for ${def.customerName}: ${JSON.stringify(contractRes)}`);
-      continue;
-    }
-    const contractId = contractRes.id;
+    }, `Contract ${def.customerName}`);
 
-    // Subscription record (original price).
-    const subRes = await conn.sobject('SBQQ__Subscription__c').create({
+    const subId = await sfCreate('SBQQ__Subscription__c', {
       SBQQ__Contract__c: contractId,
       SBQQ__Product__c: productId,
       SBQQ__Account__c: fixtureAccountId,
@@ -290,45 +308,30 @@ async function main() {
       SBQQ__Quantity__c: def.quantity,
       SBQQ__SubscriptionStartDate__c: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
       SBQQ__SubscriptionEndDate__c: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
-    });
-    if (!subRes.success) {
-      console.warn(`  ✗ Subscription for ${def.customerName}: ${JSON.stringify(subRes)}`);
-      continue;
-    }
-    const subId = subRes.id;
+    }, `Subscription ${def.customerName}`);
 
-    // Renewal Quote.
-    const renewalQuoteRes = await conn.sobject('SBQQ__Quote__c').create({
+    const quoteId = await sfCreate('SBQQ__Quote__c', {
       SBQQ__Account__c: fixtureAccountId,
       SBQQ__Type__c: 'Renewal',
       SBQQ__StartDate__c: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
       SBQQ__EndDate__c: new Date(Date.now() + 351 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
-    });
-    if (!renewalQuoteRes.success) {
-      console.warn(`  ✗ Renewal Quote for ${def.customerName}: ${JSON.stringify(renewalQuoteRes)}`);
-      continue;
-    }
-    const quoteId = renewalQuoteRes.id;
+    }, `Renewal Quote ${def.customerName}`);
 
-    // Renewal Quote Line. If this contract is "leaky", we simulate the
-    // Price Rule having fired by storing the un-uplifted price as the
-    // NetPrice. If clean, we store the correctly-uplifted price.
     const fraction = def.upliftPct / 100;
     const renewalPrice = def.isLeaky
-      ? def.originalPrice                  // Price Rule wiped uplift
+      ? def.originalPrice                   // Price Rule wiped uplift
       : def.originalPrice * (1 + fraction); // Clean uplift applied
 
-    await conn.sobject('SBQQ__QuoteLine__c').create({
+    await sfCreate('SBQQ__QuoteLine__c', {
       SBQQ__Quote__c: quoteId,
       SBQQ__Subscription__c: subId,
       SBQQ__Product__c: productId,
       SBQQ__Quantity__c: def.quantity,
       SBQQ__ListPrice__c: def.originalPrice,
       SBQQ__NetPrice__c: renewalPrice,
-    });
+    }, `Quote Line ${def.customerName}`);
 
     createdContracts++;
-    console.log(`  + ${def.customerName} — ${def.isLeaky ? 'LEAKY' : 'clean'} (${def.upliftPct}% uplift, ${def.originalPrice}/unit × ${def.quantity})`);
   }
 
   console.log(`\n[3/4] Summary:`);
