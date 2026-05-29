@@ -52,7 +52,15 @@ interface ScanRow {
   warning_count: number | null;
   info_count: number | null;
   category_scores: Record<string, number> | null;
-  metadata: { data_fetched?: Record<string, number> } | null;
+  metadata: {
+    data_fetched?: Record<string, number>;
+    revenue_leakage?: {
+      estimated_annual_leakage?: number;
+      confidence?: string;
+      percent_of_revenue?: number | null;
+    };
+    currency_iso_code?: string;
+  } | null;
   completed_at: string | null;
 }
 
@@ -325,9 +333,13 @@ export async function POST(request: NextRequest) {
       };
     });
 
-    // Per-org overview row for the header strip
+    // Per-org overview row for the header strip — now includes revenue
+    // leakage from each org's latest scan. Surfaces the $ side-by-side
+    // alongside the score so consultants can frame the engagement in
+    // money terms ("Org A is $1.2M/yr, Org B is $400K/yr — fix A first").
     const orgOverview = (orgs as OrgRow[]).map((org) => {
       const scan = latestByOrg.get(org.id);
+      const leak = scan?.metadata?.revenue_leakage;
       return {
         id: org.id,
         name: org.name,
@@ -339,8 +351,27 @@ export async function POST(request: NextRequest) {
         critical_count: scan?.critical_count ?? 0,
         warning_count: scan?.warning_count ?? 0,
         info_count: scan?.info_count ?? 0,
+        estimated_annual_leakage: typeof leak?.estimated_annual_leakage === 'number' ? leak.estimated_annual_leakage : null,
+        leakage_confidence: leak?.confidence ?? null,
+        leakage_percent_of_revenue: leak?.percent_of_revenue ?? null,
+        currency: scan?.metadata?.currency_iso_code ?? 'USD',
       };
     });
+
+    // Portfolio-wide $ aggregate. We sum naively across orgs assuming
+    // they're independent business units. If currencies differ we still
+    // sum (display layer can flag the mismatch) — the underlying signal
+    // ("there's $X on the table across the portfolio") still holds.
+    const portfolioLeakage = {
+      total_estimated_annual_leakage: orgOverview.reduce(
+        (sum, o) => sum + (typeof o.estimated_annual_leakage === 'number' ? o.estimated_annual_leakage : 0),
+        0
+      ),
+      orgs_with_estimate: orgOverview.filter((o) => typeof o.estimated_annual_leakage === 'number').length,
+      orgs_total: orgOverview.length,
+      currency_mixed: new Set(orgOverview.map((o) => o.currency)).size > 1,
+      primary_currency: orgOverview[0]?.currency ?? 'USD',
+    };
 
     // Migration manifest — flatten the per-category recommendations into
     // a "here's where to source each piece of the greenfield target"
@@ -360,6 +391,7 @@ export async function POST(request: NextRequest) {
         orgs: orgOverview,
         categories,
         migration_manifest: manifest,
+        portfolio_leakage: portfolioLeakage,
         generated_at: new Date().toISOString(),
       },
       { headers: { 'Cache-Control': 'no-store' } }

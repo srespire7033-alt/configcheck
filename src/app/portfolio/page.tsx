@@ -47,6 +47,18 @@ interface PortfolioOrg {
   critical_count: number;
   warning_count: number;
   info_count: number;
+  estimated_annual_leakage: number | null;
+  leakage_confidence: string | null;
+  leakage_percent_of_revenue: number | null;
+  currency: string;
+}
+
+interface PortfolioLeakage {
+  total_estimated_annual_leakage: number;
+  orgs_with_estimate: number;
+  orgs_total: number;
+  currency_mixed: boolean;
+  primary_currency: string;
 }
 
 interface CompareResult {
@@ -59,7 +71,14 @@ interface CompareResult {
     source_org_name: string;
     reason: string;
   }>;
+  portfolio_leakage?: PortfolioLeakage;
   generated_at: string;
+}
+
+function formatPortfolioMoney(amount: number, currency: string): string {
+  if (amount >= 1_000_000) return `${currency} ${(amount / 1_000_000).toFixed(2)}M`;
+  if (amount >= 1_000) return `${currency} ${(amount / 1_000).toFixed(0)}K`;
+  return `${currency} ${amount.toLocaleString()}`;
 }
 
 export default function PortfolioPage() {
@@ -276,6 +295,35 @@ export default function PortfolioPage() {
         {/* Results */}
         {result && (
           <>
+            {/* Portfolio-wide Revenue Leakage Banner — sums the per-scan
+                estimates across every org in the comparison. Anchors the
+                page in $ before any per-category breakdowns. */}
+            {result.portfolio_leakage && result.portfolio_leakage.total_estimated_annual_leakage > 0 && (
+              <Card className="border-amber-200 dark:border-amber-800/40 bg-gradient-to-br from-amber-50/40 to-transparent dark:from-amber-900/10">
+                <CardContent className="py-5">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-400 mb-1">
+                        Portfolio-wide Estimated Revenue Leakage
+                      </p>
+                      <p className="text-3xl font-bold text-gray-900 dark:text-white">
+                        {formatPortfolioMoney(
+                          result.portfolio_leakage.total_estimated_annual_leakage,
+                          result.portfolio_leakage.primary_currency
+                        )}
+                        <span className="text-base font-medium text-gray-500 dark:text-gray-400 ml-2">/ year combined</span>
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1.5">
+                        Based on {result.portfolio_leakage.orgs_with_estimate} of {result.portfolio_leakage.orgs_total} orgs with revenue baselines.
+                        {result.portfolio_leakage.currency_mixed && ' Currencies vary across orgs; figures summed at face value.'}
+                      </p>
+                    </div>
+                    <TrendingDown className="h-8 w-8 text-amber-600 dark:text-amber-400 flex-shrink-0" />
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             {/* Per-Org Overview Strip */}
             <Card>
               <CardHeader>
@@ -292,6 +340,7 @@ export default function PortfolioPage() {
                         <th className="pb-2 font-medium text-right">Critical</th>
                         <th className="pb-2 font-medium text-right">Warning</th>
                         <th className="pb-2 font-medium text-right">Total Issues</th>
+                        <th className="pb-2 font-medium text-right">Annual Leakage</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
@@ -310,6 +359,11 @@ export default function PortfolioPage() {
                           </td>
                           <td className="py-2.5 text-right text-gray-600 dark:text-gray-400">
                             {org.total_issues}
+                          </td>
+                          <td className="py-2.5 text-right font-mono font-semibold text-amber-700 dark:text-amber-300">
+                            {typeof org.estimated_annual_leakage === 'number'
+                              ? formatPortfolioMoney(org.estimated_annual_leakage, org.currency)
+                              : '—'}
                           </td>
                         </tr>
                       ))}
