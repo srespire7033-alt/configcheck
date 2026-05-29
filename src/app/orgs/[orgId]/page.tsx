@@ -58,10 +58,25 @@ export default function OrgDetailPage() {
   const [availableScanTypes, setAvailableScanTypes] = useState<Array<{ value: string; label: string }>>([]);
   const [detectingPackages, setDetectingPackages] = useState(false);
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Forensic scan polling — separate from the config scan poller because
+  // the two run on different lifecycles. The forensic poll fires after the
+  // config one completes (when the user opted in to forensics).
+  const forensicPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [forensicScanning, setForensicScanning] = useState(false);
+  const [forensicComplete, setForensicComplete] = useState<{
+    findingCount: number;
+    verifiedUsd: number;
+    currency: string;
+    status: 'completed' | 'partial' | 'failed';
+  } | null>(null);
 
   // Cleanup polling on unmount
   useEffect(() => {
     return () => {
+      if (forensicPollRef.current) {
+        clearInterval(forensicPollRef.current);
+        forensicPollRef.current = null;
+      }
       if (pollIntervalRef.current) {
         clearInterval(pollIntervalRef.current);
         pollIntervalRef.current = null;
@@ -358,8 +373,85 @@ export default function OrgDetailPage() {
     }, 3000);
   }
 
+  /**
+   * Poll the forensic scan until it reaches a terminal state. Triggered
+   * after handleScan() if the user opted into forensics. Refreshes the
+   * verified leakage card live as findings stream in, then surfaces a
+   * dismissible completion banner when the scan finishes.
+   *
+   * Lifecycle stays separate from the config scan poller because
+   * forensic scans can run 5-30 min — longer than the config scan's
+   * ~60s max — so they need their own budget.
+   */
+  function pollForForensicScan(forensicScanId: string) {
+    if (forensicPollRef.current) {
+      clearInterval(forensicPollRef.current);
+    }
+    setForensicScanning(true);
+    let pollCount = 0;
+    const maxPolls = 200; // 200 × 3s = 10 minutes budget
+
+    forensicPollRef.current = setInterval(async () => {
+      pollCount += 1;
+      try {
+        const res = await fetch(`/api/forensic-scans?scanId=${forensicScanId}`);
+        if (!res.ok) return;
+        const fScan = await res.json();
+        // Live update the verified card as findings stream in.
+        try {
+          const findingsRes = await fetch(`/api/forensic-findings?forensicScanId=${forensicScanId}`);
+          const findings: Array<{ id: string; detector_id: string; title: string; gap_usd: number }> =
+            findingsRes.ok ? await findingsRes.json() : [];
+          const liveVerifiedUsd = findings.reduce((sum, f) => sum + Number(f.gap_usd || 0), 0);
+          setVerifiedLeakage({
+            total_verified_usd: liveVerifiedUsd,
+            finding_count: findings.length,
+            status: fScan.status,
+            forensic_scan_id: forensicScanId,
+            top_findings: findings.slice(0, 10).map((f) => ({
+              id: f.id,
+              detector_id: f.detector_id,
+              title: f.title,
+              gap_usd: Number(f.gap_usd),
+            })),
+          });
+        } catch {
+          // best-effort refresh; one bad fetch doesn't stop polling
+        }
+
+        const terminal = ['completed', 'partial', 'failed'].includes(fScan.status);
+        if (terminal) {
+          if (forensicPollRef.current) {
+            clearInterval(forensicPollRef.current);
+            forensicPollRef.current = null;
+          }
+          setForensicScanning(false);
+          setForensicComplete({
+            findingCount: fScan.finding_count ?? 0,
+            verifiedUsd: Number(fScan.total_verified_usd ?? 0),
+            currency: 'USD', // fixture; multi-currency lookup TBD
+            status: fScan.status,
+          });
+          fetchData();
+        } else if (pollCount >= maxPolls) {
+          if (forensicPollRef.current) {
+            clearInterval(forensicPollRef.current);
+            forensicPollRef.current = null;
+          }
+          setForensicScanning(false);
+          // Don't error-toast — Bulk API jobs can outlive our budget;
+          // the scan completes server-side and the user sees it on next
+          // visit.
+        }
+      } catch {
+        // Network blip during poll — keep trying
+      }
+    }, 3000);
+  }
+
   async function handleScan(options: { includeForensics?: boolean } = {}) {
     setScanning(true);
+    setForensicComplete(null); // clear any prior completion banner
     try {
       const res = await fetch('/api/scans', {
         method: 'POST',
@@ -382,6 +474,12 @@ export default function OrgDetailPage() {
 
       if (!data.scanId) throw new Error(data.error || 'No scanId returned');
       pollForScan(data.scanId);
+      // Kick off the forensic poll in parallel. The server already
+      // queued the forensic scan record at this point — it'll start
+      // executing after the config scan completes.
+      if (data.forensicScanId) {
+        pollForForensicScan(data.forensicScanId);
+      }
     } catch (error) {
       console.error('Failed to start scan:', error);
       setScanning(false);
@@ -599,6 +697,63 @@ export default function OrgDetailPage() {
         </div>
       ) : (
         <>
+          {/* Forensic completion banner. Pops up when a forensic scan
+              the user kicked off in THIS session reaches terminal. Auto-
+              clears on the next scan; user can dismiss with the X. */}
+          {forensicComplete && (
+            <div className={`mb-6 rounded-2xl p-4 sm:p-5 border ${
+              forensicComplete.status === 'completed'
+                ? 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-900/50'
+                : forensicComplete.status === 'partial'
+                  ? 'bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-900/50'
+                  : 'bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-900/50'
+            }`}>
+              <div className="flex items-start gap-3">
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                  forensicComplete.status === 'failed'
+                    ? 'bg-red-100 dark:bg-red-900/50'
+                    : 'bg-green-100 dark:bg-green-900/50'
+                }`}>
+                  {forensicComplete.status === 'failed' ? (
+                    <AlertCircle className="w-4 h-4 text-red-600 dark:text-red-400" />
+                  ) : (
+                    <TrendingDown className={`w-4 h-4 ${
+                      forensicComplete.status === 'completed'
+                        ? 'text-green-600 dark:text-green-400'
+                        : 'text-amber-600 dark:text-amber-400'
+                    }`} />
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className={`text-sm font-semibold ${
+                    forensicComplete.status === 'completed'
+                      ? 'text-green-800 dark:text-green-300'
+                      : forensicComplete.status === 'partial'
+                        ? 'text-amber-800 dark:text-amber-300'
+                        : 'text-red-800 dark:text-red-300'
+                  }`}>
+                    {forensicComplete.status === 'failed'
+                      ? 'Forensic scan failed'
+                      : forensicComplete.status === 'partial'
+                        ? `Forensic scan partial — ${forensicComplete.findingCount} finding${forensicComplete.findingCount === 1 ? '' : 's'} (${forensicComplete.currency} ${forensicComplete.verifiedUsd.toLocaleString()} verified)`
+                        : `Forensic scan complete — ${forensicComplete.findingCount} finding${forensicComplete.findingCount === 1 ? '' : 's'} (${forensicComplete.currency} ${forensicComplete.verifiedUsd.toLocaleString()} verified)`
+                    }
+                  </p>
+                  <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">
+                    Verified gaps appear in the Revenue Leakage card below. Click any finding to see the attribution drill-down.
+                  </p>
+                </div>
+                <button
+                  onClick={() => setForensicComplete(null)}
+                  className="p-1 -m-1 rounded text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+                  aria-label="Dismiss"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Recent-failure banner — shown when a scan failed AFTER the latest
               completed scan. Explains why the data below is stale and how to
               recover, instead of leaving the user guessing why "Run scan" did
