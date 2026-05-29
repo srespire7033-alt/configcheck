@@ -20,6 +20,44 @@ interface Entry {
 
 const entries: Entry[] = [
   {
+    date: '2026-05-29',
+    tag: 'New',
+    title: 'Coverage milestone — 209 health checks across 49 categories',
+    body:
+      'The catalog grew to 209 checks (92 CPQ + 39 Billing + 78 Revenue Cloud/ARM). Numbers across the homepage, dashboard, scan results and OG meta tags now read from a single source of truth in `src/lib/analysis/constants.ts`, with a drift-guard test that fails CI if anyone adds a check without bumping the count. Marketing numbers can never silently go stale again.',
+    bullets: [
+      'New ARM-002b — flags active products with no PricebookEntry AND no RateCardEntry (the truly unsellable case ARM-001 missed)',
+      'ARM check suite hardened against missing data — 24 previously-silent false-negatives now run cleanly',
+      'Test suite grew to 1,163 unit tests, all passing on every commit',
+    ],
+  },
+  {
+    date: '2026-05-29',
+    tag: 'New',
+    title: 'BYO External Client App — permanent OAuth connections',
+    body:
+      'OrgPrism now uses Bring-Your-Own External Client App for OAuth: each customer creates an ECA inside their own Salesforce org, so refresh tokens issued by that ECA work indefinitely. The shared-platform-ECA model previously caused refresh failures roughly every 2 hours, requiring daily reconnects — Path C is now proven working end-to-end with scans completing in 3 seconds against 12+ hour idle tokens.',
+    bullets: [
+      'Pre-flight credentials test button validates Consumer Key, Login URL, and callback URL before the OAuth round-trip',
+      'Per-org login URL safety — the gateway-vs-MyDomain mistake that broke 2 of 3 test orgs is now blocked at the modal',
+      'One-click Migrate button for legacy connections (preserves scan history)',
+    ],
+  },
+  {
+    date: '2026-05-29',
+    tag: 'Improvement',
+    title: 'AI summary deferred — scans complete 5–7× faster',
+    body:
+      'Executive summary and remediation plan generation moved to a deferred background step that runs after the scan is marked completed. Users see issues and score immediately (3 seconds for the data fetch + 152-check engine + DB write), while the AI prose fills in over the next 5–25 seconds. A Gemini outage now affects only the prose layer — issues, scores, and metadata stay safe.',
+  },
+  {
+    date: '2026-05-29',
+    tag: 'New',
+    title: 'Public /status page + self-hosted product analytics',
+    body:
+      'Live health probes at /status — database latency, scan queue depth, hourly throughput, and last-completed-scan timestamp. All metrics computed server-side against the actual infrastructure. Replaces what would otherwise be openstatus.dev / instatus.com at $9–29/mo. Companion admin /admin/analytics dashboard reads from a self-hosted analytics_events table — funnel data stays in our own Supabase, no third-party PII flow.',
+  },
+  {
     date: '2026-05-01',
     tag: 'Improvement',
     title: 'Smarter price-rule evaluation order check',

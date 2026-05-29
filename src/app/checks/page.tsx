@@ -162,11 +162,35 @@ export default function ChecksPage() {
       <main className="max-w-5xl mx-auto px-6 py-12">
         <div className="mb-12">
           <h1 className="text-3xl md:text-4xl font-bold mb-3">All {TOTAL_CHECKS} health checks</h1>
-          <p className="text-gray-600 dark:text-gray-400 max-w-3xl leading-relaxed">
+          <p className="text-gray-600 dark:text-gray-400 max-w-3xl leading-relaxed mb-6">
             Every check OrgPrism runs across Salesforce CPQ, Billing, and Revenue Cloud (ARM).
             Severity classifies how serious each finding is &mdash; Critical breaks something at runtime,
             Warning is a misconfiguration smell, Info is a best-practice nudge.
           </p>
+          {/* Severity breakdown across all suites. Computed at render time
+              from the live arrays so it stays accurate as the catalog grows. */}
+          {(() => {
+            const all = [...cpqRows, ...billingRows, ...armRows];
+            const critCount = all.filter((c) => c.severity === 'critical').length;
+            const warnCount = all.filter((c) => c.severity === 'warning').length;
+            const infoCount = all.filter((c) => c.severity === 'info').length;
+            return (
+              <div className="grid grid-cols-3 gap-3 max-w-md">
+                <div className="p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200/50 dark:border-red-800/40">
+                  <div className="text-2xl font-bold text-red-700 dark:text-red-300">{critCount}</div>
+                  <div className="text-[11px] text-red-600/80 dark:text-red-400/80 uppercase tracking-wider">Critical</div>
+                </div>
+                <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200/50 dark:border-amber-800/40">
+                  <div className="text-2xl font-bold text-amber-700 dark:text-amber-300">{warnCount}</div>
+                  <div className="text-[11px] text-amber-600/80 dark:text-amber-400/80 uppercase tracking-wider">Warning</div>
+                </div>
+                <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200/50 dark:border-blue-800/40">
+                  <div className="text-2xl font-bold text-blue-700 dark:text-blue-300">{infoCount}</div>
+                  <div className="text-[11px] text-blue-600/80 dark:text-blue-400/80 uppercase tracking-wider">Info</div>
+                </div>
+              </div>
+            );
+          })()}
         </div>
 
         {/* Quick-jump anchor strip */}
