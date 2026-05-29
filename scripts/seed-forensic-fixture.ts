@@ -247,15 +247,35 @@ async function main() {
     console.log(`  ✓ Condition already exists: ${existingConditions[0].Id}`);
   }
 
+  // Field name for the target on SBQQ__PriceAction__c varies across CPQ
+  // versions. Standard is SBQQ__TargetField__c; some installs use
+  // SBQQ__FieldName__c. Describe the object once to learn what's
+  // actually here, fall back to whichever exists.
+  const paFields = await withTimeout(
+    Promise.resolve(conn.describe('SBQQ__PriceAction__c')) as Promise<{ fields: Array<{ name: string; updateable: boolean }> }>,
+    30_000,
+    'describe SBQQ__PriceAction__c'
+  );
+  const writableNames = paFields.fields.filter((f) => f.updateable).map((f) => f.name);
+  const targetFieldCandidates = ['SBQQ__TargetField__c', 'SBQQ__FieldName__c', 'SBQQ__Field__c'];
+  const targetField = targetFieldCandidates.find((c) => writableNames.includes(c));
+  if (!targetField) {
+    console.error(`  ✗ Could not find a target-field candidate on SBQQ__PriceAction__c. Available writable fields:`);
+    console.error(`    ${writableNames.filter((n) => n.toLowerCase().includes('field') || n.toLowerCase().includes('target')).join(', ')}`);
+    console.error(`  Tell Claude which field name to use and we'll patch.`);
+    process.exit(1);
+  }
+  console.log(`  ℹ️  Using target field: ${targetField}`);
+
   // Ensure the NetPrice-overwriting action exists on this rule.
   const existingActions = await sfQuery<IdRef>(
-    `SELECT Id FROM SBQQ__PriceAction__c WHERE SBQQ__Rule__c = '${priceRuleId}' AND SBQQ__TargetField__c = 'SBQQ__NetPrice__c' LIMIT 1`,
+    `SELECT Id FROM SBQQ__PriceAction__c WHERE SBQQ__Rule__c = '${priceRuleId}' AND ${targetField} = 'SBQQ__NetPrice__c' LIMIT 1`,
     'PriceAction check'
   );
   if (existingActions.length === 0) {
     await sfCreate('SBQQ__PriceAction__c', {
       SBQQ__Rule__c: priceRuleId,
-      SBQQ__TargetField__c: 'SBQQ__NetPrice__c',
+      [targetField]: 'SBQQ__NetPrice__c',
       SBQQ__Formula__c: 'SBQQ__Quantity__c * SBQQ__ListPrice__c',
     }, 'Strip uplift');
   } else {
