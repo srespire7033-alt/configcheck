@@ -10,6 +10,8 @@ import { generateExecutiveSummary, generateRemediationPlan } from '@/lib/ai/gemi
 import { throttleAi } from '@/lib/ai/throttle';
 import { sendScanNotification } from '@/lib/email/notifications';
 import { detectInstalledPackages, packageDetectionToArray } from '@/lib/salesforce/detect-packages';
+import { fetchRevenueBaseline } from '@/lib/salesforce/queries-revenue-baseline';
+import { calculateRevenueLeakage, resolveAssumptions, type RevenueAssumptions } from '@/lib/analysis/revenue-leakage';
 import { track } from '@/lib/analytics/track-server';
 import { AnalyticsEvent } from '@/lib/analytics/events';
 import type { ProductType } from '@/types';
@@ -282,6 +284,51 @@ export async function runScanInBackground(
     // throw away an otherwise-successful scan. The user sees results
     // immediately; the AI summary fills in shortly after.
 
+    // Step 4.5: Revenue leakage calculation
+    //
+    // Pull the org's actual median deal size + annual revenue + avg
+    // discount % from Salesforce — so the $ numbers we attribute to
+    // findings are defensible ("YOUR 1,247 closed-won deals averaged
+    // $32K — here's the leakage based on that"). Then apply per-check
+    // formulas with industry-driven LTV multipliers and recoverability
+    // factors. The result stamps revenue_impact onto each issue (the
+    // existing column) and stashes the full breakdown + audit trail on
+    // scan.metadata.revenue_leakage so downstream UIs / PDF / portfolio
+    // compare can all read from one place. Failure is non-fatal — if
+    // Opportunity / Quote / Order are all unreadable the engine returns
+    // null impacts and a "system defaults" note in the audit.
+    let leakageBreakdown: ReturnType<typeof calculateRevenueLeakage> | null = null;
+    try {
+      console.log(`[SCAN ${scanId}] Fetching revenue baseline + calculating leakage...`);
+      const baseline = await fetchRevenueBaseline(conn);
+      const orgAssumptions = (org as { revenue_assumptions?: Partial<RevenueAssumptions> | null }).revenue_assumptions ?? null;
+      // User-level defaults aren't on the org row — fetch them explicitly.
+      // Falls back to system defaults if unreadable.
+      let userAssumptions: Partial<RevenueAssumptions> | null = null;
+      try {
+        const { data: u } = await supabase
+          .from('users')
+          .select('revenue_assumptions')
+          .eq('id', org.user_id as string)
+          .single();
+        userAssumptions = (u as { revenue_assumptions?: Partial<RevenueAssumptions> | null } | null)?.revenue_assumptions ?? null;
+      } catch {
+        // best-effort
+      }
+      const resolved = resolveAssumptions(orgAssumptions, userAssumptions);
+      leakageBreakdown = calculateRevenueLeakage(result.issues, baseline, resolved);
+      // Replace result.issues with the enriched version so issue rows
+      // inserted below carry revenue_impact + methodology.
+      result.issues = leakageBreakdown.issues_with_impact;
+      console.log(
+        `[SCAN ${scanId}] Leakage = ${baseline.currency_iso_code} ${leakageBreakdown.estimated_annual_leakage.toLocaleString()}/yr (${leakageBreakdown.confidence} confidence, source=${leakageBreakdown.audit.baseline_source})`
+      );
+    } catch (leakErr) {
+      const msg = leakErr instanceof Error ? leakErr.message : 'Unknown leakage error';
+      console.error(`[SCAN ${scanId}] Revenue leakage calc failed (non-fatal):`, msg);
+      // Leave result.issues unchanged; no leakage metadata stored
+    }
+
     // Step 5: Save issues
     const issuesToInsert = result.issues.map((issue) => ({
       scan_id: scanId,
@@ -358,6 +405,22 @@ export async function runScanInBackground(
           query_failures: queryFailuresMeta.length > 0 ? queryFailuresMeta : null,
           query_outcomes: Object.keys(queryOutcomesMeta).length > 0 ? queryOutcomesMeta : null,
           ai_summary_status: 'pending',
+          // Revenue leakage breakdown — headline annualized $, %-of-
+          // revenue context, top 10 contributing checks, top affected
+          // accounts placeholder, audit trail for reproducibility. UI
+          // surfaces (org-detail card, PDF, portfolio aggregate) all
+          // read from here.
+          revenue_leakage: leakageBreakdown
+            ? {
+                estimated_annual_leakage: leakageBreakdown.estimated_annual_leakage,
+                percent_of_revenue: leakageBreakdown.percent_of_revenue,
+                confidence: leakageBreakdown.confidence,
+                top_contributors: leakageBreakdown.top_contributors,
+                top_affected_accounts: leakageBreakdown.top_affected_accounts,
+                coverage: leakageBreakdown.coverage,
+                audit: leakageBreakdown.audit,
+              }
+            : null,
         },
         completed_at: new Date().toISOString(),
       })
