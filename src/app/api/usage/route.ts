@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/db/client';
 import { getAuthUser } from '@/lib/auth/get-user';
+import { checkQuota } from '@/lib/quota';
 
 export const dynamic = 'force-dynamic';
 
@@ -73,6 +74,11 @@ export async function GET(request: NextRequest) {
       dailyScans[day] = (dailyScans[day] || 0) + 1;
     });
 
+  // Surface the scan quota so client surfaces (portfolio pre-flight modal,
+  // dashboard limit banner) can show "you have N of M scans left" without
+  // an extra round-trip.
+  const scanQuota = await checkQuota(user.id, 'scans');
+
   return NextResponse.json({
     total_scans: totalRes.count || 0,
     scans_this_month: monthRes.count || 0,
@@ -82,6 +88,7 @@ export async function GET(request: NextRequest) {
     is_admin: adminRes.data?.is_admin === true,
     daily_scans: dailyScans,
     event_counts: eventCounts,
+    scan_quota: { limit: scanQuota.limit, used: scanQuota.used },
   });
 }
 

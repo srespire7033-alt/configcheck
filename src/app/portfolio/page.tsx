@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import {
   ArrowLeft,
@@ -13,9 +14,12 @@ import {
   TrendingDown,
   Download,
   FileText,
+  RefreshCw,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { LoadingScreen } from '@/components/ui/loading-screen';
+import { RefreshAndCompareModal } from '@/components/portfolio/refresh-and-compare-modal';
+import { classifyStaleness, DEFAULT_STALENESS_DAYS } from '@/lib/portfolio/staleness';
 import type { OrgCardData } from '@/types';
 
 interface CategoryComparison {
@@ -81,7 +85,22 @@ function formatPortfolioMoney(amount: number, currency: string): string {
   return `${currency} ${amount.toLocaleString()}`;
 }
 
+// Next App Router requires components that read useSearchParams() to be
+// wrapped in <Suspense> so the static prerender can bail out cleanly.
+// We do that at the page level and keep all the real logic in the inner
+// component.
 export default function PortfolioPage() {
+  return (
+    <Suspense fallback={<LoadingScreen />}>
+      <PortfolioPageInner />
+    </Suspense>
+  );
+}
+
+function PortfolioPageInner() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const runIdFromUrl = searchParams?.get('runId') ?? null;
   const [orgs, setOrgs] = useState<OrgCardData[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
@@ -89,7 +108,22 @@ export default function PortfolioPage() {
   const [result, setResult] = useState<CompareResult | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  // Pre-flight modal state for the Refresh & Compare flow.
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalSubmitting, setModalSubmitting] = useState(false);
+  const [modalError, setModalError] = useState<string | null>(null);
+  const [quota, setQuota] = useState<{ used: number; limit: number | null } | null>(null);
+
   useEffect(() => {
+    // Pull quota in parallel with orgs so the modal can render without a
+    // second wait state when it opens.
+    fetch('/api/usage')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((u) => {
+        if (u?.scan_quota) setQuota({ used: u.scan_quota.used, limit: u.scan_quota.limit });
+      })
+      .catch(() => {});
+
     fetch('/api/orgs')
       .then((r) => (r.ok ? r.json() : []))
       .then((data: OrgCardData[]) => {
@@ -110,8 +144,9 @@ export default function PortfolioPage() {
     setSelected(next);
   }
 
-  async function runCompare() {
-    if (selected.size < 2) {
+  async function runCompare(pinned?: { organizationIds: string[]; scanIds: string[] }) {
+    const orgIds = pinned?.organizationIds ?? Array.from(selected);
+    if (orgIds.length < 2) {
       setError('Select at least 2 orgs to compare');
       return;
     }
@@ -122,7 +157,13 @@ export default function PortfolioPage() {
       const res = await fetch('/api/scans/portfolio-compare', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ organizationIds: Array.from(selected) }),
+        body: JSON.stringify({
+          organizationIds: orgIds,
+          // Pin scan IDs when called from a finished portfolio run so the
+          // comparison reads the exact scans we just produced — protects
+          // against an independent scan racing the read.
+          ...(pinned?.scanIds ? { scanIds: pinned.scanIds } : {}),
+        }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -136,6 +177,78 @@ export default function PortfolioPage() {
       setComparing(false);
     }
   }
+
+  // When landing here from a finished portfolio run (?runId=...), load
+  // the run, hydrate the selection, and auto-compare with pinned scans.
+  // We deliberately don't await the org list before this — the comparison
+  // doesn't need it.
+  useEffect(() => {
+    if (!runIdFromUrl) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`/api/portfolio-runs/${runIdFromUrl}`);
+        if (!res.ok) return;
+        const json = await res.json();
+        if (cancelled) return;
+        const orgIds: string[] = json.run.organization_ids || [];
+        const scanIds: string[] = (json.run.scan_ids || []).filter((s: string | null): s is string => !!s);
+        if (orgIds.length >= 2 && scanIds.length === orgIds.length) {
+          setSelected(new Set(orgIds));
+          await runCompare({ organizationIds: orgIds, scanIds });
+        }
+      } catch {
+        // best-effort hydration; if it fails the user can re-click compare
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [runIdFromUrl]);
+
+  async function startPortfolioRun(params: {
+    forceRescanOrgIds: string[];
+    skipScanOrgIds: string[];
+    notifyOnComplete: boolean;
+  }) {
+    setModalSubmitting(true);
+    setModalError(null);
+    try {
+      const res = await fetch('/api/portfolio-runs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          organizationIds: Array.from(selected),
+          forceRescanOrgIds: params.forceRescanOrgIds,
+          skipScanOrgIds: params.skipScanOrgIds,
+          notifyOnComplete: params.notifyOnComplete,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        // Map structured errors back to the modal so quota / cached-missing
+        // problems stay in-context instead of dumping the user out.
+        setModalError(data.message || data.error || 'Failed to start portfolio run');
+        return;
+      }
+      // Success: redirect to the progress page. The portfolio run might
+      // already be "completed" (every org used cached) — in which case the
+      // progress page auto-redirects to the comparison view immediately.
+      router.push(`/portfolio/runs/${data.runId}`);
+    } catch (err) {
+      setModalError(err instanceof Error ? err.message : 'Failed to start portfolio run');
+    } finally {
+      setModalSubmitting(false);
+    }
+  }
+
+  // Staleness verdicts for the currently selected orgs — feeds the modal.
+  const selectedOrgs = orgs.filter((o) => selected.has(o.id));
+  const verdicts = classifyStaleness(
+    selectedOrgs.map((o) => ({ org_id: o.id, last_scan_at: o.last_scan_at ?? null })),
+    DEFAULT_STALENESS_DAYS
+  );
 
   function exportManifest() {
     if (!result) return;
@@ -259,27 +372,47 @@ export default function PortfolioPage() {
                     );
                   })}
                 </div>
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-3 flex-wrap">
                   <p className="text-xs text-gray-500 dark:text-gray-400">
                     {selected.size} selected
                   </p>
-                  <button
-                    onClick={runCompare}
-                    disabled={selected.size < 2 || comparing}
-                    className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                  >
-                    {comparing ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        Comparing…
-                      </>
-                    ) : (
-                      <>
-                        <GitMerge className="h-4 w-4" />
-                        Compare {selected.size} org{selected.size === 1 ? '' : 's'}
-                      </>
-                    )}
-                  </button>
+                  <div className="flex items-center gap-2">
+                    {/* Compare cached: legacy fast-path. Uses each org's
+                        latest completed scan without re-scanning. Right
+                        choice when the user just ran scans and is iterating
+                        on the comparison view. */}
+                    <button
+                      onClick={() => runCompare()}
+                      disabled={selected.size < 2 || comparing}
+                      className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      {comparing ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Comparing…
+                        </>
+                      ) : (
+                        <>
+                          <GitMerge className="h-4 w-4" />
+                          Compare cached
+                        </>
+                      )}
+                    </button>
+                    {/* Refresh & Compare: opens pre-flight modal. Default
+                        path for serious engagements where staleness
+                        matters. */}
+                    <button
+                      onClick={() => {
+                        setModalError(null);
+                        setModalOpen(true);
+                      }}
+                      disabled={selected.size < 2 || comparing}
+                      className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      <RefreshCw className="h-4 w-4" />
+                      Refresh & Compare
+                    </button>
+                  </div>
                 </div>
               </>
             )}
@@ -495,6 +628,21 @@ export default function PortfolioPage() {
           </>
         )}
       </div>
+      <RefreshAndCompareModal
+        open={modalOpen}
+        orgs={selectedOrgs.map((o) => ({
+          id: o.id,
+          name: o.name,
+          is_sandbox: o.is_sandbox,
+          last_scan_at: o.last_scan_at,
+        }))}
+        verdicts={verdicts}
+        quota={quota}
+        submitting={modalSubmitting}
+        error={modalError}
+        onCancel={() => setModalOpen(false)}
+        onConfirm={startPortfolioRun}
+      />
     </div>
   );
 }
