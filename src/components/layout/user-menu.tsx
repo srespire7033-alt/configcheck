@@ -18,6 +18,7 @@ export function UserMenu() {
   const [signingOut, setSigningOut] = useState(false);
   const [email, setEmail] = useState<string | null>(null);
   const [fullName, setFullName] = useState<string | null>(null);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -28,10 +29,19 @@ export function UserMenu() {
         if (cancelled || !data) return;
         setEmail(data.email || null);
         setFullName(data.full_name || null);
+        setAvatarUrl(data.avatar_url || null);
       })
       .catch(() => {});
+    // Refetch when other tabs / the settings page broadcasts an avatar
+    // change so the header pic updates in real time.
+    function onAvatarUpdated(e: Event) {
+      const next = (e as CustomEvent<{ url: string | null }>).detail?.url;
+      setAvatarUrl(next ?? null);
+    }
+    window.addEventListener('orgprism:avatar-updated', onAvatarUpdated);
     return () => {
       cancelled = true;
+      window.removeEventListener('orgprism:avatar-updated', onAvatarUpdated);
     };
   }, []);
 
@@ -70,9 +80,18 @@ export function UserMenu() {
         aria-haspopup="menu"
         aria-expanded={open}
       >
-        <div className="w-7 h-7 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-white text-xs font-bold flex items-center justify-center">
-          {initials}
-        </div>
+        {avatarUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={avatarUrl}
+            alt={fullName || 'You'}
+            className="w-7 h-7 rounded-full object-cover bg-gray-100 dark:bg-gray-800"
+          />
+        ) : (
+          <div className="w-7 h-7 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-white text-xs font-bold flex items-center justify-center">
+            {initials}
+          </div>
+        )}
         <ChevronDown className={`w-3.5 h-3.5 text-gray-500 transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
 

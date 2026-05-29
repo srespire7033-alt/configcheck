@@ -152,6 +152,15 @@ export default function SettingsPage() {
   const [brandingColor, setBrandingColor] = useState('#1B5E96');
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  // Profile avatar — stored in Supabase Storage, URL persisted on
+  // users.avatar_url. Header dropdown reads this on mount + on the
+  // custom `orgprism:avatar-updated` window event we dispatch from
+  // upload/remove handlers, so the avatar pic refreshes everywhere
+  // without a page reload.
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const [avatarError, setAvatarError] = useState<string | null>(null);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
   const [email, setEmail] = useState('');
   const [plan, setPlan] = useState('free');
   const [createdAt, setCreatedAt] = useState<string | null>(null);
@@ -254,6 +263,7 @@ export default function SettingsPage() {
           setEmail(data.email || '');
           setPlan(data.plan || 'free');
           setCreatedAt(data.created_at || null);
+          setAvatarUrl(data.avatar_url || null);
           setEmailNotifications(data.email_notifications_enabled !== false);
           setNotificationEmails(data.notification_emails || []);
           setNotifSettings(data.notification_settings || null);
@@ -284,6 +294,61 @@ export default function SettingsPage() {
       .then((data) => data && setUsage(data))
       .catch(() => {});
   }, []);
+
+  // Broadcast avatar changes so the header dropdown updates without a
+  // page reload. UserMenu listens for this on the window.
+  function broadcastAvatar(url: string | null) {
+    if (typeof window === 'undefined') return;
+    window.dispatchEvent(new CustomEvent('orgprism:avatar-updated', { detail: { url } }));
+  }
+
+  async function handleAvatarUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setAvatarError(null);
+    if (file.size > 2 * 1024 * 1024) {
+      setAvatarError('File too large. Max 2 MB.');
+      return;
+    }
+    setAvatarUploading(true);
+    try {
+      const form = new FormData();
+      form.append('file', file);
+      const res = await fetch('/api/auth/avatar', { method: 'POST', body: form });
+      const data = await res.json();
+      if (!res.ok) {
+        setAvatarError(data.error || 'Upload failed');
+        return;
+      }
+      setAvatarUrl(data.avatar_url);
+      broadcastAvatar(data.avatar_url);
+    } catch (err) {
+      setAvatarError(err instanceof Error ? err.message : 'Upload failed');
+    } finally {
+      setAvatarUploading(false);
+      // Reset the input so re-uploading the same file works
+      if (avatarInputRef.current) avatarInputRef.current.value = '';
+    }
+  }
+
+  async function handleAvatarRemove() {
+    setAvatarError(null);
+    setAvatarUploading(true);
+    try {
+      const res = await fetch('/api/auth/avatar', { method: 'DELETE' });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setAvatarError(data.error || 'Remove failed');
+        return;
+      }
+      setAvatarUrl(null);
+      broadcastAvatar(null);
+    } catch (err) {
+      setAvatarError(err instanceof Error ? err.message : 'Remove failed');
+    } finally {
+      setAvatarUploading(false);
+    }
+  }
 
   async function handleLogoUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -628,6 +693,60 @@ export default function SettingsPage() {
           {activeTab === 'account' && (
             <div className="space-y-6">
               <SectionCard title="Profile" description="Your personal information. This is used across the platform.">
+                {/* Profile picture — sits ABOVE the form grid so the user
+                    sees their avatar before they edit any other field. */}
+                <div className="flex items-center gap-4 pb-5 mb-5 border-b border-gray-100 dark:border-gray-800">
+                  {avatarUrl ? (
+                    /* eslint-disable-next-line @next/next/no-img-element */
+                    <img
+                      src={avatarUrl}
+                      alt={fullName || 'Profile picture'}
+                      className="w-16 h-16 rounded-full object-cover border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800 flex-shrink-0"
+                    />
+                  ) : (
+                    <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-white text-lg font-bold flex items-center justify-center flex-shrink-0">
+                      {(fullName || email || '?')
+                        .split(/[\s@.]+/)
+                        .filter(Boolean)
+                        .slice(0, 2)
+                        .map((s) => s[0]?.toUpperCase() || '')
+                        .join('')}
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900 dark:text-white mb-0.5">Profile picture</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">PNG, JPG, WebP, or GIF. Max 2 MB.</p>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <input
+                        ref={avatarInputRef}
+                        type="file"
+                        accept="image/png,image/jpeg,image/webp,image/gif"
+                        onChange={handleAvatarUpload}
+                        className="hidden"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => avatarInputRef.current?.click()}
+                        disabled={avatarUploading}
+                        className="px-3 py-1.5 text-xs font-medium text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/40 border border-blue-200 dark:border-blue-700 rounded-lg transition-colors disabled:opacity-50"
+                      >
+                        {avatarUploading ? 'Uploading…' : avatarUrl ? 'Change photo' : 'Upload photo'}
+                      </button>
+                      {avatarUrl && !avatarUploading && (
+                        <button
+                          type="button"
+                          onClick={handleAvatarRemove}
+                          className="px-3 py-1.5 text-xs font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                        >
+                          Remove
+                        </button>
+                      )}
+                    </div>
+                    {avatarError && (
+                      <p className="text-xs text-red-600 dark:text-red-400 mt-2">{avatarError}</p>
+                    )}
+                  </div>
+                </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                   <FormField label="Full Name" icon={<User className="w-4 h-4" />}>
                     <input
