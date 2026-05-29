@@ -150,8 +150,42 @@ export function calculateRevenueLeakage(
     };
   });
 
-  // Aggregate
-  const totalAnnual = enriched.reduce((sum, i) => sum + (i.revenue_impact ?? 0), 0);
+  // Aggregate. Cap each individual finding at 25% of org annual revenue
+  // and the total at 100% — the heuristic formulas multiply counts ×
+  // median deal × LTV × recoverability, which can blow past sanity in
+  // small orgs (e.g. a fixture org with $3M revenue showing a single
+  // check worth $6M because 25 affected products × $50K median × 4 LTV
+  // = $5M). The verified $ from forensic findings has no such cap — it
+  // comes from real records and is correct by construction.
+  const PER_CHECK_CAP_PCT = 0.25;   // any single check ≤ 25% of revenue
+  const TOTAL_CAP_PCT = 1.0;        // total estimated leakage ≤ 100% of revenue
+  const perCheckCap = baseline.annual_revenue && baseline.annual_revenue > 0
+    ? baseline.annual_revenue * PER_CHECK_CAP_PCT
+    : null;
+  if (perCheckCap !== null) {
+    let cappedCount = 0;
+    for (const i of enriched) {
+      if ((i.revenue_impact ?? 0) > perCheckCap) {
+        i.revenue_impact = perCheckCap;
+        cappedCount += 1;
+      }
+    }
+    if (cappedCount > 0) {
+      notes.push(
+        `${cappedCount} check${cappedCount === 1 ? '' : 's'} capped at 25% of annual revenue to keep estimates within plausible bounds.`
+      );
+    }
+  }
+  let totalAnnual = enriched.reduce((sum, i) => sum + (i.revenue_impact ?? 0), 0);
+  if (baseline.annual_revenue && baseline.annual_revenue > 0) {
+    const totalCap = baseline.annual_revenue * TOTAL_CAP_PCT;
+    if (totalAnnual > totalCap) {
+      totalAnnual = totalCap;
+      notes.push(
+        `Total estimated leakage capped at 100% of annual revenue. Verified findings (from real records) are not subject to this cap.`
+      );
+    }
+  }
   const pctOfRevenue =
     baseline.annual_revenue && baseline.annual_revenue > 0
       ? Math.round((totalAnnual / baseline.annual_revenue) * 10000) / 100

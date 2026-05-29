@@ -159,20 +159,26 @@ export default function OrgDetailPage() {
           setScan(latestScan);
 
           // Fetch the forensic scan paired with this config scan (if any).
-          // Fire-and-forget; the leakage card hides the verified pane
-          // when this returns null.
+          // Compute totals from the FINDINGS themselves, not the
+          // forensic_scans summary row — those summary fields
+          // (finding_count, total_verified_usd) are only updated at the
+          // end of a scan, so during a running scan the UI would show
+          // count=0 + verified=$0 while findings are visibly streaming in.
+          // The findings query gives us live truth.
           fetch(`/api/forensic-scans?parentScanId=${latestScan.id}`)
             .then((r) => (r.ok ? r.json() : null))
             .then(async (fScan) => {
               if (!fScan) return;
               const findingsRes = await fetch(`/api/forensic-findings?forensicScanId=${fScan.id}`);
-              const findings = findingsRes.ok ? await findingsRes.json() : [];
+              const findings: Array<{ id: string; detector_id: string; title: string; gap_usd: number }> =
+                findingsRes.ok ? await findingsRes.json() : [];
+              const liveVerifiedUsd = findings.reduce((sum, f) => sum + Number(f.gap_usd || 0), 0);
               setVerifiedLeakage({
-                total_verified_usd: Number(fScan.total_verified_usd ?? 0),
-                finding_count: fScan.finding_count ?? findings.length,
+                total_verified_usd: liveVerifiedUsd,
+                finding_count: findings.length,
                 status: fScan.status,
                 forensic_scan_id: fScan.id,
-                top_findings: (findings || []).slice(0, 10).map((f: { id: string; detector_id: string; title: string; gap_usd: number }) => ({
+                top_findings: findings.slice(0, 10).map((f) => ({
                   id: f.id,
                   detector_id: f.detector_id,
                   title: f.title,
