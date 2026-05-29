@@ -58,6 +58,13 @@ export async function GET(request: NextRequest) {
       supabase.from('users').select('company_name, report_branding_color, company_logo_url').eq('id', scan.user_id).single(),
     ]);
 
+    // Revenue leakage breakdown lives on scan.metadata.revenue_leakage when
+    // the scan ran with a baseline available. Older scans won't have it —
+    // the PDF component conditionally renders the section.
+    const scanMeta = (scan.metadata || {}) as Record<string, unknown>;
+    const leakage = (scanMeta.revenue_leakage as Parameters<typeof CPQHealthReport>[0]['leakage']) || null;
+    const currency = (scanMeta.currency_iso_code as string) || 'USD';
+
     const reportElement = React.createElement(CPQHealthReport, {
       scan,
       issues: issuesRes.data || [],
@@ -66,6 +73,8 @@ export async function GET(request: NextRequest) {
       brandColor: userRes.data?.report_branding_color || '#1B5E96',
       logoUrl: userRes.data?.company_logo_url || null,
       remediationPlan: scan.ai_remediation_plan || null,
+      leakage,
+      currency,
     });
 
     // Cast needed: CPQHealthReport returns Document but TS can't infer DocumentProps

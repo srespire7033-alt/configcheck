@@ -73,6 +73,19 @@ const styles = StyleSheet.create({
   statBox: { flex: 1, backgroundColor: '#f9fafb', borderRadius: 6, padding: 10, alignItems: 'center' },
   statNumber: { fontSize: 20, fontWeight: 700 },
   statLabel: { fontSize: 8, color: '#6b7280', marginTop: 2 },
+  // Revenue leakage block — sits below the score on page 2 because this
+  // is the consultant-deliverable headline number. Amber tint (not red)
+  // signals "money on the table" rather than "fire".
+  leakBox: { backgroundColor: '#fef3c7', borderRadius: 8, padding: 14, marginTop: 16, borderWidth: 1, borderColor: '#fcd34d' },
+  leakTitle: { fontSize: 10, fontWeight: 700, color: '#78350f', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.5 },
+  leakHeadline: { fontSize: 22, fontWeight: 700, color: '#92400e', marginBottom: 4 },
+  leakSub: { fontSize: 9, color: '#a16207', marginBottom: 10 },
+  leakConfChip: { fontSize: 7, fontWeight: 700, color: '#78350f', backgroundColor: '#fde68a', paddingHorizontal: 5, paddingVertical: 2, borderRadius: 3 },
+  leakContribRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 4, borderTopWidth: 0.5, borderTopColor: '#fde68a' },
+  leakContribCheck: { fontSize: 8, fontFamily: 'Inter', color: '#78350f', fontWeight: 600 },
+  leakContribTitle: { fontSize: 8.5, color: '#451a03', flex: 1, marginLeft: 6 },
+  leakContribImpact: { fontSize: 9, fontWeight: 700, color: '#92400e' },
+  leakMethodFootnote: { fontSize: 7, color: '#a16207', marginTop: 8, fontStyle: 'italic' },
 });
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -108,6 +121,28 @@ function getScoreBorder(score: number) {
   return '#fecaca';
 }
 
+// Shape we expect on scan.metadata.revenue_leakage when the leakage
+// engine ran during the scan. Matches RevenueLeakageData on the dashboard
+// side. Optional throughout so older scans without leakage data still
+// render the report unchanged.
+interface PdfLeakage {
+  estimated_annual_leakage: number;
+  percent_of_revenue: number | null;
+  confidence: 'high' | 'medium' | 'low' | 'unknown';
+  top_contributors: Array<{ check_id: string; title: string; impact: number; methodology: string }>;
+  audit?: {
+    baseline_source: string;
+    baseline_sample_size: number;
+    industry_used: string;
+  };
+}
+
+function formatMoneyShort(amount: number, currency: string): string {
+  if (amount >= 1_000_000) return `${currency} ${(amount / 1_000_000).toFixed(2)}M`;
+  if (amount >= 1_000) return `${currency} ${(amount / 1_000).toFixed(0)}K`;
+  return `${currency} ${amount.toLocaleString()}`;
+}
+
 interface ReportProps {
   scan: DBScan;
   issues: DBIssue[];
@@ -116,9 +151,11 @@ interface ReportProps {
   brandColor: string;
   logoUrl?: string | null;
   remediationPlan?: string | null;
+  leakage?: PdfLeakage | null;
+  currency?: string;
 }
 
-export function CPQHealthReport({ scan, issues, orgName, companyName, brandColor, logoUrl, remediationPlan }: ReportProps) {
+export function CPQHealthReport({ scan, issues, orgName, companyName, brandColor, logoUrl, remediationPlan, leakage, currency = 'USD' }: ReportProps) {
   const scores = (scan.category_scores || {}) as unknown as Record<string, number>;
   const criticalIssues = issues.filter((i) => i.severity === 'critical');
   const warningIssues = issues.filter((i) => i.severity === 'warning');
@@ -210,6 +247,48 @@ export function CPQHealthReport({ scan, issues, orgName, companyName, brandColor
               <Text style={styles.categoryScore}>{score}/100</Text>
             </View>
           ))}
+
+        {/* Revenue Leakage block — the consultant-deliverable headline.
+            Renders only when the scan produced a leakage estimate. Sits
+            above the AI summary so it's the first $ number a CFO sees. */}
+        {leakage && leakage.estimated_annual_leakage > 0 && (
+          <View style={styles.leakBox} wrap={false}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+              <Text style={styles.leakTitle}>Estimated Annual Revenue Leakage</Text>
+              <Text style={styles.leakConfChip}>
+                {leakage.confidence === 'high' ? 'HIGH CONFIDENCE' :
+                 leakage.confidence === 'medium' ? 'MEDIUM CONFIDENCE' :
+                 leakage.confidence === 'low' ? 'LOW CONFIDENCE' : 'ESTIMATE'}
+              </Text>
+            </View>
+            <Text style={styles.leakHeadline}>
+              {formatMoneyShort(leakage.estimated_annual_leakage, currency)} / year
+            </Text>
+            {leakage.percent_of_revenue !== null && (
+              <Text style={styles.leakSub}>
+                {leakage.percent_of_revenue.toFixed(1)}% of annual revenue
+                {leakage.audit ? ` · ${leakage.audit.baseline_sample_size.toLocaleString()} records analyzed · ${leakage.audit.industry_used} profile` : ''}
+              </Text>
+            )}
+            {leakage.top_contributors.length > 0 && (
+              <View style={{ marginTop: 6 }}>
+                <Text style={{ fontSize: 8, fontWeight: 700, color: '#78350f', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                  Top {Math.min(5, leakage.top_contributors.length)} Contributors
+                </Text>
+                {leakage.top_contributors.slice(0, 5).map((c, i) => (
+                  <View key={c.check_id + i} style={styles.leakContribRow}>
+                    <Text style={styles.leakContribCheck}>{c.check_id}</Text>
+                    <Text style={styles.leakContribTitle}>{c.title}</Text>
+                    <Text style={styles.leakContribImpact}>{formatMoneyShort(c.impact, currency)}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
+            <Text style={styles.leakMethodFootnote}>
+              Forward-looking annualized estimate based on real org data. Each formula includes a recoverability factor to avoid over-promising. Some leakage is structurally non-recoverable.
+            </Text>
+          </View>
+        )}
 
         {/* AI Summary */}
         {scan.summary && (
