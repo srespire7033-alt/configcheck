@@ -219,12 +219,15 @@ async function main() {
     priceRuleId = existingRules[0].Id;
     console.log(`  ✓ Already exists: ${priceRuleId}`);
   } else {
+    // Note: SBQQ__Description__c was removed from SBQQ__PriceRule__c in
+    // newer CPQ packages. The rule is identifiable by Name alone — the
+    // description was nice-to-have for telling fixture rules apart in
+    // Setup but isn't required for the engine.
     priceRuleId = await sfCreate('SBQQ__PriceRule__c', {
       Name: priceRuleName,
       SBQQ__Active__c: true,
       SBQQ__EvaluationEvent__c: 'On Calculate',
       SBQQ__ConditionsMet__c: 'All',
-      SBQQ__Description__c: `${FIXTURE_TAG} Intentionally suppresses renewal uplift.`,
     }, 'Renewal Floor Pricing');
 
     await sfCreate('SBQQ__PriceCondition__c', {
