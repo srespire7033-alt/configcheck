@@ -104,6 +104,7 @@ export async function runForensicScanInBackground(input: ForensicScanInput): Pro
 
     const completed: string[] = [];
     const failed: string[] = [];
+    const detectorErrors: Record<string, string> = {};
     const allFindings: Array<{ detector: string; result: DetectorResult }> = [];
 
     for (const detector of enabledDetectors) {
@@ -117,6 +118,10 @@ export async function runForensicScanInBackground(input: ForensicScanInput): Pro
         const msg = err instanceof Error ? err.message : String(err);
         console.error(`[FORENSIC ${forensicScanId}] ${detector.id} failed: ${msg}`);
         failed.push(detector.id);
+        // Persist per-detector error so we can debug without Vercel logs.
+        // 500-char cap keeps the metadata column from bloating on noisy
+        // stack traces.
+        detectorErrors[detector.id] = msg.slice(0, 500);
       }
     }
 
@@ -201,6 +206,7 @@ export async function runForensicScanInBackground(input: ForensicScanInput): Pro
         metadata: {
           duration_ms: Date.now() - startedAt,
           product_type: productType,
+          detector_errors: Object.keys(detectorErrors).length > 0 ? detectorErrors : undefined,
         },
       })
       .eq('id', forensicScanId);

@@ -119,7 +119,7 @@ const REN_001: ForensicDetector = {
             SBQQ__Contract__c, SBQQ__Contract__r.ContractNumber,
             SBQQ__Contract__r.SBQQ__RenewalUpliftRate__c,
             SBQQ__NetPrice__c, SBQQ__Quantity__c
-          FROM SBQQ__RenewedSubscription__c
+          FROM SBQQ__Subscription__c
           WHERE Id IN (${chunk.map((id) => `'${id}'`).join(',')})
         `;
         const subRes = await bulkQuery<SubscriptionRow>(ctx.conn, subQuery);
@@ -178,7 +178,7 @@ const REN_001: ForensicDetector = {
           name: line['SBQQ__Quote__r.Name'],
         },
         {
-          type: 'SBQQ__RenewedSubscription__c',
+          type: 'SBQQ__Subscription__c',
           id: sub.Id,
           name: sub.Name,
           financials: {
