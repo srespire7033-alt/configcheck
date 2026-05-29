@@ -240,26 +240,51 @@ export async function generateRemediationPlan(
   overallScore: number,
   options: { noRetry?: boolean } = {}
 ): Promise<string> {
-  const issueList = issues
+  // Sort by ROI ($/hour) so the highest-leverage fixes float to the top of
+  // the prompt. Gemini tends to weight order, and consultants reading the
+  // plan want "biggest $ recovered per consultant-hour" first — that's how
+  // they sequence the engagement and quote the work.
+  const ranked = issues
     .filter((i) => i.severity !== 'info')
-    .map((i) => `- [${i.check_id}] ${i.severity.toUpperCase()}: ${i.title} (${i.affected_records?.length || 0} records, est. ${i.effort_hours || '?'}h)`)
+    .map((i) => {
+      const impact = typeof i.revenue_impact === 'number' ? i.revenue_impact : 0;
+      const hours = typeof i.effort_hours === 'number' && i.effort_hours > 0 ? i.effort_hours : 4;
+      // ROI = $/hour. Issues without $ get ROI=0 and sink to the bottom —
+      // they still appear but rank below quantified ones.
+      const roi = impact > 0 ? impact / hours : 0;
+      return { i, impact, hours, roi };
+    })
+    .sort((a, b) => b.roi - a.roi);
+
+  const issueList = ranked
+    .map(({ i, impact, hours, roi }) => {
+      const records = i.affected_records?.length || 0;
+      const dollar = impact > 0 ? ` · $${Math.round(impact).toLocaleString()}/yr leak` : '';
+      const roiTag = roi > 0 ? ` · ROI $${Math.round(roi).toLocaleString()}/hr` : '';
+      return `- [${i.check_id}] ${i.severity.toUpperCase()}: ${i.title} (${records} records, est. ${hours}h${dollar}${roiTag})`;
+    })
     .join('\n');
+
+  const totalLeak = ranked.reduce((s, r) => s + r.impact, 0);
+  const leakContext = totalLeak > 0
+    ? `\n## Estimated Total Annual Leakage Across These Issues: $${Math.round(totalLeak).toLocaleString()}\n`
+    : '';
 
   const prompt = `You are a Salesforce Revenue Cloud expert creating a remediation plan for a consulting engagement.
 
-## Current Score: ${overallScore}/100
-## Issues to Address:
+## Current Score: ${overallScore}/100${leakContext}
+## Issues to Address (pre-sorted by ROI — $ recovered per consultant-hour):
 ${issueList}
 
-Create a prioritized remediation plan with 3 phases:
+Create a prioritized remediation plan with 3 phases. **Sequence each phase by ROI (highest $/hr first), not by severity alone.** A medium-severity issue with a 100x ROI should beat a critical issue with a tiny one.
 
-**Phase 1 — Quick Wins (< 1 hour each):** Issues that are fast to fix with high impact on score.
+**Phase 1 — Highest ROI (< 4 hours each):** Best $-per-hour fixes. Lead with these — they pay for the engagement.
 
-**Phase 2 — Core Fixes (1-4 hours each):** Critical and warning issues that need careful attention.
+**Phase 2 — Core Fixes (4-12 hours each):** Critical and warning issues that need careful attention but have meaningful $ recovery or score lift.
 
-**Phase 3 — Optimization:** Lower priority improvements for long-term health.
+**Phase 3 — Optimization:** Lower priority improvements, including issues without quantifiable $ impact.
 
-For each item include: the check ID, what to do (1 sentence), and estimated time.
+For each item include: the check ID, what to do (1 sentence), estimated time, and (if known) the $ recovered. When a phase has a clear $ total, state it.
 
 Keep it practical and actionable. No fluff. Format as plain text with clear sections.`;
 
