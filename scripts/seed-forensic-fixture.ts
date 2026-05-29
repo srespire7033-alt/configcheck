@@ -38,6 +38,30 @@
  *   Then Data Loader → Delete. Related QuoteLines, Subscriptions cascade.
  */
 
+// Load .env.local before anything else imports supabase — otherwise
+// createServiceClient() trips "supabaseUrl is required" because Next's
+// auto-load doesn't apply to standalone node scripts.
+import { readFileSync, existsSync } from 'fs';
+import { resolve } from 'path';
+(function loadEnv() {
+  const envPath = resolve(process.cwd(), '.env.local');
+  if (!existsSync(envPath)) return;
+  const content = readFileSync(envPath, 'utf8');
+  for (const line of content.split('\n')) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#')) continue;
+    const eq = trimmed.indexOf('=');
+    if (eq === -1) continue;
+    const key = trimmed.slice(0, eq).trim();
+    let value = trimmed.slice(eq + 1).trim();
+    // Strip wrapping quotes if present
+    if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+      value = value.slice(1, -1);
+    }
+    if (!(key in process.env)) process.env[key] = value;
+  }
+})();
+
 import { createRefreshableConnection } from '@/lib/salesforce/client';
 
 const FIXTURE_TAG = '[ORGPRISM_FORENSIC_FIXTURE_v1]';
@@ -70,14 +94,66 @@ async function main() {
 
   console.log(`Connecting to org ${orgUuid}...`);
   const { conn } = await createRefreshableConnection(orgUuid);
-  console.log(`Connected as ${conn.userInfo?.id ?? '(unknown)'} on ${conn.instanceUrl}`);
+  console.log(`Connected on ${conn.instanceUrl}`);
+
+  // ─── 0. Sanity check the connection with a trivial query.
+  //       If the token is stale and the refresh hook is misbehaving,
+  //       we want to see THAT here (in 1 second), not hang for minutes
+  //       on a SBQQ query we may not even need to run.
+  console.log(`\n[0/4] Connection sanity check (querying User)...`);
+  const sanityStart = Date.now();
+  try {
+    const me = await withTimeout(
+      Promise.resolve(
+        conn.query<{ Id: string; Name: string; Username: string }>(
+          `SELECT Id, Name, Username FROM User WHERE Username != null LIMIT 1`
+        )
+      ),
+      30_000,
+      'sanity check query'
+    );
+    console.log(`  ✓ Connection healthy (${Date.now() - sanityStart}ms) — running as ${me.records[0]?.Username ?? '(unknown)'}`);
+  } catch (e) {
+    console.error(`  ✗ Sanity query failed after ${Date.now() - sanityStart}ms:`, e instanceof Error ? e.message : e);
+    console.error(`  Most likely cause: stale Salesforce access token + a broken refresh hook.`);
+    console.error(`  Try: open OrgPrism, reconnect CPQ Ks, then re-run this script.`);
+    process.exit(1);
+  }
+
+  // ─── 0.5 Confirm SBQQ is installed before we try to use it. Better
+  //         error message than the SOQL exception.
+  console.log(`\n[0.5/4] Confirming SBQQ (CPQ) is installed...`);
+  try {
+    await withTimeout(
+      Promise.resolve(conn.query<IdRef>(`SELECT Id FROM SBQQ__PriceRule__c LIMIT 1`)),
+      30_000,
+      'SBQQ probe'
+    );
+    console.log(`  ✓ SBQQ found.`);
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    if (msg.includes('SBQQ__PriceRule__c') && msg.includes('not supported')) {
+      console.error(`  ✗ SBQQ is not installed in this org. Install Salesforce CPQ first, then re-run.`);
+    } else {
+      console.error(`  ✗ SBQQ probe failed:`, msg);
+    }
+    process.exit(1);
+  }
 
   // ─── 1. Ensure the offending Price Rule exists ──────────────────────
   const priceRuleName = 'Renewal Floor Pricing — Forensic Fixture';
   console.log(`\n[1/4] Ensuring Price Rule "${priceRuleName}"...`);
-  const existingRules = await conn.query<IdRef & { Name: string }>(
-    `SELECT Id, Name FROM SBQQ__PriceRule__c WHERE Name = '${priceRuleName.replace(/'/g, "\\'")}' LIMIT 1`
+  const rulesStart = Date.now();
+  const existingRules = await withTimeout(
+    Promise.resolve(
+      conn.query<IdRef & { Name: string }>(
+        `SELECT Id, Name FROM SBQQ__PriceRule__c WHERE Name = '${priceRuleName.replace(/'/g, "\\'")}' LIMIT 1`
+      )
+    ),
+    30_000,
+    'price rule lookup'
   );
+  console.log(`  Lookup took ${Date.now() - rulesStart}ms, found ${existingRules.records.length} matching rule(s).`);
   let priceRuleId: string;
   if (existingRules.records.length > 0) {
     priceRuleId = existingRules.records[0].Id;
@@ -237,6 +313,28 @@ async function main() {
   console.log(`\n[4/4] Expected verified leakage when REN-001 runs: ~$${Math.round(expectedLeakage).toLocaleString()}`);
   console.log(`     (Sum across ${CONTRACTS.filter((c) => c.isLeaky).length} leaky renewals)`);
   console.log(`\n✓ Done. Now go to OrgPrism → CPQ Ks → "New Scan + Forensics" to see the engine in action.`);
+}
+
+/**
+ * Wrap a promise so it rejects with a clear message if it takes too long.
+ * Without this, a stuck jsforce call (token refresh loop, network drop)
+ * leaves the script appearing to hang silently — worst possible failure
+ * mode for a CLI tool.
+ */
+function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(`Timed out after ${ms}ms: ${label}`)), ms);
+    p.then(
+      (v) => {
+        clearTimeout(timer);
+        resolve(v);
+      },
+      (e) => {
+        clearTimeout(timer);
+        reject(e);
+      }
+    );
+  });
 }
 
 main().catch((err) => {
