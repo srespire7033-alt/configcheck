@@ -11,7 +11,6 @@ import { CategoryBreakdown } from '@/components/scan/category-breakdown';
 import { GroupedIssueList } from '@/components/issues/grouped-issue-list';
 import { IssueDetailModal } from '@/components/issues/issue-detail-modal';
 import { SeverityModal } from '@/components/issues/severity-modal';
-import { RevenueRiskCard } from '@/components/scan/revenue-risk-card';
 import { RevenueLeakageCard, type RevenueLeakageData, type VerifiedLeakage } from '@/components/scan/revenue-leakage-card';
 import { ComplexityCard } from '@/components/scan/complexity-card';
 import { ScheduleModal } from '@/components/schedule/schedule-modal';
@@ -19,7 +18,7 @@ import { ScheduleList } from '@/components/schedule/schedule-list';
 import { ScoreTrend } from '@/components/scan/score-trend';
 import { ScoreFormulaTooltip } from '@/components/scan/score-formula-tooltip';
 import { TOTAL_CHECKS } from '@/lib/analysis/constants';
-import type { DBScan, DBIssue, DBOrganization, DBScanSchedule, RevenueRiskSummary, ComplexityBreakdown, ProductType } from '@/types';
+import type { DBScan, DBIssue, DBOrganization, DBScanSchedule, ComplexityBreakdown, ProductType } from '@/types';
 import { getProductTypeLabel } from '@/lib/utils';
 
 export default function OrgDetailPage() {
@@ -1495,17 +1494,20 @@ export default function OrgDetailPage() {
             );
           })()}
 
-          {/* ===== REVENUE RISK + COMPLEXITY ===== */}
+          {/* ===== CPQ COMPLEXITY =====
+              Older "Revenue at Risk" card removed — it overlapped with
+              the new Estimated Revenue Leakage card above and confused
+              users into thinking we had two competing $ numbers. The
+              Leakage card is the canonical $ surface; complexity is a
+              separate dimension and stays. */}
           {(() => {
             const meta = scan.metadata as Record<string, unknown> | null;
             if (!meta) return null;
-            const rev = meta.revenue_summary as RevenueRiskSummary | undefined;
             const comp = meta.complexity as ComplexityBreakdown | undefined;
-            if (!rev && !comp) return null;
+            if (!comp) return null;
             return (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                {rev && <RevenueRiskCard summary={rev} />}
-                {comp && <ComplexityCard complexity={comp} />}
+              <div className="mb-8">
+                <ComplexityCard complexity={comp} />
               </div>
             );
           })()}
