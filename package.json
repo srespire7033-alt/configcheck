@@ -25,6 +25,7 @@
     "@supabase/supabase-js": "^2.102.1",
     "@vercel/functions": "^3.4.3",
     "clsx": "^2.1.1",
+    "csv-parse": "^6.2.1",
     "date-fns": "^4.1.0",
     "jsforce": "^3.10.14",
     "lucide-react": "^1.7.0",

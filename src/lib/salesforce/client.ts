@@ -86,11 +86,14 @@ export function getAuthorizationUrl(state?: string, customClientId?: string, cus
     response_type: 'code',
     client_id: customClientId || SF_CLIENT_ID,
     redirect_uri: SF_REDIRECT_URI,
-    // Read-only scope. `api` grants SOQL/REST read access (which is all our
-    // scans need); `refresh_token` lets us call Salesforce later without
+    // Read-only scope. `api` grants SOQL/REST/Bulk API 2.0/Tooling API
+    // access (covers config scans AND the forensic engine's record-level
+    // reads); `refresh_token` lets us call Salesforce later without
     // re-prompting the user. We DO NOT request `full` — that scope grants
-    // write access to every object the connecting user can see, which would
-    // be a massive over-grant for a read-only configuration auditor.
+    // write access to every object the connecting user can see. Even when
+    // we add stage-and-approve writeback later, we'll use the same `api`
+    // scope (which permits writes via Composite/REST) — the safety control
+    // is product-side (human approval), not scope-side.
     scope: 'api refresh_token',
     state: state || '',
     code_challenge: codeChallenge,

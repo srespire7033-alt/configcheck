@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { organizationId, productType: requestedProductType, portfolioRunId } = await request.json();
+    const { organizationId, productType: requestedProductType, portfolioRunId, includeForensics } = await request.json();
 
     if (!organizationId) {
       return NextResponse.json({ error: 'organizationId is required' }, { status: 400 });
@@ -167,24 +167,80 @@ export async function POST(request: NextRequest) {
       properties: { product_type: productType, scan_id: scan.id },
     });
 
+    // If the user opted into a forensic scan, create the forensic_scans
+    // row up front (status='queued') so the UI can show a pending state
+    // alongside the config scan. The forensic background job runs AFTER
+    // the config scan completes — see runScanInBackground for the chain.
+    let forensicScanId: string | null = null;
+    if (includeForensics === true) {
+      // Pull user plan + admin flag once for the forensic gate.
+      const { data: u } = await supabase
+        .from('users')
+        .select('plan, is_admin')
+        .eq('id', user.id)
+        .single();
+      const { data: forensicScan } = await supabase
+        .from('forensic_scans')
+        .insert({
+          user_id: user.id,
+          organization_id: organizationId,
+          parent_scan_id: scan.id,
+          status: 'queued',
+          metadata: { plan: u?.plan ?? 'free', is_admin: u?.is_admin === true },
+        })
+        .select('id')
+        .single();
+      forensicScanId = forensicScan?.id ?? null;
+    }
+
     // Run the scan in the background via waitUntil — keeps the Vercel
     // function alive until the scan finishes, up to maxDuration. Client
     // polls GET /api/scans?scanId=xxx for status transitions.
+    //
+    // When forensics is opted in, we chain: config scan completes →
+    // forensic scan starts. Both are scheduled here so the function
+    // stays alive long enough to kick the forensic off (we don't wait
+    // for it to FINISH — runForensicScanInBackground itself respects
+    // the Vercel budget).
     waitUntil(
-      runScanInBackground(scan.id, org, productType).catch(async (error) => {
-        console.error('[SCAN] Scan execution failed:', error);
-        const svc = createServiceClient();
-        const failUpdate = {
-          status: 'failed',
-          error_message: error instanceof Error ? error.message : 'Scan failed unexpectedly',
-          completed_at: new Date().toISOString(),
-        };
-        const { error: updateErr } = await svc.from('scans').update(failUpdate).eq('id', scan.id);
-        if (updateErr) console.error('[SCAN] Failed to mark scan as failed:', updateErr);
-      })
+      runScanInBackground(scan.id, org, productType)
+        .then(async () => {
+          if (!forensicScanId) return;
+          // Dynamic import — keeps forensic engine off the cold-path for
+          // config-only scans.
+          const { runForensicScanInBackground } = await import('@/lib/forensics/run-forensic-scan');
+          const { data: u } = await createServiceClient()
+            .from('users')
+            .select('plan, is_admin')
+            .eq('id', user.id)
+            .single();
+          await runForensicScanInBackground({
+            forensicScanId,
+            organizationId,
+            userId: user.id,
+            parentScanId: scan.id,
+            plan: (u?.plan as string) ?? 'free',
+            isAdmin: u?.is_admin === true,
+          });
+        })
+        .catch(async (error) => {
+          console.error('[SCAN] Scan execution failed:', error);
+          const svc = createServiceClient();
+          const failUpdate = {
+            status: 'failed',
+            error_message: error instanceof Error ? error.message : 'Scan failed unexpectedly',
+            completed_at: new Date().toISOString(),
+          };
+          const { error: updateErr } = await svc.from('scans').update(failUpdate).eq('id', scan.id);
+          if (updateErr) console.error('[SCAN] Failed to mark scan as failed:', updateErr);
+        })
     );
 
-    return NextResponse.json({ scanId: scan.id, status: 'pending' });
+    return NextResponse.json({
+      scanId: scan.id,
+      status: 'pending',
+      forensicScanId,
+    });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json({ error: message }, { status: 500 });

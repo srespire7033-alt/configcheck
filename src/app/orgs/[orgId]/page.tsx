@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, RefreshCw, Sparkles, Download, FileBarChart, CalendarClock, Cloud, ShieldCheck, FileSpreadsheet, ChevronDown, ChevronRight, AlertTriangle, AlertCircle, Info, X } from 'lucide-react';
+import { ArrowLeft, RefreshCw, Sparkles, Download, FileBarChart, CalendarClock, Cloud, ShieldCheck, FileSpreadsheet, ChevronDown, ChevronRight, AlertTriangle, AlertCircle, Info, X, TrendingDown } from 'lucide-react';
 import { getCategoryLabel, formatTimeAgo } from '@/lib/utils';
 import { groupTopIssues } from '@/lib/analysis/top-issue-grouper';
 import { HealthScore } from '@/components/scan/health-score';
@@ -325,13 +325,17 @@ export default function OrgDetailPage() {
     }, 3000);
   }
 
-  async function handleScan() {
+  async function handleScan(options: { includeForensics?: boolean } = {}) {
     setScanning(true);
     try {
       const res = await fetch('/api/scans', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ organizationId: orgId, productType: scanProductType }),
+        body: JSON.stringify({
+          organizationId: orgId,
+          productType: scanProductType,
+          includeForensics: options.includeForensics === true,
+        }),
       });
 
       const data = await res.json();
@@ -551,7 +555,7 @@ export default function OrgDetailPage() {
               </div>
             ) : null}
             <button
-              onClick={handleScan}
+              onClick={() => handleScan()}
               disabled={detectingPackages}
               className="px-6 py-3 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 transition flex items-center gap-2 disabled:opacity-50"
             >
@@ -585,7 +589,7 @@ export default function OrgDetailPage() {
                   </p>
                   <div className="flex items-center gap-2 mt-3">
                     <button
-                      onClick={handleScan}
+                      onClick={() => handleScan()}
                       disabled={scanning}
                       className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg disabled:opacity-50 transition"
                     >
@@ -1123,14 +1127,33 @@ export default function OrgDetailPage() {
                       </div>
                     )}
                   </div>
-                  <button
-                    onClick={handleScan}
-                    disabled={scanning}
-                    className="px-3 sm:px-6 py-2.5 sm:py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-medium transition flex items-center justify-center gap-2 disabled:opacity-50 shadow-sm shadow-blue-600/30 hover:shadow-blue-600/40 text-sm sm:text-base"
-                  >
-                    <RefreshCw className={`w-4 h-4 sm:w-5 sm:h-5 ${scanning ? 'animate-spin' : ''}`} />
-                    {scanning ? 'Scanning...' : 'New Scan'}
-                  </button>
+                  <div className="inline-flex rounded-xl overflow-hidden shadow-sm shadow-blue-600/30">
+                    <button
+                      onClick={() => handleScan()}
+                      disabled={scanning}
+                      className="px-3 sm:px-6 py-2.5 sm:py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium transition flex items-center justify-center gap-2 disabled:opacity-50 text-sm sm:text-base"
+                      title="Config audit only — ~60 seconds"
+                    >
+                      <RefreshCw className={`w-4 h-4 sm:w-5 sm:h-5 ${scanning ? 'animate-spin' : ''}`} />
+                      {scanning ? 'Scanning...' : 'New Scan'}
+                    </button>
+                    {/* Forensic split — runs a deeper Bulk-API-backed pass
+                        that reconciles actual Quote/Order/Subscription
+                        records to compute VERIFIED $ leakage. Takes 5-30
+                        min depending on data volume. Free tier limited
+                        to REN-001 (renewal uplift); Pro+ gets all
+                        detectors. */}
+                    <button
+                      onClick={() => handleScan({ includeForensics: true })}
+                      disabled={scanning}
+                      className="px-3 sm:px-4 py-2.5 sm:py-3 bg-blue-700 hover:bg-blue-800 text-white font-medium transition flex items-center gap-1.5 disabled:opacity-50 text-xs sm:text-sm border-l border-blue-500/40"
+                      title="Config audit + Revenue Forensics — 5-30 minutes, scans actual transaction records"
+                    >
+                      <TrendingDown className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                      <span className="hidden sm:inline">+ Forensics</span>
+                      <span className="sm:hidden">+$</span>
+                    </button>
+                  </div>
                   <button
                     onClick={() => setShowScheduleModal(true)}
                     className="px-3 sm:px-6 py-2.5 sm:py-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-xl font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition flex items-center justify-center gap-2 text-sm sm:text-base"

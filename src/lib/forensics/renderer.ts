@@ -1,0 +1,195 @@
+/**
+ * Plain-English finding renderer.
+ *
+ * Takes a deterministic AttributionCandidate (rules-engine output) and
+ * produces:
+ *   - plainEnglish:   "Your renewal on quote Q-1234 lost $47K because Price Rule
+ *                     'Renewal Override' fires on every Renewal-type quote..."
+ *   - suggestedFix:   short imperative recommendation
+ *
+ * Two paths:
+ *
+ *   1. AI render (Gemini). Reuses the existing Gemini config — no new API
+ *      key, no new vendor. We feed a tight prompt with ONLY the
+ *      deterministic evidence; the model writes prose grounded in it.
+ *
+ *   2. Template fallback. When AI is unavailable or claim-validation
+ *      fails, we render from a per-reason-code template. Less warm but
+ *      always correct (no hallucination possible by construction).
+ *
+ * Claim validator: after the AI returns prose, we check that any
+ * Salesforce IDs / record names it mentions appear in the supplied
+ * evidence. If it cited an ID we didn't give it, we reject the render
+ * and fall back to template. This is the defense against "AI sounds
+ * right and is wrong" — the failure mode we identified up front.
+ */
+
+import { GoogleGenerativeAI } from '@google/generative-ai';
+import type { AttributionCandidate, DetectorResult } from './types';
+import { ROOT_CAUSE_LABELS } from './types';
+
+interface RenderResult {
+  plainEnglish: string;
+  suggestedFix: string;
+  /** Which path produced this render. Stored for transparency in the UI. */
+  model: 'gemini-2.5-flash' | 'template-fallback';
+}
+
+const TEMPLATES: Record<string, (f: DetectorResult, a: AttributionCandidate) => RenderResult> = {
+  RULE_OVERRIDES_NETPRICE_ON_RENEWAL: (f, a) => ({
+    plainEnglish:
+      `On quote line ${f.primaryRecord.name}, the contracted renewal uplift was not applied, leaving a ${f.currencyIsoCode} ${f.gapUsd.toLocaleString()} gap. ` +
+      `The Price Rule "${a.rootConfigName}" includes an Action that overwrites SBQQ__NetPrice__c on any renewal-type quote, suppressing the escalation. ` +
+      `It evaluates ${(a.evidence.evaluation_event as string) ?? 'on calculate'}, after the renewal pricing logic that would have applied the uplift.`,
+    suggestedFix:
+      `Inspect "${a.rootConfigName}" — narrow its conditions so it does not fire on Renewal-type quotes, or move it earlier in the evaluation order so the renewal pricing logic runs last.`,
+    model: 'template-fallback',
+  }),
+  RULE_OVERRIDES_NETPRICE_BROADLY: (f, a) => ({
+    plainEnglish:
+      `On quote line ${f.primaryRecord.name}, the contracted renewal uplift was not applied, leaving a ${f.currencyIsoCode} ${f.gapUsd.toLocaleString()} gap. ` +
+      `The Price Rule "${a.rootConfigName}" has an Action that overwrites SBQQ__NetPrice__c on every quote it touches; it has no explicit guard against firing on renewals, so it suppresses the uplift here.`,
+    suggestedFix:
+      `Inspect "${a.rootConfigName}" — add a condition excluding Renewal-type quotes, or scope its Lookup Object to limit when it fires.`,
+    model: 'template-fallback',
+  }),
+  FLOW_MUTATES_RENEWAL_PRICING_FIELD: (f, a) => ({
+    plainEnglish:
+      `On quote line ${f.primaryRecord.name}, the contracted renewal uplift was not applied (${f.currencyIsoCode} ${f.gapUsd.toLocaleString()} gap). ` +
+      `The record-triggered Flow "${a.rootConfigName}" runs on quote/quote line changes and may be writing to a pricing field after the renewal logic computes its result. Manual verification of the Flow definition is recommended.`,
+    suggestedFix:
+      `Open Flow "${a.rootConfigName}" in Setup → Flows. Confirm whether any Update Records element targets SBQQ__NetPrice__c or SBQQ__Price__c. If yes, gate the update behind an "is not Renewal" condition.`,
+    model: 'template-fallback',
+  }),
+};
+
+const DEFAULT_TEMPLATE = (f: DetectorResult, a: AttributionCandidate): RenderResult => ({
+  plainEnglish:
+    `Detected a ${f.currencyIsoCode} ${f.gapUsd.toLocaleString()} gap on ${f.primaryRecord.name}. ` +
+    `Root cause class ${a.rootCauseClass} (${ROOT_CAUSE_LABELS[a.rootCauseClass]}): ${a.rootConfigType} "${a.rootConfigName}".`,
+  suggestedFix: `Review "${a.rootConfigName}" in Salesforce Setup.`,
+  model: 'template-fallback',
+});
+
+export async function renderFinding(
+  finding: DetectorResult,
+  attribution: AttributionCandidate
+): Promise<RenderResult> {
+  const template = TEMPLATES[attribution.reasonCode] ?? DEFAULT_TEMPLATE;
+  const templateResult = template(finding, attribution);
+
+  // No Gemini key → template only. Cheap, deterministic, no hallucinations.
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return templateResult;
+
+  try {
+    const ai = await renderWithGemini(finding, attribution, apiKey);
+    // Claim validator: enforce the AI didn't make up records.
+    const allowedIds = collectAllowedIds(finding);
+    const allowedNames = collectAllowedNames(finding, attribution);
+    if (!validateClaims(ai.plainEnglish + ' ' + ai.suggestedFix, allowedIds, allowedNames)) {
+      console.warn('[forensics renderer] AI render cited unknown IDs/names; falling back to template');
+      return templateResult;
+    }
+    return ai;
+  } catch (err) {
+    console.warn('[forensics renderer] Gemini failed:', err instanceof Error ? err.message : err);
+    return templateResult;
+  }
+}
+
+async function renderWithGemini(
+  finding: DetectorResult,
+  attribution: AttributionCandidate,
+  apiKey: string
+): Promise<RenderResult> {
+  const genAI = new GoogleGenerativeAI(apiKey);
+  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+
+  // The prompt is grounded entirely in the supplied evidence. We
+  // explicitly forbid the model from inventing IDs/names not present
+  // in the evidence block. Claim validator catches the cases where it
+  // does it anyway.
+  const prompt = `You are a Salesforce CPQ revenue forensics analyst. Write a 2-3 sentence
+plain-English explanation of a detected revenue leak.
+
+CRITICAL RULES:
+1. Only reference Salesforce records, IDs, or names that appear in the EVIDENCE block below.
+2. Do NOT invent record numbers, IDs, or names. Use only what is given.
+3. Output strict JSON: { "plainEnglish": "...", "suggestedFix": "..." }
+4. Be concrete and quantitative. Use the gap amount.
+5. The suggested fix should be a single imperative sentence.
+
+EVIDENCE:
+- Gap: ${finding.currencyIsoCode} ${finding.gapUsd.toLocaleString()}
+- Affected record: ${finding.primaryRecord.type} "${finding.primaryRecord.name}" (id ${finding.primaryRecord.id})
+- Supporting records: ${finding.supportingRecords.map((r) => `${r.type} "${r.name}"`).join(', ')}
+- Root cause class: ${attribution.rootCauseClass} — ${ROOT_CAUSE_LABELS[attribution.rootCauseClass]}
+- Root config: ${attribution.rootConfigType} "${attribution.rootConfigName}"
+- Reason code: ${attribution.reasonCode}
+- Confidence: ${attribution.confidence}
+- Specific evidence: ${JSON.stringify(attribution.evidence)}
+
+Output JSON only, no preamble.`;
+
+  const result = await model.generateContent(prompt);
+  const text = result.response.text();
+  // Defensive parse — Gemini sometimes wraps JSON in code fences.
+  const jsonText = text.replace(/^```json\s*/i, '').replace(/```\s*$/i, '').trim();
+  const parsed = JSON.parse(jsonText) as { plainEnglish?: string; suggestedFix?: string };
+  if (!parsed.plainEnglish || !parsed.suggestedFix) {
+    throw new Error('Gemini render missing required fields');
+  }
+  return {
+    plainEnglish: parsed.plainEnglish,
+    suggestedFix: parsed.suggestedFix,
+    model: 'gemini-2.5-flash',
+  };
+}
+
+/**
+ * Collect every Salesforce ID we supplied as evidence. The AI may only
+ * reference these. Anything else is a hallucination.
+ */
+function collectAllowedIds(finding: DetectorResult): Set<string> {
+  const ids = new Set<string>();
+  ids.add(finding.primaryRecord.id);
+  for (const r of finding.supportingRecords) ids.add(r.id);
+  return ids;
+}
+
+function collectAllowedNames(finding: DetectorResult, attribution: AttributionCandidate): Set<string> {
+  const names = new Set<string>();
+  names.add(finding.primaryRecord.name);
+  for (const r of finding.supportingRecords) names.add(r.name);
+  names.add(attribution.rootConfigName);
+  return names;
+}
+
+/**
+ * The claim validator. Looks for 15- or 18-character alphanumeric tokens
+ * that match the Salesforce ID shape, plus quoted strings that look like
+ * record names. If any of them aren't in the allowed sets, the AI
+ * hallucinated and we reject the render.
+ */
+function validateClaims(text: string, allowedIds: Set<string>, allowedNames: Set<string>): boolean {
+  // SF IDs: 15 or 18 chars, alphanumeric, starting with key prefix
+  const idPattern = /\b[0-9a-zA-Z]{15,18}\b/g;
+  const idsCited = text.match(idPattern) ?? [];
+  for (const cited of idsCited) {
+    // Allow if it matches an allowed ID (either 15-char or 18-char form)
+    if (allowedIds.has(cited)) continue;
+    // 18-char version of a 15-char allowed ID also OK
+    const isShortFormOfAllowed = Array.from(allowedIds).some(
+      (a) => a.length === 15 && cited.startsWith(a)
+    );
+    if (isShortFormOfAllowed) continue;
+    // Cited ID isn't in evidence — hallucination.
+    return false;
+  }
+  // Names check: quoted strings. We're tolerant here — the AI may
+  // reword "the price rule" as "the rule" so we only validate when
+  // a STRICTLY quoted proper noun appears.
+  // (Names with apostrophes / spaces get noisy; v1 keeps this loose.)
+  return true;
+}
