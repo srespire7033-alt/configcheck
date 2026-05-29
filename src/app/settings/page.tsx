@@ -148,6 +148,15 @@ export default function SettingsPage() {
   const [jobTitle, setJobTitle] = useState('');
   const [location, setLocation] = useState('');
   const [timezone, setTimezone] = useState('Asia/Kolkata');
+  // Revenue leakage assumptions — drive the $ formulas in the leakage
+  // engine. Industry sets the LTV multiplier (SaaS deals compound across
+  // a multi-year subscription, one-time deals don't); use_median picks
+  // robust vs sensitive averaging across the org's actual transactional
+  // data. Saved as JSON on users.revenue_assumptions.
+  const [industry, setIndustry] = useState<'saas' | 'manufacturing' | 'services' | 'financial' | 'b2c' | 'other'>('saas');
+  const [useMedian, setUseMedian] = useState<boolean>(true);
+  const [savingAssumptions, setSavingAssumptions] = useState(false);
+  const [savedAssumptions, setSavedAssumptions] = useState(false);
   const [companyName, setCompanyName] = useState('');
   const [brandingColor, setBrandingColor] = useState('#1B5E96');
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
@@ -257,6 +266,9 @@ export default function SettingsPage() {
           setJobTitle(data.job_title || '');
           setLocation(data.location || '');
           setTimezone(data.timezone || 'Asia/Kolkata');
+          const ra = data.revenue_assumptions || {};
+          if (ra.industry) setIndustry(ra.industry);
+          if (typeof ra.use_median === 'boolean') setUseMedian(ra.use_median);
           setCompanyName(data.company_name || '');
           setBrandingColor(data.report_branding_color || '#1B5E96');
           setLogoUrl(data.company_logo_url || null);
@@ -515,6 +527,27 @@ export default function SettingsPage() {
     } catch {
       alert('Failed to save account settings. Please try again.');
     } finally { setSavingAccount(false); }
+  }
+
+  async function saveAssumptions() {
+    setSavingAssumptions(true);
+    try {
+      const res = await fetch('/api/auth/me', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          revenue_assumptions: { industry, use_median: useMedian },
+        }),
+        cache: 'no-store',
+      });
+      if (!res.ok) throw new Error('save failed');
+      setSavedAssumptions(true);
+      setTimeout(() => setSavedAssumptions(false), 6000);
+    } catch {
+      alert('Failed to save revenue assumptions.');
+    } finally {
+      setSavingAssumptions(false);
+    }
   }
 
   async function saveBranding() {
@@ -877,6 +910,48 @@ export default function SettingsPage() {
                     </div>
                   </div>
                 )}
+              </SectionCard>
+
+              {/* Revenue assumptions — drives the $ formulas in the
+                  leakage engine. We expose only the two highest-leverage
+                  knobs (industry preset + median/mean) so users don't get
+                  overwhelmed. Per-org overrides live on the org settings
+                  page; this is the per-user default that applies to all
+                  new scans across all orgs. */}
+              <SectionCard
+                title="Revenue Leakage Assumptions"
+                description="Drives the $ numbers attached to scan findings. Industry sets how much each leak compounds; averaging picks robust vs sensitive."
+              >
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                  <FormField label="Industry" icon={<Briefcase className="w-4 h-4" />}>
+                    <select
+                      value={industry}
+                      onChange={(e) => setIndustry(e.target.value as typeof industry)}
+                      className="form-input"
+                    >
+                      <option value="saas">SaaS / Subscription (LTV ~4x)</option>
+                      <option value="manufacturing">Manufacturing / One-time (LTV 1x)</option>
+                      <option value="services">Professional Services (LTV 2x)</option>
+                      <option value="financial">Financial Services (LTV 5x)</option>
+                      <option value="b2c">B2C / Retail (LTV ~1.5x)</option>
+                      <option value="other">Other / Mixed</option>
+                    </select>
+                  </FormField>
+                  <FormField label="Averaging method">
+                    <select
+                      value={useMedian ? 'median' : 'mean'}
+                      onChange={(e) => setUseMedian(e.target.value === 'median')}
+                      className="form-input"
+                    >
+                      <option value="median">Median (robust to outliers)</option>
+                      <option value="mean">Mean (sensitive to large deals)</option>
+                    </select>
+                  </FormField>
+                </div>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-3">
+                  These settings only affect future scans. Existing scans keep the values they were computed with — visible in the &ldquo;How was this calculated?&rdquo; disclosure on each report.
+                </p>
+                <SaveBar saving={savingAssumptions} saved={savedAssumptions} onSave={saveAssumptions} />
               </SectionCard>
 
               {/* Display preferences (S17) — only Theme for now. Density,

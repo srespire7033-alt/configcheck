@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
   const supabase = createServiceClient();
   const { data, error } = await supabase
     .from('users')
-    .select('id, email, full_name, phone, job_title, location, company_name, company_logo_url, report_branding_color, timezone, plan, is_admin, email_notifications_enabled, notification_emails, notification_settings, onboarding_completed, referral_source, role, company_size, checklist_dismissed, checklist_progress, created_at')
+    .select('id, email, full_name, phone, job_title, location, company_name, company_logo_url, report_branding_color, timezone, plan, is_admin, email_notifications_enabled, notification_emails, notification_settings, onboarding_completed, referral_source, role, company_size, checklist_dismissed, checklist_progress, revenue_assumptions, created_at')
     .eq('id', user.id)
     .single();
 
@@ -58,7 +58,32 @@ export async function PUT(request: NextRequest) {
       'notification_settings',
       'onboarding_completed', 'referral_source', 'role', 'company_size',
       'checklist_dismissed', 'checklist_progress',
+      'revenue_assumptions',
     ];
+
+    // Sanitize revenue_assumptions to known shape so we don't accept
+    // arbitrary JSON into the column.
+    if (body.revenue_assumptions !== undefined) {
+      const ra = body.revenue_assumptions;
+      if (ra === null) {
+        updates.revenue_assumptions = null;
+      } else if (typeof ra === 'object' && ra !== null) {
+        const validIndustries = ['saas', 'manufacturing', 'services', 'financial', 'b2c', 'other'];
+        const cleaned: Record<string, unknown> = {};
+        if (typeof ra.industry === 'string' && validIndustries.includes(ra.industry)) {
+          cleaned.industry = ra.industry;
+        }
+        if (typeof ra.use_median === 'boolean') {
+          cleaned.use_median = ra.use_median;
+        }
+        if (typeof ra.confidence_min_sample === 'number' && ra.confidence_min_sample > 0) {
+          cleaned.confidence_min_sample = Math.floor(ra.confidence_min_sample);
+        }
+        updates.revenue_assumptions = Object.keys(cleaned).length > 0 ? cleaned : null;
+      } else {
+        return NextResponse.json({ error: 'revenue_assumptions must be an object or null' }, { status: 400 });
+      }
+    }
     for (const field of allowedFields) {
       if (body[field] !== undefined) {
         updates[field] = body[field];
@@ -88,7 +113,7 @@ export async function PUT(request: NextRequest) {
       .from('users')
       .update(updates)
       .eq('id', user.id)
-      .select('id, email, full_name, phone, job_title, location, company_name, company_logo_url, report_branding_color, timezone, plan, is_admin, email_notifications_enabled, notification_emails, notification_settings, onboarding_completed, referral_source, role, company_size, checklist_dismissed, checklist_progress, created_at')
+      .select('id, email, full_name, phone, job_title, location, company_name, company_logo_url, report_branding_color, timezone, plan, is_admin, email_notifications_enabled, notification_emails, notification_settings, onboarding_completed, referral_source, role, company_size, checklist_dismissed, checklist_progress, revenue_assumptions, created_at')
       .single();
 
     if (error) {
