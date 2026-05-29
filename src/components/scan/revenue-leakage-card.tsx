@@ -35,8 +35,23 @@ export interface RevenueLeakageData {
   };
 }
 
+export interface VerifiedLeakage {
+  total_verified_usd: number;
+  finding_count: number;
+  status: string;
+  forensic_scan_id: string | null;
+  top_findings: Array<{
+    id: string;
+    detector_id: string;
+    title: string;
+    gap_usd: number;
+  }>;
+}
+
 interface Props {
   leakage: RevenueLeakageData;
+  verified?: VerifiedLeakage | null;
+  orgId?: string;
   currency?: string;
 }
 
@@ -79,12 +94,19 @@ function formatMoney(amount: number, currency: string): string {
   return `${currency} ${amount.toLocaleString()}`;
 }
 
-export function RevenueLeakageCard({ leakage, currency = 'USD' }: Props) {
+export function RevenueLeakageCard({ leakage, verified, orgId, currency = 'USD' }: Props) {
   const [showMethodology, setShowMethodology] = useState(false);
   const [expandedIdx, setExpandedIdx] = useState<number | null>(null);
 
   const confStyle = CONFIDENCE_STYLES[leakage.confidence];
-  const total = leakage.estimated_annual_leakage;
+  // Headline math: verified $ is the floor we can defend with real
+  // transactional records; estimated $ is the heuristic on top. The
+  // combined number is what consultants quote to their clients, but the
+  // verified portion is what survives CFO scrutiny.
+  const verifiedUsd = verified?.total_verified_usd ?? 0;
+  const estimated = leakage.estimated_annual_leakage;
+  const total = verifiedUsd + estimated;
+  const forensicRunning = verified && ['queued', 'running', 'reconciling', 'attributing'].includes(verified.status);
 
   return (
     <Card className="border-amber-200 dark:border-amber-800/40 bg-gradient-to-br from-amber-50/40 to-transparent dark:from-amber-900/10">
@@ -111,12 +133,31 @@ export function RevenueLeakageCard({ leakage, currency = 'USD' }: Props) {
         </div>
       </CardHeader>
       <CardContent>
-        {/* Headline */}
+        {/* Headline. When forensic findings exist we split verified vs
+            estimated explicitly — verified $ is what survives a CFO
+            asking "show me the records." Estimated is the heuristic
+            layer on top, kept honest with the same "Estimate only" chip. */}
         <div className="mb-5">
           <div className="text-4xl font-bold text-gray-900 dark:text-white">
             {formatMoney(total, currency)}
             <span className="text-base font-medium text-gray-500 dark:text-gray-400 ml-2">/ year</span>
           </div>
+          {verifiedUsd > 0 && (
+            <div className="mt-2 flex items-center gap-3 text-sm">
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300">
+                ✓ {formatMoney(verifiedUsd, currency)} verified
+              </span>
+              <span className="text-gray-500 dark:text-gray-400">
+                + {formatMoney(estimated, currency)} estimated
+              </span>
+            </div>
+          )}
+          {forensicRunning && (
+            <p className="text-xs text-blue-600 dark:text-blue-400 mt-2 flex items-center gap-1.5">
+              <span className="inline-block w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
+              Forensic scan running — verified $ will appear here when done
+            </p>
+          )}
           {leakage.percent_of_revenue !== null && (
             <p className="text-sm text-gray-600 dark:text-gray-400 mt-1.5">
               {leakage.percent_of_revenue.toFixed(1)}% of your annual revenue from{' '}
@@ -124,6 +165,36 @@ export function RevenueLeakageCard({ leakage, currency = 'USD' }: Props) {
             </p>
           )}
         </div>
+
+        {/* Verified findings drill-down. Surfaces above the estimated
+            contributors because real $ outranks heuristic $. Each one
+            links to the finding detail page for attribution + recovery. */}
+        {verified && verified.top_findings.length > 0 && orgId && (
+          <div className="mb-5">
+            <p className="text-xs font-semibold uppercase tracking-wide text-green-700 dark:text-green-400 mb-2 flex items-center gap-1.5">
+              ✓ Verified findings ({verified.finding_count})
+            </p>
+            <div className="space-y-1.5">
+              {verified.top_findings.slice(0, 5).map((f) => (
+                <a
+                  key={f.id}
+                  href={`/orgs/${orgId}/forensics/${f.id}`}
+                  className="flex items-center justify-between gap-3 px-3 py-2 rounded-lg border border-green-200 dark:border-green-800/40 bg-green-50/40 dark:bg-green-900/10 hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors"
+                >
+                  <div className="flex items-center gap-2 min-w-0">
+                    <code className="text-[11px] font-mono text-green-700 dark:text-green-400 flex-shrink-0">
+                      {f.detector_id}
+                    </code>
+                    <span className="text-sm text-gray-800 dark:text-gray-200 truncate">{f.title}</span>
+                  </div>
+                  <span className="font-mono font-semibold text-green-700 dark:text-green-300 flex-shrink-0">
+                    {formatMoney(f.gap_usd, currency)}
+                  </span>
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Top contributors */}
         {leakage.top_contributors.length > 0 && (

@@ -12,7 +12,7 @@ import { GroupedIssueList } from '@/components/issues/grouped-issue-list';
 import { IssueDetailModal } from '@/components/issues/issue-detail-modal';
 import { SeverityModal } from '@/components/issues/severity-modal';
 import { RevenueRiskCard } from '@/components/scan/revenue-risk-card';
-import { RevenueLeakageCard, type RevenueLeakageData } from '@/components/scan/revenue-leakage-card';
+import { RevenueLeakageCard, type RevenueLeakageData, type VerifiedLeakage } from '@/components/scan/revenue-leakage-card';
 import { ComplexityCard } from '@/components/scan/complexity-card';
 import { ScheduleModal } from '@/components/schedule/schedule-modal';
 import { ScheduleList } from '@/components/schedule/schedule-list';
@@ -45,6 +45,10 @@ export default function OrgDetailPage() {
   const [schedules, setSchedules] = useState<DBScanSchedule[]>([]);
   const [showScheduleModal, setShowScheduleModal] = useState(false);
   const [showExportMenu, setShowExportMenu] = useState(false);
+  // Forensic scan paired with the currently-displayed config scan. When
+  // present, the Revenue Leakage card shows a verified $ alongside the
+  // estimated $ from config heuristics.
+  const [verifiedLeakage, setVerifiedLeakage] = useState<VerifiedLeakage | null>(null);
   const [remediationPlan, setRemediationPlan] = useState<string>('');
   const [remediationLoading, setRemediationLoading] = useState(false);
   const [remediationError, setRemediationError] = useState<string | null>(null);
@@ -154,6 +158,30 @@ export default function OrgDetailPage() {
         const latestScan = completedScans.length > 0 ? completedScans[0] : (scans.length > 0 ? scans[0] : null);
         if (latestScan) {
           setScan(latestScan);
+
+          // Fetch the forensic scan paired with this config scan (if any).
+          // Fire-and-forget; the leakage card hides the verified pane
+          // when this returns null.
+          fetch(`/api/forensic-scans?parentScanId=${latestScan.id}`)
+            .then((r) => (r.ok ? r.json() : null))
+            .then(async (fScan) => {
+              if (!fScan) return;
+              const findingsRes = await fetch(`/api/forensic-findings?forensicScanId=${fScan.id}`);
+              const findings = findingsRes.ok ? await findingsRes.json() : [];
+              setVerifiedLeakage({
+                total_verified_usd: Number(fScan.total_verified_usd ?? 0),
+                finding_count: fScan.finding_count ?? findings.length,
+                status: fScan.status,
+                forensic_scan_id: fScan.id,
+                top_findings: (findings || []).slice(0, 10).map((f: { id: string; detector_id: string; title: string; gap_usd: number }) => ({
+                  id: f.id,
+                  detector_id: f.detector_id,
+                  title: f.title,
+                  gap_usd: Number(f.gap_usd),
+                })),
+              });
+            })
+            .catch(() => {});
 
           // Load cached remediation plan if available
           if (latestScan.ai_remediation_plan) {
@@ -1462,7 +1490,7 @@ export default function OrgDetailPage() {
             if (!leakage) return null;
             return (
               <div className="mb-8">
-                <RevenueLeakageCard leakage={leakage} />
+                <RevenueLeakageCard leakage={leakage} verified={verifiedLeakage} orgId={orgId} />
               </div>
             );
           })()}
