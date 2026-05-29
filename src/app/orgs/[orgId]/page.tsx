@@ -156,6 +156,30 @@ export default function OrgDetailPage() {
           }
         }
 
+        // Also resume forensic-scan polling if one is in flight. Without
+        // this, a forensic scan that was kicked off in a previous tab
+        // session never triggers the completion banner — the user has
+        // to refresh manually, which is the exact bug we just hit.
+        try {
+          const fScansRes = await fetch(`/api/forensic-scans?organizationId=${orgId}`);
+          if (fScansRes.ok) {
+            const fScans: Array<{ id: string; status: string; started_at: string }> = await fScansRes.json();
+            const activeForensicStatuses = new Set(['queued', 'running', 'reconciling', 'attributing']);
+            const inflightForensic = fScans.find((s) => activeForensicStatuses.has(s.status));
+            if (inflightForensic) {
+              const ageMs = Date.now() - new Date(inflightForensic.started_at).getTime();
+              // Same 10-min budget as the config scan resume.
+              if (ageMs < 10 * 60 * 1000) {
+                pollForForensicScan(inflightForensic.id);
+              }
+            }
+          }
+        } catch {
+          // Best-effort resume — if /api/forensic-scans is down, the
+          // user will see the result on next visit via the page-load
+          // fetch a few lines below.
+        }
+
         // Detect any failed scans newer than our latest completed scan, so
         // we can show a banner explaining why the user's recent attempt didn't
         // produce results. Without this, the page silently shows old data and
