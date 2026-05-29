@@ -76,11 +76,19 @@ const REN_001: ForensicDetector = {
     // contract requires callers to never inline-build SOQL from user data,
     // and this detector honors that by construction (everything is a
     // hardcoded field path or a date literal).
+    //
+    // CurrencyIsoCode only exists when multi-currency is enabled at the
+    // org level. Single-currency orgs (the majority) don't have it on
+    // any object. We detect at runtime via describe and conditionally
+    // include the field — falls back to ctx.defaultCurrencyIsoCode when
+    // multi-currency is off.
+    const multiCurrency = await isMultiCurrencyEnabled(ctx.conn);
+    const currencySelect = multiCurrency ? ', SBQQ__Quote__r.CurrencyIsoCode' : '';
     const renewalLinesQuery = `
       SELECT
         Id, Name,
         SBQQ__Quote__c, SBQQ__Quote__r.Name,
-        SBQQ__Quote__r.SBQQ__Type__c, SBQQ__Quote__r.CurrencyIsoCode,
+        SBQQ__Quote__r.SBQQ__Type__c${currencySelect},
         SBQQ__RenewedSubscription__c,
         SBQQ__Product__c, SBQQ__Product__r.Name,
         SBQQ__NetPrice__c, SBQQ__Quantity__c
@@ -159,7 +167,12 @@ const REN_001: ForensicDetector = {
       // Tolerance: gaps under $1 are rounding noise.
       if (gap < 1) continue;
 
-      const currency = line['SBQQ__Quote__r.CurrencyIsoCode'] || ctx.defaultCurrencyIsoCode;
+      // CurrencyIsoCode may be absent (single-currency org); fall back to
+      // the org default. The optional-chained read is safe even when the
+      // field wasn't in the SELECT.
+      const currency =
+        (line as unknown as Record<string, string | undefined>)['SBQQ__Quote__r.CurrencyIsoCode'] ||
+        ctx.defaultCurrencyIsoCode;
 
       const primaryRecord: SourceRecord = {
         type: 'SBQQ__QuoteLine__c',
@@ -235,6 +248,27 @@ export default REN_001;
 // ────────────────────────────────────────────────────────────────────
 // Helpers
 // ────────────────────────────────────────────────────────────────────
+
+/**
+ * Cheap probe: query for CurrencyIsoCode on a known object. If the field
+ * doesn't exist, the org isn't multi-currency. Cached per process via
+ * the WeakSet on the connection — we run a forensic scan once per HTTP
+ * request, so this is at most one describe per scan.
+ */
+const MULTI_CURRENCY_CACHE = new WeakMap<object, boolean>();
+async function isMultiCurrencyEnabled(conn: import('jsforce').Connection): Promise<boolean> {
+  const cached = MULTI_CURRENCY_CACHE.get(conn);
+  if (cached !== undefined) return cached;
+  try {
+    const desc = (await conn.describe('SBQQ__Quote__c')) as { fields: Array<{ name: string }> };
+    const enabled = desc.fields.some((f) => f.name === 'CurrencyIsoCode');
+    MULTI_CURRENCY_CACHE.set(conn, enabled);
+    return enabled;
+  } catch {
+    MULTI_CURRENCY_CACHE.set(conn, false);
+    return false;
+  }
+}
 
 function chunkArray<T>(arr: T[], size: number): T[][] {
   const out: T[][] = [];
