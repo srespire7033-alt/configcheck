@@ -118,10 +118,12 @@ export function RevenueLeakageCard({ leakage, verified, orgId, currency = 'USD' 
             </div>
             <div>
               <h2 className="text-base font-semibold text-gray-900 dark:text-white">
-                Estimated Revenue Leakage
+                Revenue Leakage
               </h2>
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                Forward-looking annualized estimate based on your org&rsquo;s actual data
+                {verifiedUsd > 0
+                  ? 'Verified findings from real records + estimated impact from config heuristics'
+                  : 'Forward-looking annualized estimate based on your org’s actual data'}
               </p>
             </div>
           </div>
@@ -136,26 +138,34 @@ export function RevenueLeakageCard({ leakage, verified, orgId, currency = 'USD' 
         {/* Headline. When forensic findings exist we split verified vs
             estimated explicitly — verified $ is what survives a CFO
             asking "show me the records." Estimated is the heuristic
-            layer on top, kept honest with the same "Estimate only" chip. */}
+            layer on top, kept honest with the same "Estimate only" chip.
+            The word "Total" is explicit so users don't have to decode
+            the breakdown to know what the big number represents. */}
         <div className="mb-5">
+          <p className="text-[11px] uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1">
+            {verifiedUsd > 0 ? 'Total Revenue Leakage' : 'Estimated Revenue Leakage'}
+          </p>
           <div className="text-4xl font-bold text-gray-900 dark:text-white">
             {formatMoney(total, currency)}
             <span className="text-base font-medium text-gray-500 dark:text-gray-400 ml-2">/ year</span>
           </div>
           {verifiedUsd > 0 && (
-            <div className="mt-2 flex items-center gap-3 text-sm">
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300">
-                ✓ {formatMoney(verifiedUsd, currency)} verified
+            <div className="mt-2 inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gray-100/60 dark:bg-gray-800/40 text-sm">
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300">
+                ✓ Verified
               </span>
-              <span className="text-gray-500 dark:text-gray-400">
-                + {formatMoney(estimated, currency)} estimated
+              <span className="font-mono text-gray-900 dark:text-white">{formatMoney(verifiedUsd, currency)}</span>
+              <span className="text-gray-400 dark:text-gray-500">+</span>
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
+                ~ Estimated
               </span>
+              <span className="font-mono text-gray-900 dark:text-white">{formatMoney(estimated, currency)}</span>
             </div>
           )}
           {forensicRunning && (
             <p className="text-xs text-blue-600 dark:text-blue-400 mt-2 flex items-center gap-1.5">
               <span className="inline-block w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
-              Forensic scan running — verified $ will appear here when done
+              Forensic scan running — verified $ updating live
             </p>
           )}
           {leakage.percent_of_revenue !== null && (
