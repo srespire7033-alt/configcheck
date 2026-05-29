@@ -45,9 +45,9 @@ interface PriceConditionRow {
 
 interface PriceActionRow {
   Id: string;
-  Name: string;
-  SBQQ__Rule__c: string;
-  SBQQ__TargetField__c: string;
+  /** Resolved target field name — aliased from whichever column the org uses
+   *  (SBQQ__TargetField__c | SBQQ__FieldName__c | SBQQ__Field__c). */
+  TargetField: string;
   SBQQ__SourceField__c?: string;
   SBQQ__Value__c?: string;
   SBQQ__Formula__c?: string;
@@ -106,14 +106,28 @@ export default CLASS_C_TRACER;
 async function findConflictingPriceRules(conn: Connection, finding: DetectorResult): Promise<AttributionCandidate[]> {
   // 1. Active Price Rules that have Actions targeting any of the
   //    relevant pricing fields.
-  const targetFields = ['SBQQ__NetPrice__c', 'SBQQ__Price__c', 'SBQQ__Discount__c', 'SBQQ__ListPrice__c'];
+  const targetFieldValues = ['SBQQ__NetPrice__c', 'SBQQ__Price__c', 'SBQQ__Discount__c', 'SBQQ__ListPrice__c'];
+
+  // Resolve which field on SBQQ__PriceAction__c stores the target field
+  // name. Varies across CPQ versions — standard is SBQQ__TargetField__c,
+  // some installs use SBQQ__FieldName__c. Describe once, pick whichever
+  // exists. Without this the SELECT below 500s the whole tracer.
+  const paDesc = (await conn.describe('SBQQ__PriceAction__c')) as { fields: Array<{ name: string }> };
+  const paFieldNames = new Set(paDesc.fields.map((f) => f.name));
+  const targetFieldColumn = ['SBQQ__TargetField__c', 'SBQQ__FieldName__c', 'SBQQ__Field__c'].find((c) => paFieldNames.has(c));
+  if (!targetFieldColumn) {
+    console.warn('[forensics] Class C: no target-field column on SBQQ__PriceAction__c; skipping rule tracer');
+    return [];
+  }
 
   // Pull rules + their actions/conditions. Single SOQL with sub-selects
   // because Price Rule data volume is bounded (orgs rarely have >500).
+  // We project the resolved target field as TargetField so downstream
+  // code stays version-agnostic.
   const rulesRes = await conn.query<PriceRuleRow & { Actions: { records: PriceActionRow[] }; Conditions: { records: PriceConditionRow[] } }>(
     `SELECT Id, Name, SBQQ__Active__c, SBQQ__EvaluationEvent__c, SBQQ__LookupObject__c, SBQQ__ConditionsMet__c,
-       (SELECT Id, Name, SBQQ__TargetField__c, SBQQ__SourceField__c, SBQQ__Value__c, SBQQ__Formula__c FROM SBQQ__PriceActions__r),
-       (SELECT Id, Name, SBQQ__Field__c, SBQQ__Operator__c, SBQQ__Value__c, SBQQ__Object__c FROM SBQQ__PriceConditions__r)
+       (SELECT Id, ${targetFieldColumn} TargetField, SBQQ__SourceField__c, SBQQ__Value__c, SBQQ__Formula__c FROM SBQQ__PriceActions__r),
+       (SELECT Id, SBQQ__Field__c, SBQQ__Operator__c, SBQQ__Value__c, SBQQ__Object__c FROM SBQQ__PriceConditions__r)
      FROM SBQQ__PriceRule__c
      WHERE SBQQ__Active__c = TRUE
      LIMIT 500`
@@ -125,7 +139,7 @@ async function findConflictingPriceRules(conn: Connection, finding: DetectorResu
     const conditions = rule.Conditions?.records ?? [];
 
     // Does this rule target a pricing field?
-    const pricingActions = actions.filter((a) => targetFields.includes(a.SBQQ__TargetField__c));
+    const pricingActions = actions.filter((a) => targetFieldValues.includes(a.TargetField));
     if (pricingActions.length === 0) continue;
 
     // Does its condition set plausibly match a Renewal context?
@@ -141,7 +155,7 @@ async function findConflictingPriceRules(conn: Connection, finding: DetectorResu
     //         (the rule fires on EVERY quote including renewals)
     //   0.4  — pricing action targets a related field (Discount, ListPrice)
     //         but not NetPrice directly
-    const netPriceAction = pricingActions.find((a) => a.SBQQ__TargetField__c === 'SBQQ__NetPrice__c');
+    const netPriceAction = pricingActions.find((a) => a.TargetField === 'SBQQ__NetPrice__c');
     let confidence: number;
     if (netPriceAction && renewalConditions.length > 0) confidence = 1.0;
     else if (netPriceAction) confidence = 0.7;
@@ -160,7 +174,7 @@ async function findConflictingPriceRules(conn: Connection, finding: DetectorResu
       confidence,
       evidence: {
         evaluation_event: rule.SBQQ__EvaluationEvent__c,
-        target_field: primaryAction.SBQQ__TargetField__c,
+        target_field: primaryAction.TargetField,
         action_value: primaryAction.SBQQ__Value__c ?? primaryAction.SBQQ__Formula__c ?? primaryAction.SBQQ__SourceField__c,
         renewal_condition_count: renewalConditions.length,
         all_conditions: conditions.map((c) => ({
