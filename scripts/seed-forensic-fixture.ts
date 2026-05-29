@@ -400,6 +400,7 @@ async function main() {
   // ────────────────────────────────────────────────────────────────────
   console.log(`\n[4/6] Seeding DSC-FOR-001 promo roll-off fixtures...`);
   const promoExpectedLeakage = await seedPromoFixtures(
+    conn,
     sfQuery,
     sfCreate,
     fixtureAccountId,
@@ -425,6 +426,7 @@ async function main() {
  * 5 quote lines applying 15%. Name includes "Promo" so detector flags it.
  */
 async function seedPromoFixtures(
+  conn: import('jsforce').Connection,
   sfQuery: <T>(soql: string, label: string) => Promise<T[]>,
   sfCreate: (sobject: string, fields: Record<string, unknown>, label: string) => Promise<string>,
   accountId: string,
@@ -434,7 +436,6 @@ async function seedPromoFixtures(
   interface PromoSchedule {
     Id: string;
     Name: string;
-    SBQQ__EndDate__c?: string | null;
   }
   interface PromoLine {
     customerName: string;
@@ -447,9 +448,25 @@ async function seedPromoFixtures(
   const expiredScheduleDiscount = 25;
   const nullEndScheduleDiscount = 15;
 
+  // Describe SBQQ__DiscountSchedule__c — standard CPQ doesn't ship date
+  // fields here; only Advanced Discounting + custom fields add them.
+  // We only set what's writable. Both detector sub-cases still work:
+  // (a) needs the end-date column, (b) is name-based and works without.
+  const dsDesc = (await conn.describe('SBQQ__DiscountSchedule__c')) as { fields: Array<{ name: string; updateable: boolean }> };
+  const writableDsFields = new Set(dsDesc.fields.filter((f) => f.updateable).map((f) => f.name));
+  const dsStartCol = ['SBQQ__StartDate__c', 'Start_Date__c', 'StartDate__c'].find((c) => writableDsFields.has(c));
+  const dsEndCol = ['SBQQ__EndDate__c', 'End_Date__c', 'EndDate__c', 'SBQQ__ExpirationDate__c', 'Expiration_Date__c'].find((c) => writableDsFields.has(c));
+  if (!dsEndCol) {
+    console.log(`  ℹ️  No end-date column on SBQQ__DiscountSchedule__c — sub-case (a) "expired schedule" won't fire; sub-case (b) "promo-named, no end date" will.`);
+  } else {
+    console.log(`  ℹ️  Using end-date column: ${dsEndCol}`);
+  }
+  // Type field also varies (some orgs lock it down). Probe.
+  const dsTypeCol = writableDsFields.has('SBQQ__Type__c') ? 'SBQQ__Type__c' : null;
+
   // Expired schedule first.
   const expiredCheck = await sfQuery<PromoSchedule>(
-    `SELECT Id, Name, SBQQ__EndDate__c FROM SBQQ__DiscountSchedule__c WHERE Name = '${expiredScheduleName.replace(/'/g, "\\'")}' LIMIT 1`,
+    `SELECT Id, Name FROM SBQQ__DiscountSchedule__c WHERE Name = '${expiredScheduleName.replace(/'/g, "\\'")}' LIMIT 1`,
     'expired DiscountSchedule lookup'
   );
   let expiredScheduleId: string;
@@ -457,16 +474,11 @@ async function seedPromoFixtures(
     expiredScheduleId = expiredCheck[0].Id;
     console.log(`  ✓ Expired schedule already exists: ${expiredScheduleId}`);
   } else {
-    expiredScheduleId = await sfCreate(
-      'SBQQ__DiscountSchedule__c',
-      {
-        Name: expiredScheduleName,
-        SBQQ__StartDate__c: '2025-01-01',
-        SBQQ__EndDate__c: '2025-03-31',
-        SBQQ__Type__c: 'Range',
-      },
-      'expired promo schedule'
-    );
+    const expiredFields: Record<string, unknown> = { Name: expiredScheduleName };
+    if (dsStartCol) expiredFields[dsStartCol] = '2025-01-01';
+    if (dsEndCol) expiredFields[dsEndCol] = '2025-03-31';
+    if (dsTypeCol) expiredFields[dsTypeCol] = 'Range';
+    expiredScheduleId = await sfCreate('SBQQ__DiscountSchedule__c', expiredFields, 'expired promo schedule');
   }
 
   // Null-EndDate promo schedule next.
@@ -479,16 +491,12 @@ async function seedPromoFixtures(
     nullEndScheduleId = nullEndCheck[0].Id;
     console.log(`  ✓ Null-end schedule already exists: ${nullEndScheduleId}`);
   } else {
-    nullEndScheduleId = await sfCreate(
-      'SBQQ__DiscountSchedule__c',
-      {
-        Name: nullEndScheduleName,
-        SBQQ__StartDate__c: '2024-11-01',
-        SBQQ__Type__c: 'Range',
-        // SBQQ__EndDate__c deliberately omitted
-      },
-      'null-end promo schedule'
-    );
+    const nullEndFields: Record<string, unknown> = { Name: nullEndScheduleName };
+    if (dsStartCol) nullEndFields[dsStartCol] = '2024-11-01';
+    if (dsTypeCol) nullEndFields[dsTypeCol] = 'Range';
+    // End-date column deliberately omitted whether it exists or not —
+    // this fixture demonstrates the "no end date set" governance gap.
+    nullEndScheduleId = await sfCreate('SBQQ__DiscountSchedule__c', nullEndFields, 'null-end promo schedule');
   }
 
   // 5 affected lines per schedule.

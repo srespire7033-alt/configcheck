@@ -30,9 +30,11 @@ import type { DetectorContext, DetectorResult, ForensicDetector, SourceRecord } 
 interface DiscountScheduleRow {
   Id: string;
   Name: string;
-  SBQQ__StartDate__c: string | null;
-  SBQQ__EndDate__c: string | null;
-  SBQQ__Type__c?: string | null;
+  /** Aliased — present only when a start-date column was found via describe. */
+  StartDate?: string | null;
+  /** Aliased — present only when an end-date column was found via describe. */
+  EndDate?: string | null;
+  Type?: string | null;
 }
 
 interface DiscountedLineRow {
@@ -63,14 +65,27 @@ const DSC_FOR_001: ForensicDetector = {
   freeTier: false,
 
   async run(ctx: DetectorContext): Promise<DetectorResult[]> {
+    // Standard CPQ DiscountSchedules don't have date fields — only the
+    // 'Advanced Discounting' or custom-field configurations do. Describe
+    // the object to learn what's present, then build the SELECT to
+    // include whatever date columns exist. Schedules without date
+    // tracking get detected via the name-keyword path only.
+    const dsDesc = (await ctx.conn.describe('SBQQ__DiscountSchedule__c')) as { fields: Array<{ name: string }> };
+    const dsFields = new Set(dsDesc.fields.map((f) => f.name));
+    const startDateCol = ['SBQQ__StartDate__c', 'Start_Date__c', 'StartDate__c'].find((c) => dsFields.has(c));
+    const endDateCol = ['SBQQ__EndDate__c', 'End_Date__c', 'EndDate__c', 'SBQQ__ExpirationDate__c', 'Expiration_Date__c'].find((c) => dsFields.has(c));
+    const typeCol = dsFields.has('SBQQ__Type__c') ? 'SBQQ__Type__c' : null;
+
+    const cols = ['Id', 'Name'];
+    if (startDateCol) cols.push(`${startDateCol} StartDate`);
+    if (endDateCol) cols.push(`${endDateCol} EndDate`);
+    if (typeCol) cols.push(`${typeCol} Type`);
+
     // 1. Pull every Discount Schedule. CPQ orgs typically have <500
     //    of these; non-bulk SOQL handles it fine.
     const schedulesRes = await bulkQuery<DiscountScheduleRow>(
       ctx.conn,
-      `
-        SELECT Id, Name, SBQQ__StartDate__c, SBQQ__EndDate__c, SBQQ__Type__c
-        FROM SBQQ__DiscountSchedule__c
-      `
+      `SELECT ${cols.join(', ')} FROM SBQQ__DiscountSchedule__c`
     );
     if (!schedulesRes.jobComplete || schedulesRes.records.length === 0) return [];
 
@@ -81,8 +96,8 @@ const DSC_FOR_001: ForensicDetector = {
 
     for (const s of schedulesRes.records) {
       schedulesById.set(s.Id, s);
-      if (s.SBQQ__EndDate__c) {
-        const end = new Date(s.SBQQ__EndDate__c);
+      if (s.EndDate) {
+        const end = new Date(s.EndDate);
         if (end < today) expiredScheduleIds.push(s.Id);
       } else {
         // No end date — only treat as leaky if name suggests a promo.
@@ -129,9 +144,9 @@ const DSC_FOR_001: ForensicDetector = {
       // Sub-case routing:
       //   (a) expired: line was created after schedule's EndDate
       //   (b) null-end promo: name contains promo keyword, no EndDate
-      const isExpired = !!schedule.SBQQ__EndDate__c &&
-        new Date(line.CreatedDate) > new Date(schedule.SBQQ__EndDate__c);
-      const isNullEndPromo = !schedule.SBQQ__EndDate__c &&
+      const isExpired = !!schedule.EndDate &&
+        new Date(line.CreatedDate) > new Date(schedule.EndDate);
+      const isNullEndPromo = !schedule.EndDate &&
         promoNullEndScheduleIds.includes(schedule.Id);
 
       if (!isExpired && !isNullEndPromo) continue;
@@ -171,8 +186,8 @@ const DSC_FOR_001: ForensicDetector = {
           name: schedule.Name,
           financials: {
             // Stored as ISO strings so the renderer can format them.
-            ...(schedule.SBQQ__StartDate__c && { start_date: schedule.SBQQ__StartDate__c }),
-            ...(schedule.SBQQ__EndDate__c && { end_date: schedule.SBQQ__EndDate__c }),
+            ...(schedule.StartDate && { start_date: schedule.StartDate }),
+            ...(schedule.EndDate && { end_date: schedule.EndDate }),
           },
         },
         {
@@ -204,12 +219,12 @@ const DSC_FOR_001: ForensicDetector = {
         title: `Discount ${subCaseTitle}`,
         description: `${discountPct}% discount on ${line['SBQQ__Product__r.Name'] || 'product'} — schedule ${
           subCase === 'expired'
-            ? `ended ${schedule.SBQQ__EndDate__c}`
+            ? `ended ${schedule.EndDate}`
             : `has no end date`
         }.`,
         metadata: {
           sub_case: subCase,
-          schedule_end_date: schedule.SBQQ__EndDate__c,
+          schedule_end_date: schedule.EndDate,
           discount_pct: discountPct,
           list_price_per_unit: listPrice,
           line_created_at: line.CreatedDate,
