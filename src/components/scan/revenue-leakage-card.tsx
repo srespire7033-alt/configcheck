@@ -176,36 +176,17 @@ export function RevenueLeakageCard({ leakage, verified, orgId, currency = 'USD' 
           )}
         </div>
 
-        {/* Verified findings drill-down. Surfaces above the estimated
-            contributors because real $ outranks heuristic $. Each one
-            links to the finding detail page for attribution + recovery. */}
+        {/* Verified findings drill-down — grouped by detector so the
+            card stays readable when forensic scans produce many
+            findings. When there's only one detector or only a few
+            findings, we flatten back to the per-finding list. */}
         {verified && verified.top_findings.length > 0 && orgId && (
-          <div className="mb-5">
-            <p className="text-xs font-semibold uppercase tracking-wide text-green-700 dark:text-green-400 mb-2 flex items-center gap-1.5">
-              {verified.top_findings.length < verified.finding_count
-                ? `✓ Top ${verified.top_findings.length} of ${verified.finding_count} verified findings`
-                : `✓ Verified findings (${verified.finding_count})`}
-            </p>
-            <div className="space-y-1.5">
-              {verified.top_findings.map((f) => (
-                <a
-                  key={f.id}
-                  href={`/orgs/${orgId}/forensics/${f.id}`}
-                  className="flex items-center justify-between gap-3 px-3 py-2 rounded-lg border border-green-200 dark:border-green-800/40 bg-green-50/40 dark:bg-green-900/10 hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors"
-                >
-                  <div className="flex items-center gap-2 min-w-0">
-                    <code className="text-[11px] font-mono text-green-700 dark:text-green-400 flex-shrink-0">
-                      {f.detector_id}
-                    </code>
-                    <span className="text-sm text-gray-800 dark:text-gray-200 truncate">{f.title}</span>
-                  </div>
-                  <span className="font-mono font-semibold text-green-700 dark:text-green-300 flex-shrink-0">
-                    {formatMoney(f.gap_usd, currency)}
-                  </span>
-                </a>
-              ))}
-            </div>
-          </div>
+          <VerifiedFindingsSection
+            findings={verified.top_findings}
+            totalCount={verified.finding_count}
+            orgId={orgId}
+            currency={currency}
+          />
         )}
 
         {/* Top contributors */}
@@ -331,5 +312,165 @@ export function RevenueLeakageCard({ leakage, verified, orgId, currency = 'USD' 
         )}
       </CardContent>
     </Card>
+  );
+}
+
+/**
+ * Verified findings list with adaptive layout:
+ *   - ≤5 findings total: render flat (per-finding rows). Same as before.
+ *   - >5 findings: collapse into per-detector groups ("REN-001 — 9 findings,
+ *     USD 126K"). Click a group to expand its individual findings inline.
+ *
+ * Keeps the leakage card readable as the engine ships more detectors and
+ * customers run scans across many checks. Defers a dedicated /forensics
+ * page until card-scrolling becomes truly painful.
+ */
+function VerifiedFindingsSection({
+  findings,
+  totalCount,
+  orgId,
+  currency,
+}: {
+  findings: Array<{ id: string; detector_id: string; title: string; gap_usd: number }>;
+  totalCount: number;
+  orgId: string;
+  currency: string;
+}) {
+  const FLAT_THRESHOLD = 5;
+  const [expandedDetectors, setExpandedDetectors] = useState<Set<string>>(new Set());
+
+  const verifiedTotalUsd = findings.reduce((sum, f) => sum + f.gap_usd, 0);
+  const headerLabel =
+    findings.length < totalCount
+      ? `✓ Top ${findings.length} of ${totalCount} verified findings`
+      : `✓ Verified findings (${totalCount})`;
+
+  // Flat list for small N — keeps simple cases simple.
+  if (findings.length <= FLAT_THRESHOLD) {
+    return (
+      <div className="mb-5">
+        <p className="text-xs font-semibold uppercase tracking-wide text-green-700 dark:text-green-400 mb-2 flex items-center gap-1.5">
+          {headerLabel}
+        </p>
+        <div className="space-y-1.5">
+          {findings.map((f) => (
+            <FindingRow key={f.id} finding={f} orgId={orgId} currency={currency} />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // Group by detector_id; sort groups by their total $ desc.
+  const groups = new Map<string, typeof findings>();
+  for (const f of findings) {
+    const list = groups.get(f.detector_id) ?? [];
+    list.push(f);
+    groups.set(f.detector_id, list);
+  }
+  const sortedGroups = Array.from(groups.entries())
+    .map(([detectorId, items]) => ({
+      detectorId,
+      items: items.sort((a, b) => b.gap_usd - a.gap_usd),
+      totalGap: items.reduce((sum, f) => sum + f.gap_usd, 0),
+      // Use the first finding's title as a representative label —
+      // findings in the same detector tend to share the same title shape.
+      representativeTitle: items[0].title,
+    }))
+    .sort((a, b) => b.totalGap - a.totalGap);
+
+  return (
+    <div className="mb-5">
+      <div className="flex items-baseline justify-between mb-2">
+        <p className="text-xs font-semibold uppercase tracking-wide text-green-700 dark:text-green-400 flex items-center gap-1.5">
+          {headerLabel}
+        </p>
+        <span className="text-[11px] font-mono text-green-700 dark:text-green-400">
+          {formatMoney(verifiedTotalUsd, currency)} total
+        </span>
+      </div>
+      <div className="space-y-1.5">
+        {sortedGroups.map((group) => {
+          const isExpanded = expandedDetectors.has(group.detectorId);
+          return (
+            <div key={group.detectorId} className="rounded-lg border border-green-200 dark:border-green-800/40 bg-green-50/40 dark:bg-green-900/10">
+              <button
+                onClick={() => {
+                  const next = new Set(expandedDetectors);
+                  if (next.has(group.detectorId)) next.delete(group.detectorId);
+                  else next.add(group.detectorId);
+                  setExpandedDetectors(next);
+                }}
+                className="w-full flex items-center justify-between gap-3 px-3 py-2 text-left hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors"
+              >
+                <div className="flex items-center gap-2 min-w-0">
+                  <code className="text-[11px] font-mono text-green-700 dark:text-green-400 flex-shrink-0">
+                    {group.detectorId}
+                  </code>
+                  <span className="text-sm text-gray-800 dark:text-gray-200 truncate">
+                    {group.representativeTitle}
+                  </span>
+                  <span className="text-[11px] text-gray-500 dark:text-gray-400 flex-shrink-0">
+                    · {group.items.length} finding{group.items.length === 1 ? '' : 's'}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5 flex-shrink-0">
+                  <span className="font-mono font-semibold text-green-700 dark:text-green-300">
+                    {formatMoney(group.totalGap, currency)}
+                  </span>
+                  {isExpanded ? (
+                    <ChevronUp className="h-3.5 w-3.5 text-gray-400" />
+                  ) : (
+                    <ChevronDown className="h-3.5 w-3.5 text-gray-400" />
+                  )}
+                </div>
+              </button>
+              {isExpanded && (
+                <div className="px-2 pb-2 pt-1 space-y-1 border-t border-green-100 dark:border-green-900/30">
+                  {group.items.map((f) => (
+                    <FindingRow key={f.id} finding={f} orgId={orgId} currency={currency} compact />
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function FindingRow({
+  finding,
+  orgId,
+  currency,
+  compact,
+}: {
+  finding: { id: string; detector_id: string; title: string; gap_usd: number };
+  orgId: string;
+  currency: string;
+  compact?: boolean;
+}) {
+  return (
+    <a
+      href={`/orgs/${orgId}/forensics/${finding.id}`}
+      className={`flex items-center justify-between gap-3 px-3 py-2 rounded-lg border border-green-200 dark:border-green-800/40 bg-green-50/40 dark:bg-green-900/10 hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors ${
+        compact ? 'border-transparent bg-transparent dark:bg-transparent hover:bg-white/40 dark:hover:bg-gray-800/30' : ''
+      }`}
+    >
+      <div className="flex items-center gap-2 min-w-0">
+        {!compact && (
+          <code className="text-[11px] font-mono text-green-700 dark:text-green-400 flex-shrink-0">
+            {finding.detector_id}
+          </code>
+        )}
+        <span className={`text-sm text-gray-800 dark:text-gray-200 truncate ${compact ? 'text-xs' : ''}`}>
+          {finding.title}
+        </span>
+      </div>
+      <span className={`font-mono font-semibold text-green-700 dark:text-green-300 flex-shrink-0 ${compact ? 'text-xs' : ''}`}>
+        {formatMoney(finding.gap_usd, currency)}
+      </span>
+    </a>
   );
 }

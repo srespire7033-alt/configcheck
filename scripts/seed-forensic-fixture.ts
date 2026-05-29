@@ -383,18 +383,197 @@ async function main() {
     createdContracts++;
   }
 
-  console.log(`\n[3/4] Summary:`);
+  console.log(`\n[3/4] REN-001 summary:`);
   console.log(`  Created: ${createdContracts}`);
   console.log(`  Skipped (already existed): ${skippedContracts}`);
 
-  // Expected leakage:
-  const expectedLeakage = CONTRACTS.filter((c) => c.isLeaky).reduce(
+  const expectedRenLeakage = CONTRACTS.filter((c) => c.isLeaky).reduce(
     (sum, c) => sum + c.originalPrice * c.quantity * (c.upliftPct / 100),
     0
   );
-  console.log(`\n[4/4] Expected verified leakage when REN-001 runs: ~$${Math.round(expectedLeakage).toLocaleString()}`);
-  console.log(`     (Sum across ${CONTRACTS.filter((c) => c.isLeaky).length} leaky renewals)`);
-  console.log(`\n✓ Done. Now go to OrgPrism → CPQ Ks → "New Scan + Forensics" to see the engine in action.`);
+
+  // ────────────────────────────────────────────────────────────────────
+  // DSC-FOR-001 fixtures — two sub-cases:
+  //   (a) Discount Schedule with EndDate in past, lines applied AFTER it
+  //   (b) Discount Schedule with NO EndDate at all (open-ended promo)
+  // Each gets 5 affected quote lines for a total of ~$130K leakage.
+  // ────────────────────────────────────────────────────────────────────
+  console.log(`\n[4/6] Seeding DSC-FOR-001 promo roll-off fixtures...`);
+  const promoExpectedLeakage = await seedPromoFixtures(
+    sfQuery,
+    sfCreate,
+    fixtureAccountId,
+    productId,
+    FIXTURE_TAG
+  );
+
+  console.log(`\n[6/6] Expected verified leakage totals:`);
+  console.log(`  REN-001 (renewal uplift): ~$${Math.round(expectedRenLeakage).toLocaleString()}`);
+  console.log(`  DSC-FOR-001 (promo roll-off): ~$${Math.round(promoExpectedLeakage).toLocaleString()}`);
+  console.log(`  TOTAL: ~$${Math.round(expectedRenLeakage + promoExpectedLeakage).toLocaleString()}`);
+  console.log(`\n✓ Done. Now go to OrgPrism → CPQ Ks → "+ Forensics" to see the engine in action.`);
+}
+
+/**
+ * Seed both DSC-FOR-001 sub-cases. Returns the expected $ leakage so the
+ * top-level summary can sum across detectors.
+ *
+ * Sub-case (a): "2025 Q1 New Logo Promo" with EndDate = 2025-03-31, 5
+ * quote lines created on 2025-06-15 (after expiry) still apply 25%.
+ *
+ * Sub-case (b): "Holiday Launch Special Promo" with no EndDate (null),
+ * 5 quote lines applying 15%. Name includes "Promo" so detector flags it.
+ */
+async function seedPromoFixtures(
+  sfQuery: <T>(soql: string, label: string) => Promise<T[]>,
+  sfCreate: (sobject: string, fields: Record<string, unknown>, label: string) => Promise<string>,
+  accountId: string,
+  productId: string,
+  fixtureTag: string
+): Promise<number> {
+  interface PromoSchedule {
+    Id: string;
+    Name: string;
+    SBQQ__EndDate__c?: string | null;
+  }
+  interface PromoLine {
+    customerName: string;
+    listPrice: number;
+    quantity: number;
+  }
+
+  const expiredScheduleName = '2025 Q1 New Logo Promo - Forensic Fixture';
+  const nullEndScheduleName = 'Holiday Launch Special Promo - Forensic Fixture';
+  const expiredScheduleDiscount = 25;
+  const nullEndScheduleDiscount = 15;
+
+  // Expired schedule first.
+  const expiredCheck = await sfQuery<PromoSchedule>(
+    `SELECT Id, Name, SBQQ__EndDate__c FROM SBQQ__DiscountSchedule__c WHERE Name = '${expiredScheduleName.replace(/'/g, "\\'")}' LIMIT 1`,
+    'expired DiscountSchedule lookup'
+  );
+  let expiredScheduleId: string;
+  if (expiredCheck.length > 0) {
+    expiredScheduleId = expiredCheck[0].Id;
+    console.log(`  ✓ Expired schedule already exists: ${expiredScheduleId}`);
+  } else {
+    expiredScheduleId = await sfCreate(
+      'SBQQ__DiscountSchedule__c',
+      {
+        Name: expiredScheduleName,
+        SBQQ__StartDate__c: '2025-01-01',
+        SBQQ__EndDate__c: '2025-03-31',
+        SBQQ__Type__c: 'Range',
+      },
+      'expired promo schedule'
+    );
+  }
+
+  // Null-EndDate promo schedule next.
+  const nullEndCheck = await sfQuery<PromoSchedule>(
+    `SELECT Id, Name FROM SBQQ__DiscountSchedule__c WHERE Name = '${nullEndScheduleName.replace(/'/g, "\\'")}' LIMIT 1`,
+    'null-end DiscountSchedule lookup'
+  );
+  let nullEndScheduleId: string;
+  if (nullEndCheck.length > 0) {
+    nullEndScheduleId = nullEndCheck[0].Id;
+    console.log(`  ✓ Null-end schedule already exists: ${nullEndScheduleId}`);
+  } else {
+    nullEndScheduleId = await sfCreate(
+      'SBQQ__DiscountSchedule__c',
+      {
+        Name: nullEndScheduleName,
+        SBQQ__StartDate__c: '2024-11-01',
+        SBQQ__Type__c: 'Range',
+        // SBQQ__EndDate__c deliberately omitted
+      },
+      'null-end promo schedule'
+    );
+  }
+
+  // 5 affected lines per schedule.
+  const expiredLines: PromoLine[] = [
+    { customerName: 'Vertex Cloud Expired', listPrice: 40_000, quantity: 6 },
+    { customerName: 'Nimbus Group Expired',  listPrice: 28_000, quantity: 10 },
+    { customerName: 'Strata Data Expired',   listPrice: 22_000, quantity: 12 },
+    { customerName: 'Pillar Health Expired', listPrice: 60_000, quantity: 4 },
+    { customerName: 'Beacon Energy Expired', listPrice: 18_000, quantity: 15 },
+  ];
+  const nullEndLines: PromoLine[] = [
+    { customerName: 'Cascade Retail Promo',   listPrice: 25_000, quantity: 8 },
+    { customerName: 'Apex Logistics Promo',   listPrice: 50_000, quantity: 3 },
+    { customerName: 'Echo Tech Promo',        listPrice: 16_000, quantity: 20 },
+    { customerName: 'Polaris Banking Promo',  listPrice: 72_000, quantity: 2 },
+    { customerName: 'Summit Mfg Promo',       listPrice: 12_000, quantity: 18 },
+  ];
+
+  let createdLines = 0;
+  let totalLeakage = 0;
+
+  for (const [scheduleId, lineList, discountPct, subCaseLabel] of [
+    [expiredScheduleId, expiredLines, expiredScheduleDiscount, 'expired'],
+    [nullEndScheduleId, nullEndLines, nullEndScheduleDiscount, 'null-end'],
+  ] as Array<[string, PromoLine[], number, string]>) {
+    for (const line of lineList) {
+      // Skip if this customer's subscription is already present.
+      // Marker is the subscription's display Name (auto-numbered),
+      // so really we check by Contract description in CONTRACT_FOR_PROMO
+      // form. Cheapest: try create, skip on duplicate by querying first.
+      const contractCheck = await sfQuery<{ Id: string }>(
+        `SELECT Id FROM Contract WHERE AccountId = '${accountId}' AND Description = '${fixtureTag}: ${line.customerName}' LIMIT 1`,
+        `Contract check ${line.customerName}`
+      );
+      if (contractCheck.length > 0) {
+        console.log(`  ⏭  ${line.customerName} — already exists, skipping`);
+        continue;
+      }
+      // The contract's StartDate is back-dated to give the renewal-
+      // type quote line a plausible "created after expiry" timeline.
+      // For sub-case (a), line CreatedDate is "today" (when seed runs)
+      // which IS after 2025-03-31, so the detector classifies as expired.
+      const contractId = await sfCreate('Contract', {
+        AccountId: accountId,
+        StartDate: '2024-01-01',
+        ContractTerm: 12,
+        Status: 'Draft',
+        Description: `${fixtureTag}: ${line.customerName}`,
+      }, `Promo Contract ${line.customerName}`);
+
+      const subId = await sfCreate('SBQQ__Subscription__c', {
+        SBQQ__Contract__c: contractId,
+        SBQQ__Product__c: productId,
+        SBQQ__Account__c: accountId,
+        SBQQ__NetPrice__c: line.listPrice * (1 - discountPct / 100),
+        SBQQ__Quantity__c: line.quantity,
+        SBQQ__SubscriptionStartDate__c: '2024-01-01',
+        SBQQ__SubscriptionEndDate__c: '2025-01-01',
+      }, `Promo Subscription ${line.customerName}`);
+
+      const quoteId = await sfCreate('SBQQ__Quote__c', {
+        SBQQ__Account__c: accountId,
+        SBQQ__Type__c: 'New',
+        SBQQ__StartDate__c: '2024-06-01',
+        SBQQ__EndDate__c: '2025-06-01',
+      }, `Promo Quote ${line.customerName}`);
+
+      await sfCreate('SBQQ__QuoteLine__c', {
+        SBQQ__Quote__c: quoteId,
+        SBQQ__Subscription__c: subId,
+        SBQQ__Product__c: productId,
+        SBQQ__DiscountSchedule__c: scheduleId,
+        SBQQ__Discount__c: discountPct,
+        SBQQ__Quantity__c: line.quantity,
+        SBQQ__ListPrice__c: line.listPrice,
+        SBQQ__NetPrice__c: line.listPrice * (1 - discountPct / 100),
+      }, `Promo QuoteLine ${line.customerName}`);
+
+      createdLines += 1;
+      totalLeakage += line.listPrice * line.quantity * (discountPct / 100);
+      console.log(`  + ${line.customerName} (${subCaseLabel}, ${discountPct}% × ${line.quantity} units @ ${line.listPrice})`);
+    }
+  }
+  console.log(`\n[5/6] DSC-FOR-001 summary: ${createdLines} promo lines created`);
+  return totalLeakage;
 }
 
 /**

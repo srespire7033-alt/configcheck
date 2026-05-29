@@ -61,6 +61,23 @@ const TEMPLATES: Record<string, (f: DetectorResult, a: AttributionCandidate) => 
       `Open Flow "${a.rootConfigName}" in Setup → Flows. Confirm whether any Update Records element targets SBQQ__NetPrice__c or SBQQ__Price__c. If yes, gate the update behind an "is not Renewal" condition.`,
     model: 'template-fallback',
   }),
+  // ─────────── DSC-FOR-001 / Class D ───────────
+  DISCOUNT_SCHEDULE_NO_END_DATE: (f, a) => ({
+    plainEnglish:
+      `On quote line ${f.primaryRecord.name}, the discount from "${a.rootConfigName}" keeps applying — the discount schedule has no end date, so a one-time promo became a permanent price reduction. ` +
+      `Recurring leak of ${f.currencyIsoCode} ${f.gapUsd.toLocaleString()} per period, compounding every billing cycle until the schedule is bounded.`,
+    suggestedFix:
+      `Open "${a.rootConfigName}" in Setup → Discount Schedules. Set an SBQQ__EndDate__c, then audit existing quote lines using this schedule to decide which need re-pricing for future billing periods.`,
+    model: 'template-fallback',
+  }),
+  DISCOUNT_END_DATE_NOT_ENFORCED: (f, a) => ({
+    plainEnglish:
+      `On quote line ${f.primaryRecord.name}, the discount from "${a.rootConfigName}" was applied AFTER the schedule's end date. ` +
+      `${f.currencyIsoCode} ${f.gapUsd.toLocaleString()} of discount that should not have applied. No validation rule blocks this from happening, so it will recur on every future quote that references this schedule.`,
+    suggestedFix:
+      `Add a ValidationRule on SBQQ__QuoteLine__c: when SBQQ__DiscountSchedule__r.SBQQ__EndDate__c < TODAY, prevent save. Re-quote the affected lines without the expired discount.`,
+    model: 'template-fallback',
+  }),
 };
 
 const DEFAULT_TEMPLATE = (f: DetectorResult, a: AttributionCandidate): RenderResult => ({

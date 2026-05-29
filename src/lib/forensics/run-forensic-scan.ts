@@ -29,7 +29,9 @@
 import { createServiceClient } from '@/lib/db/client';
 import { createRefreshableConnection } from '@/lib/salesforce/client';
 import REN_001 from './detectors/ren-001-renewal-uplift';
+import DSC_FOR_001 from './detectors/dsc-for-001-promo-rolloff';
 import CLASS_C_TRACER from './attribution/class-c-conflicting';
+import CLASS_D_TRACER from './attribution/class-d-governance';
 import { renderFinding } from './renderer';
 import type { DetectorContext, ForensicDetector, AttributionTracer, DetectorResult } from './types';
 
@@ -38,13 +40,13 @@ import type { DetectorContext, ForensicDetector, AttributionTracer, DetectorResu
  * Each detector is responsible for stating which product types it applies
  * to and whether it's free-tier eligible.
  */
-const DETECTORS: ForensicDetector[] = [REN_001];
+const DETECTORS: ForensicDetector[] = [REN_001, DSC_FOR_001];
 
 /**
  * Registry of attribution tracers. The orchestrator runs ALL applicable
  * tracers against each finding and keeps the top candidate.
  */
-const TRACERS: AttributionTracer[] = [CLASS_C_TRACER];
+const TRACERS: AttributionTracer[] = [CLASS_C_TRACER, CLASS_D_TRACER];
 
 /**
  * Free-tier detector allowlist (Strategy C — only REN-001 available on free).
