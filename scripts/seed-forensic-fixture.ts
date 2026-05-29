@@ -230,8 +230,10 @@ async function main() {
       SBQQ__ConditionsMet__c: 'All',
     }, 'Renewal Floor Pricing');
 
+    // Name is auto-numbered on PriceCondition / PriceAction in newer CPQ
+    // versions (Setup → Object Manager shows it as auto-number). Don't
+    // try to set it — Salesforce assigns one on insert.
     await sfCreate('SBQQ__PriceCondition__c', {
-      Name: 'When renewal type',
       SBQQ__Rule__c: priceRuleId,
       SBQQ__Object__c: 'Quote',
       SBQQ__Field__c: 'SBQQ__Type__c',
@@ -240,7 +242,6 @@ async function main() {
     }, 'When renewal type');
 
     await sfCreate('SBQQ__PriceAction__c', {
-      Name: 'Strip uplift on renewal',
       SBQQ__Rule__c: priceRuleId,
       SBQQ__TargetField__c: 'SBQQ__NetPrice__c',
       SBQQ__Formula__c: 'SBQQ__Quantity__c * SBQQ__ListPrice__c',
