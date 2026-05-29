@@ -389,7 +389,12 @@ export default function OrgDetailPage() {
     }
     setForensicScanning(true);
     let pollCount = 0;
-    const maxPolls = 200; // 200 × 3s = 10 minutes budget
+    // 2s interval × 300 polls = 10 minutes budget.
+    // 2s strikes the right balance: lag at the "scan just finished"
+    // moment is ≤2s (was ≤3s), Supabase load stays modest (~1 call/s
+    // average across the 2 fetches per tick).
+    const intervalMs = 2000;
+    const maxPolls = 300;
 
     forensicPollRef.current = setInterval(async () => {
       pollCount += 1;
@@ -446,7 +451,7 @@ export default function OrgDetailPage() {
       } catch {
         // Network blip during poll — keep trying
       }
-    }, 3000);
+    }, intervalMs);
   }
 
   async function handleScan(options: { includeForensics?: boolean } = {}) {
