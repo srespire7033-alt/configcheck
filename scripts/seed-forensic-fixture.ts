@@ -275,12 +275,18 @@ async function main() {
   const productId = prodRows[0].Id;
   console.log(`  Using Product2: ${prodRows[0].Name} (${productId})`);
 
-  const existingContracts = await sfQuery<IdRef & { Description: string }>(
-    `SELECT Id, Description FROM Contract WHERE Description LIKE '%${FIXTURE_TAG}%' LIMIT 100`,
+  // Contract.Description is a long text area and CANNOT be filtered in
+  // SOQL ("field 'Description' can not be filtered in a query call").
+  // Track fixtures via AccountId instead — every Contract on the
+  // fixture Account is by definition one of ours.
+  const existingContracts = await sfQuery<IdRef & { Description: string | null }>(
+    `SELECT Id, Description FROM Contract WHERE AccountId = '${fixtureAccountId}' LIMIT 100`,
     'existing fixture Contracts'
   );
   const existingContractCustomers = new Set(
-    existingContracts.map((r) => r.Description.split(':')[1]?.trim())
+    existingContracts
+      .map((r) => r.Description?.split(':')[1]?.trim())
+      .filter((s): s is string => !!s)
   );
   let createdContracts = 0;
   let skippedContracts = 0;
