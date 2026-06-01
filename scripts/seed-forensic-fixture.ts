@@ -747,14 +747,18 @@ async function seedOrphanOrders(
   const pbeId = pbeRows[0].Id;
   const pbeUnitPrice = parseFloat(pbeRows[0].UnitPrice || '0') || 100_000;
 
-  // Idempotency check — any existing fixture-tagged Orders on this Account?
-  const existingOrphans = await sfQuery<{ Id: string; Description: string | null }>(
-    `SELECT Id, Description FROM Order WHERE AccountId = '${accountId}' AND Description LIKE '%${fixtureTag}%ORD-FOR-001%' LIMIT 20`,
-    'Existing orphan Orders'
+  // Idempotency check. Order.Description is long-text-area which can't
+  // be filtered in SOQL — query by AccountId, filter the tag client-side.
+  const allOrdersOnAcct = await sfQuery<{ Id: string; Description: string | null; Status: string }>(
+    `SELECT Id, Description, Status FROM Order WHERE AccountId = '${accountId}' LIMIT 100`,
+    'Existing Orders on fixture Account'
   );
-  if (existingOrphans.length >= 5) {
-    console.log(`  ✓ ${existingOrphans.length} orphan Orders already seeded; skipping batch.`);
-    return existingOrphans.length * pbeUnitPrice * 3; // approximate
+  const existingOrphanOrders = allOrdersOnAcct.filter(
+    (o) => (o.Description ?? '').includes(`${fixtureTag}`) && (o.Description ?? '').includes('ORD-FOR-001')
+  );
+  if (existingOrphanOrders.length >= 5) {
+    console.log(`  ✓ ${existingOrphanOrders.length} orphan Orders already seeded; skipping batch.`);
+    return existingOrphanOrders.length * pbeUnitPrice * 3; // approximate
   }
 
   // Order specs — varying $ amounts to make the demo interesting.
