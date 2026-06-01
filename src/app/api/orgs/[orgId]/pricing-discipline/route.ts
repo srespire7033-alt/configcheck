@@ -44,8 +44,28 @@ interface QuoteLineAgg {
   SBQQ__Discount__c: string | number | null;
   SBQQ__PricingMethod__c: string | null;
   SBQQ__Product__c: string | null;
-  Product__r?: { Name?: string } | null;
+  // CPQ relationship name for SBQQ__Product__c is SBQQ__Product__r —
+  // NOT Product__r. Earlier version had this wrong and silently
+  // fell back to showing product IDs.
+  SBQQ__Product__r?: { Name?: string } | null;
+  SBQQ__Quote__r?: { Name?: string; SBQQ__Account__c?: string | null; SBQQ__Account__r?: { Name?: string } | null } | null;
   SBQQ__DiscountSchedule__c?: string | null;
+}
+
+interface OffenderRowDetailed {
+  product_name: string;
+  product_id: string;
+  line_count: number;
+  avg_discount_pct: number;
+  sample_quote_id: string | null;
+  sample_quote_name: string | null;
+}
+
+interface AccountAgg {
+  account_id: string;
+  account_name: string;
+  line_count: number;
+  avg_discount_pct: number;
 }
 
 interface DiscountScheduleRow {
@@ -56,19 +76,12 @@ interface DiscountScheduleRow {
 
 type Grade = 'A' | 'B' | 'C' | 'D' | 'F';
 
-interface OffenderRow {
-  product_name: string;
-  product_id: string;
-  line_count: number;
-  avg_discount_pct: number;
-  sample_quote_id: string | null;
-}
-
 interface OverrideOffenderRow {
   product_name: string;
   product_id: string;
   override_count: number;
   sample_quote_id: string | null;
+  sample_quote_name: string | null;
 }
 
 export interface PricingDisciplineResponse {
@@ -77,10 +90,14 @@ export interface PricingDisciplineResponse {
   total_quote_lines: number;
   // Discount-discipline metric
   avg_discount_pct: number;
+  median_discount_pct: number;
   pct_lines_above_threshold: number;
   approved_threshold_pct: number;
+  approved_threshold_source: string;
   lines_above_threshold: number;
-  top_discount_offenders: OffenderRow[];
+  schedules_referenced: number;
+  top_discount_offenders: OffenderRowDetailed[];
+  top_discounting_accounts: AccountAgg[];
   // Override-discipline metric
   override_count: number;
   override_pct: number;
@@ -121,7 +138,9 @@ export async function GET(_req: NextRequest, { params }: { params: { orgId: stri
   try {
     const res = await conn.query<QuoteLineAgg>(`
       SELECT Id, SBQQ__Quote__c, SBQQ__Discount__c, SBQQ__PricingMethod__c,
-             SBQQ__Product__c, SBQQ__Product__r.Name, SBQQ__DiscountSchedule__c
+             SBQQ__Product__c, SBQQ__Product__r.Name,
+             SBQQ__Quote__r.Name, SBQQ__Quote__r.SBQQ__Account__c, SBQQ__Quote__r.SBQQ__Account__r.Name,
+             SBQQ__DiscountSchedule__c
       FROM SBQQ__QuoteLine__c
       WHERE CreatedDate >= ${sinceIso}
     `);
@@ -140,10 +159,14 @@ export async function GET(_req: NextRequest, { params }: { params: { orgId: stri
       metric_window_months: 12,
       total_quote_lines: 0,
       avg_discount_pct: 0,
+      median_discount_pct: 0,
       pct_lines_above_threshold: 0,
       approved_threshold_pct: DEFAULT_APPROVED_DISCOUNT_PCT,
+      approved_threshold_source: `${DEFAULT_APPROVED_DISCOUNT_PCT}% default fallback`,
       lines_above_threshold: 0,
+      schedules_referenced: 0,
       top_discount_offenders: [],
+      top_discounting_accounts: [],
       override_count: 0,
       override_pct: 0,
       top_override_offenders: [],
@@ -178,9 +201,17 @@ export async function GET(_req: NextRequest, { params }: { params: { orgId: stri
     line_count: number;
     discount_sum: number;
     override_count: number;
-    sample_quote: string | null;
+    sample_quote_id: string | null;
+    sample_quote_name: string | null;
+  }
+  interface AcctAgg {
+    name: string;
+    line_count: number;
+    discount_sum: number;
   }
   const byProduct = new Map<string, ProductAgg>();
+  const byAccount = new Map<string, AcctAgg>();
+  const allDiscounts: number[] = []; // for median
   let totalDiscountSum = 0;
   let totalLinesWithDiscount = 0;
   let linesAboveThreshold = 0;
@@ -188,43 +219,62 @@ export async function GET(_req: NextRequest, { params }: { params: { orgId: stri
 
   for (const line of lines) {
     const productId = line.SBQQ__Product__c ?? 'unknown';
-    const productName = line.Product__r?.Name ?? productId;
+    const productName = line.SBQQ__Product__r?.Name ?? productId;
     const discount = Number(line.SBQQ__Discount__c ?? 0);
     const isManual = line.SBQQ__PricingMethod__c === 'Manual';
+    const quoteName = line.SBQQ__Quote__r?.Name ?? null;
+    const accountId = line.SBQQ__Quote__r?.SBQQ__Account__c ?? null;
+    const accountName = line.SBQQ__Quote__r?.SBQQ__Account__r?.Name ?? (accountId ? `Account ${accountId.slice(0, 8)}` : 'Unknown');
     const threshold = line.SBQQ__DiscountSchedule__c
       ? Number(schedulesById.get(line.SBQQ__DiscountSchedule__c)?.SBQQ__DiscountAmount__c ?? DEFAULT_APPROVED_DISCOUNT_PCT)
       : DEFAULT_APPROVED_DISCOUNT_PCT;
 
     let agg = byProduct.get(productId);
     if (!agg) {
-      agg = { name: productName, line_count: 0, discount_sum: 0, override_count: 0, sample_quote: null };
+      agg = { name: productName, line_count: 0, discount_sum: 0, override_count: 0, sample_quote_id: null, sample_quote_name: null };
       byProduct.set(productId, agg);
     }
     agg.line_count += 1;
     agg.discount_sum += discount;
     if (isManual) agg.override_count += 1;
-    if (!agg.sample_quote && discount > threshold) agg.sample_quote = line.SBQQ__Quote__c;
+    if (!agg.sample_quote_id && discount > threshold) {
+      agg.sample_quote_id = line.SBQQ__Quote__c;
+      agg.sample_quote_name = quoteName;
+    }
+
+    if (accountId) {
+      let acct = byAccount.get(accountId);
+      if (!acct) {
+        acct = { name: accountName, line_count: 0, discount_sum: 0 };
+        byAccount.set(accountId, acct);
+      }
+      acct.line_count += 1;
+      acct.discount_sum += discount;
+    }
 
     if (discount > 0) {
       totalDiscountSum += discount;
       totalLinesWithDiscount += 1;
+      allDiscounts.push(discount);
     }
     if (discount > threshold) linesAboveThreshold += 1;
     if (isManual) totalOverride += 1;
   }
 
   const avgDiscount = totalLinesWithDiscount > 0 ? totalDiscountSum / totalLinesWithDiscount : 0;
+  const medianDiscount = computeMedian(allDiscounts);
   const pctAboveThreshold = (linesAboveThreshold / lines.length) * 100;
   const overridePct = (totalOverride / lines.length) * 100;
 
   // Top discount offenders: products with the highest avg discount.
-  const topDiscount: OffenderRow[] = Array.from(byProduct.entries())
+  const topDiscount: OffenderRowDetailed[] = Array.from(byProduct.entries())
     .map(([id, a]) => ({
       product_id: id,
       product_name: a.name,
       line_count: a.line_count,
       avg_discount_pct: round2(a.discount_sum / Math.max(a.line_count, 1)),
-      sample_quote_id: a.sample_quote,
+      sample_quote_id: a.sample_quote_id,
+      sample_quote_name: a.sample_quote_name,
     }))
     .filter((r) => r.line_count >= 2 && r.avg_discount_pct > 0)
     .sort((x, y) => y.avg_discount_pct - x.avg_discount_pct)
@@ -236,23 +286,46 @@ export async function GET(_req: NextRequest, { params }: { params: { orgId: stri
       product_id: id,
       product_name: a.name,
       override_count: a.override_count,
-      sample_quote_id: a.sample_quote,
+      sample_quote_id: a.sample_quote_id,
+      sample_quote_name: a.sample_quote_name,
     }))
     .filter((r) => r.override_count > 0)
     .sort((x, y) => y.override_count - x.override_count)
     .slice(0, 5);
 
+  // Top discounting accounts: account-level avg discount.
+  const topAccounts: AccountAgg[] = Array.from(byAccount.entries())
+    .map(([id, a]) => ({
+      account_id: id,
+      account_name: a.name,
+      line_count: a.line_count,
+      avg_discount_pct: round2(a.discount_sum / Math.max(a.line_count, 1)),
+    }))
+    .filter((r) => r.line_count >= 2 && r.avg_discount_pct > 0)
+    .sort((x, y) => y.avg_discount_pct - x.avg_discount_pct)
+    .slice(0, 5);
+
   const grade = computeGrade(avgDiscount, overridePct);
+
+  const schedulesReferenced = schedulesById.size;
+  const thresholdSource =
+    schedulesReferenced > 0
+      ? `Per-line: SBQQ__DiscountSchedule__c.SBQQ__DiscountAmount__c when present (${schedulesReferenced} schedule${schedulesReferenced === 1 ? '' : 's'} referenced); ${DEFAULT_APPROVED_DISCOUNT_PCT}% fallback otherwise`
+      : `${DEFAULT_APPROVED_DISCOUNT_PCT}% default — no Discount Schedules referenced on quote lines in window`;
 
   const response: PricingDisciplineResponse = {
     generated_at: new Date().toISOString(),
     metric_window_months: 12,
     total_quote_lines: lines.length,
     avg_discount_pct: round2(avgDiscount),
+    median_discount_pct: round2(medianDiscount),
     pct_lines_above_threshold: round2(pctAboveThreshold),
     approved_threshold_pct: DEFAULT_APPROVED_DISCOUNT_PCT,
+    approved_threshold_source: thresholdSource,
     lines_above_threshold: linesAboveThreshold,
+    schedules_referenced: schedulesReferenced,
     top_discount_offenders: topDiscount,
+    top_discounting_accounts: topAccounts,
     override_count: totalOverride,
     override_pct: round2(overridePct),
     top_override_offenders: topOverride,
@@ -264,6 +337,13 @@ export async function GET(_req: NextRequest, { params }: { params: { orgId: stri
 
 function round2(n: number): number {
   return Math.round(n * 100) / 100;
+}
+
+function computeMedian(values: number[]): number {
+  if (values.length === 0) return 0;
+  const sorted = values.slice().sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid];
 }
 
 export function computeGrade(avgDiscount: number, overridePct: number): Grade {

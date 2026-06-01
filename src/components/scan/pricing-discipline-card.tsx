@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Scale, ChevronDown, ChevronUp, AlertTriangle, TrendingDown, ExternalLink } from 'lucide-react';
+import { Scale, ChevronDown, ChevronUp, AlertTriangle, TrendingDown, ExternalLink, Info, Building2 } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import type { PricingDisciplineResponse } from '@/app/api/orgs/[orgId]/pricing-discipline/route';
 
@@ -79,7 +79,13 @@ export function PricingDisciplineCard({ orgId }: { orgId: string }) {
             <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">Avg discount applied</p>
             <p className="text-3xl font-bold">{data.avg_discount_pct.toFixed(1)}%</p>
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-              Approved threshold: {data.approved_threshold_pct}%
+              Median: {data.median_discount_pct.toFixed(1)}%
+            </p>
+            <p
+              className="text-xs text-gray-500 dark:text-gray-400 mt-1 inline-flex items-center gap-1 cursor-help"
+              title={data.approved_threshold_source}
+            >
+              Approved threshold: {data.approved_threshold_pct}% <Info className="h-3 w-3 opacity-60" />
             </p>
             <p className="text-sm mt-2">
               <span className={data.pct_lines_above_threshold > 30 ? 'text-amber-600 dark:text-amber-400 font-medium' : 'text-gray-600 dark:text-gray-300'}>
@@ -119,49 +125,89 @@ export function PricingDisciplineCard({ orgId }: { orgId: string }) {
         )}
 
         {expanded && (
-          <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-4">
-            {data.top_discount_offenders.length > 0 && (
+          <div className="mt-3 space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {data.top_discount_offenders.length > 0 && (
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2 flex items-center gap-1">
+                    <TrendingDown className="h-3 w-3" /> Highest avg discount (by product)
+                  </p>
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="text-left text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-800">
+                        <th className="py-1">Product</th>
+                        <th className="py-1 text-right">Lines</th>
+                        <th className="py-1 text-right">Avg discount</th>
+                        <th className="py-1">Sample quote</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {data.top_discount_offenders.map((row) => (
+                        <tr key={row.product_id} className="border-b border-gray-100 dark:border-gray-900">
+                          <td className="py-1 truncate max-w-[150px]" title={row.product_name}>{row.product_name}</td>
+                          <td className="py-1 text-right">{row.line_count}</td>
+                          <td className="py-1 text-right font-mono">{row.avg_discount_pct.toFixed(1)}%</td>
+                          <td className="py-1 truncate max-w-[100px] text-gray-500 dark:text-gray-400">
+                            {row.sample_quote_name ?? '—'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+              {data.top_override_offenders.length > 0 ? (
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2 flex items-center gap-1">
+                    <ExternalLink className="h-3 w-3" /> Most-overridden products
+                  </p>
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="text-left text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-800">
+                        <th className="py-1">Product</th>
+                        <th className="py-1 text-right">Override count</th>
+                        <th className="py-1">Sample quote</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {data.top_override_offenders.map((row) => (
+                        <tr key={row.product_id} className="border-b border-gray-100 dark:border-gray-900">
+                          <td className="py-1 truncate max-w-[150px]" title={row.product_name}>{row.product_name}</td>
+                          <td className="py-1 text-right font-mono">{row.override_count}</td>
+                          <td className="py-1 truncate max-w-[100px] text-gray-500 dark:text-gray-400">
+                            {row.sample_quote_name ?? '—'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="text-xs text-gray-500 dark:text-gray-400 flex items-center justify-center border border-dashed border-gray-300 dark:border-gray-700 rounded-lg p-4">
+                  No manual overrides detected in window
+                </div>
+              )}
+            </div>
+
+            {data.top_discounting_accounts.length > 0 && (
               <div>
                 <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2 flex items-center gap-1">
-                  <TrendingDown className="h-3 w-3" /> Highest avg discount
+                  <Building2 className="h-3 w-3" /> Top discounting accounts
                 </p>
                 <table className="w-full text-xs">
                   <thead>
                     <tr className="text-left text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-800">
-                      <th className="py-1">Product</th>
+                      <th className="py-1">Account</th>
                       <th className="py-1 text-right">Lines</th>
                       <th className="py-1 text-right">Avg discount</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {data.top_discount_offenders.map((row) => (
-                      <tr key={row.product_id} className="border-b border-gray-100 dark:border-gray-900">
-                        <td className="py-1 truncate max-w-[150px]" title={row.product_name}>{row.product_name}</td>
+                    {data.top_discounting_accounts.map((row) => (
+                      <tr key={row.account_id} className="border-b border-gray-100 dark:border-gray-900">
+                        <td className="py-1 truncate max-w-[200px]" title={row.account_name}>{row.account_name}</td>
                         <td className="py-1 text-right">{row.line_count}</td>
                         <td className="py-1 text-right font-mono">{row.avg_discount_pct.toFixed(1)}%</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-            {data.top_override_offenders.length > 0 && (
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2 flex items-center gap-1">
-                  <ExternalLink className="h-3 w-3" /> Most-overridden products
-                </p>
-                <table className="w-full text-xs">
-                  <thead>
-                    <tr className="text-left text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-800">
-                      <th className="py-1">Product</th>
-                      <th className="py-1 text-right">Override count</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {data.top_override_offenders.map((row) => (
-                      <tr key={row.product_id} className="border-b border-gray-100 dark:border-gray-900">
-                        <td className="py-1 truncate max-w-[200px]" title={row.product_name}>{row.product_name}</td>
-                        <td className="py-1 text-right font-mono">{row.override_count}</td>
                       </tr>
                     ))}
                   </tbody>
