@@ -13,6 +13,7 @@ import { IssueDetailModal } from '@/components/issues/issue-detail-modal';
 import { SeverityModal } from '@/components/issues/severity-modal';
 import { RevenueLeakageCard, type RevenueLeakageData, type VerifiedLeakage } from '@/components/scan/revenue-leakage-card';
 import { PricingDisciplineCard } from '@/components/scan/pricing-discipline-card';
+import { SinceLastScanCard } from '@/components/scan/since-last-scan-card';
 import { ComplexityCard } from '@/components/scan/complexity-card';
 import { ScheduleModal } from '@/components/schedule/schedule-modal';
 import { ScheduleList } from '@/components/schedule/schedule-list';
@@ -1681,6 +1682,15 @@ export default function OrgDetailPage() {
               check formulas with recoverability + LTV multipliers. Sits
               ABOVE the older revenue-risk card because this is the
               consultant-deliverable headline. */}
+          {/* ===== SINCE LAST SCAN (DIFF) =====
+              Sits ABOVE Revenue Leakage — once you've run more than one
+              scan, "what changed this week" is the headline a returning
+              user wants first. Self-hides when there's only one scan
+              (component returns null on 204). */}
+          <div className="mb-8">
+            <SinceLastScanCard orgId={orgId} />
+          </div>
+
           {(() => {
             const meta = scan.metadata as Record<string, unknown> | null;
             const leakage = meta?.revenue_leakage as RevenueLeakageData | undefined;

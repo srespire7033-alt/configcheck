@@ -91,23 +91,67 @@ export async function GET(request: NextRequest) {
         continue;
       }
 
+      // Create a forensic_scans row up front so the chain mirrors the
+      // user-triggered scan flow. Scheduled scans ALWAYS include forensic
+      // — the whole product narrative around scheduling is "what got
+      // worse this week," and the diff card only has data to show if
+      // forensic runs alongside config every time.
+      const { data: u } = await supabase
+        .from('users')
+        .select('plan, is_admin')
+        .eq('id', schedule.user_id)
+        .single();
+      const userPlan = (u?.plan as string | undefined) ?? 'free';
+      const userIsAdmin = u?.is_admin === true;
+      const { data: forensicScan } = await supabase
+        .from('forensic_scans')
+        .insert({
+          user_id: schedule.user_id,
+          organization_id: schedule.organization_id,
+          parent_scan_id: scan.id,
+          status: 'queued',
+          metadata: {
+            plan: userPlan,
+            is_admin: userIsAdmin,
+            triggered_by_schedule_id: schedule.id,
+          },
+        })
+        .select('id')
+        .single();
+      const forensicScanId = forensicScan?.id ?? null;
+
       // Run the scan inline via waitUntil. The previous fire-and-forget
       // POST to /api/scans was bouncing off getAuthUser (cookie-only auth),
       // so cron-triggered scans were stuck in pending forever. Calling
       // runScanInBackground directly bypasses the auth gate — we already
-      // verified the schedule belongs to a real org above.
+      // verified the schedule belongs to a real org above. Then chain
+      // to the forensic engine the same way /api/scans does for
+      // user-triggered scans.
       waitUntil(
-        runScanInBackground(scan.id, org, productType).catch(async (error: unknown) => {
-          console.error(`[CRON-SCAN ${scan.id}] Scan execution failed:`, error);
-          await supabase
-            .from('scans')
-            .update({
-              status: 'failed',
-              error_message: error instanceof Error ? error.message : 'Scheduled scan failed unexpectedly',
-              completed_at: new Date().toISOString(),
-            })
-            .eq('id', scan.id);
-        })
+        runScanInBackground(scan.id, org, productType)
+          .then(async () => {
+            if (!forensicScanId) return;
+            const { runForensicScanInBackground } = await import('@/lib/forensics/run-forensic-scan');
+            await runForensicScanInBackground({
+              forensicScanId,
+              organizationId: schedule.organization_id,
+              userId: schedule.user_id,
+              parentScanId: scan.id,
+              plan: userPlan,
+              isAdmin: userIsAdmin,
+            });
+          })
+          .catch(async (error: unknown) => {
+            console.error(`[CRON-SCAN ${scan.id}] Scan execution failed:`, error);
+            await supabase
+              .from('scans')
+              .update({
+                status: 'failed',
+                error_message: error instanceof Error ? error.message : 'Scheduled scan failed unexpectedly',
+                completed_at: new Date().toISOString(),
+              })
+              .eq('id', scan.id);
+          })
       );
 
       // Update the schedule: set last_run_at and calculate next_run_at
