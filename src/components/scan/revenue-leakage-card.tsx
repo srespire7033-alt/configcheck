@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { TrendingDown, Info, ChevronDown, ChevronUp, AlertCircle, Sparkles, Network, ChevronRight, ShieldCheck } from 'lucide-react';
+import { TrendingDown, Info, ChevronDown, ChevronUp, AlertCircle, Sparkles, Network, ChevronRight, ShieldCheck, FileDown } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 
 interface TopContributor {
@@ -217,6 +217,23 @@ export function RevenueLeakageCard({ leakage, verified, orgId, currency = 'USD' 
                     <p className="font-semibold text-sm">Recovery Queue</p>
                     <p className="text-[11px] opacity-80 truncate">
                       Stage → approve → download CSV
+                    </p>
+                  </div>
+                </div>
+                <ChevronRight className="h-4 w-4 opacity-70 group-hover:translate-x-0.5 transition-transform flex-shrink-0" />
+              </a>
+              <a
+                href={`/api/orgs/${orgId}/executive-report`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group flex items-center justify-between gap-3 px-4 py-3 rounded-xl bg-gradient-to-r from-slate-700 to-slate-900 hover:from-slate-800 hover:to-black text-white shadow-sm shadow-slate-700/20 transition-all"
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <FileDown className="h-5 w-5 flex-shrink-0" />
+                  <div className="min-w-0">
+                    <p className="font-semibold text-sm">Download Client Report</p>
+                    <p className="text-[11px] opacity-80 truncate">
+                      5-page executive PDF · the deliverable
                     </p>
                   </div>
                 </div>
