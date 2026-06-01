@@ -736,13 +736,17 @@ async function seedOrphanOrders(
   const chargeTypeFields = chargeTypeCandidates
     .map((name) => oiFields.find((f) => f.name === name))
     .filter((f): f is FieldMeta => !!f);
+  // Prefer 'One-Time' over 'Recurring' because Recurring triggers
+  // a follow-on validation requiring SBQQ__BillingFrequency__c. The
+  // detector doesn't care about the charge type — it only checks for
+  // missing billing schedules — so the simplest charge type wins.
   function pickChargeValue(field: FieldMeta): string {
     const vals = field.picklistValues ?? [];
-    const recurring = vals.find((v) => /recurring/i.test(v.value));
-    if (recurring) return recurring.value;
+    const oneTime = vals.find((v) => /one.?time/i.test(v.value));
+    if (oneTime) return oneTime.value;
     const def = vals.find((v) => v.defaultValue);
     if (def) return def.value;
-    return vals[0]?.value ?? 'Recurring';
+    return vals[0]?.value ?? 'One-Time';
   }
   const chargeTypeAssignments: Record<string, string> = {};
   for (const f of chargeTypeFields) {
