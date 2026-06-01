@@ -53,13 +53,30 @@ export async function GET(_req: NextRequest, { params }: { params: { orgId: stri
   const supabase = createServiceClient();
 
   // ─── 1. Pull org metadata ─────────────────────────────────────────
-  const { data: org } = await supabase
+  // First check existence WITHOUT the user filter so we can give
+  // useful error feedback: 'this org doesn't exist' vs 'you don't have
+  // access to this org' are very different debug paths.
+  const { data: orgAny } = await supabase
     .from('organizations')
-    .select('id, name, instance_url, product_type')
+    .select('id, name, instance_url, product_type, user_id')
     .eq('id', params.orgId)
-    .eq('user_id', user.id)
     .single();
-  if (!org) return NextResponse.json({ error: 'Org not found' }, { status: 404 });
+  if (!orgAny) {
+    return NextResponse.json(
+      { error: `Org ${params.orgId} does not exist in this environment.` },
+      { status: 404 }
+    );
+  }
+  if (orgAny.user_id !== user.id) {
+    return NextResponse.json(
+      {
+        error: 'You do not have access to this org.',
+        hint: `Org is owned by a different user. Logged-in user: ${user.id.slice(0, 8)}…, org owner: ${(orgAny.user_id as string | null)?.slice(0, 8) ?? 'none'}…`,
+      },
+      { status: 403 }
+    );
+  }
+  const org = orgAny;
 
   // ─── 2. Latest config-scan for the Revenue Leakage estimated data ──
   const { data: latestScan } = await supabase
