@@ -217,7 +217,7 @@ export default function OrgDetailPage() {
                 finding_count: findings.length,
                 status: fScan.status,
                 forensic_scan_id: fScan.id,
-                top_findings: findings.slice(0, 10).map((f) => ({
+                top_findings: findings.slice(0, 50).map((f) => ({
                   id: f.id,
                   detector_id: f.detector_id,
                   title: f.title,
@@ -437,7 +437,7 @@ export default function OrgDetailPage() {
             finding_count: findings.length,
             status: fScan.status,
             forensic_scan_id: forensicScanId,
-            top_findings: findings.slice(0, 10).map((f) => ({
+            top_findings: findings.slice(0, 50).map((f) => ({
               id: f.id,
               detector_id: f.detector_id,
               title: f.title,
