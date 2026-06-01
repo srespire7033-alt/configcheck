@@ -101,7 +101,14 @@ export async function POST(request: NextRequest) {
       projected_reclaim_usd: payload.projectedReclaimUsd,
     });
     if (error) {
-      errors.push({ findingId: finding.id as string, reason: error.message });
+      // 23505 = unique violation from the partial unique index. Means
+      // a concurrent stage already created an active row — treat as
+      // 'already staged' rather than erroring.
+      if ((error as { code?: string }).code === '23505') {
+        alreadyStaged += 1;
+      } else {
+        errors.push({ findingId: finding.id as string, reason: error.message });
+      }
     } else {
       staged += 1;
     }

@@ -94,7 +94,26 @@ export async function POST(_request: NextRequest, { params }: { params: { id: st
     })
     .select()
     .single();
-  if (insertErr || !created) {
+
+  if (insertErr) {
+    // 23505 = Postgres unique violation. The partial unique index on
+    // recovery_actions blocks creating a second active row per finding.
+    // If we hit it, a concurrent stage call won the race — fetch and
+    // return the winner instead of bubbling a 500 to the user.
+    if ((insertErr as { code?: string }).code === '23505') {
+      const { data: winner } = await supabase
+        .from('recovery_actions')
+        .select('*')
+        .eq('finding_id', finding.id)
+        .eq('user_id', user.id)
+        .in('approval_status', ['pending', 'approved', 'committed'])
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (winner) {
+        return NextResponse.json({ action: winner, status: 'already_staged_by_race' });
+      }
+    }
     return NextResponse.json({ error: 'Failed to stage action' }, { status: 500 });
   }
   return NextResponse.json({ action: created, status: 'staged' });
