@@ -1,13 +1,19 @@
 'use client';
 
-import { useEffect, useState, use } from 'react';
+import { useEffect, useState } from 'react';
+import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, TrendingUp, TrendingDown, Check, Sparkles, AlertTriangle } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import type { ForensicDiffResponse } from '@/app/api/orgs/[orgId]/forensic-diff/route';
 
-export default function ForensicDiffPage({ params }: { params: Promise<{ orgId: string }> }) {
-  const { orgId } = use(params);
+export default function ForensicDiffPage() {
+  // useParams() — matches the existing pattern across this codebase
+  // (attribution-map, recovery, finding-detail all use it). The
+  // page-props params signature changed between Next 14/15 and the
+  // useParams hook works on both.
+  const params = useParams();
+  const orgId = params.orgId as string;
   const [data, setData] = useState<ForensicDiffResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
