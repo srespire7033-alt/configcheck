@@ -860,12 +860,19 @@ async function seedOrphanOrders(
     // org's validation. Class A attribution will still fire — at 0.7
     // confidence (workflow not triggering) instead of 1.0 (rule
     // missing). That's the more realistic real-customer scenario.
+    // Note: this org's validation rule on OrderItem requires
+    // ServiceDate and blng__BillableUnitPrice__c too. Set both.
+    // blng__BillableUnitPrice__c is the "what we'll actually bill"
+    // price — separate from UnitPrice so customer-facing pricing can
+    // differ from billing-system pricing.
     await sfCreate('OrderItem', {
       OrderId: orderId,
       Product2Id: productId,
       PricebookEntryId: pbeId,
       Quantity: spec.quantity,
       UnitPrice: pbeUnitPrice,
+      ServiceDate: effectiveDate,
+      blng__BillableUnitPrice__c: pbeUnitPrice,
       blng__BillingRule__c: billingRuleId,
       blng__RevenueRecognitionRule__c: revenueRuleId,
       blng__TaxRule__c: taxRuleId,
