@@ -70,8 +70,9 @@ const FIXTURE_ACCOUNT_NAME = 'OrgPrism Forensic Fixture Co';
 
 async function main() {
   const orgUuid = process.argv[2];
+  const reseed = process.argv.includes('--reseed');
   if (!orgUuid) {
-    console.error('Usage: npx tsx scripts/seed-ord-variance-fixture.ts <orgPrismOrgId>');
+    console.error('Usage: npx tsx scripts/seed-ord-variance-fixture.ts <orgPrismOrgId> [--reseed]');
     process.exit(1);
   }
   console.log(`Connecting to org ${orgUuid}...`);
@@ -103,14 +104,23 @@ async function main() {
   type CreateResult = { success: boolean; id?: string; errors?: unknown };
   async function sfCreate(sobject: string, fields: Record<string, unknown>, label: string): Promise<string> {
     process.stdout.write(`  > Create ${sobject} (${label})... `);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const r = (await (conn.sobject(sobject) as any).create(fields)) as CreateResult;
-    if (!r.success) {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const r = (await (conn.sobject(sobject) as any).create(fields)) as CreateResult;
+      if (!r.success) {
+        console.log('FAILED');
+        throw new Error(`${sobject} create failed (${label}): ${JSON.stringify(r)}`);
+      }
+      console.log(`✓ ${r.id}`);
+      return r.id as string;
+    } catch (e) {
       console.log('FAILED');
-      throw new Error(`${sobject} create failed (${label}): ${JSON.stringify(r)}`);
+      // jsforce errors carry the detailed messages on .data. Surface them.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const err = e as any;
+      const details = err?.data ? JSON.stringify(err.data) : err?.message ?? String(e);
+      throw new Error(`${sobject} create failed (${label}):\n  Fields sent: ${JSON.stringify(fields)}\n  SF error: ${details}`);
     }
-    console.log(`✓ ${r.id}`);
-    return r.id as string;
   }
   async function sfUpdate(sobject: string, id: string, fields: Record<string, unknown>, label: string): Promise<void> {
     process.stdout.write(`  > Update ${sobject} ${id} (${label})... `);
@@ -190,11 +200,115 @@ async function main() {
       return null;
     }
   }
-  const billingRuleId = await firstId('blng__BillingRule__c');
-  const revenueRuleId = await firstId('blng__RevenueRecognitionRule__c');
-  const taxRuleId = await firstId('blng__TaxRule__c');
+  // Auto-create rule records if the objects exist but no records do.
+  // The OrderItem validation references these tables; without any
+  // records, every OrderItem insert fails.
+  async function ensureRule(sobject: string, name: string): Promise<string | null> {
+    const existing = await firstId(sobject);
+    if (existing) return existing;
+    // Object may not exist at all — describe it first.
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const desc = (await conn.describe(sobject)) as { createable?: boolean };
+      if (!desc.createable) return null;
+    } catch {
+      return null;
+    }
+    try {
+      const id = await sfCreate(
+        sobject,
+        { Name: name, blng__Active__c: true },
+        `${sobject} (auto-created for fixture)`
+      );
+      return id;
+    } catch (e) {
+      // Some installs require additional fields. Print and bail.
+      console.warn(`  ⚠️  Could not auto-create ${sobject}: ${e instanceof Error ? e.message : e}`);
+      return null;
+    }
+  }
+  // Smarter rule creator — for objects with extra required fields,
+  // describe + pick first picklist value or set sensible defaults.
+  async function ensureRuleWithDefaults(sobject: string, name: string, extras: Record<string, unknown> = {}): Promise<string | null> {
+    const existing = await firstId(sobject);
+    if (existing) return existing;
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const desc = (await conn.describe(sobject)) as {
+        createable?: boolean;
+        fields: Array<{ name: string; type?: string; picklistValues?: Array<{ value: string; defaultValue?: boolean }> }>;
+      };
+      if (!desc.createable) return null;
+      // For each required field we haven't supplied, pick its default picklist
+      // value (or first value).
+      const payload: Record<string, unknown> = { Name: name, blng__Active__c: true, ...extras };
+      try {
+        return await sfCreate(sobject, payload, `${sobject} (auto-created)`);
+      } catch (e) {
+        // Parse required-field errors and retry with auto-filled values.
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const err = e as any;
+        const msg = err?.message ?? String(e);
+        const fieldsMatch = msg.match(/Required fields are missing: \[([^\]]+)\]/);
+        if (!fieldsMatch) {
+          console.warn(`  ⚠️  Could not auto-create ${sobject}: ${msg}`);
+          return null;
+        }
+        const missing = fieldsMatch[1].split(',').map((s: string) => s.trim());
+        for (const fname of missing) {
+          const f = desc.fields.find((x) => x.name === fname);
+          if (!f) continue;
+          const pv = f.picklistValues ?? [];
+          if (pv.length > 0) {
+            const def = pv.find((v) => v.defaultValue) ?? pv[0];
+            payload[fname] = def.value;
+          } else if (f.type === 'boolean') {
+            payload[fname] = false;
+          } else {
+            payload[fname] = 'No';
+          }
+        }
+        try {
+          return await sfCreate(sobject, payload, `${sobject} (auto-created retry)`);
+        } catch (e2) {
+          console.warn(`  ⚠️  ${sobject} retry failed: ${e2 instanceof Error ? e2.message : e2}`);
+          return null;
+        }
+      }
+    } catch {
+      return null;
+    }
+  }
+  const billingRuleId = await ensureRuleWithDefaults('blng__BillingRule__c', 'Fixture Billing Rule');
+  const revenueRuleId = await ensureRuleWithDefaults('blng__RevenueRecognitionRule__c', 'Fixture Revenue Rule');
+  const taxRuleId = await ensureRuleWithDefaults('blng__TaxRule__c', 'Fixture Tax Rule');
   const hasBilling = !!(billingRuleId && revenueRuleId && taxRuleId);
-  console.log(`  Billing rules ${hasBilling ? 'OK' : 'NOT installed — will skip charge-type fields and hope activation succeeds'}`);
+  console.log(`  Billing rules ${hasBilling ? `OK (billing=${billingRuleId?.slice(0,8)}, rev=${revenueRuleId?.slice(0,8)}, tax=${taxRuleId?.slice(0,8)})` : 'NOT available — OrderItem validation may fail'}`);
+
+  // The org's validation rule on OrderItem reads Product2's rule lookups,
+  // not OrderItem's own. Patch the product if missing.
+  if (hasBilling) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const productCheck = (await conn.query(
+      `SELECT Id, blng__BillingRule__c, blng__RevenueRecognitionRule__c, blng__TaxRule__c FROM Product2 WHERE Id = '${productPbe.Product2Id}'`
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    )) as any;
+    const prod = productCheck.records[0];
+    if (!prod?.blng__BillingRule__c || !prod?.blng__RevenueRecognitionRule__c || !prod?.blng__TaxRule__c) {
+      console.log(`  > Patching Product2 ${productPbe.Product2Id} with rule lookups...`);
+      try {
+        await sfUpdate('Product2', productPbe.Product2Id, {
+          blng__BillingRule__c: billingRuleId,
+          blng__RevenueRecognitionRule__c: revenueRuleId,
+          blng__TaxRule__c: taxRuleId,
+        }, 'patch product rules');
+      } catch (e) {
+        console.warn(`    ⚠️  Product2 patch failed: ${e instanceof Error ? e.message : e}`);
+      }
+    } else {
+      console.log(`  ✓ Product2 already has rule lookups`);
+    }
+  }
 
   // Detect charge-type field
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -211,12 +325,23 @@ async function main() {
 
   // Detect SBQQ__Quote__c on Order
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const orderDesc = (await conn.describe('Order')) as { fields: Array<{ name: string }> };
+  const orderDesc = (await conn.describe('Order')) as { fields: Array<{ name: string; type?: string }> };
   const orderFieldNames = new Set(orderDesc.fields.map((f) => f.name));
   if (!orderFieldNames.has('SBQQ__Quote__c')) {
     console.error('  ✗ Order does not have SBQQ__Quote__c — CPQ does not appear to be installed. Abort.');
     process.exit(1);
   }
+  // Pre-flight: which extra fields does THIS org demand on activation?
+  // We probe for known troublemakers and pre-populate them.
+  const hasOiBillableUnitPrice = oiDesc.fields.some((f) => f.name === 'blng__BillableUnitPrice__c');
+  const orderStartDateField = ['blng__BillingStartDate__c', 'blng__StartDate__c', 'SBQQ__StartDate__c']
+    .find((n) => orderFieldNames.has(n));
+  console.log(`  Activation fields: ${hasOiBillableUnitPrice ? 'OI.blng__BillableUnitPrice__c ' : ''}${orderStartDateField ?? '(no extra Order.StartDate found)'}`);
+  // Does QuoteLine support SBQQ__PartialPeriod__c?
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const qlDesc = (await conn.describe('SBQQ__QuoteLine__c')) as { fields: Array<{ name: string }> };
+  const hasPartialPeriod = qlDesc.fields.some((f) => f.name === 'SBQQ__PartialPeriod__c');
+  console.log(`  SBQQ__PartialPeriod__c on QuoteLine: ${hasPartialPeriod ? 'yes' : 'no (proration flag will be skipped)'}`);
 
   // ─── 4. Idempotency check ───────────────────────────────────────────
   // SBQQ__Quote__c doesn't have a standard Description field, so we
@@ -231,13 +356,91 @@ async function main() {
     'Orders on fixture account'
   );
   const taggedOrders = allOrdersOnAcct.filter((o) => (o.Description ?? '').includes(FIXTURE_TAG));
-  if (taggedOrders.length >= 7) {
-    // 3 ORD-FOR-002 Orders (with one split → 4) + 3 ORD-FOR-003 Orders = 7
-    console.log(`  ✓ ${taggedOrders.length} fixture Orders already exist. Skipping.`);
-    console.log(`\nDone (already seeded). To re-seed, delete tagged records first.`);
+  console.log(`  (${taggedOrders.length} tagged Orders found.)`);
+
+  // --reseed: aggressively delete all tagged Orders (and their items)
+  // so we can re-seed clean. Useful when prior runs left half-built
+  // Drafts that activation never completed on.
+  if (reseed && taggedOrders.length > 0) {
+    console.log(`  --reseed flag set — deleting ${taggedOrders.length} tagged Order(s) + items + opportunities + quotes...`);
+    // Delete OrderItems first
+    const oiRows = await sfQuery<{ Id: string }>(
+      `SELECT Id FROM OrderItem WHERE OrderId IN (${taggedOrders.map((o) => `'${o.Id}'`).join(',')})`,
+      'tagged OrderItems'
+    );
+    for (const oi of oiRows) {
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await (conn.sobject('OrderItem') as any).destroy(oi.Id);
+      } catch (e) {
+        console.warn(`    ⚠️  could not delete OI ${oi.Id}: ${e instanceof Error ? e.message : e}`);
+      }
+    }
+    // Delete the Orders
+    for (const o of taggedOrders) {
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await (conn.sobject('Order') as any).destroy(o.Id);
+      } catch (e) {
+        console.warn(`    ⚠️  could not delete Order ${o.Id}: ${e instanceof Error ? e.message : e}`);
+      }
+    }
+    // Delete all SBQQ__Quote__c on this account that have no remaining Orders
+    const remainingQuotes = await sfQuery<{ Id: string; SBQQ__Opportunity2__c: string | null }>(
+      `SELECT Id, SBQQ__Opportunity2__c FROM SBQQ__Quote__c WHERE SBQQ__Account__c = '${accountId}'`,
+      'all account Quotes'
+    );
+    const oppIdsToClean = new Set<string>();
+    for (const q of remainingQuotes) {
+      if (q.SBQQ__Opportunity2__c) oppIdsToClean.add(q.SBQQ__Opportunity2__c);
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await (conn.sobject('SBQQ__Quote__c') as any).destroy(q.Id);
+      } catch (e) {
+        console.warn(`    ⚠️  could not delete Quote ${q.Id}: ${e instanceof Error ? e.message : e}`);
+      }
+    }
+    // Delete Opportunities named ORDVAR-*
+    const orphanedOpps = await sfQuery<{ Id: string }>(
+      `SELECT Id FROM Opportunity WHERE AccountId = '${accountId}' AND Name LIKE 'ORDVAR-%'`,
+      'ORDVAR opportunities'
+    );
+    for (const op of orphanedOpps) {
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await (conn.sobject('Opportunity') as any).destroy(op.Id);
+      } catch (e) {
+        console.warn(`    ⚠️  could not delete Opp ${op.Id}: ${e instanceof Error ? e.message : e}`);
+      }
+    }
+    console.log(`  ✓ Cleaned up. Continuing with fresh seed.`);
+  } else if (taggedOrders.length >= 7) {
+    console.log(`  ✓ ${taggedOrders.length} fixture Orders already exist. Pass --reseed to wipe & re-create.`);
+    console.log(`\nDone (already seeded).`);
     return;
   }
-  console.log(`  (${taggedOrders.length} tagged Orders found — will seed if any scenario missing.)`);
+
+  // Clean up orphan Quotes from prior failed runs — Quotes on this
+  // Account with NO QuoteLines AND no Orders. They're harmless to the
+  // detector (no Order = invisible) but pile up over re-runs.
+  const orphanQuotes = await sfQuery<{ Id: string; SBQQ__Type__c: string }>(
+    `SELECT Id, SBQQ__Type__c FROM SBQQ__Quote__c
+     WHERE SBQQ__Account__c = '${accountId}'
+       AND Id NOT IN (SELECT SBQQ__Quote__c FROM SBQQ__QuoteLine__c WHERE SBQQ__Quote__c != null)
+     LIMIT 50`,
+    'orphan Quotes (no lines)'
+  );
+  if (orphanQuotes.length > 0) {
+    console.log(`  Cleaning up ${orphanQuotes.length} orphan Quote(s) from prior failed runs...`);
+    for (const q of orphanQuotes) {
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await (conn.sobject('SBQQ__Quote__c') as any).destroy(q.Id);
+      } catch (e) {
+        console.warn(`    ⚠️  Could not delete orphan ${q.Id}: ${e instanceof Error ? e.message : e}`);
+      }
+    }
+  }
 
   // ─── 5. ORD-FOR-002 scenarios ────────────────────────────────────────
   console.log(`\n[5] Seeding ORD-FOR-002 (new-biz variance)...`);
@@ -279,6 +482,9 @@ async function main() {
       chargeAssignments,
       spec,
       hasBilling,
+      hasOiBillableUnitPrice,
+      orderStartDateField,
+      hasPartialPeriod,
     });
   }
 
@@ -304,8 +510,12 @@ async function main() {
       existingProductId: productPbe.Product2Id,
       newLineNetTotal: 5_000,
       newProductId: productPbe.Product2Id, // same product → suspect pattern
-      orderTotal: 5_000,
-      misflagExisting: true, // line marked Existing=false for product on existing-line
+      // Simulates the rep mis-flagged a carry-over line as new — the
+      // Order then picks up BOTH the existing AND the supposed-new line
+      // as new ($25K + $5K = $30K), but the expected delta was only $5K.
+      // Variance: +$25K over-billed.
+      orderTotal: 30_000,
+      misflagExisting: true,
       partialPeriod: false,
     },
     {
@@ -336,6 +546,9 @@ async function main() {
       chargeAssignments,
       spec,
       hasBilling,
+      hasOiBillableUnitPrice,
+      orderStartDateField,
+      hasPartialPeriod,
     });
   }
 
@@ -359,6 +572,9 @@ interface CommonCtx {
   taxRuleId: string | null;
   chargeAssignments: Record<string, string>;
   hasBilling: boolean;
+  hasOiBillableUnitPrice: boolean;
+  orderStartDateField: string | undefined;
+  hasPartialPeriod: boolean;
 }
 
 async function createNewBizFixture(
@@ -375,12 +591,28 @@ async function createNewBizFixture(
   const start = new Date(today.getTime() - 90 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
   const end = new Date(today.getTime() + 275 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
 
-  // Create the Quote. SBQQ__Quote__c has no Description field, so we
-  // tag via Order.Description downstream (Order DOES have Description).
+  // CPQ validation: Order requires its Quote to be marked Primary on
+  // an Opportunity. Create an Opportunity first, then link the Quote.
+  const oppId = await sfCreate(
+    'Opportunity',
+    {
+      Name: `ORDVAR-${spec.quoteName}`,
+      AccountId: accountId,
+      CloseDate: new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
+      StageName: 'Closed Won',
+      Pricebook2Id: stdPbId,
+    },
+    `Opportunity ${spec.quoteName}`
+  );
+
+  // Create the Quote, marked Primary, linked to the Opportunity.
+  // SBQQ__Quote__c has no Description field — we tag via Order.Description.
   const quoteId = await sfCreate(
     'SBQQ__Quote__c',
     {
       SBQQ__Account__c: accountId,
+      SBQQ__Opportunity2__c: oppId,
+      SBQQ__Primary__c: true,
       SBQQ__Type__c: 'Quote',
       SBQQ__Status__c: 'Approved',
       SBQQ__StartDate__c: start,
@@ -402,7 +634,8 @@ async function createNewBizFixture(
       SBQQ__Quantity__c: qty,
       SBQQ__ListPrice__c: pbeUnitPrice,
       SBQQ__NetPrice__c: spec.quoteNet / qty,
-      SBQQ__NetTotal__c: spec.quoteNet,
+      // SBQQ__NetTotal__c is a formula in standard CPQ — derived from
+      // SBQQ__NetPrice__c × SBQQ__Quantity__c — so we don't write it.
       SBQQ__CustomerPrice__c: spec.quoteNet / qty,
       SBQQ__PricingMethod__c: 'List',
     },
@@ -425,18 +658,16 @@ async function createNewBizFixture(
     const orderTotal = spec.orderTotals[i];
     const effectiveDate = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
 
-    const orderId = await sfCreate(
-      'Order',
-      {
-        AccountId: accountId,
-        Status: 'Draft',
-        EffectiveDate: effectiveDate,
-        Pricebook2Id: stdPbId,
-        SBQQ__Quote__c: quoteId,
-        Description: `${FIXTURE_TAG} ORD-FOR-002 ${spec.label} — Order ${i + 1}/${spec.orderTotals.length}`,
-      },
-      `Order ${spec.quoteName}-${i + 1}`
-    );
+    const orderFields: Record<string, unknown> = {
+      AccountId: accountId,
+      Status: 'Draft',
+      EffectiveDate: effectiveDate,
+      Pricebook2Id: stdPbId,
+      SBQQ__Quote__c: quoteId,
+      Description: `${FIXTURE_TAG} ORD-FOR-002 ${spec.label} — Order ${i + 1}/${spec.orderTotals.length}`,
+    };
+    if (ctx.orderStartDateField) orderFields[ctx.orderStartDateField] = effectiveDate;
+    const orderId = await sfCreate('Order', orderFields, `Order ${spec.quoteName}-${i + 1}`);
 
     const orderQty = Math.max(1, Math.round(orderTotal / pbeUnitPrice));
     const orderUnitPrice = orderTotal / orderQty;
@@ -446,6 +677,7 @@ async function createNewBizFixture(
       PricebookEntryId: pbeId,
       Quantity: orderQty,
       UnitPrice: orderUnitPrice,
+      ServiceDate: effectiveDate,
       ...ctx.chargeAssignments,
     };
     if (ctx.hasBilling) {
@@ -453,6 +685,7 @@ async function createNewBizFixture(
       oiFields.blng__RevenueRecognitionRule__c = ctx.revenueRuleId;
       oiFields.blng__TaxRule__c = ctx.taxRuleId;
     }
+    if (ctx.hasOiBillableUnitPrice) oiFields.blng__BillableUnitPrice__c = orderUnitPrice;
     await sfCreate('OrderItem', oiFields, `OI ${spec.quoteName}-${i + 1}`);
 
     try {
@@ -489,11 +722,27 @@ async function createAmendmentFixture(
   const start = new Date(today.getTime() - 90 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
   const end = new Date(today.getTime() + 275 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
 
+  // CPQ validation: Order requires its Quote to be Primary on an
+  // Opportunity. Same as new-biz path.
+  const oppId = await sfCreate(
+    'Opportunity',
+    {
+      Name: `ORDVAR-AM-${spec.quoteName}`,
+      AccountId: accountId,
+      CloseDate: new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
+      StageName: 'Closed Won',
+      Pricebook2Id: stdPbId,
+    },
+    `Opportunity AM ${spec.quoteName}`
+  );
+
   // Create amendment Quote (no Description field on SBQQ__Quote__c).
   const quoteId = await sfCreate(
     'SBQQ__Quote__c',
     {
       SBQQ__Account__c: accountId,
+      SBQQ__Opportunity2__c: oppId,
+      SBQQ__Primary__c: true,
       SBQQ__Type__c: 'Amendment',
       SBQQ__Status__c: 'Approved',
       SBQQ__StartDate__c: start,
@@ -513,7 +762,7 @@ async function createAmendmentFixture(
       SBQQ__Quantity__c: existingQty,
       SBQQ__ListPrice__c: pbeUnitPrice,
       SBQQ__NetPrice__c: spec.existingLineNetTotal / existingQty,
-      SBQQ__NetTotal__c: spec.existingLineNetTotal,
+      // SBQQ__NetTotal__c is formula-only — let CPQ derive it.
       SBQQ__CustomerPrice__c: spec.existingLineNetTotal / existingQty,
       SBQQ__Existing__c: true,
       SBQQ__PricingMethod__c: 'List',
@@ -529,32 +778,30 @@ async function createAmendmentFixture(
     SBQQ__Quantity__c: newQty,
     SBQQ__ListPrice__c: pbeUnitPrice,
     SBQQ__NetPrice__c: spec.newLineNetTotal / newQty,
-    SBQQ__NetTotal__c: spec.newLineNetTotal,
+    // SBQQ__NetTotal__c is formula-only — let CPQ derive it.
     SBQQ__CustomerPrice__c: spec.newLineNetTotal / newQty,
     SBQQ__Existing__c: false,
     SBQQ__PricingMethod__c: 'List',
   };
   // For PRORATION_ACTIVE scenario, flag PartialPeriod if the field
-  // exists. Detector probes describe() so absence is silent.
-  if (spec.partialPeriod) {
+  // exists in this org. Detector probes describe() so absence is silent.
+  if (spec.partialPeriod && ctx.hasPartialPeriod) {
     newLineFields.SBQQ__PartialPeriod__c = true;
   }
   await sfCreate('SBQQ__QuoteLine__c', newLineFields, `New QL ${spec.quoteName}`);
 
   // Amendment Order.
   const effectiveDate = new Date(today.getTime() - 15 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
-  const orderId = await sfCreate(
-    'Order',
-    {
-      AccountId: accountId,
-      Status: 'Draft',
-      EffectiveDate: effectiveDate,
-      Pricebook2Id: stdPbId,
-      SBQQ__Quote__c: quoteId,
-      Description: `${FIXTURE_TAG} ORD-FOR-003 ${spec.label} — Amendment Order`,
-    },
-    `Amendment Order ${spec.quoteName}`
-  );
+  const orderFields: Record<string, unknown> = {
+    AccountId: accountId,
+    Status: 'Draft',
+    EffectiveDate: effectiveDate,
+    Pricebook2Id: stdPbId,
+    SBQQ__Quote__c: quoteId,
+    Description: `${FIXTURE_TAG} ORD-FOR-003 ${spec.label} — Amendment Order`,
+  };
+  if (ctx.orderStartDateField) orderFields[ctx.orderStartDateField] = effectiveDate;
+  const orderId = await sfCreate('Order', orderFields, `Amendment Order ${spec.quoteName}`);
 
   const orderQty = Math.max(1, Math.round(spec.orderTotal / pbeUnitPrice));
   const orderUnit = spec.orderTotal / orderQty;
@@ -564,6 +811,7 @@ async function createAmendmentFixture(
     PricebookEntryId: pbeId,
     Quantity: orderQty,
     UnitPrice: orderUnit,
+    ServiceDate: effectiveDate,
     ...ctx.chargeAssignments,
   };
   if (ctx.hasBilling) {
@@ -571,6 +819,7 @@ async function createAmendmentFixture(
     oi.blng__RevenueRecognitionRule__c = ctx.revenueRuleId;
     oi.blng__TaxRule__c = ctx.taxRuleId;
   }
+  if (ctx.hasOiBillableUnitPrice) oi.blng__BillableUnitPrice__c = orderUnit;
   await sfCreate('OrderItem', oi, `Amendment OI ${spec.quoteName}`);
 
   try {
