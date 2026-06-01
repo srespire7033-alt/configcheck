@@ -708,20 +708,48 @@ async function seedOrphanOrders(
   productId: string,
   fixtureTag: string
 ): Promise<number> {
-  // Probe that Salesforce Billing is installed (or at least that the
-  // OrderItem object has the blng__BillingRule__c field). If not,
-  // we can still create Orders but the detector won't fire on a
-  // Billing-less org — log + skip.
+  // Describe OrderItem so we know:
+  //   - whether Billing's blng__BillingRule__c exists (gates the whole seed)
+  //   - which ChargeType field this org's validation rule expects
+  //     (some installs require SBQQ__ChargeType__c, some blng__ChargeType__c,
+  //     some both)
+  type FieldMeta = { name: string; picklistValues?: Array<{ value: string; defaultValue?: boolean }> };
+  let oiFields: FieldMeta[];
   try {
-    const oiDesc = (await conn.describe('OrderItem')) as { fields: Array<{ name: string }> };
-    const hasBillingRule = oiDesc.fields.some((f) => f.name === 'blng__BillingRule__c');
-    if (!hasBillingRule) {
-      console.log(`  ℹ️  OrderItem doesn't have blng__BillingRule__c — Salesforce Billing may not be installed. Skipping orphan-Order seed.`);
-      return 0;
-    }
+    const oiDesc = (await conn.describe('OrderItem')) as { fields: FieldMeta[] };
+    oiFields = oiDesc.fields;
   } catch (e) {
     console.warn(`  ⚠️  OrderItem describe failed:`, e instanceof Error ? e.message : e);
     return 0;
+  }
+  const fieldNames = new Set(oiFields.map((f) => f.name));
+  if (!fieldNames.has('blng__BillingRule__c')) {
+    console.log(`  ℹ️  OrderItem doesn't have blng__BillingRule__c — Salesforce Billing may not be installed. Skipping orphan-Order seed.`);
+    return 0;
+  }
+
+  // Detect which ChargeType field is present and pick a valid value.
+  // Both CPQ and Billing can install a 'ChargeType' picklist with
+  // values like Recurring / One-Time / Usage. We pick 'Recurring' if
+  // available since it's most relevant to subscription billing leaks.
+  const chargeTypeCandidates = ['SBQQ__ChargeType__c', 'blng__ChargeType__c'];
+  const chargeTypeFields = chargeTypeCandidates
+    .map((name) => oiFields.find((f) => f.name === name))
+    .filter((f): f is FieldMeta => !!f);
+  function pickChargeValue(field: FieldMeta): string {
+    const vals = field.picklistValues ?? [];
+    const recurring = vals.find((v) => /recurring/i.test(v.value));
+    if (recurring) return recurring.value;
+    const def = vals.find((v) => v.defaultValue);
+    if (def) return def.value;
+    return vals[0]?.value ?? 'Recurring';
+  }
+  const chargeTypeAssignments: Record<string, string> = {};
+  for (const f of chargeTypeFields) {
+    chargeTypeAssignments[f.name] = pickChargeValue(f);
+  }
+  if (chargeTypeFields.length > 0) {
+    console.log(`  ℹ️  OrderItem charge-type fields: ${chargeTypeFields.map((f) => `${f.name}='${chargeTypeAssignments[f.name]}'`).join(', ')}`);
   }
 
   // Standard Pricebook for the Order.
@@ -787,7 +815,9 @@ async function seedOrphanOrders(
     }, `Order ${spec.customer}`);
 
     // Add an OrderItem WITHOUT blng__BillingRule__c so Class A's
-    // 1.0-confidence path fires.
+    // 1.0-confidence path fires. ChargeType is REQUIRED by the org's
+    // validation rule, so we set whichever ChargeType field(s) the
+    // org's OrderItem object exposes.
     await sfCreate('OrderItem', {
       OrderId: orderId,
       Product2Id: productId,
@@ -795,6 +825,7 @@ async function seedOrphanOrders(
       Quantity: spec.quantity,
       UnitPrice: pbeUnitPrice,
       // blng__BillingRule__c deliberately omitted (null)
+      ...chargeTypeAssignments,
     }, `OrderItem ${spec.customer}`);
 
     // Activate the Order. Activation requires items present (which we
