@@ -137,6 +137,93 @@ export function buildRecoveryPayload(finding: FindingShape): RecoveryPayload {
         projectedReclaimUsd,
       };
     }
+    // ────────────────── ORD-FOR-003 — amendment variance ──────────────
+    case 'ORD-FOR-003': {
+      const recoveryMode = (m.recovery_mode as string | undefined) ?? 'pre_invoice_patch';
+      const direction = (m.direction as string | undefined) ?? 'under_billed';
+      const quoteName = (m.quote_name as string | undefined) ?? '';
+      const expectedDelta = (m.expected_delta as number | undefined) ?? 0;
+      const orderSum = (m.order_total_sum as number | undefined) ?? 0;
+      const variance = (m.variance_amount as number | undefined) ?? 0;
+      const suspectLineIds = (m.existing_flag_suspect_line_ids as string[] | undefined) ?? [];
+      const breakdown =
+        (m.line_breakdown as Array<{
+          order_item_id: string;
+          product_name: string;
+          unit_price: number;
+          quantity: number;
+          line_total: number;
+        }> | undefined) ?? [];
+
+      // Mode 1: Data-quality fix — patch SBQQ__Existing__c = TRUE on
+      // the mis-flagged QuoteLine(s). Once corrected, the consultant
+      // re-activates the amendment and the Order re-computes. This
+      // path is the cleanest because it fixes the cause, not just the
+      // symptom.
+      if (recoveryMode === 'data_quality_fix' && suspectLineIds.length > 0) {
+        const rows = suspectLineIds.map((id) =>
+          [
+            csvField(id),
+            csvField('true'),
+            csvField(
+              `Mis-flagged Existing=false on Amendment ${quoteName}. Set to TRUE, then re-activate amendment to regenerate Order.`
+            ),
+          ].join(',')
+        );
+        return {
+          csvHeader: 'Id,SBQQ__Existing__c,RecoveryNotes',
+          csvRow: rows.join('\n'),
+          actionLabel: 'Patch SBQQ__Existing__c on amendment QuoteLines, then re-activate',
+          filename: `recovery-ORD-FOR-003-${r.primary_record?.name ?? finding.id}.csv`,
+          projectedReclaimUsd,
+        };
+      }
+
+      // Mode 2: Post-invoice — manual Credit/Debit Memo guidance.
+      if (recoveryMode === 'post_invoice_manual_review' || breakdown.length === 0) {
+        return {
+          csvHeader: 'OrderId,Variance,Direction,Action,RecoveryNotes',
+          csvRow: [
+            csvField(r.primary_record?.id),
+            csvField(variance.toFixed(2)),
+            csvField(direction),
+            csvField(direction === 'under_billed' ? 'IssueDebitMemo' : 'IssueCreditMemo'),
+            csvField(
+              `Amendment ${quoteName} expected delta ${expectedDelta.toLocaleString()}; Order(s) totalled ${orderSum.toLocaleString()}. Order has invoices — handle via Salesforce Billing Credit/Debit Memo flow.`
+            ),
+          ].join(','),
+          actionLabel: direction === 'under_billed'
+            ? 'Issue debit memo (invoiced amendment — manual)'
+            : 'Issue credit memo (invoiced amendment — manual)',
+          filename: `recovery-ORD-FOR-003-${r.primary_record?.name ?? finding.id}.csv`,
+          projectedReclaimUsd,
+        };
+      }
+
+      // Mode 3: Pre-invoice patch — proportional distribution like 8a.
+      const adjustmentFactor = orderSum !== 0 ? expectedDelta / orderSum : 1;
+      const patchedRows = breakdown.map((line) => {
+        const newUnitPrice = line.quantity > 0
+          ? Math.round(line.unit_price * adjustmentFactor * 100) / 100
+          : line.unit_price;
+        return [
+          csvField(line.order_item_id),
+          csvField(newUnitPrice.toFixed(2)),
+          csvField(
+            `${line.product_name}: was ${line.unit_price.toFixed(2)} × ${line.quantity}, patch to match Amendment ${quoteName} delta`
+          ),
+        ].join(',');
+      });
+      return {
+        csvHeader: 'Id,UnitPrice,RecoveryNotes',
+        csvRow: patchedRows.join('\n'),
+        actionLabel: direction === 'under_billed'
+          ? 'Patch amendment OrderItem UnitPrices upward to match Quote delta'
+          : 'Patch amendment OrderItem UnitPrices downward to match Quote delta',
+        filename: `recovery-ORD-FOR-003-${r.primary_record?.name ?? finding.id}.csv`,
+        projectedReclaimUsd,
+      };
+    }
     // ────────────────── ORD-FOR-002 — patch OrderItem unit prices ──
     case 'ORD-FOR-002': {
       const recoveryMode = (m.recovery_mode as string | undefined) ?? 'pre_invoice_patch';

@@ -39,6 +39,7 @@ const CLASS_A_TRACER: AttributionTracer = {
 
   async trace(finding: DetectorResult): Promise<AttributionCandidate[]> {
     if (finding.detectorId === 'ORD-FOR-002') return traceQuoteOrderVariance(finding);
+    if (finding.detectorId === 'ORD-FOR-003') return traceAmendmentVariance(finding);
     if (finding.detectorId !== 'ORD-FOR-001') return [];
 
     const hasNullBillingRule = finding.metadata?.has_orderitem_with_null_billing_rule === true;
@@ -102,6 +103,61 @@ export default CLASS_A_TRACER;
  * win the ranking. If `manually_edited = false`, the field-mapping
  * disconnect explanation stands.
  */
+/**
+ * ORD-FOR-003 — Amendment variance. Class A's story: the amendment Q→O
+ * conversion didn't preserve the delta. Yields when Class E
+ * (data-quality) or Class B (manual edit) has stronger evidence.
+ */
+function traceAmendmentVariance(finding: DetectorResult): AttributionCandidate[] {
+  // Class E wins outright if the data-quality smoking gun is present —
+  // surface a low-confidence Class A so it stays in the candidate list
+  // but doesn't beat E.
+  const dataQualitySuspect =
+    Array.isArray(finding.metadata?.existing_flag_suspect_line_ids) &&
+    (finding.metadata?.existing_flag_suspect_line_ids as unknown[]).length > 0;
+  const manuallyEdited = finding.metadata?.manually_edited === true;
+  const prorationActive = finding.metadata?.proration_active === true;
+  const crossValidated = finding.metadata?.cross_validated === true;
+  const direction = (finding.metadata?.direction as string | undefined) ?? 'under_billed';
+  const quoteId = finding.metadata?.quote_id as string | undefined;
+  const quoteName = (finding.metadata?.quote_name as string | undefined) ?? 'Amendment Quote';
+
+  // Base confidence:
+  //   0.85 normally
+  //   0.5 if manual-edit signal present (Class B should win)
+  //   0.4 if data-quality suspect (Class E should win)
+  //   +0.05 if cross-validated via prior Orders (Layer 2 agrees)
+  //   −0.1 if proration active (uncertainty)
+  let confidence = 0.85;
+  if (dataQualitySuspect) confidence = 0.4;
+  else if (manuallyEdited) confidence = 0.5;
+  if (crossValidated) confidence = Math.min(1, confidence + 0.05);
+  if (prorationActive) confidence = Math.max(0.1, confidence - 0.1);
+
+  return [
+    {
+      rootCauseClass: 'A',
+      rootConfigType: 'SBQQ__Quote__c',
+      rootConfigId: quoteId ?? null,
+      rootConfigName: quoteName,
+      reasonCode: 'AMENDMENT_DELTA_MISMATCH',
+      confidence,
+      evidence: {
+        quote_id: quoteId,
+        quote_name: quoteName,
+        expected_delta: finding.metadata?.expected_delta,
+        order_total_sum: finding.metadata?.order_total_sum,
+        variance_amount: finding.metadata?.variance_amount,
+        direction,
+        cross_validated: crossValidated,
+        proration_active: prorationActive,
+        system_disconnect:
+          'Amendment Quote was activated and the resulting Order(s) do not sum to the expected delta (sum of new amendment lines). The Q→O conversion either dropped a new line, applied stale pricing, or a Flow/Apex on Order rewrote pricing fields. Inspect the amendment Q→O field mapping.',
+      },
+    },
+  ];
+}
+
 function traceQuoteOrderVariance(finding: DetectorResult): AttributionCandidate[] {
   const direction = (finding.metadata?.direction as string | undefined) ?? 'under_billed';
   const manuallyEdited = finding.metadata?.manually_edited === true;

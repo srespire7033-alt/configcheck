@@ -159,6 +159,44 @@ const TEMPLATES: Record<string, (f: DetectorResult, a: AttributionCandidate) => 
       model: 'template-fallback',
     };
   },
+  // ─────────── ORD-FOR-003 / Class A | B | E ───────────
+  AMENDMENT_DELTA_MISMATCH: (f, a) => {
+    const direction = (a.evidence.direction as string | undefined) ?? 'under_billed';
+    const expected = (a.evidence.expected_delta as number | undefined) ?? 0;
+    const actual = (a.evidence.order_total_sum as number | undefined) ?? 0;
+    const prorationActive = a.evidence.proration_active === true;
+    const crossValidated = a.evidence.cross_validated === true;
+    return {
+      plainEnglish:
+        `Amendment Quote "${a.rootConfigName}" should have produced a ${f.currencyIsoCode} ${expected.toLocaleString()} delta on activation, but the amendment Order(s) totalled ${f.currencyIsoCode} ${actual.toLocaleString()} — customer is ${direction === 'under_billed' ? 'under-billed' : 'over-billed'} by ${f.currencyIsoCode} ${f.gapUsd.toLocaleString()}.${crossValidated ? ' Cross-validated against prior Order totals for this Account.' : ''}${prorationActive ? ' Proration is active; part of the variance may be legitimate day-counting.' : ''}`,
+      suggestedFix:
+        `Inspect the amendment Q→O field mapping and any Flow/Apex on Order that may have rewritten pricing. Patch OrderItem.UnitPrice on the amendment Order(s) so the rolled-up sum matches the expected delta.`,
+      model: 'template-fallback',
+    };
+  },
+  AMENDMENT_ORDER_EDITED_POST_ACTIVATION: (f, a) => {
+    const direction = (a.evidence.direction as string | undefined) ?? 'under_billed';
+    return {
+      plainEnglish:
+        `Amendment Order ${a.rootConfigName} was edited by a different user >1 hour after creation, and the activated total no longer matches the amendment Quote's expected delta. Customer is ${direction === 'under_billed' ? 'under-billed' : 'over-billed'} by ${f.currencyIsoCode} ${f.gapUsd.toLocaleString()}. ` +
+        `Manual edit on an activated amendment Order bypassed CPQ pricing.`,
+      suggestedFix:
+        `Reverse the manual edit by patching OrderItem.UnitPrice back to the amendment-derived values. Add an approval rule on Order to block post-activation pricing-field edits.`,
+      model: 'template-fallback',
+    };
+  },
+  AMENDMENT_EXISTING_FLAG_MISCONFIGURED: (f, a) => {
+    const count = (a.evidence.suspect_count as number | undefined) ?? 1;
+    const quoteName = (a.evidence.quote_name as string | undefined) ?? 'amendment quote';
+    return {
+      plainEnglish:
+        `Amendment Quote "${quoteName}" has ${count} line(s) marked SBQQ__Existing__c=false for product(s) already on existing-flagged lines. The amendment treated those as NEW additions and the Order double-counted them — ${f.currencyIsoCode} ${f.gapUsd.toLocaleString()} of variance is the direct result. ` +
+        `The flag should have been derived (TRUE for products carried over from the original contract) but was set to FALSE during quote configuration.`,
+      suggestedFix:
+        `Patch SBQQ__Existing__c=TRUE on the ${count} suspect QuoteLine(s) via Data Loader, then re-activate the amendment so the Order regenerates with the correct delta. Audit other amendments for the same misconfiguration pattern.`,
+      model: 'template-fallback',
+    };
+  },
   ORDER_EDITED_POST_ACTIVATION: (f, a) => {
     const direction = (a.evidence.direction as string | undefined) ?? 'under_billed';
     const variance = (a.evidence.variance_amount as number | undefined) ?? 0;

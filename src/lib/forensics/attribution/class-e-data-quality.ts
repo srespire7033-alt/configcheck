@@ -31,6 +31,7 @@ const CLASS_E_TRACER: AttributionTracer = {
   rootCauseClass: 'E',
 
   async trace(finding: DetectorResult): Promise<AttributionCandidate[]> {
+    if (finding.detectorId === 'ORD-FOR-003') return traceAmendmentDataQuality(finding);
     if (finding.detectorId !== 'QL-FOR-001') return [];
 
     const subCase = (finding.metadata?.sub_case as string | undefined) ?? '';
@@ -89,3 +90,38 @@ const CLASS_E_TRACER: AttributionTracer = {
 };
 
 export default CLASS_E_TRACER;
+
+/**
+ * ORD-FOR-003 — Amendment data-quality smoking gun. Only emits when
+ * the detector flagged QuoteLine(s) with Existing=false for Products
+ * already present on existing-flagged lines (clear rep-error pattern).
+ * Wins at 0.95 confidence — beats both Class A (0.4 with this
+ * signal) and Class B (0.5 with this signal).
+ */
+function traceAmendmentDataQuality(finding: DetectorResult): AttributionCandidate[] {
+  const suspectIds = (finding.metadata?.existing_flag_suspect_line_ids as string[] | undefined) ?? [];
+  if (suspectIds.length === 0) return [];
+
+  const quoteId = finding.metadata?.quote_id as string | undefined;
+  const quoteName = (finding.metadata?.quote_name as string | undefined) ?? 'Amendment Quote';
+
+  return [
+    {
+      rootCauseClass: 'E',
+      rootConfigType: 'SBQQ__QuoteLine__c',
+      rootConfigId: suspectIds[0] ?? null,
+      rootConfigName: `${suspectIds.length} mis-flagged line(s) on ${quoteName}`,
+      reasonCode: 'AMENDMENT_EXISTING_FLAG_MISCONFIGURED',
+      confidence: 0.95,
+      evidence: {
+        quote_id: quoteId,
+        quote_name: quoteName,
+        suspect_line_ids: suspectIds,
+        suspect_count: suspectIds.length,
+        variance_amount: finding.metadata?.variance_amount,
+        data_quality_gap:
+          'Amendment Quote has lines marked SBQQ__Existing__c=false for Products already on existing-flagged lines for the same amendment. The flag should have been derived (TRUE for products carried over from the original contract) but was set to FALSE — so the line is being treated as a NEW addition and double-counted on the amendment Order.',
+      },
+    },
+  ];
+}

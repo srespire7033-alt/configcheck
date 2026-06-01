@@ -30,6 +30,7 @@ const CLASS_B_TRACER: AttributionTracer = {
     // only emit a Class B candidate when the manual-edit signal is
     // present; otherwise Class A's field-mapping story wins.
     if (finding.detectorId === 'ORD-FOR-002') return traceOrd002ManualEdit(finding);
+    if (finding.detectorId === 'ORD-FOR-003') return traceOrd003ManualEdit(finding);
     // v1 routing: only REN-002 findings are eligible. Other manual-
     // override-shaped detectors (QL-FOR-002 "manual override no
     // approval", DSC-FOR-002 "stacked discounts") will route through
@@ -74,6 +75,42 @@ export default CLASS_B_TRACER;
  * activated Order after the fact. Otherwise stay silent and let
  * Class A explain via field-mapping disconnect.
  */
+/**
+ * ORD-FOR-003 — same shape as ORD-FOR-002 but on the amendment Order.
+ * Only claim when the manual-edit signal is present AND data-quality
+ * suspect lines are NOT — Class E should win the data-quality story.
+ */
+function traceOrd003ManualEdit(finding: DetectorResult): AttributionCandidate[] {
+  if (finding.metadata?.manually_edited !== true) return [];
+  const dataQualitySuspect =
+    Array.isArray(finding.metadata?.existing_flag_suspect_line_ids) &&
+    (finding.metadata?.existing_flag_suspect_line_ids as unknown[]).length > 0;
+
+  const direction = (finding.metadata?.direction as string | undefined) ?? 'under_billed';
+  const orderIds = (finding.metadata?.order_ids as string[] | undefined) ?? [];
+  const primaryOrderId = orderIds[0] ?? finding.primaryRecord.id;
+
+  return [
+    {
+      rootCauseClass: 'B',
+      rootConfigType: 'Order',
+      rootConfigId: primaryOrderId,
+      rootConfigName: finding.primaryRecord.name,
+      reasonCode: 'AMENDMENT_ORDER_EDITED_POST_ACTIVATION',
+      // Drop below Class E if data-quality is the smoking gun.
+      confidence: dataQualitySuspect ? 0.5 : 0.9,
+      evidence: {
+        order_id: primaryOrderId,
+        order_number: finding.primaryRecord.name,
+        variance_amount: finding.metadata?.variance_amount,
+        direction,
+        governance_gap:
+          'Amendment Order was edited by a different user >1 hour after creation. The variance between the expected amendment delta and the activated Order total is consistent with a manual price adjustment that bypassed CPQ.',
+      },
+    },
+  ];
+}
+
 function traceOrd002ManualEdit(finding: DetectorResult): AttributionCandidate[] {
   if (finding.metadata?.manually_edited !== true) return [];
 

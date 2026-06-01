@@ -78,6 +78,8 @@ export async function verifyCommit(
       return verifyOrdFor001(finding, conn);
     case 'ORD-FOR-002':
       return verifyOrdFor002(finding, conn);
+    case 'ORD-FOR-003':
+      return verifyOrdFor003(finding, conn);
     case 'QL-FOR-001':
       return verifyQlFor001(finding, conn);
     default:
@@ -257,6 +259,82 @@ async function verifyOrdFor002(
 
 function round2Verif(n: number): number {
   return Math.round(n * 100) / 100;
+}
+
+/**
+ * ORD-FOR-003 has 3 recovery modes — verification logic differs per mode.
+ *   pre_invoice_patch  → re-sum amendment Order TotalAmount; should match expected_delta.
+ *   data_quality_fix   → check SBQQ__Existing__c = TRUE on the suspect line(s); the
+ *                        re-activation regenerates the Order so we can't verify the
+ *                        Order total directly (it'd be a new Order). Pass when the
+ *                        flag patch landed.
+ *   post_invoice_manual_review → no auto-verifier. Returns 'manual review only'.
+ */
+async function verifyOrdFor003(
+  finding: FindingForVerification,
+  conn: Connection
+): Promise<CommitVerificationResult> {
+  const meta = (finding.metadata as Record<string, unknown>) ?? {};
+  const recoveryMode = (meta.recovery_mode as string | undefined) ?? 'pre_invoice_patch';
+
+  if (recoveryMode === 'post_invoice_manual_review') {
+    return {
+      verified: false,
+      verified_at: nowIso(),
+      expected_value: null,
+      actual_value: null,
+      message:
+        'Post-invoice manual-review finding — no automated verifier. Confirm Credit/Debit Memo issued via Salesforce Billing.',
+    };
+  }
+
+  if (recoveryMode === 'data_quality_fix') {
+    const suspectIds = (meta.existing_flag_suspect_line_ids as string[] | undefined) ?? [];
+    if (suspectIds.length === 0) return failed('No suspect QuoteLine IDs on finding — cannot verify.');
+    try {
+      const res = await conn.query<{ SBQQ__Existing__c: boolean | null }>(
+        `SELECT SBQQ__Existing__c FROM SBQQ__QuoteLine__c WHERE Id IN (${suspectIds.map((id) => `'${id}'`).join(',')})`
+      );
+      const allFixed = res.records.length > 0 && res.records.every((r) => r.SBQQ__Existing__c === true);
+      return {
+        verified: allFixed,
+        verified_at: nowIso(),
+        expected_value: 'all Existing=true',
+        actual_value: `${res.records.filter((r) => r.SBQQ__Existing__c === true).length} of ${res.records.length}`,
+        message: allFixed
+          ? `All ${suspectIds.length} suspect QuoteLine(s) now have SBQQ__Existing__c=true. Re-activate the amendment to regenerate the Order.`
+          : `Only ${res.records.filter((r) => r.SBQQ__Existing__c === true).length} of ${suspectIds.length} suspect QuoteLine(s) carry SBQQ__Existing__c=true. CSV upload may not have landed for all rows.`,
+      };
+    } catch (e) {
+      return failed(`Verification query failed: ${e instanceof Error ? e.message : String(e)}`);
+    }
+  }
+
+  // pre_invoice_patch — same approach as ORD-FOR-002 but against the
+  // expected_delta (not the full Quote Net Amount).
+  const expectedDelta = (meta.expected_delta as number | undefined) ?? 0;
+  const orderIds = (meta.order_ids as string[] | undefined) ?? [];
+  if (orderIds.length === 0) {
+    return failed('No Order IDs on finding — cannot verify.');
+  }
+  try {
+    const res = await conn.query<{ TotalAmount: string | number | null }>(
+      `SELECT TotalAmount FROM Order WHERE Id IN (${orderIds.map((id) => `'${id}'`).join(',')})`
+    );
+    const actualSum = res.records.reduce((s, r) => s + Number(r.TotalAmount ?? 0), 0);
+    const verified = Math.abs(actualSum - expectedDelta) <= 0.01;
+    return {
+      verified,
+      verified_at: nowIso(),
+      expected_value: expectedDelta,
+      actual_value: round2Verif(actualSum),
+      message: verified
+        ? `Amendment Order total sum (${actualSum.toLocaleString()}) now matches expected delta (${expectedDelta.toLocaleString()}).`
+        : `Amendment Order total sum is ${actualSum.toLocaleString()} but expected delta is ${expectedDelta.toLocaleString()}. Variance ${(actualSum - expectedDelta).toLocaleString()} remains.`,
+    };
+  } catch (e) {
+    return failed(`Verification query failed: ${e instanceof Error ? e.message : String(e)}`);
+  }
 }
 
 async function verifyQlFor001(
