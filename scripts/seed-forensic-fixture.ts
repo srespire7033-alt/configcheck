@@ -756,6 +756,44 @@ async function seedOrphanOrders(
     console.log(`  ℹ️  OrderItem charge-type fields: ${chargeTypeFields.map((f) => `${f.name}='${chargeTypeAssignments[f.name]}'`).join(', ')}`);
   }
 
+  // The org has validation rules requiring Billing Rule, Revenue
+  // Recognition Rule, and Tax Rule on every OrderItem. We populate all
+  // three to satisfy validation. The detector still fires because the
+  // demo org's activation workflow doesn't auto-generate billing
+  // schedules — Class A attribution then routes through
+  // ACTIVATION_WORKFLOW_NOT_TRIGGERING (0.7 conf) instead of the 1.0
+  // BILLING_RULE_MISSING_ON_ORDERITEM path. This is actually a more
+  // realistic demo: 'everything is configured, but the activation
+  // hand-off to Billing is silently broken.'
+  async function pickFirstActive(sobject: string, label: string): Promise<string | null> {
+    try {
+      const rows = await sfQuery<{ Id: string }>(
+        `SELECT Id FROM ${sobject} WHERE blng__Active__c = TRUE LIMIT 1`,
+        `Active ${label}`
+      );
+      return rows[0]?.Id ?? null;
+    } catch {
+      // Some installs use IsActive (standard) instead of blng__Active__c
+      try {
+        const rows = await sfQuery<{ Id: string }>(
+          `SELECT Id FROM ${sobject} LIMIT 1`,
+          `Any ${label} (no Active filter)`
+        );
+        return rows[0]?.Id ?? null;
+      } catch {
+        return null;
+      }
+    }
+  }
+  const billingRuleId = await pickFirstActive('blng__BillingRule__c', 'Billing Rule');
+  const revenueRuleId = await pickFirstActive('blng__RevenueRecognitionRule__c', 'Revenue Recognition Rule');
+  const taxRuleId = await pickFirstActive('blng__TaxRule__c', 'Tax Rule');
+  if (!billingRuleId || !revenueRuleId || !taxRuleId) {
+    console.warn(`  ⚠️  Missing required Billing/Revenue/Tax rules in the org. Found: billing=${billingRuleId}, revenue=${revenueRuleId}, tax=${taxRuleId}. Skipping orphan-Order seed.`);
+    return 0;
+  }
+  console.log(`  ℹ️  Using rules: billing=${billingRuleId.slice(0, 8)}…, revenue=${revenueRuleId.slice(0, 8)}…, tax=${taxRuleId.slice(0, 8)}…`);
+
   // Standard Pricebook for the Order.
   const stdPbRows = await sfQuery<{ Id: string }>(
     `SELECT Id FROM Pricebook2 WHERE IsStandard = TRUE LIMIT 1`,
@@ -818,17 +856,19 @@ async function seedOrphanOrders(
       Description: `${fixtureTag} ORD-FOR-001: ${spec.customer}`,
     }, `Order ${spec.customer}`);
 
-    // Add an OrderItem WITHOUT blng__BillingRule__c so Class A's
-    // 1.0-confidence path fires. ChargeType is REQUIRED by the org's
-    // validation rule, so we set whichever ChargeType field(s) the
-    // org's OrderItem object exposes.
+    // Populate all required rule lookups + charge type to satisfy the
+    // org's validation. Class A attribution will still fire — at 0.7
+    // confidence (workflow not triggering) instead of 1.0 (rule
+    // missing). That's the more realistic real-customer scenario.
     await sfCreate('OrderItem', {
       OrderId: orderId,
       Product2Id: productId,
       PricebookEntryId: pbeId,
       Quantity: spec.quantity,
       UnitPrice: pbeUnitPrice,
-      // blng__BillingRule__c deliberately omitted (null)
+      blng__BillingRule__c: billingRuleId,
+      blng__RevenueRecognitionRule__c: revenueRuleId,
+      blng__TaxRule__c: taxRuleId,
       ...chargeTypeAssignments,
     }, `OrderItem ${spec.customer}`);
 
