@@ -109,21 +109,35 @@ export async function runForensicScanInBackground(input: ForensicScanInput): Pro
     const detectorErrors: Record<string, string> = {};
     const allFindings: Array<{ detector: string; result: DetectorResult }> = [];
 
-    for (const detector of enabledDetectors) {
-      try {
-        console.log(`[FORENSIC ${forensicScanId}] Running ${detector.id}...`);
-        const results = await detector.run(ctx);
-        for (const r of results) allFindings.push({ detector: detector.id, result: r });
-        completed.push(detector.id);
-        console.log(`[FORENSIC ${forensicScanId}] ${detector.id} → ${results.length} findings`);
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
-        console.error(`[FORENSIC ${forensicScanId}] ${detector.id} failed: ${msg}`);
-        failed.push(detector.id);
-        // Persist per-detector error so we can debug without Vercel logs.
-        // 500-char cap keeps the metadata column from bloating on noisy
-        // stack traces.
-        detectorErrors[detector.id] = msg.slice(0, 500);
+    // Run detectors in PARALLEL — each does its own Bulk API job which
+    // is async server-side anyway, so concurrent execution just doubles
+    // up the wait, not the work. Halves wall-clock time vs sequential
+    // and is critical for staying inside Vercel Hobby's 60s budget when
+    // multiple detectors are enabled.
+    console.log(`[FORENSIC ${forensicScanId}] Running ${enabledDetectors.length} detectors in parallel...`);
+    const results = await Promise.allSettled(
+      enabledDetectors.map((d) =>
+        d.run(ctx).then(
+          (r) => ({ detectorId: d.id, results: r }),
+          (e) => Promise.reject({ detectorId: d.id, err: e })
+        )
+      )
+    );
+    for (const r of results) {
+      if (r.status === 'fulfilled') {
+        for (const finding of r.value.results) {
+          allFindings.push({ detector: r.value.detectorId, result: finding });
+        }
+        completed.push(r.value.detectorId);
+        console.log(`[FORENSIC ${forensicScanId}] ${r.value.detectorId} → ${r.value.results.length} findings`);
+      } else {
+        const reason = r.reason as { detectorId?: string; err?: unknown } | undefined;
+        const detectorId = reason?.detectorId ?? 'unknown';
+        const errVal = reason?.err;
+        const msg = errVal instanceof Error ? errVal.message : String(errVal);
+        console.error(`[FORENSIC ${forensicScanId}] ${detectorId} failed: ${msg}`);
+        failed.push(detectorId);
+        detectorErrors[detectorId] = msg.slice(0, 500);
       }
     }
 

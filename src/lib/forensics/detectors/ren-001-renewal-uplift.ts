@@ -98,8 +98,11 @@ const REN_001: ForensicDetector = {
         AND SBQQ__RenewedSubscription__c != null
     `;
 
+    // 45s cap so the detector fits inside Vercel Hobby's 60s function
+    // budget when run alongside other detectors. Bulk jobs that exceed
+    // this stay running server-side; the next scan picks them up.
     const linesRes = await bulkQuery<RenewalLineRow>(ctx.conn, renewalLinesQuery, {
-      maxPollMs: 8 * 60 * 1000, // 8 min cap for this query
+      maxPollMs: 45_000,
     });
     if (!linesRes.jobComplete) {
       // The job is still running on Salesforce — bail with empty. The
