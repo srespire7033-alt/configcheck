@@ -219,18 +219,25 @@ async function main() {
   }
 
   // ─── 4. Idempotency check ───────────────────────────────────────────
-  console.log(`\n[4] Idempotency check — any existing fixture Quotes?`);
-  // SBQQ__Quote__c Description filter — long-text, can't WHERE on it
-  const allQuotesOnAcct = await sfQuery<{ Id: string; Description: string | null; Name: string }>(
-    `SELECT Id, Description, Name FROM SBQQ__Quote__c WHERE SBQQ__Account__c = '${accountId}' LIMIT 100`,
-    'Quotes on fixture account'
+  // SBQQ__Quote__c doesn't have a standard Description field, so we
+  // can't tag Quotes there. Instead we check Orders tagged with our
+  // fixture marker — each Quote produces at least one Order, so the
+  // presence of N tagged Orders means the fixture has already been
+  // seeded. Order.Description is long-text (unfilterable) so we pull
+  // and filter client-side.
+  console.log(`\n[4] Idempotency check — any existing fixture Orders?`);
+  const allOrdersOnAcct = await sfQuery<{ Id: string; Description: string | null }>(
+    `SELECT Id, Description FROM Order WHERE AccountId = '${accountId}' LIMIT 200`,
+    'Orders on fixture account'
   );
-  const taggedQuotes = allQuotesOnAcct.filter((q) => (q.Description ?? '').includes(FIXTURE_TAG));
-  if (taggedQuotes.length >= 6) {
-    console.log(`  ✓ ${taggedQuotes.length} fixture Quotes already exist. Re-run cleanup first if you want fresh data.`);
-    console.log(`\nDone (skipped — fixtures already present).`);
+  const taggedOrders = allOrdersOnAcct.filter((o) => (o.Description ?? '').includes(FIXTURE_TAG));
+  if (taggedOrders.length >= 7) {
+    // 3 ORD-FOR-002 Orders (with one split → 4) + 3 ORD-FOR-003 Orders = 7
+    console.log(`  ✓ ${taggedOrders.length} fixture Orders already exist. Skipping.`);
+    console.log(`\nDone (already seeded). To re-seed, delete tagged records first.`);
     return;
   }
+  console.log(`  (${taggedOrders.length} tagged Orders found — will seed if any scenario missing.)`);
 
   // ─── 5. ORD-FOR-002 scenarios ────────────────────────────────────────
   console.log(`\n[5] Seeding ORD-FOR-002 (new-biz variance)...`);
@@ -368,7 +375,8 @@ async function createNewBizFixture(
   const start = new Date(today.getTime() - 90 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
   const end = new Date(today.getTime() + 275 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
 
-  // Create the Quote.
+  // Create the Quote. SBQQ__Quote__c has no Description field, so we
+  // tag via Order.Description downstream (Order DOES have Description).
   const quoteId = await sfCreate(
     'SBQQ__Quote__c',
     {
@@ -378,7 +386,6 @@ async function createNewBizFixture(
       SBQQ__StartDate__c: start,
       SBQQ__EndDate__c: end,
       SBQQ__PriceBook__c: stdPbId,
-      Description: `${FIXTURE_TAG} ORD-FOR-002 ${spec.label} — Quote ${spec.quoteName}`,
     },
     `Quote ${spec.quoteName}`
   );
@@ -482,7 +489,7 @@ async function createAmendmentFixture(
   const start = new Date(today.getTime() - 90 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
   const end = new Date(today.getTime() + 275 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
 
-  // Create amendment Quote.
+  // Create amendment Quote (no Description field on SBQQ__Quote__c).
   const quoteId = await sfCreate(
     'SBQQ__Quote__c',
     {
@@ -492,7 +499,6 @@ async function createAmendmentFixture(
       SBQQ__StartDate__c: start,
       SBQQ__EndDate__c: end,
       SBQQ__PriceBook__c: stdPbId,
-      Description: `${FIXTURE_TAG} ORD-FOR-003 ${spec.label} — Amendment ${spec.quoteName}`,
     },
     `Amendment Quote ${spec.quoteName}`
   );
