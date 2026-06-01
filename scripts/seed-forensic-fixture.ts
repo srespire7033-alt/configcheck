@@ -518,28 +518,50 @@ async function seedPromoFixtures(
   let createdLines = 0;
   let totalLeakage = 0;
 
-  // Contract.Description is a long-text-area and can't be filtered in
-  // SOQL, so we pre-pull all fixture contracts once and check membership
-  // against an in-memory set. Same pattern the REN-001 seed uses.
-  const existingPromoContracts = await sfQuery<{ Id: string; Description: string | null }>(
-    `SELECT Id, Description FROM Contract WHERE AccountId = '${accountId}' LIMIT 200`,
-    'existing fixture Contracts (for promo)'
+  // Per-component idempotency: check the THING THAT MATTERS (QuoteLine
+  // referencing our discount schedule), not a proxy (Contract by name).
+  // We hit this same bug-class with the Price Rule earlier — a crash
+  // mid-chain left the parent records sitting in the org while the
+  // critical leaf record was missing.
+  //
+  // For each customer slot: look up an existing QuoteLine on this
+  // Account that uses the relevant schedule. If found, skip. If not,
+  // create the full chain (may produce a duplicate Contract — fixture
+  // org tolerates that, recoverability of the engine matters more).
+  const existingPromoLines = await sfQuery<{ Id: string; SBQQ__DiscountSchedule__c: string }>(
+    `SELECT Id, SBQQ__DiscountSchedule__c FROM SBQQ__QuoteLine__c
+     WHERE SBQQ__DiscountSchedule__c IN ('${expiredScheduleId}', '${nullEndScheduleId}')
+     LIMIT 200`,
+    'existing promo QuoteLines'
   );
-  const existingPromoCustomers = new Set(
-    existingPromoContracts
-      .map((r) => r.Description?.split(':')[1]?.trim())
-      .filter((s): s is string => !!s)
-  );
+  const existingLineCountByScheduleId = new Map<string, number>();
+  for (const ql of existingPromoLines) {
+    existingLineCountByScheduleId.set(
+      ql.SBQQ__DiscountSchedule__c,
+      (existingLineCountByScheduleId.get(ql.SBQQ__DiscountSchedule__c) ?? 0) + 1
+    );
+  }
 
   for (const [scheduleId, lineList, discountPct, subCaseLabel] of [
     [expiredScheduleId, expiredLines, expiredScheduleDiscount, 'expired'],
     [nullEndScheduleId, nullEndLines, nullEndScheduleDiscount, 'null-end'],
   ] as Array<[string, PromoLine[], number, string]>) {
-    for (const line of lineList) {
-      if (existingPromoCustomers.has(line.customerName)) {
-        console.log(`  ⏭  ${line.customerName} — already exists, skipping`);
-        continue;
+    const existingCount = existingLineCountByScheduleId.get(scheduleId) ?? 0;
+    const needed = Math.max(0, lineList.length - existingCount);
+    if (needed === 0) {
+      console.log(`  ✓ All ${lineList.length} ${subCaseLabel} promo QuoteLines already exist; skipping batch.`);
+      // Still count them in expected leakage so the summary is honest.
+      for (const line of lineList) {
+        totalLeakage += line.listPrice * line.quantity * (discountPct / 100);
       }
+      continue;
+    }
+    if (existingCount > 0) {
+      console.log(`  ℹ️  ${existingCount} of ${lineList.length} ${subCaseLabel} QuoteLines already exist; creating ${needed} more.`);
+    }
+    const linesToCreate = lineList.slice(existingCount); // simple: create the tail
+
+    for (const line of linesToCreate) {
       // The contract's StartDate is back-dated to give the renewal-
       // type quote line a plausible "created after expiry" timeline.
       // For sub-case (a), line CreatedDate is "today" (when seed runs)
