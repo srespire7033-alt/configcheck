@@ -102,10 +102,15 @@ export default function RecoveryDashboardPage() {
   const [actionInFlight, setActionInFlight] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async (tabOverride?: StatusTab) => {
     setError(null);
+    // Caller may pass the tab explicitly when they JUST called
+    // setTab(...) — React hasn't flushed the state yet, so reading
+    // `tab` from the closure would race with the new tab value and
+    // refetch the OLD status. See restageAction below.
+    const effectiveTab = tabOverride ?? tab;
     try {
-      const res = await fetch(`/api/recovery-actions?organizationId=${orgId}&status=${tab}`);
+      const res = await fetch(`/api/recovery-actions?organizationId=${orgId}&status=${effectiveTab}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json: ListResponse = await res.json();
       setData(json);
@@ -167,7 +172,9 @@ export default function RecoveryDashboardPage() {
       });
       // After restage, switch user to Pending tab so they see the result.
       setTab('pending');
-      await fetchData();
+      // Pass 'pending' explicitly — setTab is async and fetchData's
+      // closure still reads the previous tab value.
+      await fetchData('pending');
     } finally {
       setActionInFlight(false);
     }
