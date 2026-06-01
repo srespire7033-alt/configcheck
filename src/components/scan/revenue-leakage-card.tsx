@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { TrendingDown, Info, ChevronDown, ChevronUp, AlertCircle, Sparkles } from 'lucide-react';
+import { TrendingDown, Info, ChevronDown, ChevronUp, AlertCircle, Sparkles, Network, ChevronRight } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 
 interface TopContributor {
@@ -181,12 +181,32 @@ export function RevenueLeakageCard({ leakage, verified, orgId, currency = 'USD' 
             findings. When there's only one detector or only a few
             findings, we flatten back to the per-finding list. */}
         {verified && verified.top_findings.length > 0 && orgId && (
-          <VerifiedFindingsSection
-            findings={verified.top_findings}
-            totalCount={verified.finding_count}
-            orgId={orgId}
-            currency={currency}
-          />
+          <>
+            <VerifiedFindingsSection
+              findings={verified.top_findings}
+              totalCount={verified.finding_count}
+              orgId={orgId}
+              currency={currency}
+            />
+            {/* Hero CTA — the consultant-deliverable screen. Surfaces
+                only when verified findings exist (no map to show
+                otherwise). */}
+            <a
+              href={`/orgs/${orgId}/forensics/attribution-map`}
+              className="mb-5 group flex items-center justify-between gap-3 px-4 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white shadow-sm shadow-purple-600/20 transition-all"
+            >
+              <div className="flex items-center gap-3">
+                <Network className="h-5 w-5" />
+                <div>
+                  <p className="font-semibold text-sm">View Attribution Map</p>
+                  <p className="text-[11px] opacity-80">
+                    See which root configs cause the most $ — fix once, recover many findings
+                  </p>
+                </div>
+              </div>
+              <ChevronRight className="h-4 w-4 opacity-70 group-hover:translate-x-0.5 transition-transform" />
+            </a>
+          </>
         )}
 
         {/* Top contributors */}
