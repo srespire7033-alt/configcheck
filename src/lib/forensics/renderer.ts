@@ -115,6 +115,30 @@ const TEMPLATES: Record<string, (f: DetectorResult, a: AttributionCandidate) => 
       model: 'template-fallback',
     };
   },
+  // ─────────── ORD-FOR-001 / Class A ───────────
+  BILLING_RULE_MISSING_ON_ORDERITEM: (f, a) => {
+    const days = (a.evidence.days_since_activation as number | undefined) ?? 0;
+    const itemCount = (a.evidence.item_count as number | undefined) ?? 0;
+    return {
+      plainEnglish:
+        `Order ${f.primaryRecord.name} was activated ${days} days ago — the customer is receiving the product — but ${f.currencyIsoCode} ${f.gapUsd.toLocaleString()} has accrued without a single invoice being generated. ` +
+        `At least one of the ${itemCount} OrderItem(s) has blng__BillingRule__c = null, which means Salesforce Billing's schedule-generation logic silently skipped this Order at activation time.`,
+      suggestedFix:
+        `Open Order ${f.primaryRecord.name} → Order Products. Set blng__BillingRule__c on every OrderItem (typically the default product-level billing rule). Then run Salesforce Billing's 'Generate Billing Schedule' action to back-fill the missed periods.`,
+      model: 'template-fallback',
+    };
+  },
+  ACTIVATION_WORKFLOW_NOT_TRIGGERING: (f, a) => {
+    const days = (a.evidence.days_since_activation as number | undefined) ?? 0;
+    return {
+      plainEnglish:
+        `Order ${f.primaryRecord.name} was activated ${days} days ago with billing rules configured on every line — but no billing schedules were generated. ` +
+        `${f.currencyIsoCode} ${f.gapUsd.toLocaleString()} of revenue is unbilled. The activation workflow or trigger that should fire on Status='Activated' isn't running.`,
+      suggestedFix:
+        `Inspect Setup → Flows / Process Builder / Apex Triggers for any automation on the Order object that calls Salesforce Billing's schedule generator. Check that it's Active. Once fixed, run 'Generate Billing Schedule' against this Order to back-fill.`,
+      model: 'template-fallback',
+    };
+  },
   OPTION_PRICE_UNRESOLVED: (f, a) => {
     const productName = (a.evidence.product_name as string | undefined) ?? 'option';
     return {

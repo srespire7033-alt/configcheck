@@ -49,7 +49,15 @@ interface PricebookEntryRow {
 const QL_FOR_001: ForensicDetector = {
   id: 'QL-FOR-001',
   label: 'Bundle required option charged at $0',
-  appliesTo: ['cpq', 'cpq_billing'],
+  // DISABLED: the detector as written false-positives on customers
+  // using inclusive bundle pricing (parent ListPrice covers options,
+  // so option NetPrice = 0 is intentional). Real-world version needs
+  // 4 disqualifying-signal checks (SBQQ__Bundled__c, ProductOption
+  // Discount=100, math-based inclusive check, OptionType=Related) to
+  // avoid massive false positives. Keeping the code as the reference
+  // implementation of Class E attribution; not running it on scans
+  // until the false-positive guards are added.
+  appliesTo: [],
   freeTier: false,
 
   async run(ctx: DetectorContext): Promise<DetectorResult[]> {

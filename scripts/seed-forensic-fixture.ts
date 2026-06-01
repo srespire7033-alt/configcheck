@@ -502,7 +502,11 @@ async function main() {
     FIXTURE_TAG
   );
 
-  console.log(`\n[5/7] Seeding QL-FOR-001 bundle required-option fixtures...`);
+  // QL-FOR-001 detector is currently DISABLED (appliesTo: []) so its
+  // findings won't appear in scans. We keep the seed running so the
+  // fixture data is in the org for the next iteration when the
+  // false-positive guards land.
+  console.log(`\n[5/8] Seeding QL-FOR-001 bundle required-option fixtures (detector currently disabled)...`);
   const bundleExpectedLeakage = await seedBundleFixtures(
     conn,
     sfQuery,
@@ -511,12 +515,23 @@ async function main() {
     FIXTURE_TAG
   );
 
-  console.log(`\n[7/7] Expected verified leakage totals:`);
-  console.log(`  REN-001 (renewal uplift):        ~$${Math.round(expectedRenLeakage).toLocaleString()}`);
-  console.log(`  DSC-FOR-001 (promo roll-off):    ~$${Math.round(promoExpectedLeakage).toLocaleString()}`);
-  console.log(`  QL-FOR-001 (bundle free option): ~$${Math.round(bundleExpectedLeakage).toLocaleString()}`);
-  console.log(`  REN-002 (under list)             — computed at scan time, depends on Pricebook bump`);
-  console.log(`  TOTAL fixture leakage:           ~$${Math.round(expectedRenLeakage + promoExpectedLeakage + bundleExpectedLeakage).toLocaleString()}`);
+  console.log(`\n[6/8] Seeding ORD-FOR-001 orphan-Order fixtures...`);
+  const orphanOrderExpectedLeakage = await seedOrphanOrders(
+    conn,
+    sfQuery,
+    sfCreate,
+    fixtureAccountId,
+    productId,
+    FIXTURE_TAG
+  );
+
+  console.log(`\n[8/8] Expected verified leakage totals:`);
+  console.log(`  REN-001 (renewal uplift):                  ~$${Math.round(expectedRenLeakage).toLocaleString()}`);
+  console.log(`  DSC-FOR-001 (promo roll-off):              ~$${Math.round(promoExpectedLeakage).toLocaleString()}`);
+  console.log(`  QL-FOR-001 (bundle free option, disabled): ~$${Math.round(bundleExpectedLeakage).toLocaleString()}`);
+  console.log(`  ORD-FOR-001 (order, no billing schedule):  ~$${Math.round(orphanOrderExpectedLeakage).toLocaleString()}`);
+  console.log(`  REN-002 (under list)                       — computed at scan time, depends on Pricebook bump`);
+  console.log(`  TOTAL active fixture leakage:              ~$${Math.round(expectedRenLeakage + promoExpectedLeakage + orphanOrderExpectedLeakage).toLocaleString()}`);
   console.log(`\n✓ Done. Now go to OrgPrism → CPQ Ks → "+ Forensics" to see the engine in action.`);
 }
 
@@ -666,6 +681,143 @@ async function seedBundleFixtures(
     totalLeakage += def.listPrice;
     console.log(`  + ${def.name}: list ${def.listPrice}, net $0 → leak ${def.listPrice}`);
   }
+  return totalLeakage;
+}
+
+/**
+ * ORD-FOR-001 seed: 5 activated Orders with NO billing schedules.
+ *
+ * Salesforce requires Orders go through a strict lifecycle:
+ *   1. Create Order in 'Draft' status (with EffectiveDate and Pricebook2)
+ *   2. Add OrderItems
+ *   3. Update Status to 'Activated' (this requires items present and
+ *      activates Order-level validation)
+ *
+ * For the detector to flag these orders, we deliberately:
+ *   - Set OrderItem.blng__BillingRule__c = null on some items
+ *     (smoking gun for Class A's 1.0-confidence path)
+ *   - Don't generate any blng__BillingSchedule__c records
+ *
+ * Expected: 5 findings worth $1-2M combined.
+ */
+async function seedOrphanOrders(
+  conn: import('jsforce').Connection,
+  sfQuery: <T>(soql: string, label: string) => Promise<T[]>,
+  sfCreate: (sobject: string, fields: Record<string, unknown>, label: string) => Promise<string>,
+  accountId: string,
+  productId: string,
+  fixtureTag: string
+): Promise<number> {
+  // Probe that Salesforce Billing is installed (or at least that the
+  // OrderItem object has the blng__BillingRule__c field). If not,
+  // we can still create Orders but the detector won't fire on a
+  // Billing-less org — log + skip.
+  try {
+    const oiDesc = (await conn.describe('OrderItem')) as { fields: Array<{ name: string }> };
+    const hasBillingRule = oiDesc.fields.some((f) => f.name === 'blng__BillingRule__c');
+    if (!hasBillingRule) {
+      console.log(`  ℹ️  OrderItem doesn't have blng__BillingRule__c — Salesforce Billing may not be installed. Skipping orphan-Order seed.`);
+      return 0;
+    }
+  } catch (e) {
+    console.warn(`  ⚠️  OrderItem describe failed:`, e instanceof Error ? e.message : e);
+    return 0;
+  }
+
+  // Standard Pricebook for the Order.
+  const stdPbRows = await sfQuery<{ Id: string }>(
+    `SELECT Id FROM Pricebook2 WHERE IsStandard = TRUE LIMIT 1`,
+    'Standard Pricebook for Order'
+  );
+  if (stdPbRows.length === 0) {
+    console.warn(`  ⚠️  No Standard Pricebook — can't create Orders. Skipping.`);
+    return 0;
+  }
+  const stdPbId = stdPbRows[0].Id;
+
+  // Verify the product has a Standard Pricebook entry (Order activation requires this).
+  const pbeRows = await sfQuery<{ Id: string; UnitPrice: string }>(
+    `SELECT Id, UnitPrice FROM PricebookEntry WHERE Product2Id = '${productId}' AND Pricebook2Id = '${stdPbId}' LIMIT 1`,
+    'PricebookEntry for orphan-Order product'
+  );
+  if (pbeRows.length === 0) {
+    console.warn(`  ⚠️  Product ${productId} has no Standard Pricebook entry — can't activate Orders. Skipping.`);
+    return 0;
+  }
+  const pbeId = pbeRows[0].Id;
+  const pbeUnitPrice = parseFloat(pbeRows[0].UnitPrice || '0') || 100_000;
+
+  // Idempotency check — any existing fixture-tagged Orders on this Account?
+  const existingOrphans = await sfQuery<{ Id: string; Description: string | null }>(
+    `SELECT Id, Description FROM Order WHERE AccountId = '${accountId}' AND Description LIKE '%${fixtureTag}%ORD-FOR-001%' LIMIT 20`,
+    'Existing orphan Orders'
+  );
+  if (existingOrphans.length >= 5) {
+    console.log(`  ✓ ${existingOrphans.length} orphan Orders already seeded; skipping batch.`);
+    return existingOrphans.length * pbeUnitPrice * 3; // approximate
+  }
+
+  // Order specs — varying $ amounts to make the demo interesting.
+  const orderSpecs = [
+    { customer: 'Helix Industries Order', quantity: 3, daysAgo: 240 },
+    { customer: 'Quantum Forge Order',    quantity: 5, daysAgo: 180 },
+    { customer: 'Apex Logistics Order',   quantity: 2, daysAgo: 120 },
+    { customer: 'Nimbus Group Order',     quantity: 8, daysAgo: 60  },
+    { customer: 'Strata Data Order',      quantity: 4, daysAgo: 30  },
+  ];
+
+  let totalLeakage = 0;
+  let createdCount = 0;
+
+  for (const spec of orderSpecs) {
+    const effectiveDate = new Date(Date.now() - spec.daysAgo * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    const itemTotal = spec.quantity * pbeUnitPrice;
+
+    // Create Order in Draft status.
+    const orderId = await sfCreate('Order', {
+      AccountId: accountId,
+      Status: 'Draft',
+      EffectiveDate: effectiveDate,
+      Pricebook2Id: stdPbId,
+      Description: `${fixtureTag} ORD-FOR-001: ${spec.customer}`,
+    }, `Order ${spec.customer}`);
+
+    // Add an OrderItem WITHOUT blng__BillingRule__c so Class A's
+    // 1.0-confidence path fires.
+    await sfCreate('OrderItem', {
+      OrderId: orderId,
+      Product2Id: productId,
+      PricebookEntryId: pbeId,
+      Quantity: spec.quantity,
+      UnitPrice: pbeUnitPrice,
+      // blng__BillingRule__c deliberately omitted (null)
+    }, `OrderItem ${spec.customer}`);
+
+    // Activate the Order. Activation requires items present (which we
+    // just added) and may trigger workflows — but we want to SKIP the
+    // billing-schedule generation, so the lack of blng__BillingRule__c
+    // does the work for us.
+    try {
+      const activateRes = await withTimeout(
+        Promise.resolve(conn.sobject('Order').update({ Id: orderId, Status: 'Activated' })) as Promise<{ success?: boolean; errors?: unknown }>,
+        30_000,
+        `Activate Order ${spec.customer}`
+      );
+      if (activateRes.success === false) {
+        console.warn(`  ⚠️  Could not activate ${spec.customer}: ${JSON.stringify(activateRes.errors)}`);
+        continue;
+      }
+    } catch (e) {
+      console.warn(`  ⚠️  Activate failed for ${spec.customer}:`, e instanceof Error ? e.message : e);
+      continue;
+    }
+
+    totalLeakage += itemTotal;
+    createdCount += 1;
+    console.log(`  + ${spec.customer}: ${spec.quantity} × ${pbeUnitPrice} = $${itemTotal.toLocaleString()} (activated ${spec.daysAgo}d ago)`);
+  }
+
+  console.log(`\n  Created ${createdCount} orphan Orders, total $${Math.round(totalLeakage).toLocaleString()} unbilled`);
   return totalLeakage;
 }
 
