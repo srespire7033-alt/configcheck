@@ -24,7 +24,6 @@
  * pull is filtered by SBQQ__DiscountSchedule__c IS NOT NULL.
  */
 
-import { bulkQuery } from '../bulk-client';
 import type { DetectorContext, DetectorResult, ForensicDetector, SourceRecord } from '../types';
 
 interface DiscountScheduleRow {
@@ -81,13 +80,13 @@ const DSC_FOR_001: ForensicDetector = {
     if (endDateCol) cols.push(`${endDateCol} EndDate`);
     if (typeCol) cols.push(`${typeCol} Type`);
 
-    // 1. Pull every Discount Schedule. CPQ orgs typically have <500
-    //    of these; non-bulk SOQL handles it fine.
-    const schedulesRes = await bulkQuery<DiscountScheduleRow>(
-      ctx.conn,
-      `SELECT ${cols.join(', ')} FROM SBQQ__DiscountSchedule__c`
+    // Regular SOQL — Discount Schedules are bounded (<500 per org).
+    // Bulk API's submit+poll overhead would dwarf the actual query time.
+    const schedulesRes = await ctx.conn.query<DiscountScheduleRow>(
+      `SELECT ${cols.join(', ')} FROM SBQQ__DiscountSchedule__c`,
+      { autoFetch: true, maxFetch: 10_000 }
     );
-    if (!schedulesRes.jobComplete || schedulesRes.records.length === 0) return [];
+    if (schedulesRes.records.length === 0) return [];
 
     const today = new Date();
     const schedulesById = new Map<string, DiscountScheduleRow>();
@@ -132,8 +131,10 @@ const DSC_FOR_001: ForensicDetector = {
         AND SBQQ__Discount__c > 0
         AND CreatedDate >= ${sinceIso}
     `;
-    const linesRes = await bulkQuery<DiscountedLineRow>(ctx.conn, linesQuery);
-    if (!linesRes.jobComplete) return [];
+    const linesRes = await ctx.conn.query<DiscountedLineRow>(linesQuery, {
+      autoFetch: true,
+      maxFetch: 50_000,
+    });
 
     // 3. Reconcile per-line.
     const findings: DetectorResult[] = [];

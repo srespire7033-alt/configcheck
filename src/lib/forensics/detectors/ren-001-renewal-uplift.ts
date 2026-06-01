@@ -32,7 +32,6 @@
  * Privacy: zero PII pulled. Quote Numbers, Order Numbers, IDs — that's it.
  */
 
-import { bulkQuery } from '../bulk-client';
 import type { DetectorContext, DetectorResult, ForensicDetector, SourceRecord } from '../types';
 
 interface RenewalLineRow {
@@ -98,17 +97,16 @@ const REN_001: ForensicDetector = {
         AND SBQQ__RenewedSubscription__c != null
     `;
 
-    // 45s cap so the detector fits inside Vercel Hobby's 60s function
-    // budget when run alongside other detectors. Bulk jobs that exceed
-    // this stay running server-side; the next scan picks them up.
-    const linesRes = await bulkQuery<RenewalLineRow>(ctx.conn, renewalLinesQuery, {
-      maxPollMs: 45_000,
+    // Regular SOQL (not Bulk API): for the renewal-quote-line volumes
+    // a typical CPQ customer has — even at 5-10K closed-won renewal
+    // quotes/year — REST SOQL completes in <500ms vs Bulk API's
+    // 5-30s submit+poll overhead. Bulk only earns its keep over ~50K
+    // rows. Auto-pagination via `autoFetch` handles >2K rows
+    // transparently if we ever hit it.
+    const linesRes = await ctx.conn.query<RenewalLineRow>(renewalLinesQuery, {
+      autoFetch: true,
+      maxFetch: 50_000,
     });
-    if (!linesRes.jobComplete) {
-      // The job is still running on Salesforce — bail with empty. The
-      // forensic scan will mark partial; next run picks up.
-      return [];
-    }
     if (linesRes.records.length === 0) {
       // No renewal quote lines found. Either the org has no renewals
       // yet, or SBQQ__Type__c is being stored differently. Neither is a
@@ -120,10 +118,9 @@ const REN_001: ForensicDetector = {
     const subscriptionIds = Array.from(new Set(linesRes.records.map((r) => r.SBQQ__RenewedSubscription__c).filter(Boolean)));
     const subscriptionsBySubId = new Map<string, SubscriptionRow>();
     if (subscriptionIds.length > 0) {
-      // Chunk to 1000 — Bulk API can handle more but the IN clause has
-      // a 4K char practical limit. We don't expect more than ~5K
-      // subscriptions per scan in v1.
-      for (const chunk of chunkArray(subscriptionIds, 1000)) {
+      // SOQL IN-clause practical limit ~4K characters; 500 ids fits
+      // comfortably with 15-char Salesforce IDs.
+      for (const chunk of chunkArray(subscriptionIds, 500)) {
         const subQuery = `
           SELECT
             Id, Name,
@@ -133,7 +130,7 @@ const REN_001: ForensicDetector = {
           FROM SBQQ__Subscription__c
           WHERE Id IN (${chunk.map((id) => `'${id}'`).join(',')})
         `;
-        const subRes = await bulkQuery<SubscriptionRow>(ctx.conn, subQuery);
+        const subRes = await ctx.conn.query<SubscriptionRow>(subQuery, { autoFetch: true, maxFetch: 50_000 });
         for (const s of subRes.records) subscriptionsBySubId.set(s.Id, s);
       }
     }
