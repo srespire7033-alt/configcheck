@@ -124,15 +124,38 @@ function getRulesCached(conn: Connection) {
       console.warn('[forensics] Class C: no target-field column on SBQQ__PriceAction__c; skipping rule tracer');
       return { targetFieldColumn: null, rules: [] };
     }
-    const rulesRes = await conn.query<PriceRuleRow & { Actions: { records: PriceActionRow[] }; Conditions: { records: PriceConditionRow[] } }>(
+    // No SOQL field aliases (REST doesn't allow on non-aggregates) —
+    // we project the dynamic target column raw, then normalize each
+    // row's PriceAction children to a stable `TargetField` key in JS
+    // below before returning.
+    const rulesRes = await conn.query<Record<string, unknown>>(
       `SELECT Id, Name, SBQQ__Active__c, SBQQ__EvaluationEvent__c, SBQQ__LookupObject__c, SBQQ__ConditionsMet__c,
-         (SELECT Id, ${targetFieldColumn} TargetField, SBQQ__SourceField__c, SBQQ__Value__c, SBQQ__Formula__c FROM SBQQ__PriceActions__r),
+         (SELECT Id, ${targetFieldColumn}, SBQQ__SourceField__c, SBQQ__Value__c, SBQQ__Formula__c FROM SBQQ__PriceActions__r),
          (SELECT Id, SBQQ__Field__c, SBQQ__Operator__c, SBQQ__Value__c, SBQQ__Object__c FROM SBQQ__PriceConditions__r)
        FROM SBQQ__PriceRule__c
        WHERE SBQQ__Active__c = TRUE
        LIMIT 500`
     );
-    return { targetFieldColumn, rules: rulesRes.records };
+    // Normalize: rename dynamic targetFieldColumn → 'TargetField' on
+    // every PriceAction child row so downstream code is column-name-agnostic.
+    const normalizedRules = rulesRes.records.map((rule) => {
+      const actionsRel = rule['SBQQ__PriceActions__r'] as { records?: Array<Record<string, unknown>> } | undefined;
+      const conditionsRel = rule['SBQQ__PriceConditions__r'] as { records?: Array<Record<string, unknown>> } | undefined;
+      return {
+        ...(rule as unknown as PriceRuleRow),
+        Actions: {
+          records: (actionsRel?.records ?? []).map((a) => ({
+            Id: a.Id as string,
+            TargetField: a[targetFieldColumn] as string,
+            SBQQ__SourceField__c: a.SBQQ__SourceField__c as string | undefined,
+            SBQQ__Value__c: a.SBQQ__Value__c as string | undefined,
+            SBQQ__Formula__c: a.SBQQ__Formula__c as string | undefined,
+          })) as PriceActionRow[],
+        },
+        Conditions: { records: (conditionsRel?.records ?? []) as unknown as PriceConditionRow[] },
+      } as PriceRuleRow & { Actions: { records: PriceActionRow[] }; Conditions: { records: PriceConditionRow[] } };
+    });
+    return { targetFieldColumn, rules: normalizedRules };
   })();
   RULES_CACHE.set(conn, cached);
   return cached;

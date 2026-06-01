@@ -26,15 +26,10 @@
 
 import type { DetectorContext, DetectorResult, ForensicDetector, SourceRecord } from '../types';
 
-interface DiscountScheduleRow {
-  Id: string;
-  Name: string;
-  /** Aliased — present only when a start-date column was found via describe. */
-  StartDate?: string | null;
-  /** Aliased — present only when an end-date column was found via describe. */
-  EndDate?: string | null;
-  Type?: string | null;
-}
+// DiscountScheduleRow was the typed shape when we aliased SOQL columns.
+// REST SOQL doesn't allow aliasing on non-aggregate columns, so we now
+// query with the raw field names and normalize in code (see
+// NormalizedSchedule inside run()).
 
 interface DiscountedLineRow {
   Id: string;
@@ -75,40 +70,54 @@ const DSC_FOR_001: ForensicDetector = {
     const endDateCol = ['SBQQ__EndDate__c', 'End_Date__c', 'EndDate__c', 'SBQQ__ExpirationDate__c', 'Expiration_Date__c'].find((c) => dsFields.has(c));
     const typeCol = dsFields.has('SBQQ__Type__c') ? 'SBQQ__Type__c' : null;
 
+    // SOQL doesn't support field aliasing on non-aggregate columns — we
+    // select by real field name and read by real field name. We can't
+    // use a static interface for the row shape because the column name
+    // is dynamic per-org; cast through unknown and access via bracket.
     const cols = ['Id', 'Name'];
-    if (startDateCol) cols.push(`${startDateCol} StartDate`);
-    if (endDateCol) cols.push(`${endDateCol} EndDate`);
-    if (typeCol) cols.push(`${typeCol} Type`);
+    if (startDateCol) cols.push(startDateCol);
+    if (endDateCol) cols.push(endDateCol);
+    if (typeCol) cols.push(typeCol);
 
-    // Regular SOQL — Discount Schedules are bounded (<500 per org).
-    // Bulk API's submit+poll overhead would dwarf the actual query time.
-    const schedulesRes = await ctx.conn.query<DiscountScheduleRow>(
-      `SELECT ${cols.join(', ')} FROM SBQQ__DiscountSchedule__c`,
-      { autoFetch: true, maxFetch: 10_000 }
+    const schedulesRes = await ctx.conn.query<Record<string, unknown>>(
+      `SELECT ${cols.join(', ')} FROM SBQQ__DiscountSchedule__c`
     );
+    console.log(`[DSC-FOR-001] Schedule query: ${schedulesRes.records.length} rows`);
     if (schedulesRes.records.length === 0) return [];
 
     const today = new Date();
-    const schedulesById = new Map<string, DiscountScheduleRow>();
+    // Normalize each row to the same internal shape regardless of
+    // which column name the org uses (we know what columns were
+    // requested via startDateCol/endDateCol).
+    interface NormalizedSchedule {
+      Id: string;
+      Name: string;
+      StartDate: string | null;
+      EndDate: string | null;
+    }
+    const schedulesById = new Map<string, NormalizedSchedule>();
     const expiredScheduleIds: string[] = [];
     const promoNullEndScheduleIds: string[] = [];
 
-    for (const s of schedulesRes.records) {
+    for (const raw of schedulesRes.records) {
+      const s: NormalizedSchedule = {
+        Id: raw.Id as string,
+        Name: (raw.Name as string) ?? '',
+        StartDate: startDateCol ? ((raw[startDateCol] as string | null) ?? null) : null,
+        EndDate: endDateCol ? ((raw[endDateCol] as string | null) ?? null) : null,
+      };
       schedulesById.set(s.Id, s);
       if (s.EndDate) {
         const end = new Date(s.EndDate);
         if (end < today) expiredScheduleIds.push(s.Id);
       } else {
-        // No end date — only treat as leaky if name suggests a promo.
-        // A legit perpetual discount (e.g. "Strategic Account") shouldn't
-        // fire DSC-FOR-001. A "2024 New Logo Promo" with no end date
-        // almost certainly should.
         const name = (s.Name || '').toLowerCase();
         if (PROMO_KEYWORDS.some((kw) => name.includes(kw))) {
           promoNullEndScheduleIds.push(s.Id);
         }
       }
     }
+    console.log(`[DSC-FOR-001] Candidates: ${expiredScheduleIds.length} expired + ${promoNullEndScheduleIds.length} promo-named null-end`);
 
     const candidateScheduleIds = [...expiredScheduleIds, ...promoNullEndScheduleIds];
     if (candidateScheduleIds.length === 0) return [];
@@ -131,10 +140,8 @@ const DSC_FOR_001: ForensicDetector = {
         AND SBQQ__Discount__c > 0
         AND CreatedDate >= ${sinceIso}
     `;
-    const linesRes = await ctx.conn.query<DiscountedLineRow>(linesQuery, {
-      autoFetch: true,
-      maxFetch: 50_000,
-    });
+    const linesRes = await ctx.conn.query<DiscountedLineRow>(linesQuery);
+    console.log(`[DSC-FOR-001] Lines query: ${linesRes.records.length} rows`);
 
     // 3. Reconcile per-line.
     const findings: DetectorResult[] = [];

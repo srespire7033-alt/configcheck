@@ -97,16 +97,14 @@ const REN_001: ForensicDetector = {
         AND SBQQ__RenewedSubscription__c != null
     `;
 
-    // Regular SOQL (not Bulk API): for the renewal-quote-line volumes
-    // a typical CPQ customer has — even at 5-10K closed-won renewal
-    // quotes/year — REST SOQL completes in <500ms vs Bulk API's
-    // 5-30s submit+poll overhead. Bulk only earns its keep over ~50K
-    // rows. Auto-pagination via `autoFetch` handles >2K rows
-    // transparently if we ever hit it.
-    const linesRes = await ctx.conn.query<RenewalLineRow>(renewalLinesQuery, {
-      autoFetch: true,
-      maxFetch: 50_000,
-    });
+    // Regular SOQL. Up to 2K rows in default REST. For the renewal-line
+    // volumes typical CPQ customers have, this completes in <500ms vs
+    // Bulk API's 5-30s submit+poll. autoFetch is omitted because it has
+    // had quirky behavior with parent-relationship WHERE clauses in
+    // some jsforce versions — we'll add explicit pagination if any
+    // customer pushes past 2K rows.
+    const linesRes = await ctx.conn.query<RenewalLineRow>(renewalLinesQuery);
+    console.log(`[REN-001] Renewal lines query: ${linesRes.records.length} rows`);
     if (linesRes.records.length === 0) {
       // No renewal quote lines found. Either the org has no renewals
       // yet, or SBQQ__Type__c is being stored differently. Neither is a
@@ -130,9 +128,10 @@ const REN_001: ForensicDetector = {
           FROM SBQQ__Subscription__c
           WHERE Id IN (${chunk.map((id) => `'${id}'`).join(',')})
         `;
-        const subRes = await ctx.conn.query<SubscriptionRow>(subQuery, { autoFetch: true, maxFetch: 50_000 });
+        const subRes = await ctx.conn.query<SubscriptionRow>(subQuery);
         for (const s of subRes.records) subscriptionsBySubId.set(s.Id, s);
       }
+      console.log(`[REN-001] Subscriptions loaded: ${subscriptionsBySubId.size}`);
     }
 
     // 3. Reconcile.
@@ -239,6 +238,7 @@ const REN_001: ForensicDetector = {
       });
     }
 
+    console.log(`[REN-001] Emitting ${findings.length} findings (sum gap = $${Math.round(findings.reduce((s, f) => s + f.gapUsd, 0)).toLocaleString()})`);
     return findings;
   },
 };
