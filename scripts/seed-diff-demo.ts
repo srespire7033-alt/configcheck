@@ -125,12 +125,17 @@ async function main() {
   // ─── 4. Create the synthetic "previous" scan ─────────────────────
   console.log('\n[4] Creating synthetic previous scan...');
   const newerTs = new Date(latest.completed_at).getTime();
-  // Place the synthetic scan slightly BEFORE the latest real scan
-  // (30s earlier) so the diff API picks the real one as 'to' and the
-  // synthetic as 'from'. Backdate completed_at by 7 days for a
-  // realistic "since last scan = a week ago" narrative.
-  const synthCompletedAt = new Date(newerTs - 7 * 24 * 60 * 60 * 1000).toISOString();
-  const synthStartedAt = new Date(newerTs - 7 * 24 * 60 * 60 * 1000 - 60_000).toISOString();
+  // CRITICAL: place the synthetic scan EXACTLY 5 seconds before the
+  // latest real scan. If we used "7 days ago" (the first attempt),
+  // any real scans in between push the synthetic out of slot #2 in
+  // the diff API's "latest 2 scans" lookup. 5s ensures it's
+  // unambiguously second-most-recent regardless of how many real
+  // scans the org has accumulated. The completed_at header text
+  // ("Jun 1 → Jun 1") may not look like a real weekly comparison
+  // but the diff buckets WILL populate, which is the point of this
+  // demo seed.
+  const synthCompletedAt = new Date(newerTs - 5_000).toISOString();
+  const synthStartedAt = new Date(newerTs - 65_000).toISOString();
 
   const { data: synthScan, error: scanErr } = await supabase
     .from('forensic_scans')
