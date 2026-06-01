@@ -242,6 +242,41 @@ export default function RecoveryDashboardPage() {
           })}
         </div>
 
+        {/* Tab-specific narrative — explains the workflow's next step
+            so users don't bounce off after Approve wondering what to
+            do next. Commit is a manual attestation in v1; we don't
+            auto-verify the Salesforce-side upload. */}
+        {tab === 'pending' && data.counts.pending > 0 && (
+          <div className="px-4 py-3 rounded-lg bg-amber-50/40 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800/40 text-xs text-amber-800 dark:text-amber-300">
+            <strong>Next step:</strong> Review each row, then Approve. Approved actions move to the next tab where you can download the consolidated CSV.
+          </div>
+        )}
+        {tab === 'approved' && data.counts.approved > 0 && (
+          <div className="px-4 py-3 rounded-lg bg-blue-50/40 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800/40 text-xs text-blue-800 dark:text-blue-300">
+            <strong>Recovery flow:</strong>
+            <ol className="list-decimal list-inside mt-1 space-y-0.5">
+              <li>Select the actions you want to commit</li>
+              <li>Click <b>Download CSV</b> — you'll get a single Data Loader-ready file</li>
+              <li>Open Salesforce Data Loader, upload the CSV (Upsert with Id as external ID)</li>
+              <li>Come back here, re-select the same rows, click <b>Mark committed</b> to record that the upload succeeded</li>
+            </ol>
+            <p className="mt-1.5 opacity-80">
+              v1 trusts your attestation — we don&apos;t auto-verify the Salesforce-side write. v2 will re-query the records after commit to confirm.
+            </p>
+          </div>
+        )}
+        {tab === 'committed' && data.counts.committed > 0 && (
+          <div className="px-4 py-3 rounded-lg bg-green-50/40 dark:bg-green-900/10 border border-green-200 dark:border-green-800/40 text-xs text-green-800 dark:text-green-300">
+            <strong>Done.</strong> These actions are the audit trail of what your engagement actually recovered.
+            Hand the committed list (and the CSVs you uploaded) to the client as the deliverable.
+          </div>
+        )}
+        {tab === 'rejected' && data.counts.rejected > 0 && (
+          <div className="px-4 py-3 rounded-lg bg-gray-50/60 dark:bg-gray-800/30 border border-gray-200 dark:border-gray-700 text-xs text-gray-700 dark:text-gray-300">
+            Changed your mind on a rejected action? Select it and click <b>Re-stage</b> to send it back to Pending.
+          </div>
+        )}
+
         {/* Bulk action bar */}
         {currentTabActions.length > 0 && (
           <div className="flex items-center justify-between gap-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700">
@@ -382,12 +417,15 @@ export default function RecoveryDashboardPage() {
                           </div>
                         </div>
                         <div className="flex items-center gap-3 mt-2.5 flex-wrap">
-                          <Link
+                          <a
                             href={`/orgs/${orgId}/forensics/${action.finding_id}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
                             className="text-xs text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center gap-1"
+                            title="Opens in a new tab so you keep your queue selection"
                           >
                             View finding <ExternalLink className="h-3 w-3" />
-                          </Link>
+                          </a>
                           <button
                             onClick={() => {
                               const next = new Set(expanded);
