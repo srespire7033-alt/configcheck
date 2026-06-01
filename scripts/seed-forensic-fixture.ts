@@ -309,6 +309,43 @@ async function main() {
   const productId = prodRows[0].Id;
   console.log(`  Using Product2: ${prodRows[0].Name} (${productId})`);
 
+  // REN-002 fixture: ensure the Standard Pricebook entry for this
+  // product is set ABOVE the renewal-line prices, so the detector
+  // sees current-list > renewal-net-price and flags. Anchor the
+  // current list at $100K. Our highest renewal NetPrice is 96K
+  // (Apex Logistics, 5% uplift). 96K vs 100K = 4% below list,
+  // INSIDE the 10% tolerance — would NOT trigger.
+  //
+  // Bumping the current list to $120K instead. Then the leaky
+  // renewals (e.g. Vertex Cloud at $36K) are 70% below list, and
+  // even the smaller-gap ones blow past the 10% tolerance.
+  // Detector should flag all 9 leaky lines plus the 'clean' lines
+  // that still sit below the new list price.
+  const REN_002_TARGET_LIST = 120_000;
+  const existingPbeRows = await sfQuery<IdRef & { UnitPrice: string }>(
+    `SELECT Id, UnitPrice FROM PricebookEntry WHERE Product2Id = '${productId}' AND Pricebook2.IsStandard = TRUE AND IsActive = TRUE LIMIT 1`,
+    'Standard PricebookEntry lookup'
+  );
+  if (existingPbeRows.length === 0) {
+    console.log(`  ⚠️  No active Standard Pricebook entry for product ${productId}. REN-002 will skip this product. Create one in Setup if you want REN-002 fixtures.`);
+  } else {
+    const existing = existingPbeRows[0];
+    const currentPrice = parseFloat(existing.UnitPrice || '0');
+    if (currentPrice >= REN_002_TARGET_LIST) {
+      console.log(`  ✓ Pricebook entry already at ${currentPrice} (>= $${REN_002_TARGET_LIST.toLocaleString()} target) — REN-002 will fire on existing renewals.`);
+    } else {
+      // Use the raw REST API to update; the sfCreate helper doesn't
+      // do updates. jsforce's sobject.update is a single call.
+      console.log(`  > Updating PricebookEntry ${existing.Id} from ${currentPrice} to ${REN_002_TARGET_LIST}...`);
+      const updateRes = await conn.sobject('PricebookEntry').update({ Id: existing.Id, UnitPrice: REN_002_TARGET_LIST });
+      if (Array.isArray(updateRes) ? !updateRes[0].success : !updateRes.success) {
+        console.warn(`  ✗ Update failed: ${JSON.stringify(updateRes)}`);
+      } else {
+        console.log(`  ✓ Updated. REN-002 should now find every renewal QuoteLine below this list price.`);
+      }
+    }
+  }
+
   // Contract.Description is a long text area and CANNOT be filtered in
   // SOQL ("field 'Description' can not be filtered in a query call").
   // Track fixtures via AccountId instead — every Contract on the

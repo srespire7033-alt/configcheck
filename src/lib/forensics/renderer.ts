@@ -78,6 +78,29 @@ const TEMPLATES: Record<string, (f: DetectorResult, a: AttributionCandidate) => 
       `Add a ValidationRule on SBQQ__QuoteLine__c: when SBQQ__DiscountSchedule__r.SBQQ__EndDate__c < TODAY, prevent save. Re-quote the affected lines without the expired discount.`,
     model: 'template-fallback',
   }),
+  // ─────────── REN-002 / Class B ───────────
+  MANUAL_OVERRIDE_BELOW_LIST: (f, a) => {
+    const pct = (a.evidence.percent_below_list as number | undefined) ?? 0;
+    return {
+      plainEnglish:
+        `Quote line ${f.primaryRecord.name} was renewed ${Math.round(pct)}% below the current list price (${f.currencyIsoCode} ${f.gapUsd.toLocaleString()} gap). ` +
+        `SBQQ__PricingMethod__c is set to "Manual" — the rep overrode the calculated price. No approval rule flagged the divergence from current list, so the override committed without review.`,
+      suggestedFix:
+        `Add an Approval Rule on SBQQ__QuoteLine__c that fires when SBQQ__PricingMethod__c = 'Manual' AND SBQQ__NetPrice__c < (PricebookEntry.UnitPrice × 0.9). Require manager sign-off before save. For the affected line, re-quote at current list or document the strategic discount.`,
+      model: 'template-fallback',
+    };
+  },
+  IMPLIED_OVERRIDE_BELOW_LIST: (f, a) => {
+    const pct = (a.evidence.percent_below_list as number | undefined) ?? 0;
+    return {
+      plainEnglish:
+        `Quote line ${f.primaryRecord.name} is priced ${Math.round(pct)}% below the current list (${f.currencyIsoCode} ${f.gapUsd.toLocaleString()} gap). ` +
+        `SBQQ__PricingMethod__c is NOT "Manual" — but no detected price rule or discount schedule explains the gap either. Could be an unrecorded manual edit or a missing pricing automation.`,
+      suggestedFix:
+        `Inspect this quote line in Setup → its history shows whether SBQQ__NetPrice__c was edited inline. If yes, this is a tracked-edit gap; tighten the SBQQ__PricingMethod__c field-level security to prevent silent overrides. If no, look for a missing Price Rule that should have bound the line back to current list.`,
+      model: 'template-fallback',
+    };
+  },
 };
 
 const DEFAULT_TEMPLATE = (f: DetectorResult, a: AttributionCandidate): RenderResult => ({
