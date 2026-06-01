@@ -51,6 +51,17 @@ interface RecoveryAction {
   approved_at: string | null;
   committed_at: string | null;
   created_at: string;
+  metadata: {
+    auto_rejected_at?: string;
+    auto_rejected_reason?: string;
+    commit_verification?: {
+      verified: boolean;
+      verified_at: string;
+      actual_value?: string | number | null;
+      expected_value?: string | number | null;
+      message: string;
+    };
+  } | null;
   finding: {
     id: string;
     detector_id: string;
@@ -393,9 +404,30 @@ export default function RecoveryDashboardPage() {
                               <code className="text-[11px] font-mono px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300">
                                 {action.finding?.detector_id}
                               </code>
-                              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium ${meta.chipBg} ${meta.chipText}`}>
-                                {meta.label}
-                              </span>
+                              {action.metadata?.auto_rejected_reason ? (
+                                <span
+                                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300"
+                                  title={action.metadata.auto_rejected_reason}
+                                >
+                                  Auto-resolved (duplicate)
+                                </span>
+                              ) : (
+                                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium ${meta.chipBg} ${meta.chipText}`}>
+                                  {meta.label}
+                                </span>
+                              )}
+                              {action.metadata?.commit_verification && (
+                                <span
+                                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium ${
+                                    action.metadata.commit_verification.verified
+                                      ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300'
+                                      : 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300'
+                                  }`}
+                                  title={action.metadata.commit_verification.message}
+                                >
+                                  {action.metadata.commit_verification.verified ? '✓ Verified on SF' : '⚠ Verify failed'}
+                                </span>
+                              )}
                               {action.finding?.primary_record?.name && (
                                 <span className="text-[11px] text-gray-500 dark:text-gray-400 font-mono">
                                   {action.finding.primary_record.name}
