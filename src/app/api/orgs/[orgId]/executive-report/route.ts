@@ -53,18 +53,23 @@ export async function GET(_req: NextRequest, { params }: { params: { orgId: stri
   const supabase = createServiceClient();
 
   // ─── 1. Pull org metadata ─────────────────────────────────────────
-  // First check existence WITHOUT the user filter so we can give
-  // useful error feedback: 'this org doesn't exist' vs 'you don't have
-  // access to this org' are very different debug paths.
-  const { data: orgAny } = await supabase
+  // Select only the minimum columns we KNOW exist (matches the
+  // pricing-discipline pattern). Capture .error too so a schema
+  // mismatch surfaces clearly rather than silently returning 404.
+  const { data: orgAny, error: orgErr } = await supabase
     .from('organizations')
-    .select('id, name, instance_url, product_type, user_id')
+    .select('id, name, instance_url, user_id')
     .eq('id', params.orgId)
     .single();
-  if (!orgAny) {
+  if (orgErr || !orgAny) {
     return NextResponse.json(
-      { error: `Org ${params.orgId} does not exist in this environment.` },
-      { status: 404 }
+      {
+        error: orgErr
+          ? `Database error reading org: ${orgErr.message}`
+          : `Org ${params.orgId} does not exist in this environment.`,
+        details: orgErr ?? undefined,
+      },
+      { status: orgErr ? 500 : 404 }
     );
   }
   if (orgAny.user_id !== user.id) {
@@ -76,7 +81,13 @@ export async function GET(_req: NextRequest, { params }: { params: { orgId: stri
       { status: 403 }
     );
   }
-  const org = orgAny;
+  // product_type is optional — older orgs may not have it set.
+  const { data: orgExtras } = await supabase
+    .from('organizations')
+    .select('product_type')
+    .eq('id', params.orgId)
+    .single();
+  const org = { ...orgAny, product_type: (orgExtras as { product_type?: string } | null)?.product_type ?? 'cpq' };
 
   // ─── 2. Latest config-scan for the Revenue Leakage estimated data ──
   const { data: latestScan } = await supabase
