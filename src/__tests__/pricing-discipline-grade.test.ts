@@ -4,7 +4,7 @@
  * so the boundaries need to be deterministic.
  */
 import { describe, it, expect } from 'vitest';
-import { computeGrade, gradeNarrative } from '@/app/api/orgs/[orgId]/pricing-discipline/route';
+import { computeGrade, gradeNarrative } from '@/lib/forensics/pricing-discipline-grade';
 
 describe('computeGrade', () => {
   it('returns A when both metrics are well under threshold', () => {
