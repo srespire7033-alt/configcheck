@@ -46,8 +46,17 @@ export async function GET(request: NextRequest) {
 
   if (statusFilter) query = query.eq('approval_status', statusFilter);
 
-  const { data: actions, error } = await query;
+  const { data: rawActions, error } = await query;
   if (error) return NextResponse.json({ error: 'Failed to load actions' }, { status: 500 });
+
+  // Auto-resolved duplicate rows are cleanup artifacts — they were
+  // never user-rejected and there is always an active sibling row
+  // for the same finding_id (pending/approved/committed). They can't
+  // be re-staged (the partial unique index blocks it) and showing
+  // them in the Rejected tab is confusing. Hide them everywhere.
+  const actions = (rawActions ?? []).filter(
+    (a) => !(a.metadata as { auto_rejected_reason?: string } | null)?.auto_rejected_reason
+  );
 
   // Stitch finding details onto each action for the dashboard.
   type FindingShape = NonNullable<typeof findings>[number];
@@ -75,12 +84,15 @@ export async function GET(request: NextRequest) {
   // the dashboard tabs always show the right badge counts.
   const { data: allActionsForCounts } = await supabase
     .from('recovery_actions')
-    .select('approval_status, projected_reclaim_usd')
+    .select('approval_status, projected_reclaim_usd, metadata')
     .in('finding_id', findingIds)
     .eq('user_id', user.id);
   const counts = { pending: 0, approved: 0, committed: 0, rejected: 0 };
   const totals: Record<string, number> = { pending: 0, approved: 0, committed: 0, rejected: 0 };
   for (const a of allActionsForCounts ?? []) {
+    // Skip auto-resolved duplicates — they're cleanup artifacts, not
+    // a real workflow state the user should see counts for.
+    if ((a.metadata as { auto_rejected_reason?: string } | null)?.auto_rejected_reason) continue;
     const s = a.approval_status as keyof typeof counts;
     if (counts[s] != null) {
       counts[s] += 1;
