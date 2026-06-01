@@ -492,7 +492,7 @@ async function main() {
   //   (b) Discount Schedule with NO EndDate at all (open-ended promo)
   // Each gets 5 affected quote lines for a total of ~$130K leakage.
   // ────────────────────────────────────────────────────────────────────
-  console.log(`\n[4/6] Seeding DSC-FOR-001 promo roll-off fixtures...`);
+  console.log(`\n[4/7] Seeding DSC-FOR-001 promo roll-off fixtures...`);
   const promoExpectedLeakage = await seedPromoFixtures(
     conn,
     sfQuery,
@@ -502,11 +502,171 @@ async function main() {
     FIXTURE_TAG
   );
 
-  console.log(`\n[6/6] Expected verified leakage totals:`);
-  console.log(`  REN-001 (renewal uplift): ~$${Math.round(expectedRenLeakage).toLocaleString()}`);
-  console.log(`  DSC-FOR-001 (promo roll-off): ~$${Math.round(promoExpectedLeakage).toLocaleString()}`);
-  console.log(`  TOTAL: ~$${Math.round(expectedRenLeakage + promoExpectedLeakage).toLocaleString()}`);
+  console.log(`\n[5/7] Seeding QL-FOR-001 bundle required-option fixtures...`);
+  const bundleExpectedLeakage = await seedBundleFixtures(
+    conn,
+    sfQuery,
+    sfCreate,
+    fixtureAccountId,
+    FIXTURE_TAG
+  );
+
+  console.log(`\n[7/7] Expected verified leakage totals:`);
+  console.log(`  REN-001 (renewal uplift):        ~$${Math.round(expectedRenLeakage).toLocaleString()}`);
+  console.log(`  DSC-FOR-001 (promo roll-off):    ~$${Math.round(promoExpectedLeakage).toLocaleString()}`);
+  console.log(`  QL-FOR-001 (bundle free option): ~$${Math.round(bundleExpectedLeakage).toLocaleString()}`);
+  console.log(`  REN-002 (under list)             — computed at scan time, depends on Pricebook bump`);
+  console.log(`  TOTAL fixture leakage:           ~$${Math.round(expectedRenLeakage + promoExpectedLeakage + bundleExpectedLeakage).toLocaleString()}`);
   console.log(`\n✓ Done. Now go to OrgPrism → CPQ Ks → "+ Forensics" to see the engine in action.`);
+}
+
+/**
+ * QL-FOR-001 seed: create 2 bundle-option Products with active Standard
+ * Pricebook entries, then a fixture Quote with one parent line and the
+ * options as required children — set the option lines' NetPrice to $0
+ * (the leak the detector should catch).
+ *
+ * The detector inspects SBQQ__RequiredBy__c. Setting that field links
+ * an option line to its parent line on the same quote.
+ */
+async function seedBundleFixtures(
+  conn: import('jsforce').Connection,
+  sfQuery: <T>(soql: string, label: string) => Promise<T[]>,
+  sfCreate: (sobject: string, fields: Record<string, unknown>, label: string) => Promise<string>,
+  accountId: string,
+  fixtureTag: string
+): Promise<number> {
+  interface ProductRow { Id: string; Name: string }
+  interface PbeRow { Id: string; UnitPrice: string; Product2Id: string; Pricebook2Id: string }
+
+  // ─── 1. Two option products + their Pricebook entries.
+  const optionDefs = [
+    { name: 'Premium Support - Forensic Fixture', listPrice: 24_000 },
+    { name: 'Implementation Services - Forensic Fixture', listPrice: 18_000 },
+  ];
+
+  // Find the Standard Pricebook (every org has exactly one).
+  const stdPbRows = await sfQuery<{ Id: string }>(
+    `SELECT Id FROM Pricebook2 WHERE IsStandard = TRUE LIMIT 1`,
+    'Standard Pricebook lookup'
+  );
+  if (stdPbRows.length === 0) {
+    console.warn(`  ⚠️  No Standard Pricebook found — QL-FOR-001 seed cannot create Pricebook entries. Skipping.`);
+    return 0;
+  }
+  const stdPbId = stdPbRows[0].Id;
+
+  const optionProductIds: string[] = [];
+  for (const def of optionDefs) {
+    const existing = await sfQuery<ProductRow>(
+      `SELECT Id, Name FROM Product2 WHERE Name = '${def.name.replace(/'/g, "\\'")}' LIMIT 1`,
+      `Lookup product ${def.name}`
+    );
+    let prodId: string;
+    if (existing.length > 0) {
+      prodId = existing[0].Id;
+      console.log(`  ✓ Product "${def.name}" already exists: ${prodId}`);
+    } else {
+      prodId = await sfCreate('Product2', {
+        Name: def.name,
+        IsActive: true,
+        Description: `${fixtureTag} required bundle option for QL-FOR-001 demo`,
+      }, `Product ${def.name}`);
+    }
+    optionProductIds.push(prodId);
+
+    // Pricebook entry — required so the detector can resolve a current price.
+    const existingPbe = await sfQuery<PbeRow>(
+      `SELECT Id, UnitPrice FROM PricebookEntry WHERE Product2Id = '${prodId}' AND Pricebook2Id = '${stdPbId}' LIMIT 1`,
+      `Lookup PBE for ${def.name}`
+    );
+    if (existingPbe.length === 0) {
+      await sfCreate('PricebookEntry', {
+        Product2Id: prodId,
+        Pricebook2Id: stdPbId,
+        UnitPrice: def.listPrice,
+        IsActive: true,
+      }, `PBE for ${def.name}`);
+    } else if (parseFloat(existingPbe[0].UnitPrice || '0') !== def.listPrice) {
+      // Update price if it drifted.
+      const updateRes = await conn.sobject('PricebookEntry').update({ Id: existingPbe[0].Id, UnitPrice: def.listPrice });
+      const ok = Array.isArray(updateRes) ? updateRes[0].success : updateRes.success;
+      if (!ok) console.warn(`  ⚠️  Could not update PBE price for ${def.name}`);
+    }
+  }
+
+  // ─── 2. Bundle parent Product.
+  const parentName = 'Enterprise Bundle - Forensic Fixture';
+  const parentExisting = await sfQuery<ProductRow>(
+    `SELECT Id FROM Product2 WHERE Name = '${parentName}' LIMIT 1`,
+    'Lookup bundle parent'
+  );
+  let parentProdId: string;
+  if (parentExisting.length > 0) {
+    parentProdId = parentExisting[0].Id;
+    console.log(`  ✓ Parent product already exists: ${parentProdId}`);
+  } else {
+    parentProdId = await sfCreate('Product2', {
+      Name: parentName,
+      IsActive: true,
+      Description: `${fixtureTag} bundle parent for QL-FOR-001 demo`,
+    }, `Bundle parent product`);
+    await sfCreate('PricebookEntry', {
+      Product2Id: parentProdId,
+      Pricebook2Id: stdPbId,
+      UnitPrice: 100_000,
+      IsActive: true,
+    }, `PBE for bundle parent`);
+  }
+
+  // ─── 3. Idempotency at QuoteLine level — check before creating.
+  const existingBundleLines = await sfQuery<{ Id: string; SBQQ__Product__c: string }>(
+    `SELECT Id, SBQQ__Product__c
+     FROM SBQQ__QuoteLine__c
+     WHERE SBQQ__Quote__r.SBQQ__Account__c = '${accountId}'
+       AND SBQQ__Product__c IN (${optionProductIds.map((id) => `'${id}'`).join(',')})
+       AND SBQQ__NetPrice__c = 0
+     LIMIT 10`,
+    'Existing bundle option lines'
+  );
+  if (existingBundleLines.length >= optionProductIds.length) {
+    console.log(`  ✓ ${existingBundleLines.length} bundle-option lines already seeded; skipping batch.`);
+    // Return expected leakage so summary stays honest.
+    return optionDefs.reduce((sum, def) => sum + def.listPrice, 0);
+  }
+
+  // ─── 4. Create a fixture Quote with parent line + required-option lines @ $0.
+  const quoteId = await sfCreate('SBQQ__Quote__c', {
+    SBQQ__Account__c: accountId,
+    SBQQ__Type__c: 'Quote',
+    SBQQ__StartDate__c: '2026-01-01',
+    SBQQ__EndDate__c: '2027-01-01',
+  }, 'Bundle fixture Quote');
+
+  const parentLineId = await sfCreate('SBQQ__QuoteLine__c', {
+    SBQQ__Quote__c: quoteId,
+    SBQQ__Product__c: parentProdId,
+    SBQQ__Quantity__c: 1,
+    SBQQ__ListPrice__c: 100_000,
+    SBQQ__NetPrice__c: 100_000,
+  }, 'Bundle parent QuoteLine');
+
+  let totalLeakage = 0;
+  for (let i = 0; i < optionProductIds.length; i += 1) {
+    const optProd = optionProductIds[i];
+    const def = optionDefs[i];
+    await sfCreate('SBQQ__QuoteLine__c', {
+      SBQQ__Quote__c: quoteId,
+      SBQQ__Product__c: optProd,
+      SBQQ__RequiredBy__c: parentLineId,
+      SBQQ__Quantity__c: 1,
+      SBQQ__ListPrice__c: def.listPrice,
+      SBQQ__NetPrice__c: 0, // ← the leak
+    }, `Required option QuoteLine ${def.name}`);
+    totalLeakage += def.listPrice;
+    console.log(`  + ${def.name}: list ${def.listPrice}, net $0 → leak ${def.listPrice}`);
+  }
+  return totalLeakage;
 }
 
 /**

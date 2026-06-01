@@ -101,6 +101,31 @@ const TEMPLATES: Record<string, (f: DetectorResult, a: AttributionCandidate) => 
       model: 'template-fallback',
     };
   },
+  // ─────────── QL-FOR-001 / Class E ───────────
+  PRICE_OVERRIDE_MISSING_ON_OPTION: (f, a) => {
+    const productName = (a.evidence.product_name as string | undefined) ?? 'option';
+    const resolved = (a.evidence.resolved_list_price as number | undefined) ?? 0;
+    const quantity = (a.evidence.quantity as number | undefined) ?? 1;
+    return {
+      plainEnglish:
+        `Quote line ${f.primaryRecord.name} is a required bundle option ("${productName}") but was priced at $0. ` +
+        `Product2 carries a current list of ${f.currencyIsoCode} ${resolved.toLocaleString()}/unit × ${quantity} units — that's the ${f.currencyIsoCode} ${f.gapUsd.toLocaleString()} the customer received free.`,
+      suggestedFix:
+        `Update the bundle's pricing logic so required options always inherit Product2.ListPrice. In Setup → CPQ Configuration → Bundle Options, ensure 'Option Price Editable' is unchecked for required options. Re-quote affected deals to restore the option's price.`,
+      model: 'template-fallback',
+    };
+  },
+  OPTION_PRICE_UNRESOLVED: (f, a) => {
+    const productName = (a.evidence.product_name as string | undefined) ?? 'option';
+    return {
+      plainEnglish:
+        `Quote line ${f.primaryRecord.name} is a required bundle option ("${productName}") priced at $0 — but Product2 doesn't have a Standard Pricebook entry either. ` +
+        `Either the option is intentionally free (legitimate strategic giveaway) OR the product's Pricebook entry was never created. Manual review needed.`,
+      suggestedFix:
+        `Open Product2 "${productName}" in Setup. If it should be charged, create a Standard Pricebook entry with the intended price. If it's a free required option (rare but valid), document the strategic intent on the product description so future audits don't keep flagging it.`,
+      model: 'template-fallback',
+    };
+  },
 };
 
 const DEFAULT_TEMPLATE = (f: DetectorResult, a: AttributionCandidate): RenderResult => ({
