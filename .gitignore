@@ -45,3 +45,20 @@ test-results/
 .claude/settings.local.json
 .claude/scheduled_tasks.lock
 .claude/worktrees/
+
+# Personal / sensitive — never commit
+recovery-codes.txt
+*.recovery-codes.txt
+*-2fa.txt
+.env
+.env.*
+
+# Local-only artifacts (decks, demos, exports)
+*.docx
+*.pptx
+*.key
+Recordings/
+OrgPrism Deck*.html
+
+# Generated recovery CSVs from real org scans — not source
+recovery-*.csv

@@ -76,6 +76,8 @@ export async function verifyCommit(
       return verifyDscFor001(finding, conn);
     case 'ORD-FOR-001':
       return verifyOrdFor001(finding, conn);
+    case 'ORD-FOR-002':
+      return verifyOrdFor002(finding, conn);
     case 'QL-FOR-001':
       return verifyQlFor001(finding, conn);
     default:
@@ -219,6 +221,42 @@ async function verifyOrdFor001(
   } catch (e) {
     return failed(`Verification query failed: ${e instanceof Error ? e.message : String(e)}`);
   }
+}
+
+async function verifyOrdFor002(
+  finding: FindingForVerification,
+  conn: Connection
+): Promise<CommitVerificationResult> {
+  const meta = (finding.metadata as Record<string, unknown>) ?? {};
+  const quoteNet = (meta.quote_net_amount as number | undefined) ?? 0;
+  const orderIds = (meta.order_ids as string[] | undefined) ?? [];
+  if (orderIds.length === 0) {
+    return failed('No Order IDs on finding — cannot verify.');
+  }
+
+  try {
+    const res = await conn.query<{ TotalAmount: string | number | null }>(
+      `SELECT TotalAmount FROM Order WHERE Id IN (${orderIds.map((id) => `'${id}'`).join(',')})`
+    );
+    const actualSum = res.records.reduce((s, r) => s + Number(r.TotalAmount ?? 0), 0);
+    // "Exact match" per spec — $0.01 tolerance for float drift only.
+    const verified = Math.abs(actualSum - quoteNet) <= 0.01;
+    return {
+      verified,
+      verified_at: nowIso(),
+      expected_value: quoteNet,
+      actual_value: round2Verif(actualSum),
+      message: verified
+        ? `Order total sum (${actualSum.toLocaleString()}) now matches Quote Net Amount (${quoteNet.toLocaleString()}).`
+        : `Order total sum is ${actualSum.toLocaleString()} but Quote Net Amount is ${quoteNet.toLocaleString()}. Variance ${(actualSum - quoteNet).toLocaleString()} remains — patch may not have landed.`,
+    };
+  } catch (e) {
+    return failed(`Verification query failed: ${e instanceof Error ? e.message : String(e)}`);
+  }
+}
+
+function round2Verif(n: number): number {
+  return Math.round(n * 100) / 100;
 }
 
 async function verifyQlFor001(

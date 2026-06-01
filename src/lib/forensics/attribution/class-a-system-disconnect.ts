@@ -38,6 +38,7 @@ const CLASS_A_TRACER: AttributionTracer = {
   rootCauseClass: 'A',
 
   async trace(finding: DetectorResult): Promise<AttributionCandidate[]> {
+    if (finding.detectorId === 'ORD-FOR-002') return traceQuoteOrderVariance(finding);
     if (finding.detectorId !== 'ORD-FOR-001') return [];
 
     const hasNullBillingRule = finding.metadata?.has_orderitem_with_null_billing_rule === true;
@@ -90,3 +91,48 @@ const CLASS_A_TRACER: AttributionTracer = {
 };
 
 export default CLASS_A_TRACER;
+
+/**
+ * ORD-FOR-002 — Quote-to-Order variance. Class A is the DEFAULT
+ * explanation: the Q→O sync didn't preserve totals. We still emit a
+ * Class A candidate at moderate confidence, then let Class B
+ * (manual override) compete on the manual-edit signal.
+ *
+ * If `manually_edited = true` we lower our confidence so Class B can
+ * win the ranking. If `manually_edited = false`, the field-mapping
+ * disconnect explanation stands.
+ */
+function traceQuoteOrderVariance(finding: DetectorResult): AttributionCandidate[] {
+  const direction = (finding.metadata?.direction as string | undefined) ?? 'under_billed';
+  const manuallyEdited = finding.metadata?.manually_edited === true;
+  const orderCount = (finding.metadata?.order_ids as string[] | undefined)?.length ?? 1;
+  const quoteId = finding.metadata?.quote_id as string | undefined;
+  const quoteName = (finding.metadata?.quote_name as string | undefined) ?? 'Quote';
+
+  return [
+    {
+      rootCauseClass: 'A',
+      rootConfigType: 'SBQQ__Quote__c',
+      rootConfigId: quoteId ?? null,
+      rootConfigName: quoteName,
+      reasonCode: 'QUOTE_ORDER_TOTAL_VARIANCE',
+      // Lower confidence when manual-edit signal is present so Class B
+      // can take primary attribution. Higher when there's no manual
+      // signal — the Q→O field-mapping story is the leading theory.
+      confidence: manuallyEdited ? 0.5 : 0.85,
+      evidence: {
+        quote_id: quoteId,
+        quote_name: quoteName,
+        quote_net_amount: finding.metadata?.quote_net_amount,
+        order_total_sum: finding.metadata?.order_total_sum,
+        variance_amount: finding.metadata?.variance_amount,
+        variance_pct: finding.metadata?.variance_pct,
+        direction,
+        order_count: orderCount,
+        recovery_mode: finding.metadata?.recovery_mode,
+        system_disconnect:
+          'Quote was approved at the quoted Net Amount but the activated Order(s) totalled a different number. The Q→O conversion either dropped a line, applied a different Pricebook, or a Flow/Apex on Order rewrote pricing fields. Inspect the Q→O field mapping and any Order triggers/Flows.',
+      },
+    },
+  ];
+}

@@ -139,6 +139,38 @@ const TEMPLATES: Record<string, (f: DetectorResult, a: AttributionCandidate) => 
       model: 'template-fallback',
     };
   },
+  // ─────────── ORD-FOR-002 / Class A or B ───────────
+  QUOTE_ORDER_TOTAL_VARIANCE: (f, a) => {
+    const direction = (a.evidence.direction as string | undefined) ?? 'under_billed';
+    const quoteNet = (a.evidence.quote_net_amount as number | undefined) ?? 0;
+    const orderSum = (a.evidence.order_total_sum as number | undefined) ?? 0;
+    const orderCount = (a.evidence.order_count as number | undefined) ?? 1;
+    const recoveryMode = (a.evidence.recovery_mode as string | undefined) ?? 'pre_invoice_patch';
+    const directionPhrase = direction === 'under_billed' ? 'under-billed' : 'over-billed';
+    const fixSentence =
+      recoveryMode === 'post_invoice_manual_review'
+        ? `Order has been invoiced — handle via Salesforce Billing's Credit/Debit Memo flow. Activated OrderItems cannot be repriced once invoices exist.`
+        : `Patch each OrderItem.UnitPrice on the affected Order(s) so the rolled-up Order.TotalAmount sum matches Quote ${a.rootConfigName}'s ${f.currencyIsoCode} ${quoteNet.toLocaleString()}.`;
+    return {
+      plainEnglish:
+        `Quote "${a.rootConfigName}" was approved at ${f.currencyIsoCode} ${quoteNet.toLocaleString()} but the ${orderCount} activated Order(s) totalled ${f.currencyIsoCode} ${orderSum.toLocaleString()} — the customer is ${directionPhrase} by ${f.currencyIsoCode} ${f.gapUsd.toLocaleString()}. ` +
+        `The Q→O conversion either dropped a line, applied a different Pricebook, or a Flow/Apex on Order rewrote pricing fields. There is no audit trail of an approval that authorized the variance.`,
+      suggestedFix: fixSentence,
+      model: 'template-fallback',
+    };
+  },
+  ORDER_EDITED_POST_ACTIVATION: (f, a) => {
+    const direction = (a.evidence.direction as string | undefined) ?? 'under_billed';
+    const variance = (a.evidence.variance_amount as number | undefined) ?? 0;
+    return {
+      plainEnglish:
+        `Order ${a.rootConfigName} was edited by a different user more than an hour after it was created, and the totals no longer match the originating Quote. The customer is ${direction === 'under_billed' ? 'under-billed' : 'over-billed'} by ${f.currencyIsoCode} ${Math.abs(variance).toLocaleString()}. ` +
+        `Manual edit on an activated Order bypassed CPQ pricing — no approval rule on Order intercepted the change.`,
+      suggestedFix:
+        `Open Order ${a.rootConfigName} → History. Reverse the manual edit by patching OrderItem.UnitPrice back to the Quote-derived values, and add an approval rule on Order to block post-activation pricing-field edits.`,
+      model: 'template-fallback',
+    };
+  },
   OPTION_PRICE_UNRESOLVED: (f, a) => {
     const productName = (a.evidence.product_name as string | undefined) ?? 'option';
     return {

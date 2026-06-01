@@ -137,6 +137,81 @@ export function buildRecoveryPayload(finding: FindingShape): RecoveryPayload {
         projectedReclaimUsd,
       };
     }
+    // ────────────────── ORD-FOR-002 — patch OrderItem unit prices ──
+    case 'ORD-FOR-002': {
+      const recoveryMode = (m.recovery_mode as string | undefined) ?? 'pre_invoice_patch';
+      const direction = (m.direction as string | undefined) ?? 'under_billed';
+      const quoteName = (m.quote_name as string | undefined) ?? '';
+      const quoteNet = (m.quote_net_amount as number | undefined) ?? 0;
+      const orderSum = (m.order_total_sum as number | undefined) ?? 0;
+      const variance = (m.variance_amount as number | undefined) ?? 0;
+      const breakdown =
+        (m.line_breakdown as Array<{
+          order_item_id: string;
+          product_name: string;
+          unit_price: number;
+          quantity: number;
+          line_total: number;
+        }> | undefined) ?? [];
+
+      // Post-invoice: no CSV — invoices already exist, can't reprice
+      // activated OrderItems without a Credit Memo. The recovery row
+      // exists but draft_payload is just a guidance note. Consultant
+      // handles externally and marks Committed manually.
+      if (recoveryMode === 'post_invoice_manual_review' || breakdown.length === 0) {
+        return {
+          csvHeader: 'OrderId,Variance,Direction,Action,RecoveryNotes',
+          csvRow: [
+            csvField(r.primary_record?.id),
+            csvField(variance.toFixed(2)),
+            csvField(direction),
+            csvField(direction === 'under_billed' ? 'IssueDebitMemo' : 'IssueCreditMemo'),
+            csvField(
+              `Quote ${quoteName} approved at ${quoteNet.toLocaleString()}; Order(s) totalled ${orderSum.toLocaleString()}. Order has invoices — handle via Salesforce Billing Credit/Debit Memo flow.`
+            ),
+          ].join(','),
+          actionLabel: direction === 'under_billed'
+            ? 'Issue debit memo (invoiced order — manual)'
+            : 'Issue credit memo (invoiced order — manual)',
+          filename: `recovery-ORD-FOR-002-${r.primary_record?.name ?? finding.id}.csv`,
+          projectedReclaimUsd,
+        };
+      }
+
+      // Pre-invoice: distribute the variance proportionally across
+      // OrderItems by current line_total. Each line's patched
+      // UnitPrice = original × adjustment_factor. Adjustment factor
+      // is the ratio that makes SUM(line_totals) == quoteNet.
+      //
+      // The CSV is a multi-row patch — Data Loader applies all rows
+      // in one upsert. We override the bundle's default single-row
+      // semantics by stuffing rows into csvRow with embedded newlines;
+      // bundlePayloads() groups by header so multiple ORD-FOR-002
+      // findings still merge correctly.
+      const adjustmentFactor = orderSum !== 0 ? quoteNet / orderSum : 1;
+      const patchedRows = breakdown.map((line) => {
+        const newUnitPrice = line.quantity > 0
+          ? Math.round(line.unit_price * adjustmentFactor * 100) / 100
+          : line.unit_price;
+        return [
+          csvField(line.order_item_id),
+          csvField(newUnitPrice.toFixed(2)),
+          csvField(
+            `${line.product_name}: was ${line.unit_price.toFixed(2)} × ${line.quantity}, patch to match Quote ${quoteName}`
+          ),
+        ].join(',');
+      });
+
+      return {
+        csvHeader: 'Id,UnitPrice,RecoveryNotes',
+        csvRow: patchedRows.join('\n'),
+        actionLabel: direction === 'under_billed'
+          ? 'Patch OrderItem UnitPrices upward to match Quote'
+          : 'Patch OrderItem UnitPrices downward to match Quote',
+        filename: `recovery-ORD-FOR-002-${r.primary_record?.name ?? finding.id}.csv`,
+        projectedReclaimUsd,
+      };
+    }
     // ────────────────── ORD-FOR-001 — operational fix (no field patch) ──
     case 'ORD-FOR-001': {
       const days = (m.days_since_activation as number | undefined) ?? 0;

@@ -150,6 +150,62 @@ describe('verifyCommit', () => {
     });
   });
 
+  describe('ORD-FOR-002', () => {
+    const baseOrd002 = (over: Record<string, unknown> = {}) => ({
+      id: 'F002',
+      detector_id: 'ORD-FOR-002',
+      source_record_refs: {
+        primary_record: { type: 'Order', id: '801001', name: 'O-1001' },
+      },
+      metadata: {
+        quote_net_amount: 100_000,
+        order_ids: ['801001', '801002'],
+        ...over,
+      },
+    });
+
+    it('verified when summed Order TotalAmount matches Quote Net Amount', async () => {
+      const conn = mockConn({
+        records: [{ TotalAmount: 60_000 }, { TotalAmount: 40_000 }],
+      });
+      const v = await verifyCommit(baseOrd002(), conn);
+      expect(v?.verified).toBe(true);
+      expect(v?.expected_value).toBe(100_000);
+      expect(v?.actual_value).toBe(100_000);
+    });
+
+    it('NOT verified when Order sum still differs from Quote', async () => {
+      const conn = mockConn({
+        records: [{ TotalAmount: 60_000 }, { TotalAmount: 30_000 }],
+      });
+      const v = await verifyCommit(baseOrd002(), conn);
+      expect(v?.verified).toBe(false);
+      expect(v?.actual_value).toBe(90_000);
+      expect(v?.message).toContain('90,000');
+    });
+
+    it('tolerates float drift up to $0.01', async () => {
+      const conn = mockConn({
+        records: [{ TotalAmount: 100_000.005 }],
+      });
+      const v = await verifyCommit(
+        { ...baseOrd002(), metadata: { quote_net_amount: 100_000, order_ids: ['801001'] } },
+        conn
+      );
+      expect(v?.verified).toBe(true);
+    });
+
+    it('fails verification when order_ids missing', async () => {
+      const conn = mockConn({ records: [] });
+      const v = await verifyCommit(
+        { ...baseOrd002(), metadata: { quote_net_amount: 100_000, order_ids: [] } },
+        conn
+      );
+      expect(v?.verified).toBe(false);
+      expect(v?.message).toContain('No Order IDs');
+    });
+  });
+
   describe('Unrecognized detectors', () => {
     it('returns null when there is no verifier for the detector', async () => {
       const finding = baseFinding('SOME_UNKNOWN_DETECTOR');
