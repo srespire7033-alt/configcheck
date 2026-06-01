@@ -63,6 +63,15 @@ interface Finding {
   metadata: Record<string, unknown>;
 }
 
+interface RecoveryActionData {
+  id: string;
+  approval_status: 'pending' | 'approved' | 'committed' | 'rejected' | 'expired';
+  projected_reclaim_usd: number;
+  approved_at: string | null;
+  committed_at: string | null;
+  created_at: string;
+}
+
 interface Trace {
   id: string;
   root_cause_class: 'A' | 'B' | 'C' | 'D' | 'E';
@@ -97,8 +106,10 @@ export default function ForensicFindingPage() {
   const findingId = params?.findingId as string;
   const [finding, setFinding] = useState<Finding | null>(null);
   const [traces, setTraces] = useState<Trace[]>([]);
+  const [recoveryActions, setRecoveryActions] = useState<RecoveryActionData[]>([]);
   const [orgInstanceUrl, setOrgInstanceUrl] = useState<string | null>(null);
   const [evidenceOpen, setEvidenceOpen] = useState(false);
+  const [stagingInFlight, setStagingInFlight] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -116,11 +127,45 @@ export default function ForensicFindingPage() {
         }
         setFinding(detailRes.finding);
         setTraces(detailRes.traces);
+        setRecoveryActions(detailRes.recovery_actions ?? []);
         if (orgRes?.instance_url) setOrgInstanceUrl(orgRes.instance_url);
       })
       .catch((e) => setError(e instanceof Error ? e.message : 'Failed to load finding'))
       .finally(() => setLoading(false));
   }, [findingId, orgId]);
+
+  async function handleStage() {
+    setStagingInFlight(true);
+    try {
+      const res = await fetch(`/api/forensic-findings/${findingId}/stage`, { method: 'POST' });
+      const json = await res.json();
+      if (json.action) {
+        setRecoveryActions((prev) => {
+          const without = prev.filter((p) => p.id !== json.action.id);
+          return [json.action, ...without];
+        });
+      }
+    } finally {
+      setStagingInFlight(false);
+    }
+  }
+
+  async function handleBulkAction(actionId: string, action: 'approve' | 'reject' | 'commit' | 'stage') {
+    setStagingInFlight(true);
+    try {
+      await fetch('/api/recovery-actions/bulk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: [actionId], action }),
+      });
+      // Refetch to get fresh status + timestamps.
+      const res = await fetch(`/api/forensic-findings?findingId=${findingId}`);
+      const json = await res.json();
+      setRecoveryActions(json.recovery_actions ?? []);
+    } finally {
+      setStagingInFlight(false);
+    }
+  }
 
   if (loading) return <LoadingScreen />;
   if (error || !finding) {
@@ -351,39 +396,128 @@ export default function ForensicFindingPage() {
           </Card>
         )}
 
-        {/* 4. Recovery action */}
-        <Card>
-          <CardHeader>
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-              <CheckCircle2 className="h-5 w-5 text-green-500" />
-              Recovery
-            </h2>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-              Stage-and-approve: review the CSV, upload via Data Loader in your org. No automated write.
-            </p>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-between gap-4 flex-wrap">
-              <div>
-                <p className="text-[11px] uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                  Projected reclaim
+        {/* 4. Recovery action — state-aware. Stage → Approve → Commit. */}
+        {(() => {
+          const action = recoveryActions[0]; // most recent
+          const status = action?.approval_status;
+          return (
+            <Card>
+              <CardHeader>
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                  <CheckCircle2 className="h-5 w-5 text-green-500" />
+                  Recovery
+                </h2>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+                  Stage → Approve → Download CSV → Upload via Data Loader → Mark Committed.
                 </p>
-                <p className="text-2xl font-bold text-green-700 dark:text-green-400">
-                  {formatMoney(recoverableUsd, finding.currency_iso_code)}
-                </p>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                  {Math.round(finding.recoverability_score * 100)}% of {formatMoney(finding.gap_usd, finding.currency_iso_code)} gap
-                </p>
-              </div>
-              <a
-                href={`/api/forensic-findings/${findingId}/recovery-csv`}
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-green-600 hover:bg-green-700 text-white font-semibold transition"
-              >
-                <Download className="h-4 w-4" /> Download recovery CSV
-              </a>
-            </div>
-          </CardContent>
-        </Card>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center justify-between gap-4 flex-wrap">
+                  <div>
+                    <p className="text-[11px] uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                      Projected reclaim
+                    </p>
+                    <p className="text-2xl font-bold text-green-700 dark:text-green-400">
+                      {formatMoney(recoverableUsd, finding.currency_iso_code)}
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                      {Math.round(finding.recoverability_score * 100)}% of {formatMoney(finding.gap_usd, finding.currency_iso_code)} gap
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {/* State machine action buttons */}
+                    {!action && (
+                      <button
+                        onClick={handleStage}
+                        disabled={stagingInFlight}
+                        className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold transition disabled:opacity-50"
+                      >
+                        Stage for recovery
+                      </button>
+                    )}
+                    {status === 'pending' && (
+                      <>
+                        <span className="inline-flex items-center gap-1 px-2 py-1 rounded text-[11px] font-medium bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300">
+                          Pending review
+                        </span>
+                        <button
+                          onClick={() => handleBulkAction(action.id, 'approve')}
+                          disabled={stagingInFlight}
+                          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium disabled:opacity-50"
+                        >
+                          <CheckCircle2 className="h-4 w-4" /> Approve
+                        </button>
+                        <button
+                          onClick={() => handleBulkAction(action.id, 'reject')}
+                          disabled={stagingInFlight}
+                          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50"
+                        >
+                          Reject
+                        </button>
+                      </>
+                    )}
+                    {status === 'approved' && (
+                      <>
+                        <span className="inline-flex items-center gap-1 px-2 py-1 rounded text-[11px] font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300">
+                          Approved
+                        </span>
+                        <a
+                          href={`/api/forensic-findings/${findingId}/recovery-csv`}
+                          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-green-600 hover:bg-green-700 text-white font-semibold transition"
+                        >
+                          <Download className="h-4 w-4" /> Download CSV
+                        </a>
+                        <button
+                          onClick={() => handleBulkAction(action.id, 'commit')}
+                          disabled={stagingInFlight}
+                          title="Mark committed AFTER uploading the CSV to Salesforce"
+                          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50"
+                        >
+                          Mark committed
+                        </button>
+                      </>
+                    )}
+                    {status === 'committed' && (
+                      <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded text-sm font-medium bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300">
+                        <CheckCircle2 className="h-4 w-4" /> Committed
+                      </span>
+                    )}
+                    {(status === 'rejected' || status === 'expired') && (
+                      <>
+                        <span className="inline-flex items-center gap-1 px-2 py-1 rounded text-[11px] font-medium bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300">
+                          {status === 'rejected' ? 'Rejected' : 'Expired'}
+                        </span>
+                        <button
+                          onClick={() => handleBulkAction(action.id, 'stage')}
+                          disabled={stagingInFlight}
+                          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-sm font-medium disabled:opacity-50"
+                        >
+                          Re-stage
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+                {action && (
+                  <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+                    <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                      Recovery action created {new Date(action.created_at).toLocaleString()}
+                      {action.approved_at && ` · Approved ${new Date(action.approved_at).toLocaleString()}`}
+                      {action.committed_at && ` · Committed ${new Date(action.committed_at).toLocaleString()}`}
+                      {' · '}
+                      <a
+                        href={`/orgs/${orgId}/forensics/recovery`}
+                        className="text-blue-600 dark:text-blue-400 hover:underline"
+                      >
+                        View recovery queue
+                      </a>
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          );
+        })()}
 
         {/* Supporting records */}
         {finding.source_record_refs.supporting_records.length > 0 && (
