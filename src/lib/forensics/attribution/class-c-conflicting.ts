@@ -103,35 +103,49 @@ export default CLASS_C_TRACER;
  * condition=`Quote.Type='Renewal'` is a near-certain culprit for a
  * REN-001 finding.
  */
+// Per-connection cache for the rules-query result. Without this the tracer
+// re-runs the same query for every finding — for 20 findings that's 20
+// describes + 20 SOQL roundtrips, blowing Vercel's 60s window. We cache
+// via WeakMap so garbage collection still works when the Connection is
+// released.
+const RULES_CACHE = new WeakMap<object, Promise<{
+  targetFieldColumn: string | null;
+  rules: Array<PriceRuleRow & { Actions: { records: PriceActionRow[] }; Conditions: { records: PriceConditionRow[] } }>;
+}>>();
+
+function getRulesCached(conn: Connection) {
+  let cached = RULES_CACHE.get(conn);
+  if (cached) return cached;
+  cached = (async () => {
+    const paDesc = (await conn.describe('SBQQ__PriceAction__c')) as { fields: Array<{ name: string }> };
+    const paFieldNames = new Set(paDesc.fields.map((f) => f.name));
+    const targetFieldColumn = ['SBQQ__TargetField__c', 'SBQQ__FieldName__c', 'SBQQ__Field__c'].find((c) => paFieldNames.has(c)) ?? null;
+    if (!targetFieldColumn) {
+      console.warn('[forensics] Class C: no target-field column on SBQQ__PriceAction__c; skipping rule tracer');
+      return { targetFieldColumn: null, rules: [] };
+    }
+    const rulesRes = await conn.query<PriceRuleRow & { Actions: { records: PriceActionRow[] }; Conditions: { records: PriceConditionRow[] } }>(
+      `SELECT Id, Name, SBQQ__Active__c, SBQQ__EvaluationEvent__c, SBQQ__LookupObject__c, SBQQ__ConditionsMet__c,
+         (SELECT Id, ${targetFieldColumn} TargetField, SBQQ__SourceField__c, SBQQ__Value__c, SBQQ__Formula__c FROM SBQQ__PriceActions__r),
+         (SELECT Id, SBQQ__Field__c, SBQQ__Operator__c, SBQQ__Value__c, SBQQ__Object__c FROM SBQQ__PriceConditions__r)
+       FROM SBQQ__PriceRule__c
+       WHERE SBQQ__Active__c = TRUE
+       LIMIT 500`
+    );
+    return { targetFieldColumn, rules: rulesRes.records };
+  })();
+  RULES_CACHE.set(conn, cached);
+  return cached;
+}
+
 async function findConflictingPriceRules(conn: Connection, finding: DetectorResult): Promise<AttributionCandidate[]> {
-  // 1. Active Price Rules that have Actions targeting any of the
-  //    relevant pricing fields.
   const targetFieldValues = ['SBQQ__NetPrice__c', 'SBQQ__Price__c', 'SBQQ__Discount__c', 'SBQQ__ListPrice__c'];
 
-  // Resolve which field on SBQQ__PriceAction__c stores the target field
-  // name. Varies across CPQ versions — standard is SBQQ__TargetField__c,
-  // some installs use SBQQ__FieldName__c. Describe once, pick whichever
-  // exists. Without this the SELECT below 500s the whole tracer.
-  const paDesc = (await conn.describe('SBQQ__PriceAction__c')) as { fields: Array<{ name: string }> };
-  const paFieldNames = new Set(paDesc.fields.map((f) => f.name));
-  const targetFieldColumn = ['SBQQ__TargetField__c', 'SBQQ__FieldName__c', 'SBQQ__Field__c'].find((c) => paFieldNames.has(c));
-  if (!targetFieldColumn) {
-    console.warn('[forensics] Class C: no target-field column on SBQQ__PriceAction__c; skipping rule tracer');
-    return [];
-  }
-
-  // Pull rules + their actions/conditions. Single SOQL with sub-selects
-  // because Price Rule data volume is bounded (orgs rarely have >500).
-  // We project the resolved target field as TargetField so downstream
-  // code stays version-agnostic.
-  const rulesRes = await conn.query<PriceRuleRow & { Actions: { records: PriceActionRow[] }; Conditions: { records: PriceConditionRow[] } }>(
-    `SELECT Id, Name, SBQQ__Active__c, SBQQ__EvaluationEvent__c, SBQQ__LookupObject__c, SBQQ__ConditionsMet__c,
-       (SELECT Id, ${targetFieldColumn} TargetField, SBQQ__SourceField__c, SBQQ__Value__c, SBQQ__Formula__c FROM SBQQ__PriceActions__r),
-       (SELECT Id, SBQQ__Field__c, SBQQ__Operator__c, SBQQ__Value__c, SBQQ__Object__c FROM SBQQ__PriceConditions__r)
-     FROM SBQQ__PriceRule__c
-     WHERE SBQQ__Active__c = TRUE
-     LIMIT 500`
-  );
+  const { targetFieldColumn, rules } = await getRulesCached(conn);
+  if (!targetFieldColumn) return [];
+  // Note: rulesRes used to be a local; the cached version is bound here
+  // for compat with the for-loop below.
+  const rulesRes = { records: rules };
 
   const candidates: AttributionCandidate[] = [];
   for (const rule of rulesRes.records) {
@@ -206,21 +220,35 @@ async function findConflictingPriceRules(conn: Connection, finding: DetectorResu
  * but not proven; verify manually." This is honest about what we know
  * vs. what we'd need to parse Flow XML to prove.
  */
-async function findConflictingFlows(conn: Connection, finding: DetectorResult): Promise<AttributionCandidate[]> {
-  // Tooling API endpoint for Flow definitions.
-  // We're looking for Flows on the renewal pricing surface area.
-  // jsforce's tooling object exposes the metadata schema.
-  try {
-    const flowsRes = await conn.tooling.query<FlowDefinitionRow>(
-      `SELECT Id, DeveloperName, MasterLabel, Description
-       FROM FlowDefinitionView
-       WHERE TriggerType IN ('RecordAfterSave', 'RecordBeforeSave')
-         AND IsActive = TRUE
-         AND TriggerObjectOrEvent.QualifiedApiName IN ('SBQQ__Quote__c', 'SBQQ__QuoteLine__c', 'Contract', 'SBQQ__Subscription__c')
-       LIMIT 100`
-    );
+// Same caching pattern for the Flow query.
+const FLOWS_CACHE = new WeakMap<object, Promise<FlowDefinitionRow[]>>();
+function getFlowsCached(conn: Connection): Promise<FlowDefinitionRow[]> {
+  let cached = FLOWS_CACHE.get(conn);
+  if (cached) return cached;
+  cached = (async () => {
+    try {
+      const flowsRes = await conn.tooling.query<FlowDefinitionRow>(
+        `SELECT Id, DeveloperName, MasterLabel, Description
+         FROM FlowDefinitionView
+         WHERE TriggerType IN ('RecordAfterSave', 'RecordBeforeSave')
+           AND IsActive = TRUE
+           AND TriggerObjectOrEvent.QualifiedApiName IN ('SBQQ__Quote__c', 'SBQQ__QuoteLine__c', 'Contract', 'SBQQ__Subscription__c')
+         LIMIT 100`
+      );
+      return flowsRes.records;
+    } catch (err) {
+      console.warn('[forensics] Flow tracer query failed:', err instanceof Error ? err.message : err);
+      return [];
+    }
+  })();
+  FLOWS_CACHE.set(conn, cached);
+  return cached;
+}
 
-    return flowsRes.records.map((flow) => ({
+async function findConflictingFlows(conn: Connection, finding: DetectorResult): Promise<AttributionCandidate[]> {
+  try {
+    const flows = await getFlowsCached(conn);
+    return flows.map((flow) => ({
       rootCauseClass: 'C' as const,
       rootConfigType: 'Flow' as const,
       rootConfigId: flow.Id,

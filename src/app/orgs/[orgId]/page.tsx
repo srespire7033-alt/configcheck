@@ -1345,14 +1345,19 @@ export default function OrgDetailPage() {
                     )}
                   </div>
                   <div className="inline-flex rounded-xl overflow-hidden shadow-sm shadow-blue-600/30">
+                    {/* Both buttons disabled while EITHER scan is in
+                        flight. Forensic scans run for minutes — leaving
+                        the button clickable lets users queue up a
+                        second one, which produces duplicate data and
+                        confuses the leakage card. */}
                     <button
                       onClick={() => handleScan()}
-                      disabled={scanning}
-                      className="px-3 sm:px-6 py-2.5 sm:py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium transition flex items-center justify-center gap-2 disabled:opacity-50 text-sm sm:text-base"
+                      disabled={scanning || forensicScanning}
+                      className="px-3 sm:px-6 py-2.5 sm:py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium transition flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
                       title="Config audit only — ~60 seconds"
                     >
-                      <RefreshCw className={`w-4 h-4 sm:w-5 sm:h-5 ${scanning ? 'animate-spin' : ''}`} />
-                      {scanning ? 'Scanning...' : 'New Scan'}
+                      <RefreshCw className={`w-4 h-4 sm:w-5 sm:h-5 ${(scanning || forensicScanning) ? 'animate-spin' : ''}`} />
+                      {scanning ? 'Scanning...' : forensicScanning ? 'Forensic running...' : 'New Scan'}
                     </button>
                     {/* Forensic split — runs a deeper Bulk-API-backed pass
                         that reconciles actual Quote/Order/Subscription
@@ -1362,9 +1367,11 @@ export default function OrgDetailPage() {
                         detectors. */}
                     <button
                       onClick={() => handleScan({ includeForensics: true })}
-                      disabled={scanning}
-                      className="px-3 sm:px-4 py-2.5 sm:py-3 bg-blue-700 hover:bg-blue-800 text-white font-medium transition flex items-center gap-1.5 disabled:opacity-50 text-xs sm:text-sm border-l border-blue-500/40"
-                      title="Config audit + Revenue Forensics — 5-30 minutes, scans actual transaction records"
+                      disabled={scanning || forensicScanning}
+                      className="px-3 sm:px-4 py-2.5 sm:py-3 bg-blue-700 hover:bg-blue-800 text-white font-medium transition flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed text-xs sm:text-sm border-l border-blue-500/40"
+                      title={forensicScanning
+                        ? 'A forensic scan is already running'
+                        : 'Config audit + Revenue Forensics — scans actual transaction records (~1-3 min)'}
                     >
                       <TrendingDown className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                       <span className="hidden sm:inline">+ Forensics</span>
