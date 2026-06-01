@@ -77,8 +77,36 @@ export async function GET(request: NextRequest) {
     `);
   }
 
+  // 2b. ALSO query subscriptions directly by the SBQQ__RenewedSubscription__c
+  //     IDs on the lines — the detector's PRIMARY path uses this. The
+  //     Account+Product fallback won't help if the Quotes have null
+  //     Account, but the direct path SHOULD work.
+  const linkedSubIds = Array.from(new Set(
+    linesRes.records
+      .map((l) => l.SBQQ__RenewedSubscription__c)
+      .filter((id): id is string => !!id)
+  ));
+  let directSubsRes: { records: Array<Record<string, unknown>> } = { records: [] };
+  if (linkedSubIds.length > 0) {
+    directSubsRes = await conn.query(`
+      SELECT
+        Id, Name, SBQQ__Account__c, SBQQ__Product__c,
+        SBQQ__Contract__c, SBQQ__Contract__r.ContractNumber,
+        SBQQ__Contract__r.SBQQ__RenewalUpliftRate__c,
+        SBQQ__NetPrice__c, SBQQ__Quantity__c,
+        SBQQ__SubscriptionEndDate__c
+      FROM SBQQ__Subscription__c
+      WHERE Id IN (${linkedSubIds.map((id) => `'${id}'`).join(',')})
+    `);
+  }
+
   // 3. What's on the Contracts directly
-  const contractIds = Array.from(new Set(
+  const directContractIds = Array.from(new Set(
+    directSubsRes.records
+      .map((s) => s.SBQQ__Contract__c as string | undefined)
+      .filter((id): id is string => !!id)
+  ));
+  const contractIds = directContractIds.length > 0 ? directContractIds : Array.from(new Set(
     subsRes.records
       .map((s) => s.SBQQ__Contract__c as string | undefined)
       .filter((id): id is string => !!id)
@@ -118,18 +146,41 @@ export async function GET(request: NextRequest) {
     };
   });
 
+  // Direct-ID resolution — what the detector's primary path needs to succeed.
+  const directSubsById = new Map<string, Record<string, unknown>>();
+  for (const s of directSubsRes.records) directSubsById.set(s.Id as string, s);
+
+  const directLineMatches = linesRes.records.map((line) => {
+    const sub = line.SBQQ__RenewedSubscription__c ? directSubsById.get(line.SBQQ__RenewedSubscription__c) : undefined;
+    const subContract = sub?.['SBQQ__Contract__r'] as { SBQQ__RenewalUpliftRate__c?: string | null; ContractNumber?: string } | undefined;
+    return {
+      line_id: line.Id,
+      line_name: line.Name,
+      net_price: line.SBQQ__NetPrice__c,
+      quantity: line.SBQQ__Quantity__c,
+      renewed_sub_id: line.SBQQ__RenewedSubscription__c,
+      sub_found_by_direct_id: !!sub,
+      sub_net_price: sub?.SBQQ__NetPrice__c,
+      sub_contract_id: sub?.SBQQ__Contract__c,
+      uplift_rate_on_contract: subContract?.SBQQ__RenewalUpliftRate__c ?? null,
+      contract_number: subContract?.ContractNumber ?? null,
+    };
+  });
+
   return NextResponse.json({
     summary: {
       renewal_lines: linesRes.records.length,
       lines_with_renewed_subscription_set: linesRes.records.filter((l) => !!l.SBQQ__RenewedSubscription__c).length,
-      unique_account_ids: accountIds.length,
+      unique_account_ids_on_quote: accountIds.length,
       unique_product_ids: productIds.length,
       subscriptions_for_acct_product: subsRes.records.length,
+      subscriptions_by_direct_id: directSubsRes.records.length,
       contracts_loaded: contractsRes.records.length,
     },
     accountIds,
     productIds,
     contracts: contractsRes.records,
-    lineMatches,
+    direct_line_matches: directLineMatches,
+    acct_product_line_matches: lineMatches,
   });
 }
