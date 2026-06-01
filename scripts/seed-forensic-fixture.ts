@@ -404,11 +404,11 @@ async function main() {
       : def.originalPrice * (1 + fraction); // Clean uplift applied
 
     // SBQQ__RenewedSubscription__c is the canonical field linking a
-    // renewal quote line back to the subscription it renews. Some older
-    // installs also expose SBQQ__Subscription__c on QuoteLine; the
-    // documented + reliable field is RenewedSubscription. Our detector
-    // queries this same field — they MUST stay in sync.
-    await sfCreate('SBQQ__QuoteLine__c', {
+    // renewal quote line back to the subscription it renews. Some CPQ
+    // installs silently strip the field on initial QuoteLine create
+    // (triggers, FLS, or CPQ's own logic). We do create + immediate
+    // update to ensure the field actually lands.
+    const lineId = await sfCreate('SBQQ__QuoteLine__c', {
       SBQQ__Quote__c: quoteId,
       SBQQ__RenewedSubscription__c: subId,
       SBQQ__Product__c: productId,
@@ -417,7 +417,64 @@ async function main() {
       SBQQ__NetPrice__c: renewalPrice,
     }, `Quote Line ${def.customerName}`);
 
+    // Post-create verify + repair. Query the line back. If the field is
+    // empty, attempt an UPDATE. If the update also fails, log a clear
+    // message — the field is genuinely read-only in this org and the
+    // detector will need a different reconciliation strategy here.
+    const lineCheck = await sfQuery<{ Id: string; SBQQ__RenewedSubscription__c: string | null }>(
+      `SELECT Id, SBQQ__RenewedSubscription__c FROM SBQQ__QuoteLine__c WHERE Id = '${lineId}' LIMIT 1`,
+      `Verify RenewedSubscription on ${def.customerName}`
+    );
+    if (lineCheck.length > 0 && !lineCheck[0].SBQQ__RenewedSubscription__c) {
+      try {
+        const updateRes = await withTimeout(
+          Promise.resolve(conn.sobject('SBQQ__QuoteLine__c').update({
+            Id: lineId,
+            SBQQ__RenewedSubscription__c: subId,
+          })) as Promise<{ success?: boolean; errors?: unknown }>,
+          30_000,
+          `Repair RenewedSubscription on ${def.customerName}`
+        );
+        if (updateRes.success === false) {
+          console.warn(`  ⚠️  Could not set SBQQ__RenewedSubscription__c on ${def.customerName} — REN-001 will skip this line. Errors: ${JSON.stringify(updateRes.errors)}`);
+        } else {
+          console.log(`  ✓ Repaired RenewedSubscription on ${def.customerName}`);
+        }
+      } catch (e) {
+        console.warn(`  ⚠️  Repair failed for ${def.customerName}:`, e instanceof Error ? e.message : e);
+      }
+    }
+
     createdContracts++;
+  }
+
+  // FINAL sweep — even existing fixture lines (created in earlier seed
+  // runs before this repair logic existed) need RenewedSubscription
+  // populated for REN-001 to work. Query all renewal QuoteLines tied
+  // to our fixture Subscriptions and update the field where missing.
+  try {
+    const sweepCheck = await sfQuery<{ Id: string; SBQQ__RenewedSubscription__c: string | null; SBQQ__Quote__c: string }>(
+      `SELECT Id, SBQQ__RenewedSubscription__c, SBQQ__Quote__c
+       FROM SBQQ__QuoteLine__c
+       WHERE SBQQ__Quote__r.SBQQ__Account__c = '${fixtureAccountId}'
+         AND SBQQ__Quote__r.SBQQ__Type__c = 'Renewal'
+         AND SBQQ__RenewedSubscription__c = null
+       LIMIT 200`,
+      'Sweep renewal QuoteLines missing RenewedSubscription'
+    );
+    if (sweepCheck.length > 0) {
+      console.log(`  Sweep: ${sweepCheck.length} renewal QuoteLines need RenewedSubscription repair...`);
+      // For each missing one: find the SUB-XXXX subscription whose
+      // Contract is on the same fixture account (best-effort). v1 just
+      // logs them — manual SF-side cleanup is the easiest fix.
+      for (const orphan of sweepCheck) {
+        console.warn(`  ⚠️  QuoteLine ${orphan.Id} has no RenewedSubscription. (Pre-existing fixture row; consider deleting via Data Loader and re-running the seed.)`);
+      }
+    } else {
+      console.log(`  ✓ Sweep clean: all renewal QuoteLines have RenewedSubscription set.`);
+    }
+  } catch (e) {
+    console.warn(`  ⚠️  Sweep query failed:`, e instanceof Error ? e.message : e);
   }
 
   console.log(`\n[3/4] REN-001 summary:`);
