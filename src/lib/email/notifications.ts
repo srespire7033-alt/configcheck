@@ -313,6 +313,319 @@ function buildFailedEmail(name: string, data: ScanNotificationData, appUrl: stri
   `;
 }
 
+// ─────────────────────────────────────────────────────────────────────
+// Forensic scan completion email
+// ─────────────────────────────────────────────────────────────────────
+
+export interface ForensicNotificationData {
+  forensicScanId: string;
+  orgId: string;
+  orgName: string;
+  status: 'completed' | 'partial' | 'failed';
+  // Headline
+  totalVerifiedUsd: number;
+  findingCount: number;
+  // Top breakdowns (already sorted by $ desc upstream)
+  topDetectors: Array<{ id: string; label: string; finding_count: number; gap_usd: number }>;
+  topFindings: Array<{ detector_id: string; title: string; gap_usd: number }>;
+  // Optional diff vs previous scan
+  diff?: {
+    net_delta_usd: number;
+    net_delta_pct: number;
+    new_count: number;
+    escalated_count: number;
+    resolved_count: number;
+    improved_count: number;
+    from_scan_date: string | null;
+  };
+  // Optional pricing discipline
+  pricingDiscipline?: {
+    grade: 'A' | 'B' | 'C' | 'D' | 'F';
+    avg_discount_pct: number;
+    override_pct: number;
+  };
+  errorMessage?: string;
+}
+
+const DETECTOR_LABELS: Record<string, string> = {
+  'REN-001': 'Renewal uplift suppressed',
+  'REN-002': 'Renewal below current list',
+  'DSC-FOR-001': 'Promo discount roll-off',
+  'QL-FOR-001': 'Bundle option charged at $0',
+  'ORD-FOR-001': 'Order activated, no billing schedule',
+  'ORD-FOR-002': 'Q↔O variance (new business)',
+  'ORD-FOR-003': 'Q↔O variance (amendment)',
+};
+
+/**
+ * Send a forensic-scan-specific completion email — $-shaped, with
+ * top detectors, top findings, and a since-last-scan delta.
+ *
+ * Different shape from sendScanNotification (which is the config-scan
+ * score-and-issues email). Both can fire from the same scan run when
+ * forensic is opted in; users get two emails.
+ */
+export async function sendForensicScanNotification(userId: string, data: ForensicNotificationData) {
+  const supabase = createServiceClient();
+
+  const { data: user, error } = await supabase
+    .from('users')
+    .select('email, full_name, email_notifications_enabled, notification_emails')
+    .eq('id', userId)
+    .single();
+  if (error || !user?.email) {
+    console.log(`[EMAIL] No email for user ${userId}`, error?.message);
+    return;
+  }
+  if (user.email_notifications_enabled === false) {
+    console.log(`[EMAIL] Forensic notifications disabled for ${user.email}, skipping`);
+    return;
+  }
+
+  // Skip the "you have no leakage" email — not actionable + would
+  // spam users with clean orgs every scan cycle.
+  if (data.status === 'completed' && data.findingCount === 0 && !data.diff) {
+    console.log(`[EMAIL] Skipping clean-scan notification for ${data.orgName}`);
+    return;
+  }
+
+  const recipients: string[] = [user.email];
+  const extras = (user.notification_emails as string[]) || [];
+  for (const e of extras) if (e && !recipients.includes(e)) recipients.push(e);
+
+  const resendKey = process.env.RESEND_API_KEY;
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+  const name = user.full_name || 'there';
+  const fromAddress = process.env.EMAIL_FROM || 'OrgPrism <onboarding@resend.dev>';
+
+  const subject = buildForensicSubject(data);
+  const html = data.status === 'failed'
+    ? buildForensicFailedEmail(name, data, appUrl)
+    : buildForensicCompletedEmail(name, data, appUrl);
+
+  if (!resendKey) {
+    console.log(`[EMAIL] ⚠️ RESEND_API_KEY not set — forensic email would go to: ${recipients.join(', ')}`);
+    console.log(`[EMAIL] Subject: ${subject}`);
+    return;
+  }
+
+  try {
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${resendKey}` },
+      body: JSON.stringify({ from: fromAddress, to: recipients, subject, html }),
+    });
+    const body = await res.text();
+    if (!res.ok) {
+      console.error(`[EMAIL] ❌ Forensic email failed (${res.status}):`, body);
+    } else {
+      console.log(`[EMAIL] ✅ Forensic email sent to ${recipients.join(', ')}: ${subject}`);
+    }
+  } catch (err) {
+    console.error('[EMAIL] ❌ Forensic email error:', err);
+  }
+}
+
+function buildForensicSubject(data: ForensicNotificationData): string {
+  // Precedence rationale:
+  //   1. Failures always lead with failure (action required).
+  //   2. Large diffs come next — the "what changed" narrative is more
+  //      valuable than a static $ headline for return scans. Recovering
+  //      to zero is the strongest positive subject we can show.
+  //   3. Only when there's no diff drama do we fall back to "audit
+  //      clean" or "$ leaking."
+  if (data.status === 'failed') return `OrgPrism: Forensic scan failed for ${data.orgName}`;
+  if (data.diff && data.diff.net_delta_usd > 1000) {
+    return `OrgPrism: ${data.orgName} leaking ${fmtMoneyEmail(data.diff.net_delta_usd)} more than last scan`;
+  }
+  if (data.diff && data.diff.net_delta_usd < -1000) {
+    return `OrgPrism: ${data.orgName} recovered ${fmtMoneyEmail(Math.abs(data.diff.net_delta_usd))} since last scan`;
+  }
+  if (data.findingCount === 0) return `OrgPrism: ${data.orgName} audit clean — no leakage found`;
+  return `OrgPrism: ${fmtMoneyEmail(data.totalVerifiedUsd)} in verified leakage for ${data.orgName}`;
+}
+
+function fmtMoneyEmail(n: number): string {
+  if (Math.abs(n) >= 1_000_000) return `$${(n / 1_000_000).toFixed(2)}M`;
+  if (Math.abs(n) >= 1_000) return `$${(n / 1_000).toFixed(1)}K`;
+  if (Math.abs(n) < 1) return '$0';
+  return `$${Math.round(n).toLocaleString()}`;
+}
+
+function buildForensicCompletedEmail(name: string, data: ForensicNotificationData, appUrl: string): string {
+  const headerBg = data.findingCount === 0 ? '#16a34a' : '#4F46E5';
+  const headerLabel = data.findingCount === 0 ? 'Audit Clean ✓' : 'Forensic Audit Complete ✓';
+  const headerSubtitle = data.findingCount === 0
+    ? `No revenue leakage detected.`
+    : `${data.findingCount.toLocaleString()} finding${data.findingCount === 1 ? '' : 's'} across ${data.topDetectors.length} detector${data.topDetectors.length === 1 ? '' : 's'}.`;
+
+  // Diff block
+  const diffBlock = data.diff
+    ? (() => {
+        const d = data.diff!;
+        const positive = d.net_delta_usd > 1;
+        const negative = d.net_delta_usd < -1;
+        const color = positive ? '#dc2626' : negative ? '#16a34a' : '#6b7280';
+        const arrow = positive ? '↑' : negative ? '↓' : '·';
+        const msg = positive
+          ? `${arrow} ${fmtMoneyEmail(d.net_delta_usd)} more than last scan (+${d.net_delta_pct.toFixed(1)}%)`
+          : negative
+            ? `${arrow} ${fmtMoneyEmail(Math.abs(d.net_delta_usd))} recovered (${d.net_delta_pct.toFixed(1)}%)`
+            : `No net change since last scan`;
+        return `
+          <div style="background: #f9fafb; border-left: 4px solid ${color}; border-radius: 6px; padding: 14px 18px; margin: 16px 0;">
+            <p style="margin: 0; font-size: 13px; font-weight: 600; color: ${color};">${msg}</p>
+            <p style="margin: 4px 0 0; font-size: 11px; color: #6b7280;">
+              ↑${d.new_count} new · ↑${d.escalated_count} escalated · ✓${d.resolved_count} resolved · ↓${d.improved_count} improved
+            </p>
+          </div>
+        `;
+      })()
+    : '';
+
+  // Top detectors table
+  const detectorsHtml = data.topDetectors.length > 0
+    ? `
+      <div style="margin: 20px 0 0;">
+        <p style="font-weight: 600; color: #1f2937; margin: 0 0 10px; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">Top Detectors by $</p>
+        <table style="width: 100%; border-collapse: collapse;">
+          ${data.topDetectors.slice(0, 5).map((d) => `
+            <tr style="border-bottom: 1px solid #f3f4f6;">
+              <td style="padding: 8px 0; font-size: 12px;">
+                <span style="font-family: ui-monospace, monospace; color: #4F46E5; font-weight: 600;">${d.id}</span>
+                <span style="color: #6b7280; margin-left: 8px;">${DETECTOR_LABELS[d.id] ?? d.label}</span>
+              </td>
+              <td style="padding: 8px 0; text-align: right; font-weight: 600; font-size: 13px;">${fmtMoneyEmail(d.gap_usd)}</td>
+              <td style="padding: 8px 0; text-align: right; font-size: 11px; color: #9ca3af; padding-left: 8px;">(${d.finding_count})</td>
+            </tr>
+          `).join('')}
+        </table>
+      </div>
+    ` : '';
+
+  // Top findings
+  const findingsHtml = data.topFindings.length > 0
+    ? `
+      <div style="margin: 24px 0 0;">
+        <p style="font-weight: 600; color: #1f2937; margin: 0 0 10px; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">Top Findings</p>
+        ${data.topFindings.slice(0, 5).map((f) => `
+          <div style="padding: 10px 14px; background: #ffffff; border: 1px solid #e5e7eb; border-radius: 6px; margin-bottom: 6px;">
+            <table style="width: 100%;"><tr>
+              <td style="font-size: 12px; color: #374151;">
+                <span style="font-family: ui-monospace, monospace; color: #4F46E5; font-weight: 600; font-size: 10px; background: #eef2ff; padding: 2px 6px; border-radius: 3px; margin-right: 8px;">${f.detector_id}</span>
+                ${f.title}
+              </td>
+              <td style="text-align: right; font-size: 13px; font-weight: 600; color: #1f2937; white-space: nowrap; padding-left: 10px;">${fmtMoneyEmail(f.gap_usd)}</td>
+            </tr></table>
+          </div>
+        `).join('')}
+      </div>
+    ` : '';
+
+  // Pricing discipline
+  const pdHtml = data.pricingDiscipline
+    ? `
+      <div style="background: #f9fafb; border-radius: 10px; padding: 14px 18px; margin: 24px 0;">
+        <p style="font-weight: 600; color: #1f2937; margin: 0 0 6px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;">Pricing Discipline</p>
+        <p style="margin: 0; font-size: 14px; color: #374151;">
+          Grade: <span style="font-weight: 700; color: ${gradeColorForEmail(data.pricingDiscipline.grade)};">${data.pricingDiscipline.grade}</span>
+          · Avg discount ${data.pricingDiscipline.avg_discount_pct.toFixed(1)}%
+          · Manual override ${data.pricingDiscipline.override_pct.toFixed(1)}%
+        </p>
+      </div>
+    ` : '';
+
+  return `
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 0; background: #f9fafb;">
+      <!-- Header -->
+      <div style="background: ${headerBg}; padding: 28px 32px; border-radius: 12px 12px 0 0;">
+        <table style="width: 100%;">
+          <tr>
+            <td>
+              <h1 style="color: white; margin: 0; font-size: 20px; font-weight: 700; letter-spacing: -0.01em;">◆ OrgPrism</h1>
+              <p style="color: rgba(255,255,255,0.85); margin: 4px 0 0; font-size: 13px;">Revenue Forensics — ${data.orgName}</p>
+            </td>
+            <td style="text-align: right;">
+              <span style="color: rgba(255,255,255,0.85); font-size: 12px;">${headerLabel}</span>
+            </td>
+          </tr>
+        </table>
+      </div>
+
+      <!-- Body -->
+      <div style="background: white; padding: 32px; border: 1px solid #e5e7eb; border-top: none;">
+        <p style="color: #374151; margin: 0 0 8px; font-size: 15px;">Hi ${name},</p>
+        <p style="color: #6b7280; margin: 0 0 20px; font-size: 14px;">${headerSubtitle}</p>
+
+        ${data.findingCount > 0 ? `
+        <!-- Headline figure -->
+        <div style="text-align: center; padding: 24px 16px; background: linear-gradient(135deg, #eef2ff 0%, #ddd6fe 100%); border-radius: 12px; margin: 16px 0;">
+          <p style="margin: 0; font-size: 11px; color: #6b7280; text-transform: uppercase; letter-spacing: 1px;">Verified Annual Leakage</p>
+          <p style="margin: 8px 0 0; font-size: 36px; font-weight: 800; color: #4F46E5; letter-spacing: -0.02em;">${fmtMoneyEmail(data.totalVerifiedUsd)}</p>
+        </div>
+        ` : ''}
+
+        ${diffBlock}
+
+        ${detectorsHtml}
+
+        ${findingsHtml}
+
+        ${pdHtml}
+
+        <!-- CTAs -->
+        <div style="text-align: center; margin: 28px 0 8px;">
+          <a href="${appUrl}/orgs/${data.orgId}" style="display: inline-block; padding: 12px 24px; background: #4F46E5; color: white; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 13px; margin-right: 8px;">View Full Audit</a>
+          <a href="${appUrl}/api/orgs/${data.orgId}/executive-report" style="display: inline-block; padding: 12px 24px; background: #1f2937; color: white; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 13px;">Download Client PDF</a>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div style="padding: 20px 32px; text-align: center; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 12px 12px; background: #f9fafb;">
+        <p style="color: #9ca3af; font-size: 11px; margin: 0;">
+          You received this because forensic scan notifications are enabled.
+          <a href="${appUrl}/settings" style="color: #6b7280; text-decoration: underline;">Manage preferences</a>
+        </p>
+      </div>
+    </div>
+  `;
+}
+
+function buildForensicFailedEmail(name: string, data: ForensicNotificationData, appUrl: string): string {
+  return `
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 560px; margin: 0 auto; padding: 0; background: #f9fafb;">
+      <div style="background: #dc2626; padding: 28px 32px; border-radius: 12px 12px 0 0;">
+        <h1 style="color: white; margin: 0; font-size: 20px; font-weight: 700;">◆ OrgPrism</h1>
+        <p style="color: #fecaca; margin: 4px 0 0; font-size: 13px;">Forensic scan failed — ${data.orgName}</p>
+      </div>
+      <div style="background: white; padding: 32px; border: 1px solid #e5e7eb; border-top: none;">
+        <p style="color: #374151; margin: 0 0 16px; font-size: 15px;">Hi ${name},</p>
+        <p style="color: #6b7280; margin: 0 0 16px; font-size: 14px;">The forensic scan for <strong style="color: #1f2937;">${data.orgName}</strong> did not complete.</p>
+        ${data.errorMessage ? `
+        <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 14px 18px; margin: 16px 0;">
+          <p style="color: #b91c1c; margin: 0; font-size: 13px; font-family: ui-monospace, monospace;">${data.errorMessage}</p>
+        </div>
+        ` : ''}
+        <p style="color: #6b7280; margin: 16px 0; font-size: 13px;">
+          Likely causes: expired Salesforce token, network timeout, or org disconnected. Reconnecting the org typically resolves this.
+        </p>
+        <div style="text-align: center; margin: 24px 0 8px;">
+          <a href="${appUrl}/orgs/${data.orgId}" style="display: inline-block; padding: 12px 24px; background: #4F46E5; color: white; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 13px;">Reconnect & Retry</a>
+        </div>
+      </div>
+      <div style="padding: 20px 32px; text-align: center; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 12px 12px; background: #f9fafb;">
+        <p style="color: #9ca3af; font-size: 11px; margin: 0;">
+          <a href="${appUrl}/settings" style="color: #6b7280; text-decoration: underline;">Manage notification preferences</a>
+        </p>
+      </div>
+    </div>
+  `;
+}
+
+function gradeColorForEmail(g: 'A' | 'B' | 'C' | 'D' | 'F'): string {
+  return { A: '#16a34a', B: '#2563eb', C: '#d97706', D: '#ea580c', F: '#dc2626' }[g];
+}
+
 function buildWelcomeEmail(name: string, appUrl: string): string {
   const firstName = name.split(' ')[0] || name;
   return `

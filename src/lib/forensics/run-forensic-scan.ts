@@ -41,6 +41,8 @@ import CLASS_C_TRACER from './attribution/class-c-conflicting';
 import CLASS_D_TRACER from './attribution/class-d-governance';
 import CLASS_E_TRACER from './attribution/class-e-data-quality';
 import { renderFinding } from './renderer';
+import { sendForensicScanNotification } from '@/lib/email/notifications';
+import { computeDiff, type DiffFinding } from '@/lib/forensics/diff';
 import type { DetectorContext, ForensicDetector, AttributionTracer, DetectorResult } from './types';
 
 /**
@@ -247,6 +249,24 @@ export async function runForensicScanInBackground(input: ForensicScanInput): Pro
     console.log(
       `[FORENSIC ${forensicScanId}] ✅ ${finalStatus} — ${allFindings.length} findings, total verified $${Math.round(totalVerified).toLocaleString()}`
     );
+
+    // Fire-and-forget email notification. Wrapped so a failed send
+    // (Resend down, no API key, etc.) never blocks the scan completion.
+    try {
+      await sendForensicCompletionEmail(supabase, {
+        forensicScanId,
+        organizationId,
+        userId,
+        finalStatus: finalStatus as 'completed' | 'partial' | 'failed',
+        allFindings,
+        totalVerified,
+      });
+    } catch (emailErr) {
+      console.warn(
+        `[FORENSIC ${forensicScanId}] email notification failed:`,
+        emailErr instanceof Error ? emailErr.message : emailErr
+      );
+    }
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     console.error(`[FORENSIC ${forensicScanId}] terminal failure:`, message);
@@ -258,5 +278,163 @@ export async function runForensicScanInBackground(input: ForensicScanInput): Pro
         error_message: message,
       })
       .eq('id', forensicScanId);
+    // Best-effort failure notification.
+    try {
+      await sendForensicCompletionEmail(supabase, {
+        forensicScanId,
+        organizationId,
+        userId,
+        finalStatus: 'failed',
+        allFindings: [],
+        totalVerified: 0,
+        errorMessage: message,
+      });
+    } catch {
+      // swallow — already in the error path
+    }
   }
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// Email notification helper
+// ─────────────────────────────────────────────────────────────────────
+
+const DETECTOR_LABELS_EMAIL: Record<string, string> = {
+  'REN-001': 'Renewal uplift suppressed',
+  'REN-002': 'Renewal below current list',
+  'DSC-FOR-001': 'Promo discount roll-off',
+  'QL-FOR-001': 'Bundle option charged at $0',
+  'ORD-FOR-001': 'Order activated, no billing schedule',
+  'ORD-FOR-002': 'Q↔O variance (new business)',
+  'ORD-FOR-003': 'Q↔O variance (amendment)',
+};
+
+interface EmailDispatchArgs {
+  forensicScanId: string;
+  organizationId: string;
+  userId: string;
+  finalStatus: 'completed' | 'partial' | 'failed';
+  allFindings: Array<{ detector: string; result: DetectorResult }>;
+  totalVerified: number;
+  errorMessage?: string;
+}
+
+async function sendForensicCompletionEmail(
+  supabase: ReturnType<typeof createServiceClient>,
+  args: EmailDispatchArgs
+): Promise<void> {
+  // Pull org metadata for the email subject/body.
+  const { data: org } = await supabase
+    .from('organizations')
+    .select('name')
+    .eq('id', args.organizationId)
+    .single();
+  if (!org) {
+    console.warn(`[FORENSIC ${args.forensicScanId}] cannot send email — org not found`);
+    return;
+  }
+
+  // Per-detector aggregation for the email.
+  const detectorAgg = new Map<string, { count: number; gap: number }>();
+  for (const { result } of args.allFindings) {
+    let agg = detectorAgg.get(result.detectorId);
+    if (!agg) {
+      agg = { count: 0, gap: 0 };
+      detectorAgg.set(result.detectorId, agg);
+    }
+    agg.count += 1;
+    agg.gap += Number(result.gapUsd);
+  }
+  const topDetectors = Array.from(detectorAgg.entries())
+    .map(([id, a]) => ({
+      id,
+      label: DETECTOR_LABELS_EMAIL[id] ?? id,
+      finding_count: a.count,
+      gap_usd: a.gap,
+    }))
+    .sort((x, y) => y.gap_usd - x.gap_usd)
+    .slice(0, 5);
+
+  const topFindings = args.allFindings
+    .slice()
+    .sort((x, y) => Number(y.result.gapUsd) - Number(x.result.gapUsd))
+    .slice(0, 5)
+    .map(({ result }) => ({
+      detector_id: result.detectorId,
+      title: result.title,
+      gap_usd: Number(result.gapUsd),
+    }));
+
+  // Diff vs previous forensic scan, if one exists for this org.
+  let diff: {
+    net_delta_usd: number;
+    net_delta_pct: number;
+    new_count: number;
+    escalated_count: number;
+    resolved_count: number;
+    improved_count: number;
+    from_scan_date: string | null;
+  } | undefined;
+  try {
+    const { data: prevScans } = await supabase
+      .from('forensic_scans')
+      .select('id, completed_at')
+      .eq('organization_id', args.organizationId)
+      .in('status', ['completed', 'partial'])
+      .order('completed_at', { ascending: false })
+      .limit(2);
+    // prevScans[0] is THIS scan (just marked complete); [1] is the previous.
+    const previous = (prevScans ?? [])[1] as { id: string; completed_at: string | null } | undefined;
+    if (previous) {
+      const { data: prevFindings } = await supabase
+        .from('forensic_findings')
+        .select('id, detector_id, title, gap_usd, recoverability_score, source_record_refs')
+        .eq('forensic_scan_id', previous.id);
+      const prev: DiffFinding[] = ((prevFindings ?? []) as Array<{
+        id: string; detector_id: string; title: string; gap_usd: number | string;
+        recoverability_score: number | string; source_record_refs: unknown;
+      }>).map((r) => ({
+        id: r.id,
+        detector_id: r.detector_id,
+        title: r.title,
+        gap_usd: Number(r.gap_usd ?? 0),
+        recoverability_score: Number(r.recoverability_score ?? 0),
+        primary_record_id:
+          ((r.source_record_refs as { primary_record?: { id?: string } } | null)?.primary_record?.id) ?? null,
+      }));
+      const cur: DiffFinding[] = args.allFindings.map(({ result }) => ({
+        id: '', // we haven't queried back the persisted IDs; not needed for diff
+        detector_id: result.detectorId,
+        title: result.title,
+        gap_usd: Number(result.gapUsd),
+        recoverability_score: result.recoverabilityScore,
+        primary_record_id: result.primaryRecord.id ?? null,
+      }));
+      const d = computeDiff(prev, cur);
+      diff = {
+        net_delta_usd: d.net_delta_usd,
+        net_delta_pct: d.net_delta_pct,
+        new_count: d.summary.new_count,
+        escalated_count: d.summary.escalated_count,
+        resolved_count: d.summary.resolved_count,
+        improved_count: d.summary.improved_count,
+        from_scan_date: previous.completed_at,
+      };
+    }
+  } catch (e) {
+    console.warn(`[FORENSIC ${args.forensicScanId}] diff for email failed:`, e instanceof Error ? e.message : e);
+  }
+
+  await sendForensicScanNotification(args.userId, {
+    forensicScanId: args.forensicScanId,
+    orgId: args.organizationId,
+    orgName: (org.name as string) ?? 'your org',
+    status: args.finalStatus,
+    totalVerifiedUsd: args.totalVerified,
+    findingCount: args.allFindings.length,
+    topDetectors,
+    topFindings,
+    diff,
+    errorMessage: args.errorMessage,
+  });
 }
