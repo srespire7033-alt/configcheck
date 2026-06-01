@@ -42,7 +42,9 @@ interface OrderRow {
 
 interface BillingScheduleRow {
   Id: string;
-  blng__Order__c?: string | null;
+  // Salesforce Billing's BillingSchedule links to OrderItem (called
+  // OrderProduct in the standard data model), NOT directly to Order.
+  // To find schedules-per-Order: Order → OrderItem → BillingSchedule.
   blng__OrderProduct__c?: string | null;
 }
 
@@ -88,36 +90,13 @@ const ORD_FOR_001: ForensicDetector = {
 
     const orderIds = ordersRes.records.map((o) => o.Id);
 
-    // 3. For each Order, count related billing schedules. We chunk
-    //    the IN clause to stay under SOQL char limits.
-    const billingByOrderId = new Map<string, number>();
+    // 3. Pull ALL OrderItems for these Orders FIRST, then count
+    //    BillingSchedules linked to each OrderItem. An Order "has a
+    //    billing schedule" iff at least one of its OrderItems has one.
+    const itemsByOrderId = new Map<string, OrderItemRow[]>();
+    const allItemIds: string[] = [];
     for (let i = 0; i < orderIds.length; i += 500) {
       const chunk = orderIds.slice(i, i + 500);
-      const schedulesRes = await ctx.conn.query<BillingScheduleRow>(`
-        SELECT Id, blng__Order__c
-        FROM blng__BillingSchedule__c
-        WHERE blng__Order__c IN (${chunk.map((id) => `'${id}'`).join(',')})
-      `);
-      for (const s of schedulesRes.records) {
-        const oid = s.blng__Order__c;
-        if (!oid) continue;
-        billingByOrderId.set(oid, (billingByOrderId.get(oid) ?? 0) + 1);
-      }
-    }
-    console.log(`[ORD-FOR-001] Orders with schedules: ${billingByOrderId.size} of ${ordersRes.records.length}`);
-
-    // 4. Identify orders with zero schedules and pull their OrderItems
-    //    for gap calculation + Class A evidence.
-    const ordersWithoutSchedules = ordersRes.records.filter((o) => !billingByOrderId.has(o.Id));
-    if (ordersWithoutSchedules.length === 0) {
-      console.log('[ORD-FOR-001] All activated orders have billing schedules. Clean.');
-      return [];
-    }
-
-    const orphanIds = ordersWithoutSchedules.map((o) => o.Id);
-    const itemsByOrderId = new Map<string, OrderItemRow[]>();
-    for (let i = 0; i < orphanIds.length; i += 500) {
-      const chunk = orphanIds.slice(i, i + 500);
       const itemsRes = await ctx.conn.query<OrderItemRow>(`
         SELECT Id, OrderId, UnitPrice, Quantity, Product2Id, Product2.Name, blng__BillingRule__c
         FROM OrderItem
@@ -127,8 +106,45 @@ const ORD_FOR_001: ForensicDetector = {
         const list = itemsByOrderId.get(item.OrderId) ?? [];
         list.push(item);
         itemsByOrderId.set(item.OrderId, list);
+        allItemIds.push(item.Id);
       }
     }
+    console.log(`[ORD-FOR-001] OrderItems loaded: ${allItemIds.length}`);
+
+    // Now: which OrderItems have at least one BillingSchedule?
+    const itemsWithSchedules = new Set<string>();
+    if (allItemIds.length > 0) {
+      for (let i = 0; i < allItemIds.length; i += 500) {
+        const chunk = allItemIds.slice(i, i + 500);
+        const schedulesRes = await ctx.conn.query<BillingScheduleRow>(`
+          SELECT Id, blng__OrderProduct__c
+          FROM blng__BillingSchedule__c
+          WHERE blng__OrderProduct__c IN (${chunk.map((id) => `'${id}'`).join(',')})
+        `);
+        for (const s of schedulesRes.records) {
+          if (s.blng__OrderProduct__c) itemsWithSchedules.add(s.blng__OrderProduct__c);
+        }
+      }
+    }
+    console.log(`[ORD-FOR-001] OrderItems with schedules: ${itemsWithSchedules.size} of ${allItemIds.length}`);
+
+    // An Order is "covered" if at least one of its items has a schedule.
+    const billingByOrderId = new Map<string, number>();
+    for (const order of ordersRes.records) {
+      const items = itemsByOrderId.get(order.Id) ?? [];
+      const coveredItems = items.filter((i) => itemsWithSchedules.has(i.Id));
+      if (coveredItems.length > 0) billingByOrderId.set(order.Id, coveredItems.length);
+    }
+    console.log(`[ORD-FOR-001] Orders with at least one scheduled item: ${billingByOrderId.size} of ${ordersRes.records.length}`);
+
+    // 4. Identify orders with zero schedules.
+    const ordersWithoutSchedules = ordersRes.records.filter((o) => !billingByOrderId.has(o.Id));
+    if (ordersWithoutSchedules.length === 0) {
+      console.log('[ORD-FOR-001] All activated orders have billing schedules. Clean.');
+      return [];
+    }
+
+    // (OrderItems already loaded into itemsByOrderId at step 3.)
 
     // 5. Emit one finding per orphan Order.
     const findings: DetectorResult[] = [];
