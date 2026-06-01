@@ -12,6 +12,7 @@ import { GroupedIssueList } from '@/components/issues/grouped-issue-list';
 import { IssueDetailModal } from '@/components/issues/issue-detail-modal';
 import { SeverityModal } from '@/components/issues/severity-modal';
 import { RevenueLeakageCard, type RevenueLeakageData, type VerifiedLeakage } from '@/components/scan/revenue-leakage-card';
+import { PricingDisciplineCard } from '@/components/scan/pricing-discipline-card';
 import { ComplexityCard } from '@/components/scan/complexity-card';
 import { ScheduleModal } from '@/components/schedule/schedule-modal';
 import { ScheduleList } from '@/components/schedule/schedule-list';
@@ -1690,6 +1691,15 @@ export default function OrgDetailPage() {
               </div>
             );
           })()}
+
+          {/* ===== PRICING DISCIPLINE =====
+              Org-level pricing-health KPIs (avg discount vs approved
+              threshold + % of lines with manual override). Lazy-loads
+              via its own API on mount — independent of the scan
+              metadata flow. */}
+          <div className="mb-8">
+            <PricingDisciplineCard orgId={orgId} />
+          </div>
 
           {/* ===== CPQ COMPLEXITY =====
               Older "Revenue at Risk" card removed — it overlapped with
