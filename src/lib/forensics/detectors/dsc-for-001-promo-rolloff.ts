@@ -35,9 +35,9 @@ interface DiscountedLineRow {
   Id: string;
   Name: string;
   SBQQ__Quote__c: string;
-  'SBQQ__Quote__r.Name': string;
+  SBQQ__Quote__r?: { Name: string };
   SBQQ__Product__c: string;
-  'SBQQ__Product__r.Name': string;
+  SBQQ__Product__r?: { Name: string };
   SBQQ__DiscountSchedule__c: string;
   SBQQ__Discount__c: string;     // % discount applied (e.g. "25" for 25%)
   SBQQ__ListPrice__c: string;
@@ -186,7 +186,7 @@ const DSC_FOR_001: ForensicDetector = {
         {
           type: 'SBQQ__Quote__c',
           id: line.SBQQ__Quote__c,
-          name: line['SBQQ__Quote__r.Name'],
+          name: line.SBQQ__Quote__r?.Name ?? line.SBQQ__Quote__c,
         },
         {
           type: 'SBQQ__DiscountSchedule__c',
@@ -201,7 +201,7 @@ const DSC_FOR_001: ForensicDetector = {
         {
           type: 'Product2',
           id: line.SBQQ__Product__c,
-          name: line['SBQQ__Product__r.Name'] || line.SBQQ__Product__c,
+          name: line.SBQQ__Product__r?.Name || line.SBQQ__Product__c,
         },
       ];
 
@@ -225,7 +225,7 @@ const DSC_FOR_001: ForensicDetector = {
         primaryRecord,
         supportingRecords,
         title: `Discount ${subCaseTitle}`,
-        description: `${discountPct}% discount on ${line['SBQQ__Product__r.Name'] || 'product'} — schedule ${
+        description: `${discountPct}% discount on ${line.SBQQ__Product__r?.Name || 'product'} — schedule ${
           subCase === 'expired'
             ? `ended ${schedule.EndDate}`
             : `has no end date`

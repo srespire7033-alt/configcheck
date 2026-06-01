@@ -34,17 +34,24 @@
 
 import type { DetectorContext, DetectorResult, ForensicDetector, SourceRecord } from '../types';
 
+// REST SOQL returns parent-relationship fields NESTED, not as flattened
+// dotted keys. (Bulk API CSV flattened them; REST JSON nests them.) The
+// detector originally used dotted-key string indexing — which silently
+// returned `undefined` after the Bulk→REST switch, causing the uplift
+// reconciliation to read 0% on every line and skip every finding.
 interface RenewalLineRow {
   Id: string;
   Name: string;
   SBQQ__Quote__c: string;
-  'SBQQ__Quote__r.Name': string;
-  'SBQQ__Quote__r.SBQQ__Type__c': string;
-  'SBQQ__Quote__r.SBQQ__Account__c': string;
-  'SBQQ__Quote__r.CurrencyIsoCode': string;
+  SBQQ__Quote__r?: {
+    Name: string;
+    SBQQ__Type__c: string;
+    SBQQ__Account__c?: string | null;
+    CurrencyIsoCode?: string;
+  };
   SBQQ__RenewedSubscription__c: string | null;
   SBQQ__Product__c: string;
-  'SBQQ__Product__r.Name': string;
+  SBQQ__Product__r?: { Name: string };
   SBQQ__NetPrice__c: string;
   SBQQ__Quantity__c: string;
 }
@@ -55,8 +62,10 @@ interface SubscriptionRow {
   SBQQ__Account__c: string;
   SBQQ__Product__c: string;
   SBQQ__Contract__c: string;
-  'SBQQ__Contract__r.ContractNumber': string;
-  'SBQQ__Contract__r.SBQQ__RenewalUpliftRate__c': string | null;
+  SBQQ__Contract__r?: {
+    ContractNumber: string;
+    SBQQ__RenewalUpliftRate__c: number | string | null;
+  };
   SBQQ__NetPrice__c: string;
   SBQQ__Quantity__c: string;
   SBQQ__SubscriptionEndDate__c: string | null;
@@ -125,7 +134,8 @@ const REN_001: ForensicDetector = {
     const productIds = new Set<string>();
     for (const line of allLines.records) {
       if (line.SBQQ__RenewedSubscription__c) linkedSubIds.add(line.SBQQ__RenewedSubscription__c);
-      if (line['SBQQ__Quote__r.SBQQ__Account__c']) accountIds.add(line['SBQQ__Quote__r.SBQQ__Account__c']);
+      const acctOnQuote = line.SBQQ__Quote__r?.SBQQ__Account__c;
+      if (acctOnQuote) accountIds.add(acctOnQuote);
       if (line.SBQQ__Product__c) productIds.add(line.SBQQ__Product__c);
     }
     console.log(`[REN-001] ${linkedSubIds.size} lines linked via RenewedSubscription; ${allLines.records.length - linkedSubIds.size} need Account+Product fallback`);
@@ -183,7 +193,7 @@ const REN_001: ForensicDetector = {
         sub = subscriptionsBySubId.get(line.SBQQ__RenewedSubscription__c);
       }
       if (!sub) {
-        const key = `${line['SBQQ__Quote__r.SBQQ__Account__c']}|${line.SBQQ__Product__c}`;
+        const key = `${line.SBQQ__Quote__r?.SBQQ__Account__c}|${line.SBQQ__Product__c}`;
         const candidates = subsByAccProd.get(key) ?? [];
         // Filter to subs whose endDate is before this line's creation
         // (the subscription ENDED, so this is its renewal). For our
@@ -200,8 +210,13 @@ const REN_001: ForensicDetector = {
       }
       if (!sub) continue; // Orphaned line — flagged by a different detector (ORD-FOR-002)
 
-      const upliftPctRaw = sub['SBQQ__Contract__r.SBQQ__RenewalUpliftRate__c'];
-      const upliftPct = upliftPctRaw != null ? parseFloat(upliftPctRaw) : 0;
+      const upliftPctRaw = sub.SBQQ__Contract__r?.SBQQ__RenewalUpliftRate__c;
+      const upliftPct =
+        upliftPctRaw == null
+          ? 0
+          : typeof upliftPctRaw === 'number'
+            ? upliftPctRaw
+            : parseFloat(String(upliftPctRaw));
       // No uplift entitled → not a leak. Skip silently.
       if (!upliftPct || upliftPct <= 0) continue;
 
@@ -229,9 +244,7 @@ const REN_001: ForensicDetector = {
       // CurrencyIsoCode may be absent (single-currency org); fall back to
       // the org default. The optional-chained read is safe even when the
       // field wasn't in the SELECT.
-      const currency =
-        (line as unknown as Record<string, string | undefined>)['SBQQ__Quote__r.CurrencyIsoCode'] ||
-        ctx.defaultCurrencyIsoCode;
+      const currency = line.SBQQ__Quote__r?.CurrencyIsoCode || ctx.defaultCurrencyIsoCode;
 
       const primaryRecord: SourceRecord = {
         type: 'SBQQ__QuoteLine__c',
@@ -247,7 +260,7 @@ const REN_001: ForensicDetector = {
         {
           type: 'SBQQ__Quote__c',
           id: line.SBQQ__Quote__c,
-          name: line['SBQQ__Quote__r.Name'],
+          name: line.SBQQ__Quote__r?.Name ?? line.SBQQ__Quote__c,
         },
         {
           type: 'SBQQ__Subscription__c',
@@ -261,7 +274,7 @@ const REN_001: ForensicDetector = {
         {
           type: 'Contract',
           id: sub.SBQQ__Contract__c,
-          name: sub['SBQQ__Contract__r.ContractNumber'] || sub.SBQQ__Contract__c,
+          name: sub.SBQQ__Contract__r?.ContractNumber || sub.SBQQ__Contract__c,
           financials: {
             entitled_uplift_pct: upliftPct,
           },
@@ -269,7 +282,7 @@ const REN_001: ForensicDetector = {
         {
           type: 'Product2',
           id: line.SBQQ__Product__c,
-          name: line['SBQQ__Product__r.Name'] || line.SBQQ__Product__c,
+          name: line.SBQQ__Product__r?.Name || line.SBQQ__Product__c,
         },
       ];
 
@@ -287,7 +300,7 @@ const REN_001: ForensicDetector = {
         recoverabilityScore: 0.75,
         primaryRecord,
         supportingRecords,
-        title: `Uplift suppressed on renewal of ${line['SBQQ__Product__r.Name'] || 'product'}`,
+        title: `Uplift suppressed on renewal of ${line.SBQQ__Product__r?.Name || 'product'}`,
         description: `Contract entitled ${upliftPct}% uplift; renewal closed at ${round2((realizedTotal / (originalPrice * quantity) - 1) * 100)}%.`,
         metadata: {
           uplift_pct_entitled: upliftPct,

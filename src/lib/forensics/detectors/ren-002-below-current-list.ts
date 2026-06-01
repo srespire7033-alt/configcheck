@@ -34,9 +34,9 @@ interface RenewalLineRow {
   Id: string;
   Name: string;
   SBQQ__Quote__c: string;
-  'SBQQ__Quote__r.Name': string;
+  SBQQ__Quote__r?: { Name: string };
   SBQQ__Product__c: string;
-  'SBQQ__Product__r.Name': string;
+  SBQQ__Product__r?: { Name: string };
   SBQQ__NetPrice__c: string;
   SBQQ__Quantity__c: string;
   SBQQ__PricingMethod__c?: string | null;
@@ -143,12 +143,12 @@ const REN_002: ForensicDetector = {
         {
           type: 'SBQQ__Quote__c',
           id: line.SBQQ__Quote__c,
-          name: line['SBQQ__Quote__r.Name'],
+          name: line.SBQQ__Quote__r?.Name ?? line.SBQQ__Quote__c,
         },
         {
           type: 'PricebookEntry',
           id: entry.Id,
-          name: `Standard list for ${line['SBQQ__Product__r.Name']}`,
+          name: `Standard list for ${line.SBQQ__Product__r?.Name}`,
           financials: {
             current_unit_price: currentList,
           },
@@ -156,7 +156,7 @@ const REN_002: ForensicDetector = {
         {
           type: 'Product2',
           id: line.SBQQ__Product__c,
-          name: line['SBQQ__Product__r.Name'] || line.SBQQ__Product__c,
+          name: line.SBQQ__Product__r?.Name || line.SBQQ__Product__c,
         },
       ];
 
@@ -173,7 +173,7 @@ const REN_002: ForensicDetector = {
         recoverabilityScore: 0.85,
         primaryRecord,
         supportingRecords,
-        title: `Renewal ${round2(percentBelowList)}% below current list for ${line['SBQQ__Product__r.Name'] || 'product'}`,
+        title: `Renewal ${round2(percentBelowList)}% below current list for ${line.SBQQ__Product__r?.Name || 'product'}`,
         description: `Quoted at ${ctx.defaultCurrencyIsoCode} ${renewalPrice.toLocaleString()}/unit vs current list of ${ctx.defaultCurrencyIsoCode} ${currentList.toLocaleString()}/unit.`,
         metadata: {
           current_list_price: currentList,
