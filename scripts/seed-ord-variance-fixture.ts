@@ -385,14 +385,40 @@ async function main() {
         console.warn(`    ⚠️  could not delete Order ${o.Id}: ${e instanceof Error ? e.message : e}`);
       }
     }
-    // Delete all SBQQ__Quote__c on this account that have no remaining Orders
-    const remainingQuotes = await sfQuery<{ Id: string; SBQQ__Opportunity2__c: string | null }>(
-      `SELECT Id, SBQQ__Opportunity2__c FROM SBQQ__Quote__c WHERE SBQQ__Account__c = '${accountId}'`,
-      'all account Quotes'
+    // BUG FIX: only delete Quotes linked to the TAGGED Orders we just
+    // deleted (or have ORDVAR-named Opportunities). The earlier version
+    // deleted ALL quotes on the fixture Account — wiping unrelated
+    // REN/DSC/QL fixtures from prior seed scripts. Lesson learned the
+    // hard way.
+    // First pull the Opportunity IDs from our ORDVAR opportunities.
+    const orphanedOpps = await sfQuery<{ Id: string }>(
+      `SELECT Id FROM Opportunity WHERE AccountId = '${accountId}' AND Name LIKE 'ORDVAR-%'`,
+      'ORDVAR opportunities'
     );
-    const oppIdsToClean = new Set<string>();
-    for (const q of remainingQuotes) {
-      if (q.SBQQ__Opportunity2__c) oppIdsToClean.add(q.SBQQ__Opportunity2__c);
+    const ordvarOppIds = new Set(orphanedOpps.map((o) => o.Id));
+    // Only quotes whose Opportunity is one of our ORDVAR-* opps OR
+    // whose Id appears as SBQQ__Quote__c on the just-deleted tagged
+    // Orders. Both checks because some quotes may be linked one way
+    // but not the other.
+    const quoteIdsFromOrders = new Set<string>();
+    if (taggedOrders.length > 0) {
+      const orderQuoteRes = await sfQuery<{ SBQQ__Quote__c: string | null }>(
+        `SELECT SBQQ__Quote__c FROM Order WHERE Id IN (${taggedOrders.map((o) => `'${o.Id}'`).join(',')})`,
+        'tagged Order → Quote IDs'
+      );
+      for (const r of orderQuoteRes) if (r.SBQQ__Quote__c) quoteIdsFromOrders.add(r.SBQQ__Quote__c);
+    }
+    // Note: at this point the Orders have already been deleted, so
+    // the above query may return empty — that's fine, we have the
+    // Opportunity-name path as a fallback.
+    const quotesToDelete = await sfQuery<{ Id: string }>(
+      `SELECT Id FROM SBQQ__Quote__c
+       WHERE SBQQ__Account__c = '${accountId}'
+       AND (${ordvarOppIds.size > 0 ? `SBQQ__Opportunity2__c IN (${Array.from(ordvarOppIds).map((id) => `'${id}'`).join(',')})` : 'Id = null'}
+        ${quoteIdsFromOrders.size > 0 ? `OR Id IN (${Array.from(quoteIdsFromOrders).map((id) => `'${id}'`).join(',')})` : ''})`,
+      'ORD-VARIANCE Quotes only'
+    );
+    for (const q of quotesToDelete) {
       try {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         await (conn.sobject('SBQQ__Quote__c') as any).destroy(q.Id);
@@ -400,11 +426,7 @@ async function main() {
         console.warn(`    ⚠️  could not delete Quote ${q.Id}: ${e instanceof Error ? e.message : e}`);
       }
     }
-    // Delete Opportunities named ORDVAR-*
-    const orphanedOpps = await sfQuery<{ Id: string }>(
-      `SELECT Id FROM Opportunity WHERE AccountId = '${accountId}' AND Name LIKE 'ORDVAR-%'`,
-      'ORDVAR opportunities'
-    );
+    // Delete the ORDVAR-named Opportunities themselves.
     for (const op of orphanedOpps) {
       try {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
