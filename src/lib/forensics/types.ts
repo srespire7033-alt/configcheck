@@ -125,12 +125,54 @@ export interface ForensicDetector {
   appliesTo: Array<'cpq' | 'cpq_billing' | 'arm'>;
   /** Free-tier eligible (Strategy C — only REN-001 in v1). */
   freeTier: boolean;
+  /**
+   * Which dashboard surface the findings belong on.
+   *
+   *   revenue_leakage — quantifiable $ already lost; goes on the
+   *                     Revenue Leakage card + Recovery Queue.
+   *   governance      — process/audit issues; $ ambiguous or N/A.
+   *                     Goes on the Governance Risk card. NOT
+   *                     stageable in Recovery Queue.
+   *   pipeline        — prospective revenue (at risk, not yet lost).
+   *                     Goes on the Pipeline Risk card. Drives a
+   *                     'take action' workflow, not a CSV patch.
+   *
+   * Defaults to 'revenue_leakage' when omitted (back-compat).
+   */
+  category?: 'revenue_leakage' | 'governance' | 'pipeline';
 
   /**
    * Run the detector against the org. Returns one DetectorResult per
    * leaking record. Empty array means no leaks found (good news).
    */
   run(ctx: DetectorContext): Promise<DetectorResult[]>;
+}
+
+/**
+ * Category lookup keyed by detector_id — used by API endpoints + UI
+ * to bucket findings without re-loading the detector registry. Kept
+ * in sync with the `category` field on each detector definition.
+ *
+ * Detectors NOT listed here default to 'revenue_leakage' (the legacy
+ * behavior — every detector that existed before Slice 12 is a $-leak).
+ */
+export const DETECTOR_CATEGORY: Record<string, 'revenue_leakage' | 'governance' | 'pipeline'> = {
+  'REN-001': 'revenue_leakage',
+  'REN-002': 'revenue_leakage',
+  'REN-003': 'pipeline',
+  'DSC-FOR-001': 'revenue_leakage',
+  'QL-FOR-001': 'revenue_leakage',
+  'ORD-FOR-001': 'revenue_leakage',
+  'ORD-FOR-002': 'revenue_leakage',
+  'ORD-FOR-003': 'revenue_leakage',
+  'SUB-FOR-001': 'revenue_leakage',
+  'PROV-FOR-001': 'revenue_leakage',
+  'OPP-FOR-001': 'governance',
+  'CON-FOR-001': 'governance',
+};
+
+export function getDetectorCategory(detectorId: string): 'revenue_leakage' | 'governance' | 'pipeline' {
+  return DETECTOR_CATEGORY[detectorId] ?? 'revenue_leakage';
 }
 
 /**

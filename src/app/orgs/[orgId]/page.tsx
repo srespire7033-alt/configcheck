@@ -14,6 +14,8 @@ import { SeverityModal } from '@/components/issues/severity-modal';
 import { RevenueLeakageCard, type RevenueLeakageData, type VerifiedLeakage } from '@/components/scan/revenue-leakage-card';
 import { PricingDisciplineCard } from '@/components/scan/pricing-discipline-card';
 import { SinceLastScanCard } from '@/components/scan/since-last-scan-card';
+import { CategoryRiskCard } from '@/components/scan/category-risk-card';
+import { getDetectorCategory } from '@/lib/forensics/types';
 import { ComplexityCard } from '@/components/scan/complexity-card';
 import { ScheduleModal } from '@/components/schedule/schedule-modal';
 import { ScheduleList } from '@/components/schedule/schedule-list';
@@ -211,8 +213,15 @@ export default function OrgDetailPage() {
             .then(async (fScan) => {
               if (!fScan) return;
               const findingsRes = await fetch(`/api/forensic-findings?forensicScanId=${fScan.id}`);
-              const findings: Array<{ id: string; detector_id: string; title: string; gap_usd: number }> =
+              const allFindings: Array<{ id: string; detector_id: string; title: string; gap_usd: number }> =
                 findingsRes.ok ? await findingsRes.json() : [];
+              // Filter to revenue_leakage category only — governance and
+              // pipeline findings live in their own cards on this page,
+              // so summing them into Revenue Leakage would double-count
+              // and confuse the $ headline.
+              const findings = allFindings.filter(
+                (f) => getDetectorCategory(f.detector_id) === 'revenue_leakage'
+              );
               const liveVerifiedUsd = findings.reduce((sum, f) => sum + Number(f.gap_usd || 0), 0);
               setVerifiedLeakage({
                 total_verified_usd: liveVerifiedUsd,
@@ -1701,6 +1710,16 @@ export default function OrgDetailPage() {
               </div>
             );
           })()}
+
+          {/* ===== GOVERNANCE + PIPELINE RISK =====
+              New finding-category surfaces. Sit below Revenue Leakage
+              (which is the $ headline) but above Pricing Discipline
+              (which is an org-level KPI). Each self-hides when its
+              category has no findings. */}
+          <div className="mb-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+            <CategoryRiskCard orgId={orgId} category="governance" />
+            <CategoryRiskCard orgId={orgId} category="pipeline" />
+          </div>
 
           {/* ===== PRICING DISCIPLINE =====
               Org-level pricing-health KPIs (avg discount vs approved

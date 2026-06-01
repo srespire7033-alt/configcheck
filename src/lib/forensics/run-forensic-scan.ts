@@ -35,6 +35,11 @@ import QL_FOR_001 from './detectors/ql-for-001-bundle-option-free';
 import ORD_FOR_001 from './detectors/ord-for-001-order-no-billing';
 import ORD_FOR_002 from './detectors/ord-for-002-quote-order-variance';
 import ORD_FOR_003 from './detectors/ord-for-003-quote-order-variance-amendment';
+import SUB_FOR_001 from './detectors/sub-for-001-quantity-drift';
+import PROV_FOR_001 from './detectors/prov-for-001-provisioned-not-billed';
+import OPP_FOR_001 from './detectors/opp-for-001-closed-won-no-quote';
+import CON_FOR_001 from './detectors/con-for-001-contract-no-active-subs';
+import REN_003 from './detectors/ren-003-expired-quote-no-renewal';
 import CLASS_A_TRACER from './attribution/class-a-system-disconnect';
 import CLASS_B_TRACER from './attribution/class-b-manual-override';
 import CLASS_C_TRACER from './attribution/class-c-conflicting';
@@ -50,7 +55,16 @@ import type { DetectorContext, ForensicDetector, AttributionTracer, DetectorResu
  * Each detector is responsible for stating which product types it applies
  * to and whether it's free-tier eligible.
  */
-const DETECTORS: ForensicDetector[] = [REN_001, REN_002, DSC_FOR_001, QL_FOR_001, ORD_FOR_001, ORD_FOR_002, ORD_FOR_003];
+const DETECTORS: ForensicDetector[] = [
+  // Revenue Leakage detectors ($-quantifiable, retrospective)
+  REN_001, REN_002, DSC_FOR_001, QL_FOR_001,
+  ORD_FOR_001, ORD_FOR_002, ORD_FOR_003,
+  SUB_FOR_001, PROV_FOR_001,
+  // Governance detectors (process/audit, $ ambiguous)
+  OPP_FOR_001, CON_FOR_001,
+  // Pipeline detectors (prospective, at-risk ARR)
+  REN_003,
+];
 
 /**
  * Registry of attribution tracers. The orchestrator runs ALL applicable
