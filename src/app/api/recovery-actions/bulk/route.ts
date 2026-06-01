@@ -26,7 +26,11 @@ const TRANSITIONS: Record<Action, { from: string[]; to: string; setTimestamp?: '
   approve: { from: ['pending'], to: 'approved', setTimestamp: 'approved_at' },
   reject:  { from: ['pending'], to: 'rejected' },
   commit:  { from: ['approved'], to: 'committed', setTimestamp: 'committed_at' },
-  stage:   { from: ['rejected', 'expired'], to: 'pending' },
+  // 'stage' also accepts 'committed' so a user who hit Verify Failed on
+  // the Committed tab can take the action back to Pending and redo the
+  // entire upload flow. Timestamps reset so the audit trail reflects
+  // the retry as a fresh attempt.
+  stage:   { from: ['rejected', 'expired', 'committed'], to: 'pending' },
 };
 
 export async function POST(request: NextRequest) {

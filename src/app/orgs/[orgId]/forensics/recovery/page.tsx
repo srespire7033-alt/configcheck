@@ -145,6 +145,34 @@ export default function RecoveryDashboardPage() {
     }
   }
 
+  // Per-row actions — only used on the Committed tab when verification
+  // failed. Reverify re-runs the check inline (no state change).
+  // Restage takes the action all the way back to Pending for redo.
+  async function reverifyAction(actionId: string) {
+    setActionInFlight(true);
+    try {
+      await fetch(`/api/recovery-actions/${actionId}/re-verify`, { method: 'POST' });
+      await fetchData();
+    } finally {
+      setActionInFlight(false);
+    }
+  }
+  async function restageAction(actionId: string) {
+    setActionInFlight(true);
+    try {
+      await fetch('/api/recovery-actions/bulk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: [actionId], action: 'stage' }),
+      });
+      // After restage, switch user to Pending tab so they see the result.
+      setTab('pending');
+      await fetchData();
+    } finally {
+      setActionInFlight(false);
+    }
+  }
+
   function downloadBulkCsv() {
     if (selected.size === 0) return;
     const ids = Array.from(selected).join(',');
@@ -483,6 +511,78 @@ export default function RecoveryDashboardPage() {
                           <pre className="mt-3 text-[11px] bg-gray-900 dark:bg-gray-950 text-gray-100 p-3 rounded-lg overflow-x-auto">
                             {action.draft_payload.csv_header}{'\n'}{action.draft_payload.csv_row}
                           </pre>
+                        )}
+
+                        {/* Verification detail panel — only on committed
+                            actions. Failed verification gets an amber
+                            panel with re-verify + re-stage actions.
+                            Verified gets a quiet green panel showing
+                            what was checked so the audit trail is
+                            transparent. */}
+                        {action.approval_status === 'committed' && action.metadata?.commit_verification && (
+                          <div
+                            className={`mt-3 rounded-lg p-3 text-xs border ${
+                              action.metadata.commit_verification.verified
+                                ? 'bg-emerald-50/40 dark:bg-emerald-900/10 border-emerald-200 dark:border-emerald-800/40 text-emerald-900 dark:text-emerald-200'
+                                : 'bg-amber-50/40 dark:bg-amber-900/10 border-amber-200 dark:border-amber-800/40 text-amber-900 dark:text-amber-200'
+                            }`}
+                          >
+                            <p className="font-medium mb-1">
+                              {action.metadata.commit_verification.verified
+                                ? '✓ Verification passed'
+                                : '⚠ Verification failed — Salesforce doesn\'t reflect the patch'}
+                            </p>
+                            <p className="opacity-90 leading-relaxed mb-2">
+                              {action.metadata.commit_verification.message}
+                            </p>
+                            {(action.metadata.commit_verification.expected_value != null ||
+                              action.metadata.commit_verification.actual_value != null) && (
+                              <div className="grid grid-cols-2 gap-2 text-[11px] mb-2">
+                                <div>
+                                  <p className="opacity-70 uppercase tracking-wider">Expected</p>
+                                  <p className="font-mono">
+                                    {String(action.metadata.commit_verification.expected_value ?? '—')}
+                                  </p>
+                                </div>
+                                <div>
+                                  <p className="opacity-70 uppercase tracking-wider">Actual on Salesforce</p>
+                                  <p className="font-mono">
+                                    {String(action.metadata.commit_verification.actual_value ?? '—')}
+                                  </p>
+                                </div>
+                              </div>
+                            )}
+                            {!action.metadata.commit_verification.verified && (
+                              <div className="flex items-center gap-2 flex-wrap mt-2">
+                                <button
+                                  onClick={() => reverifyAction(action.id)}
+                                  disabled={actionInFlight}
+                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-amber-600 hover:bg-amber-700 text-white disabled:opacity-50"
+                                  title="Re-run the verifier after fixing the upload"
+                                >
+                                  <RefreshCw className="h-3.5 w-3.5" />
+                                  Re-verify
+                                </button>
+                                <button
+                                  onClick={() => restageAction(action.id)}
+                                  disabled={actionInFlight}
+                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-white dark:bg-gray-800 border border-amber-300 dark:border-amber-700 text-amber-800 dark:text-amber-200 hover:bg-amber-50 dark:hover:bg-amber-900/20 disabled:opacity-50"
+                                  title="Move back to Pending to redo the whole upload"
+                                >
+                                  Re-stage from scratch
+                                </button>
+                                <a
+                                  href={`/api/forensic-findings/${action.finding_id}/recovery-csv`}
+                                  className="text-xs text-amber-700 dark:text-amber-300 hover:underline inline-flex items-center gap-1"
+                                >
+                                  <Download className="h-3 w-3" /> Re-download CSV
+                                </a>
+                              </div>
+                            )}
+                            <p className="opacity-60 text-[10px] mt-2">
+                              Verified {new Date(action.metadata.commit_verification.verified_at).toLocaleString()}
+                            </p>
+                          </div>
                         )}
                       </div>
                     </div>
