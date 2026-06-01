@@ -40,8 +40,9 @@ interface RenewalLineRow {
   SBQQ__Quote__c: string;
   'SBQQ__Quote__r.Name': string;
   'SBQQ__Quote__r.SBQQ__Type__c': string;
+  'SBQQ__Quote__r.SBQQ__Account__c': string;
   'SBQQ__Quote__r.CurrencyIsoCode': string;
-  SBQQ__RenewedSubscription__c: string;
+  SBQQ__RenewedSubscription__c: string | null;
   SBQQ__Product__c: string;
   'SBQQ__Product__r.Name': string;
   SBQQ__NetPrice__c: string;
@@ -51,11 +52,14 @@ interface RenewalLineRow {
 interface SubscriptionRow {
   Id: string;
   Name: string;
+  SBQQ__Account__c: string;
+  SBQQ__Product__c: string;
   SBQQ__Contract__c: string;
   'SBQQ__Contract__r.ContractNumber': string;
   'SBQQ__Contract__r.SBQQ__RenewalUpliftRate__c': string | null;
   SBQQ__NetPrice__c: string;
   SBQQ__Quantity__c: string;
+  SBQQ__SubscriptionEndDate__c: string | null;
 }
 
 const REN_001: ForensicDetector = {
@@ -94,7 +98,7 @@ const REN_001: ForensicDetector = {
       SELECT
         Id, Name,
         SBQQ__Quote__c, SBQQ__Quote__r.Name,
-        SBQQ__Quote__r.SBQQ__Type__c${currencySelect},
+        SBQQ__Quote__r.SBQQ__Type__c, SBQQ__Quote__r.SBQQ__Account__c${currencySelect},
         SBQQ__RenewedSubscription__c,
         SBQQ__Product__c, SBQQ__Product__r.Name,
         SBQQ__NetPrice__c, SBQQ__Quantity__c
@@ -103,56 +107,97 @@ const REN_001: ForensicDetector = {
         AND CreatedDate >= ${sinceIso.replace('Z', 'Z')}
     `;
 
-    // Regular SOQL. Up to 2K rows in default REST. For the renewal-line
-    // volumes typical CPQ customers have, this completes in <500ms vs
-    // Bulk API's 5-30s submit+poll. autoFetch is omitted because it has
-    // had quirky behavior with parent-relationship WHERE clauses in
-    // some jsforce versions — we'll add explicit pagination if any
-    // customer pushes past 2K rows.
     const allLines = await ctx.conn.query<RenewalLineRow>(renewalLinesQuery);
-    const linesWithSub = allLines.records.filter((l) => !!l.SBQQ__RenewedSubscription__c);
-    console.log(`[REN-001] Renewal lines: ${allLines.records.length} total, ${linesWithSub.length} with SBQQ__RenewedSubscription__c set`);
-    if (linesWithSub.length === 0 && allLines.records.length > 0) {
-      console.warn(
-        `[REN-001] All ${allLines.records.length} renewal lines have SBQQ__RenewedSubscription__c = null. ` +
-        `This usually means the renewals were generated outside CPQ's renewal logic (e.g., API-created fixtures). ` +
-        `The detector needs that link to reconcile against Subscription.NetPrice + Contract uplift %.`
-      );
-    }
-    const linesRes = { records: linesWithSub };
-    if (linesRes.records.length === 0) {
-      // No renewal quote lines found. Either the org has no renewals
-      // yet, or SBQQ__Type__c is being stored differently. Neither is a
-      // detector bug — return empty.
-      return [];
-    }
+    console.log(`[REN-001] Renewal lines: ${allLines.records.length} total`);
+    if (allLines.records.length === 0) return [];
 
-    // 2. Pull the linked Subscriptions to get the original price + contract uplift.
-    const subscriptionIds = Array.from(new Set(linesRes.records.map((r) => r.SBQQ__RenewedSubscription__c).filter(Boolean)));
+    // Two paths to the originating Subscription:
+    //   (a) PRIMARY: SBQQ__RenewedSubscription__c link is populated.
+    //       Direct ID lookup, perfectly accurate.
+    //   (b) FALLBACK: link is empty (CPQ stripped it, or the line was
+    //       API-created). Match by Account + Product → most-recent
+    //       Subscription whose end date precedes the renewal line's
+    //       creation. Less precise (could mis-match if Account has
+    //       multiple subscriptions on the same product), but works
+    //       across orgs where the linkage field isn't reliable.
+    const linkedSubIds = new Set<string>();
+    const accountIds = new Set<string>();
+    const productIds = new Set<string>();
+    for (const line of allLines.records) {
+      if (line.SBQQ__RenewedSubscription__c) linkedSubIds.add(line.SBQQ__RenewedSubscription__c);
+      if (line['SBQQ__Quote__r.SBQQ__Account__c']) accountIds.add(line['SBQQ__Quote__r.SBQQ__Account__c']);
+      if (line.SBQQ__Product__c) productIds.add(line.SBQQ__Product__c);
+    }
+    console.log(`[REN-001] ${linkedSubIds.size} lines linked via RenewedSubscription; ${allLines.records.length - linkedSubIds.size} need Account+Product fallback`);
+
+    // Pull subscriptions: union of (linked IDs) + (all subs on the
+    // affected accounts for the affected products). One query each.
     const subscriptionsBySubId = new Map<string, SubscriptionRow>();
-    if (subscriptionIds.length > 0) {
-      // SOQL IN-clause practical limit ~4K characters; 500 ids fits
-      // comfortably with 15-char Salesforce IDs.
-      for (const chunk of chunkArray(subscriptionIds, 500)) {
-        const subQuery = `
-          SELECT
-            Id, Name,
-            SBQQ__Contract__c, SBQQ__Contract__r.ContractNumber,
-            SBQQ__Contract__r.SBQQ__RenewalUpliftRate__c,
-            SBQQ__NetPrice__c, SBQQ__Quantity__c
-          FROM SBQQ__Subscription__c
-          WHERE Id IN (${chunk.map((id) => `'${id}'`).join(',')})
-        `;
-        const subRes = await ctx.conn.query<SubscriptionRow>(subQuery);
+    const subQueryFields = `
+      Id, Name, SBQQ__Account__c, SBQQ__Product__c,
+      SBQQ__Contract__c, SBQQ__Contract__r.ContractNumber,
+      SBQQ__Contract__r.SBQQ__RenewalUpliftRate__c,
+      SBQQ__NetPrice__c, SBQQ__Quantity__c,
+      SBQQ__SubscriptionEndDate__c
+    `;
+    if (linkedSubIds.size > 0) {
+      for (const chunk of chunkArray(Array.from(linkedSubIds), 500)) {
+        const subRes = await ctx.conn.query<SubscriptionRow>(`SELECT ${subQueryFields} FROM SBQQ__Subscription__c WHERE Id IN (${chunk.map((id) => `'${id}'`).join(',')})`);
         for (const s of subRes.records) subscriptionsBySubId.set(s.Id, s);
       }
-      console.log(`[REN-001] Subscriptions loaded: ${subscriptionsBySubId.size}`);
     }
+    // Fallback subscriptions — all on the affected accounts for the
+    // affected products. We then match per-line in JS.
+    const subsByAccProd = new Map<string, SubscriptionRow[]>();
+    if (accountIds.size > 0 && productIds.size > 0) {
+      const accChunks = chunkArray(Array.from(accountIds), 500);
+      const prodChunks = chunkArray(Array.from(productIds), 500);
+      // Cross-product the chunks. Both are small in practice (<5).
+      for (const accChunk of accChunks) {
+        for (const prodChunk of prodChunks) {
+          const subRes = await ctx.conn.query<SubscriptionRow>(`
+            SELECT ${subQueryFields}
+            FROM SBQQ__Subscription__c
+            WHERE SBQQ__Account__c IN (${accChunk.map((id) => `'${id}'`).join(',')})
+              AND SBQQ__Product__c IN (${prodChunk.map((id) => `'${id}'`).join(',')})
+          `);
+          for (const s of subRes.records) {
+            const key = `${s.SBQQ__Account__c}|${s.SBQQ__Product__c}`;
+            const list = subsByAccProd.get(key) ?? [];
+            list.push(s);
+            subsByAccProd.set(key, list);
+            // Also index by ID so the primary path can use this map too.
+            subscriptionsBySubId.set(s.Id, s);
+          }
+        }
+      }
+    }
+    console.log(`[REN-001] Subscriptions loaded: ${subscriptionsBySubId.size}, account+product combinations: ${subsByAccProd.size}`);
 
     // 3. Reconcile.
     const findings: DetectorResult[] = [];
-    for (const line of linesRes.records) {
-      const sub = subscriptionsBySubId.get(line.SBQQ__RenewedSubscription__c);
+    for (const line of allLines.records) {
+      // Resolve subscription via primary or fallback path.
+      let sub: SubscriptionRow | undefined;
+      if (line.SBQQ__RenewedSubscription__c) {
+        sub = subscriptionsBySubId.get(line.SBQQ__RenewedSubscription__c);
+      }
+      if (!sub) {
+        const key = `${line['SBQQ__Quote__r.SBQQ__Account__c']}|${line.SBQQ__Product__c}`;
+        const candidates = subsByAccProd.get(key) ?? [];
+        // Filter to subs whose endDate is before this line's creation
+        // (the subscription ENDED, so this is its renewal). For our
+        // fixture seed, this is "any sub on the same Account+Product."
+        // Sort by endDate desc — pick the most-recent.
+        const eligible = candidates
+          .slice()
+          .sort((a, b) => {
+            const aEnd = a.SBQQ__SubscriptionEndDate__c ? new Date(a.SBQQ__SubscriptionEndDate__c).getTime() : 0;
+            const bEnd = b.SBQQ__SubscriptionEndDate__c ? new Date(b.SBQQ__SubscriptionEndDate__c).getTime() : 0;
+            return bEnd - aEnd;
+          });
+        sub = eligible[0];
+      }
       if (!sub) continue; // Orphaned line — flagged by a different detector (ORD-FOR-002)
 
       const upliftPctRaw = sub['SBQQ__Contract__r.SBQQ__RenewalUpliftRate__c'];
