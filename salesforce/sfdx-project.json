@@ -1,0 +1,17 @@
+{
+  "packageDirectories": [
+    {
+      "path": "force-app",
+      "default": true,
+      "package": "OrgPrism",
+      "versionName": "v1.0",
+      "versionNumber": "1.0.0.NEXT",
+      "definitionFile": "config/project-scratch-def.json"
+    }
+  ],
+  "namespace": "orgprism",
+  "sfdcLoginUrl": "https://login.salesforce.com",
+  "sourceApiVersion": "60.0",
+  "name": "OrgPrism",
+  "description": "CPQ + Revenue Cloud audit + recovery managed package"
+}

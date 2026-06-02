@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>ForensicFinding__c</fullName>
+    <label>Forensic Finding</label>
+    <type>Lookup</type>
+    <referenceTo>ForensicFinding__c</referenceTo>
+    <relationshipName>RecoveryActions</relationshipName>
+    <relationshipLabel>Recovery Actions</relationshipLabel>
+    <required>true</required>
+    <deleteConstraint>SetNull</deleteConstraint>
+</CustomField>

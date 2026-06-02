@@ -1,0 +1,7 @@
+# Don't push the docs or scripts into Salesforce
+*.md
+README.md
+DATA-MODEL.md
+.vscode
+.idea
+node_modules/
