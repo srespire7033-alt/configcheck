@@ -193,10 +193,17 @@ export function CategoryRiskCard({ orgId, category }: Props) {
                   const effort = getDetectorEffort(f.detector_id);
                   const effortMeta = EFFORT_META[effort];
                   return (
-                    <div key={f.id} className="group flex items-center gap-2 -mx-1">
+                    <div key={f.id} className="group flex items-center gap-2">
                       <Link
                         href={`/orgs/${orgId}/forensics/${f.id}`}
-                        className="flex-1 flex items-center justify-between gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors"
+                        // min-w-0 is critical for truncate to work down the
+                        // tree. Without it, flexbox lets the title's full
+                        // width push this Link wider than its flex-1
+                        // allotment, defeating the truncate on the title
+                        // block below. -mx-1 was also pulling the row past
+                        // the card border, which is what made the right-
+                        // side \$ chip render outside the card.
+                        className="flex-1 min-w-0 flex items-center justify-between gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors"
                       >
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2">
