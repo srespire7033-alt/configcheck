@@ -6,6 +6,8 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { getDetectorEffort, type EffortLevel } from '@/lib/forensics/types';
 import { FindingsFilterBar, useFindingsFilter } from './findings-filter';
 import { BulkActionBar } from './bulk-action-bar';
+import { NotePopover } from './note-popover';
+import { useRef } from 'react';
 
 // Effort badge — borrowed pattern from Hubbl's severity×effort matrix.
 // Lets a consultant glance at a finding and know if it's a quick win
@@ -785,6 +787,11 @@ function FindingRow({
   onToggleSelect?: (id: string) => void;
 }) {
   const [hiding, setHiding] = useState(false);
+  const [noteOpen, setNoteOpen] = useState(false);
+  // Local mirror of consultant_note so the row updates immediately
+  // after the popover saves — without waiting for a parent refresh.
+  const [localNote, setLocalNote] = useState<string | null>(finding.consultant_note ?? null);
+  const noteAnchorRef = useRef<HTMLButtonElement | null>(null);
   const effort = getDetectorEffort(finding.detector_id);
   const effortMeta = EFFORT_META[effort];
 
@@ -837,23 +844,47 @@ function FindingRow({
         >
           {effort}
         </span>
-        {finding.consultant_note && (
-          // Span wrapper carries the native title-tooltip — lucide-react
-          // icons don't accept a title prop directly. First 200 chars
-          // give the user a preview; full note lives on the detail page.
-          <span
-            className="flex-shrink-0"
-            title={`Note: ${finding.consultant_note.slice(0, 200)}${finding.consultant_note.length > 200 ? '…' : ''}`}
-            aria-label="This finding has a private note"
+        {localNote && (
+          // Click to edit inline (popover). Hover to see preview tooltip.
+          <button
+            ref={noteAnchorRef}
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setNoteOpen((v) => !v);
+            }}
+            className="flex-shrink-0 p-0.5 rounded hover:bg-amber-100 dark:hover:bg-amber-900/30 transition-colors"
+            title={`Note: ${localNote.slice(0, 200)}${localNote.length > 200 ? '…' : ''}`}
+            aria-label="Edit private note"
           >
             <StickyNote className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
-          </span>
+          </button>
         )}
       </div>
       <div className="flex items-center gap-2 flex-shrink-0">
         <span className={`font-mono font-semibold text-green-700 dark:text-green-300 ${compact ? 'text-sm' : 'text-base'}`}>
           {formatMoney(finding.gap_usd, currency)}
         </span>
+        {!localNote && (
+          // Add-note affordance — hover-only so it doesn't clutter
+          // every row. Uses the same anchor ref the icon-button would
+          // have used, so the popover lands in the same spot.
+          <button
+            ref={noteAnchorRef}
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setNoteOpen(true);
+            }}
+            className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-amber-50 dark:hover:bg-amber-900/30"
+            title="Add a private note"
+            aria-label="Add a private note"
+          >
+            <StickyNote className="h-3.5 w-3.5 text-gray-500 hover:text-amber-600" />
+          </button>
+        )}
         {onHide && (
           <button
             onClick={handleHide}
@@ -865,6 +896,14 @@ function FindingRow({
             <EyeOff className="h-3.5 w-3.5 text-gray-500" />
           </button>
         )}
+        <NotePopover
+          open={noteOpen}
+          anchorRef={noteAnchorRef}
+          findingId={finding.id}
+          initialNote={localNote}
+          onSaved={(next) => setLocalNote(next)}
+          onClose={() => setNoteOpen(false)}
+        />
       </div>
     </a>
   );
