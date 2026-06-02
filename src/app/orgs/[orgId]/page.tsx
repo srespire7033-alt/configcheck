@@ -13,6 +13,7 @@ import { IssueDetailModal } from '@/components/issues/issue-detail-modal';
 import { SeverityModal } from '@/components/issues/severity-modal';
 import { RevenueLeakageCard, type RevenueLeakageData, type VerifiedLeakage } from '@/components/scan/revenue-leakage-card';
 import { ImpactEffortMatrix } from '@/components/scan/impact-effort-matrix';
+import { DashboardTabs, type DashboardTab } from '@/components/ui/dashboard-tabs';
 import { PricingDisciplineCard } from '@/components/scan/pricing-discipline-card';
 import { SinceLastScanCard } from '@/components/scan/since-last-scan-card';
 import { CategoryRiskCard } from '@/components/scan/category-risk-card';
@@ -57,6 +58,17 @@ export default function OrgDetailPage() {
   const [remediationLoading, setRemediationLoading] = useState(false);
   const [remediationError, setRemediationError] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+
+  // Tab nav state. URL-synced via DashboardTabs so deep-links + browser
+  // back/forward work without refetching the page. Default to Summary —
+  // the most useful at-a-glance view (matrix + complexity + AI analysis
+  // + diff). Reads ?tab=<id> from the URL on first render to honor
+  // shareable URLs.
+  type TabId = 'summary' | 'leakage' | 'risk' | 'pricing' | 'issues' | 'plan';
+  const initialTab = (typeof window !== 'undefined'
+    ? (new URLSearchParams(window.location.search).get('tab') as TabId | null)
+    : null) || 'summary';
+  const [activeTab, setActiveTab] = useState<TabId>(initialTab);
   const [selectedIssue, setSelectedIssue] = useState<DBIssue | null>(null);
   const [severityFilter, setSeverityFilter] = useState<'critical' | 'warning' | 'info' | null>(null);
   const [scanProductType, setScanProductType] = useState<ProductType>('cpq');
@@ -1412,12 +1424,36 @@ export default function OrgDetailPage() {
             </div>
           </div>
 
+          {/* ===== TAB STRIP =====
+              Slices the dashboard into 6 focused sub-views. Above this
+              line: header, scan controls, score — always visible.
+              Below this line: tab-gated content. Hubbl-style horizontal
+              nav with red underline on the active tab. */}
+          {(() => {
+            const totalIssues = issues.length;
+            const tabs: DashboardTab[] = [
+              { id: 'summary', label: 'Summary' },
+              { id: 'leakage', label: 'Revenue Leakage' },
+              { id: 'risk', label: 'Governance & Pipeline' },
+              { id: 'pricing', label: 'Pricing Discipline' },
+              { id: 'issues', label: 'Issues', count: totalIssues > 0 ? totalIssues : null },
+              { id: 'plan', label: 'Plan' },
+            ];
+            return (
+              <DashboardTabs
+                tabs={tabs}
+                active={activeTab}
+                onChange={(id) => setActiveTab(id as TabId)}
+              />
+            );
+          })()}
+
           {/* ===== TOP ISSUES TO ADDRESS =====
               Sort criticals before warnings, drop info-severity, then run
               the grouper to fold sibling issues like "products missing X"
               under one parent (so the same configuration gap doesn't
               dominate the top-N list with four duplicates). */}
-          {issues.length > 0 && (() => {
+          {activeTab === 'issues' && issues.length > 0 && (() => {
             const seen = new Set<string>();
             const sorted = [...issues]
               .sort((a, b) => {
@@ -1681,12 +1717,8 @@ export default function OrgDetailPage() {
             );
           })()}
 
-          {/* ===== SCORE TREND CHART =====
-              Filtered to scans of the SAME product_type as the displayed scan.
-              Mixing CPQ + ARM + Billing scans on one chart was misleading
-              because each engine has a different score distribution — an
-              ARM 99 next to a CPQ 91 isn't comparable. */}
-          {(() => {
+          {/* ===== SCORE TREND CHART (Summary tab) ===== */}
+          {activeTab === 'summary' && (() => {
             const sameTypeScans = allScans.filter((s) => s.product_type === scan.product_type);
             if (sameTypeScans.length < 2) return null;
             return (
@@ -1702,29 +1734,22 @@ export default function OrgDetailPage() {
               check formulas with recoverability + LTV multipliers. Sits
               ABOVE the older revenue-risk card because this is the
               consultant-deliverable headline. */}
-          {/* ===== SINCE LAST SCAN (DIFF) =====
-              Sits ABOVE Revenue Leakage — once you've run more than one
-              scan, "what changed this week" is the headline a returning
-              user wants first. Self-hides when there's only one scan
-              (component returns null on 204). */}
-          <div className="mb-8">
-            <SinceLastScanCard orgId={orgId} />
-          </div>
+          {/* ===== SINCE LAST SCAN (DIFF) — Summary tab ===== */}
+          {activeTab === 'summary' && (
+            <div className="mb-8">
+              <SinceLastScanCard orgId={orgId} />
+            </div>
+          )}
 
-          {/* ===== \$-IMPACT × EFFORT MATRIX =====
-              Sits ABOVE Revenue Leakage — it's the 'what to fix first'
-              overview that consultants screenshot for client pitches.
-              Self-hides when there are no verified findings (so it
-              doesn't dominate empty-state orgs). Hubbl has the same
-              shape with severity×effort; ours is denominated in dollars,
-              which is the wedge they can't match without reading data. */}
-          {verifiedLeakage && verifiedLeakage.top_findings.length > 0 && (
+          {/* ===== \$-IMPACT × EFFORT MATRIX — Summary tab ===== */}
+          {activeTab === 'summary' && verifiedLeakage && verifiedLeakage.top_findings.length > 0 && (
             <div className="mb-8">
               <ImpactEffortMatrix findings={verifiedLeakage.top_findings} currency="USD" />
             </div>
           )}
 
-          {(() => {
+          {/* ===== REVENUE LEAKAGE — Revenue Leakage tab ===== */}
+          {activeTab === 'leakage' && (() => {
             const meta = scan.metadata as Record<string, unknown> | null;
             const leakage = meta?.revenue_leakage as RevenueLeakageData | undefined;
             if (!leakage) return null;
@@ -1735,35 +1760,26 @@ export default function OrgDetailPage() {
             );
           })()}
 
-          {/* ===== GOVERNANCE + PIPELINE RISK =====
-              New finding-category surfaces. Sit below Revenue Leakage
-              (which is the $ headline) but above Pricing Discipline
-              (which is an org-level KPI). Each self-hides when its
-              category has no findings. */}
-          <div className="mb-8 grid grid-cols-1 md:grid-cols-2 gap-6">
-            <CategoryRiskCard orgId={orgId} category="governance" />
-            <CategoryRiskCard orgId={orgId} category="pipeline" />
-          </div>
+          {/* ===== GOVERNANCE + PIPELINE RISK — Risk tab ===== */}
+          {activeTab === 'risk' && (
+            <div className="mb-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+              <CategoryRiskCard orgId={orgId} category="governance" />
+              <CategoryRiskCard orgId={orgId} category="pipeline" />
+            </div>
+          )}
 
-          {/* ===== PRICING DISCIPLINE =====
-              Org-level pricing-health KPIs (avg discount vs approved
-              threshold + % of lines with manual override). Lazy-loads
-              via its own API on mount — independent of the scan
-              metadata flow. */}
-          <div className="mb-8">
-            <PricingDisciplineCard orgId={orgId} />
-          </div>
+          {/* ===== PRICING DISCIPLINE — Pricing tab ===== */}
+          {activeTab === 'pricing' && (
+            <div className="mb-8">
+              <PricingDisciplineCard orgId={orgId} />
+            </div>
+          )}
 
-          {/* ===== CPQ COMPLEXITY =====
-              Older "Revenue at Risk" card removed — it overlapped with
-              the new Estimated Revenue Leakage card above and confused
-              users into thinking we had two competing $ numbers. The
-              Leakage card is the canonical $ surface; complexity is a
-              separate dimension and stays. */}
-          {/* Side-by-side grid: CPQ Complexity (left) + AI Analysis (right).
-              Both are independent IIFEs — if one returns null the grid
-              shows a single column gracefully. Each block lost its mb-8
-              (margin lives on the grid wrapper now). */}
+          {/* ===== CPQ COMPLEXITY + AI ANALYSIS — Summary tab =====
+              Side-by-side grid: CPQ Complexity (left) + AI Analysis
+              (right). Both are independent IIFEs — if one returns null
+              the grid shows a single column gracefully. */}
+          {activeTab === 'summary' && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8 items-start">
           {(() => {
             const meta = scan.metadata as Record<string, unknown> | null;
@@ -1910,10 +1926,11 @@ export default function OrgDetailPage() {
             );
           })()}
           </div>
+          )}
           {/* /side-by-side grid */}
 
-          {/* ===== REMEDIATION PLAN ===== */}
-          {issues.length > 0 && (
+          {/* ===== REMEDIATION PLAN — Plan tab ===== */}
+          {activeTab === 'plan' && issues.length > 0 && (
             <div className="bg-white dark:bg-[#111827] rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 mb-8">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
