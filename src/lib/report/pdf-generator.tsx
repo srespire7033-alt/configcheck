@@ -273,7 +273,7 @@ export function CPQHealthReport({ scan, issues, orgName, companyName, brandColor
             {leakage.top_contributors.length > 0 && (
               <View style={{ marginTop: 6 }}>
                 <Text style={{ fontSize: 8, fontWeight: 700, color: '#78350f', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.5 }}>
-                  Top {Math.min(5, leakage.top_contributors.length)} Contributors
+                  Biggest Revenue Leaks — Top {Math.min(5, leakage.top_contributors.length)} by $ Impact
                 </Text>
                 {leakage.top_contributors.slice(0, 5).map((c, i) => (
                   <View key={c.check_id + i} style={styles.leakContribRow}>
