@@ -67,7 +67,7 @@ export function PricingDisciplineCard({ orgId }: { orgId: string }) {
               <Scale className="h-5 w-5 text-indigo-700 dark:text-indigo-300" />
             </div>
             <div>
-              <h2 className="text-lg font-semibold">Pricing Discipline</h2>
+              <h2 className="text-lg font-bold">Pricing Discipline</h2>
               <p className="text-sm text-gray-500 dark:text-gray-400">
                 Org-level pricing-health signals across {data.total_quote_lines.toLocaleString()} quote lines (last 12 months).
               </p>

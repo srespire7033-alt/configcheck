@@ -141,7 +141,7 @@ export function CategoryRiskCard({ orgId, category }: Props) {
           <div className="flex gap-3 items-start">
             <div className={`rounded-lg p-2 ${colorClasses.accent}`}>{copy.icon}</div>
             <div>
-              <h2 className="text-lg font-semibold">{copy.title}</h2>
+              <h2 className="text-lg font-bold">{copy.title}</h2>
               <p className="text-sm text-gray-500 dark:text-gray-400">{copy.subtitle}</p>
             </div>
           </div>

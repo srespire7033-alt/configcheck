@@ -73,7 +73,7 @@ export function DashboardTabs({ tabs, active, onChange, urlSync = true }: Props)
               key={tab.id}
               type="button"
               onClick={() => handleClick(tab.id)}
-              className={`relative px-4 py-3 text-sm font-medium transition-colors whitespace-nowrap ${
+              className={`relative px-4 py-3 text-[15px] font-semibold transition-colors whitespace-nowrap ${
                 isActive
                   ? 'text-gray-900 dark:text-white'
                   : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
@@ -81,7 +81,7 @@ export function DashboardTabs({ tabs, active, onChange, urlSync = true }: Props)
               aria-current={isActive ? 'page' : undefined}
             >
               <span className="flex items-center gap-2">
-                <span className={isActive ? 'font-semibold' : ''}>{tab.label}</span>
+                <span className={isActive ? 'font-bold' : ''}>{tab.label}</span>
                 {tab.count !== undefined && tab.count !== null && (
                   <span
                     className={`inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-[10px] font-semibold ${

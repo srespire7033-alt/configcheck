@@ -239,7 +239,7 @@ export function ImpactEffortMatrix({ findings, currency = 'USD', orgId }: Props)
               <Sparkles className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
             </div>
             <div>
-              <h2 className="text-base font-semibold text-gray-900 dark:text-white">
+              <h2 className="text-lg font-bold text-gray-900 dark:text-white">
                 What to fix first
               </h2>
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
