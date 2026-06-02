@@ -1744,7 +1744,7 @@ export default function OrgDetailPage() {
           {/* ===== \$-IMPACT × EFFORT MATRIX — Summary tab ===== */}
           {activeTab === 'summary' && verifiedLeakage && verifiedLeakage.top_findings.length > 0 && (
             <div className="mb-8">
-              <ImpactEffortMatrix findings={verifiedLeakage.top_findings} currency="USD" />
+              <ImpactEffortMatrix findings={verifiedLeakage.top_findings} currency="USD" orgId={orgId} />
             </div>
           )}
 

@@ -32,20 +32,26 @@
  * the user's eye to where they can act.)
  */
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { Sparkles, Info } from 'lucide-react';
+import { Sparkles, Info, X, ExternalLink, ChevronRight } from 'lucide-react';
 import { getDetectorEffort, type EffortLevel } from '@/lib/forensics/types';
 
 interface Finding {
   id: string;
   detector_id: string;
   gap_usd: number;
+  // Optional — when present the click-to-drill modal shows it.
+  // Older call sites that didn't pass title still work; modal just
+  // falls back to the detector_id as the row label.
+  title?: string;
 }
 
 interface Props {
   findings: Finding[];
   currency?: string;
+  /** Org ID — when set, finding rows in the modal deep-link to the finding detail page. */
+  orgId?: string;
 }
 
 type ImpactLevel = 'high' | 'medium' | 'low';
@@ -142,12 +148,21 @@ const CELL_META: Record<string, CellMeta> = {
 interface Cell {
   count: number;
   totalUsd: number;
+  findings: Finding[];
 }
 
-export function ImpactEffortMatrix({ findings, currency = 'USD' }: Props) {
+export function ImpactEffortMatrix({ findings, currency = 'USD', orgId }: Props) {
+  // Click-to-drill modal state. When a cell is clicked, we open a
+  // modal listing the findings in that cell — keeps the user on the
+  // Summary tab instead of forcing a navigation away from the
+  // strategic overview.
+  const [openCell, setOpenCell] = useState<string | null>(null);
+
   // Bucket every finding into one of the 9 cells. Memoized because the
   // org page re-renders frequently during scan-streaming and recomputing
-  // a 1000-row reduce on each render adds up.
+  // a 1000-row reduce on each render adds up. Now stores the FINDINGS
+  // per cell too so the drill-down modal can list them without
+  // re-iterating the parent array.
   const matrix = useMemo(() => {
     const buckets: Record<string, Cell> = {};
     let totalFindings = 0;
@@ -157,12 +172,19 @@ export function ImpactEffortMatrix({ findings, currency = 'USD' }: Props) {
       const impact = bucketImpact(f.gap_usd);
       const effort: EffortLevel = getDetectorEffort(f.detector_id);
       const key = `${impact}-${effort}`;
-      const cell = buckets[key] ?? { count: 0, totalUsd: 0 };
+      const cell = buckets[key] ?? { count: 0, totalUsd: 0, findings: [] };
       cell.count += 1;
       cell.totalUsd += f.gap_usd;
+      cell.findings.push(f);
       buckets[key] = cell;
       totalFindings += 1;
       totalUsd += f.gap_usd;
+    }
+
+    // Sort each cell's findings by gap desc so the modal lists the
+    // biggest \$ contributors first.
+    for (const key of Object.keys(buckets)) {
+      buckets[key].findings.sort((a, b) => b.gap_usd - a.gap_usd);
     }
 
     return { buckets, totalFindings, totalUsd };
@@ -244,10 +266,16 @@ export function ImpactEffortMatrix({ findings, currency = 'USD' }: Props) {
                   const count = cell?.count ?? 0;
                   const total = cell?.totalUsd ?? 0;
                   const isEmpty = count === 0;
+                  // Empty cells are non-clickable — there's nothing to
+                  // drill into, and a button with no payload would mislead.
+                  const CellElement = isEmpty ? 'div' : 'button';
                   return (
-                    <div
+                    <CellElement
                       key={key}
-                      className={`relative rounded-lg p-3 min-h-[80px] flex flex-col justify-between ${meta.bg} ${meta.ring} ${isEmpty ? 'opacity-40' : ''}`}
+                      type={isEmpty ? undefined : 'button'}
+                      onClick={isEmpty ? undefined : () => setOpenCell(key)}
+                      className={`relative rounded-lg p-3 min-h-[80px] flex flex-col justify-between text-left w-full ${meta.bg} ${meta.ring} ${isEmpty ? 'opacity-40 cursor-default' : 'cursor-pointer hover:shadow-md hover:scale-[1.02] transition-all'}`}
+                      aria-label={isEmpty ? undefined : `Open ${meta.label} findings (${count} findings, ${formatMoney(total, currency)})`}
                     >
                       <div className="flex items-start justify-between gap-1">
                         <p className={`text-[10px] font-semibold uppercase tracking-wider ${meta.text}`}>
@@ -263,7 +291,7 @@ export function ImpactEffortMatrix({ findings, currency = 'USD' }: Props) {
                           {isEmpty ? '—' : formatMoney(total, currency)}
                         </p>
                       </div>
-                    </div>
+                    </CellElement>
                   );
                 })
               )}
@@ -283,10 +311,111 @@ export function ImpactEffortMatrix({ findings, currency = 'USD' }: Props) {
         <div className="mt-4 pt-3 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between flex-wrap gap-2">
           <p className="text-[11px] text-gray-500 dark:text-gray-400 flex items-center gap-1">
             <Info className="h-3 w-3" />
-            Effort is a heuristic per detector. {matrix.totalFindings} total finding{matrix.totalFindings === 1 ? '' : 's'}, {formatMoney(matrix.totalUsd, currency)} verified.
+            Click any cell to see the findings inside. Effort is a heuristic per detector. {matrix.totalFindings} total finding{matrix.totalFindings === 1 ? '' : 's'}, {formatMoney(matrix.totalUsd, currency)} verified.
           </p>
         </div>
       </CardContent>
+
+      {/* Drill-down modal — opens when a populated cell is clicked.
+          Lists every finding in that cell sorted by \$ desc. Each row
+          links out to the finding detail page (when orgId is provided).
+          Closing options: × button, Esc key, click on backdrop. */}
+      {openCell && (() => {
+        const cell = matrix.buckets[openCell];
+        const meta = CELL_META[openCell];
+        if (!cell) return null;
+        return (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            onClick={() => setOpenCell(null)}
+            role="dialog"
+            aria-modal="true"
+            aria-label={`${meta.label} findings`}
+          >
+            <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+            <div
+              className="relative bg-white dark:bg-[#111827] rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 max-w-2xl w-full max-h-[80vh] flex flex-col"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Modal header */}
+              <div className={`px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-start justify-between gap-4 rounded-t-2xl ${meta.bg}`}>
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <p className={`text-[11px] font-semibold uppercase tracking-wider ${meta.text}`}>
+                      {meta.label}
+                    </p>
+                    {meta.highlight && (
+                      <Sparkles className="h-3.5 w-3.5 text-emerald-500 dark:text-emerald-400" />
+                    )}
+                  </div>
+                  <p className={`text-2xl font-bold leading-tight ${meta.text}`}>
+                    {cell.count} finding{cell.count === 1 ? '' : 's'} · {formatMoney(cell.totalUsd, currency)}
+                  </p>
+                </div>
+                <button
+                  onClick={() => setOpenCell(null)}
+                  className="p-1 rounded-lg hover:bg-white/40 dark:hover:bg-gray-800/40 transition-colors"
+                  aria-label="Close"
+                >
+                  <X className={`h-5 w-5 ${meta.text}`} />
+                </button>
+              </div>
+
+              {/* Modal body — scrollable list */}
+              <div className="flex-1 overflow-y-auto p-4">
+                <div className="space-y-1.5">
+                  {cell.findings.map((f) => {
+                    const label = f.title || f.detector_id;
+                    const RowEl = orgId ? 'a' : 'div';
+                    const props = orgId
+                      ? {
+                          href: `/orgs/${orgId}/forensics/${f.id}`,
+                          className:
+                            'flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 hover:border-emerald-300 dark:hover:border-emerald-700 hover:bg-emerald-50/40 dark:hover:bg-emerald-900/10 transition-colors',
+                        }
+                      : {
+                          className:
+                            'flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700',
+                        };
+                    return (
+                      <RowEl key={f.id} {...props}>
+                        <div className="min-w-0 flex-1">
+                          <code className="text-[10px] font-mono text-gray-500 dark:text-gray-400">
+                            {f.detector_id}
+                          </code>
+                          <p className="text-sm text-gray-800 dark:text-gray-200 truncate">
+                            {label}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          <span className="text-sm font-mono font-semibold text-emerald-700 dark:text-emerald-300">
+                            {formatMoney(f.gap_usd, currency)}
+                          </span>
+                          {orgId && <ChevronRight className="h-4 w-4 text-gray-400" />}
+                        </div>
+                      </RowEl>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Modal footer */}
+              <div className="px-6 py-3 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between text-[11px] text-gray-500 dark:text-gray-400">
+                <p>
+                  <Info className="inline h-3 w-3 mr-1" />
+                  Click a finding to open its detail page.
+                </p>
+                <button
+                  onClick={() => setOpenCell(null)}
+                  className="font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </Card>
   );
 }
