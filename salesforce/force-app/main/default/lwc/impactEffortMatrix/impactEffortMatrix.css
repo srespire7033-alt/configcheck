@@ -1,0 +1,160 @@
+/* Quadrant summary chips */
+.op-matrix__quadrants {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.op-quad {
+  border-radius: 12px;
+  padding: 12px 16px;
+  border: 1px solid;
+}
+.op-quad__label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  margin: 0;
+  opacity: 0.7;
+}
+.op-quad__count {
+  font-size: 22px;
+  font-weight: 700;
+  margin: 4px 0 0;
+  line-height: 1;
+}
+.op-quad__total {
+  font-size: 12px;
+  margin: 4px 0 0;
+  font-weight: 500;
+  opacity: 0.75;
+}
+
+.op-quad--quick {
+  background: rgba(16,185,129,0.08);
+  border-color: rgba(16,185,129,0.25);
+  color: #047857;
+}
+.op-quad--big {
+  background: rgba(245,158,11,0.08);
+  border-color: rgba(245,158,11,0.25);
+  color: #b45309;
+}
+.op-quad--tidy {
+  background: rgba(59,130,246,0.06);
+  border-color: rgba(59,130,246,0.18);
+  color: #1d4ed8;
+}
+.op-quad--defer {
+  background: rgba(156,163,175,0.08);
+  border-color: rgba(156,163,175,0.25);
+  color: #4b5563;
+}
+
+/* The plot */
+.op-matrix__plot {
+  display: grid;
+  grid-template-columns: 32px 1fr;
+  grid-template-rows: 1fr 24px;
+  gap: 8px;
+}
+.op-matrix__y-label {
+  grid-column: 1;
+  grid-row: 1;
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  font-size: 11px;
+  color: var(--op-color-text-muted, #6b7280);
+  letter-spacing: 0.05em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.op-matrix__x-label {
+  grid-column: 2;
+  grid-row: 2;
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--op-color-text-muted, #6b7280);
+  padding: 0 8px;
+}
+.op-matrix__area {
+  grid-column: 2;
+  grid-row: 1;
+  position: relative;
+  height: 220px;
+  background: linear-gradient(to bottom, #f8fafc 0%, #ffffff 100%);
+  border: 1px solid var(--op-color-border-subtle, #f3f4f6);
+  border-radius: 8px;
+  overflow: hidden;
+}
+@media (min-width: 768px) {
+  .op-matrix__area { height: 320px; }
+}
+
+.op-matrix__hline {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 1px;
+  background: rgba(0,0,0,0.05);
+}
+.op-matrix__vline {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 1px;
+  background: rgba(0,0,0,0.05);
+}
+
+.op-matrix__quad-label {
+  position: absolute;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(0,0,0,0.18);
+  pointer-events: none;
+}
+.op-matrix__quad-label--tl { top: 8px;    left: 12px; }
+.op-matrix__quad-label--tr { top: 8px;    right: 12px; }
+.op-matrix__quad-label--bl { bottom: 8px; left: 12px; }
+.op-matrix__quad-label--br { bottom: 8px; right: 12px; }
+
+/* Bubbles */
+.op-matrix__bubble {
+  position: absolute;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  transform: translate(-50%, -50%);
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  padding: 0;
+}
+.op-matrix__bubble:hover,
+.op-matrix__bubble:focus {
+  transform: translate(-50%, -50%) scale(1.18);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.18);
+  z-index: 2;
+  outline: none;
+}
+
+/* States */
+.op-matrix__loading {
+  height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.op-matrix__empty,
+.op-matrix__error {
+  padding: 24px;
+  text-align: center;
+  color: var(--op-color-text-muted, #6b7280);
+  font-size: 13px;
+}

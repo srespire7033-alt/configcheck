@@ -1,0 +1,65 @@
+.op-trend__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.op-trend__delta {
+  font-size: 12px;
+  font-weight: 600;
+  font-feature-settings: 'tnum';
+  color: var(--op-color-text-muted, #6b7280);
+}
+.op-trend__delta--down {
+  color: var(--op-color-money-fg, #047857);
+}
+.op-trend__delta--up {
+  color: var(--op-color-sev-critical-fg, #b91c1c);
+}
+
+.op-trend__chart {
+  width: 100%;
+  height: 80px;
+}
+.op-trend__svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.op-trend__line {
+  fill: none;
+  stroke: var(--op-color-money-accent, #10b981);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.op-trend__dot {
+  fill: white;
+  stroke: var(--op-color-money-accent, #10b981);
+  stroke-width: 2;
+  cursor: pointer;
+  transition: r 0.15s ease;
+}
+.op-trend__dot:hover {
+  r: 6;
+  fill: var(--op-color-money-accent, #10b981);
+}
+
+.op-trend__loading {
+  height: 100px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.op-trend__empty,
+.op-trend__error {
+  font-size: 13px;
+  color: var(--op-color-text-muted, #6b7280);
+  margin: 0;
+  padding: 12px 0;
+}

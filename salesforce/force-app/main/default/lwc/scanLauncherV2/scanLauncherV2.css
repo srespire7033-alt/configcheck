@@ -1,0 +1,64 @@
+.op-sl {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.op-sl__caption {
+  font-size: 13px;
+  color: var(--op-color-text-muted, #6b7280);
+  margin: 0;
+}
+
+.op-sl__pills {
+  display: inline-flex;
+  background: var(--op-color-bg-muted, #f3f4f6);
+  border: 1px solid var(--op-color-border-default, #e5e7eb);
+  border-radius: 10px;
+  padding: 4px;
+  gap: 2px;
+  width: max-content;
+}
+
+.op-sl__pill {
+  background: transparent;
+  border: none;
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--op-color-text-muted, #6b7280);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.op-sl__pill:hover:not([disabled]) {
+  color: var(--op-color-text-body, #374151);
+}
+.op-sl__pill[disabled] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.op-sl__pill--active {
+  background: white;
+  color: var(--op-color-brand-primary, #2563eb);
+  box-shadow: var(--op-shadow-sm, 0 1px 2px rgba(0,0,0,0.05));
+}
+
+.op-sl__action {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.op-sl__spinner-wrap {
+  position: relative;
+  width: 24px;
+  height: 24px;
+}
+
+.op-sl__error {
+  font-size: 13px;
+  color: var(--op-color-sev-critical-fg, #b91c1c);
+  margin: 0;
+}

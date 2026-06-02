@@ -1,0 +1,44 @@
+<template>
+  <c-dashboard-card title="AI-Powered Analysis" subtitle="What this scan tells us — top recovery themes">
+    <lightning-button-icon
+      slot="actions"
+      icon-name="utility:einstein"
+      alternative-text="AI"
+      variant="bare"
+    ></lightning-button-icon>
+
+    <template if:true={isLoading}>
+      <div class="op-ai__loading">
+        <lightning-spinner alternative-text="Loading" size="small"></lightning-spinner>
+      </div>
+    </template>
+
+    <template if:true={hasError}>
+      <p class="op-ai__error">{error}</p>
+    </template>
+
+    <template if:true={isEmpty}>
+      <p class="op-ai__empty">Run a scan with findings to see the analysis light up.</p>
+    </template>
+
+    <template if:true={hasData}>
+      <p class="op-ai__headline">{headline}</p>
+
+      <ul class="op-ai__bullets">
+        <template for:each={topDetectors} for:item="d">
+          <li key={d.detectorId} class="op-ai__bullet">
+            <span class="op-ai__bullet-marker">•</span>
+            <span class="op-ai__bullet-text">
+              <strong>{d.label}</strong>
+              <span class="op-ai__bullet-meta"> — {d.count} {d.findingLabel} · {d.totalFmt}</span>
+            </span>
+          </li>
+        </template>
+      </ul>
+
+      <button class="op-ai__link" onclick={handleViewAll}>
+        View all findings →
+      </button>
+    </template>
+  </c-dashboard-card>
+</template>

@@ -1,0 +1,233 @@
+.op-sm__loading { padding: 30px; display: flex; justify-content: center; }
+.op-sm__empty, .op-sm__error {
+  font-size: 13px; color: var(--op-color-text-muted, #6b7280);
+  margin: 0; padding: 16px 0;
+}
+
+.op-sm__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+/* Wrap in horizontal scroll on narrow screens — preserves the table
+   format without truncating columns. Better than collapsing to cards
+   for an admin-facing surface where consultants want to scan rows. */
+@media (max-width: 720px) {
+  .op-sm__table {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+.op-sm__table th {
+  text-align: left;
+  font-size: 11px; font-weight: 700;
+  letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--op-color-text-muted, #6b7280);
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--op-color-border-subtle, #f3f4f6);
+}
+.op-sm__table td {
+  padding: 10px;
+  border-bottom: 1px solid var(--op-color-border-subtle, #f3f4f6);
+  vertical-align: top;
+}
+.op-sm__th-actions, .op-sm__td-actions { text-align: right; }
+.op-sm__td-actions { white-space: nowrap; }
+.op-sm__td-actions lightning-button { margin-left: 4px; }
+
+.op-sm__name { font-weight: 600; color: var(--op-color-text-strong, #111827); }
+.op-sm__cron {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  color: var(--op-color-text-muted, #6b7280);
+  margin-top: 2px;
+}
+
+.op-sm__status {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.op-sm__status--active  { background: rgba(16, 185, 129, 0.12); color: #047857; }
+.op-sm__status--paused  { background: rgba(156, 163, 175, 0.18); color: #4b5563; }
+.op-sm__status--failed  { background: rgba(239, 68, 68, 0.12); color: #b91c1c; }
+
+/* Modal overlay + dialog */
+.op-sm__overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 9000;
+}
+.op-sm__modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(640px, 92vw);
+  max-height: 88vh;
+  background: white;
+  border-radius: 14px;
+  box-shadow: var(--op-shadow-lg, 0 10px 15px rgba(0, 0, 0, 0.1));
+  z-index: 9001;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.op-sm__modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--op-color-border-subtle, #f3f4f6);
+}
+.op-sm__modal-header h2 { margin: 0; font-size: 17px; font-weight: 600; }
+
+.op-sm__modal-body {
+  padding: 18px 20px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.op-sm__modal-footer {
+  padding: 14px 20px;
+  border-top: 1px solid var(--op-color-border-subtle, #f3f4f6);
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  background: var(--op-color-bg-page, #f9fafb);
+}
+
+.op-sm__field {
+  margin-bottom: 16px;
+}
+.op-sm__field label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--op-color-text-body, #374151);
+  margin-bottom: 6px;
+}
+
+.op-sm__pills {
+  display: inline-flex;
+  background: var(--op-color-bg-muted, #f3f4f6);
+  border-radius: 10px;
+  padding: 3px;
+  gap: 2px;
+}
+.op-sm__pill {
+  background: transparent; border: none;
+  padding: 6px 12px;
+  border-radius: 7px;
+  font-size: 13px; font-weight: 500;
+  color: var(--op-color-text-muted, #6b7280);
+  cursor: pointer;
+}
+.op-sm__pill--active {
+  background: white;
+  color: var(--op-color-brand-primary, #2563eb);
+  box-shadow: var(--op-shadow-sm, 0 1px 2px rgba(0,0,0,0.05));
+}
+
+.op-sm__presets {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+@media (min-width: 560px) {
+  .op-sm__presets { grid-template-columns: repeat(3, 1fr); }
+}
+.op-sm__preset {
+  background: white;
+  border: 1.5px solid var(--op-color-border-default, #e5e7eb);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--op-color-text-body, #374151);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, transform 0.05s ease;
+}
+.op-sm__preset:hover:not([disabled]) {
+  border-color: var(--op-color-brand-primary, #2563eb);
+  background: rgba(37, 99, 235, 0.02);
+}
+.op-sm__preset:active:not([disabled]) {
+  transform: scale(0.99);
+}
+.op-sm__preset--active {
+  border-color: var(--op-color-brand-primary, #2563eb);
+  background: rgba(37, 99, 235, 0.06);
+  color: var(--op-color-brand-primary, #2563eb);
+  font-weight: 600;
+}
+
+/* Advanced cron expander */
+.op-sm__advanced {
+  margin: 14px 0;
+  border-top: 1px solid var(--op-color-border-subtle, #f3f4f6);
+  padding-top: 12px;
+}
+.op-sm__advanced-summary {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--op-color-text-muted, #6b7280);
+  cursor: pointer;
+  list-style: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 0;
+  user-select: none;
+}
+.op-sm__advanced-summary::before {
+  content: '▸';
+  font-size: 10px;
+  transition: transform 0.15s ease;
+}
+.op-sm__advanced[open] .op-sm__advanced-summary::before {
+  transform: rotate(90deg);
+}
+.op-sm__advanced-summary:hover {
+  color: var(--op-color-brand-primary, #2563eb);
+}
+.op-sm__advanced-body {
+  margin-top: 8px;
+}
+.op-sm__cron-hint {
+  font-size: 11px;
+  color: var(--op-color-text-muted, #6b7280);
+  margin: 6px 0 0;
+  line-height: 1.4;
+}
+.op-sm__cron-hint code {
+  background: var(--op-color-bg-muted, #f3f4f6);
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-size: 10.5px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+/* Detected product type info line */
+.op-sm__detected {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  background: rgba(59, 130, 246, 0.06);
+  border-radius: 8px;
+  font-size: 12px;
+  color: #1d4ed8;
+  margin: 12px 0 0;
+}
+.op-sm__detected-icon {
+  --sds-c-icon-color-foreground: #3b82f6;
+}

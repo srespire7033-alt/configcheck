@@ -1,0 +1,57 @@
+<template>
+  <template if:true={shouldRender}>
+    <c-dashboard-card title="Since last scan" subtitle="What changed between your two most recent scans">
+      <div class="op-sls__top">
+        <div class="op-sls__delta-block">
+          <p class={deltaClass}>{deltaFmt}</p>
+          <p class="op-sls__delta-meta">{priorFmt} → {latestFmt}</p>
+        </div>
+        <div class="op-sls__counts">
+          <div class="op-sls__count op-sls__count--new">
+            <p class="op-sls__count-label">NEW</p>
+            <p class="op-sls__count-value">{addedCount}</p>
+          </div>
+          <div class="op-sls__count op-sls__count--resolved">
+            <p class="op-sls__count-label">RESOLVED</p>
+            <p class="op-sls__count-value">{resolvedCount}</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="op-sls__lists">
+        <template if:true={hasNewFindings}>
+          <div class="op-sls__list-col">
+            <p class="op-sls__list-heading">New findings</p>
+            <ul class="op-sls__list">
+              <template for:each={newFindings} for:item="f">
+                <li
+                  key={f.id}
+                  data-id={f.id}
+                  class="op-sls__item op-sls__item--new"
+                  onclick={handleNewClick}
+                >
+                  <span class="op-sls__item-title">{f.title}</span>
+                  <span class="op-sls__item-gap">{f.gapFmt}</span>
+                </li>
+              </template>
+            </ul>
+          </div>
+        </template>
+
+        <template if:true={hasResolved}>
+          <div class="op-sls__list-col">
+            <p class="op-sls__list-heading">Resolved findings</p>
+            <ul class="op-sls__list">
+              <template for:each={resolvedTitles} for:item="t">
+                <li key={t} class="op-sls__item op-sls__item--resolved">
+                  <span class="op-sls__item-title">{t}</span>
+                  <span class="op-sls__item-check">✓</span>
+                </li>
+              </template>
+            </ul>
+          </div>
+        </template>
+      </div>
+    </c-dashboard-card>
+  </template>
+</template>

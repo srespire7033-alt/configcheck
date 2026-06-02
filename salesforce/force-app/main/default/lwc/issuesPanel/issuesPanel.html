@@ -1,0 +1,115 @@
+<template>
+  <c-dashboard-card title="All Findings" subtitle="Filter, sort, and bulk-act across every finding in the latest scan">
+    <template if:true={loading}>
+      <div class="op-ip__loading">
+        <lightning-spinner alternative-text="Loading" size="small"></lightning-spinner>
+      </div>
+    </template>
+
+    <template if:true={error}>
+      <p class="op-ip__error">{error}</p>
+    </template>
+
+    <template if:false={loading}>
+      <!-- Filter bar -->
+      <div class="op-ip__filter-row">
+        <lightning-input
+          type="search"
+          label="Search"
+          variant="label-hidden"
+          placeholder="Search title or detector…"
+          value={filter.search}
+          onchange={handleSearch}
+          class="op-ip__search"
+        ></lightning-input>
+        <lightning-combobox
+          label="Severity"
+          variant="label-hidden"
+          value={filter.severity}
+          options={severityOptions}
+          onchange={handleSeverity}
+          class="op-ip__sev-select"
+        ></lightning-combobox>
+        <lightning-combobox
+          label="Sort by"
+          variant="label-hidden"
+          value={sortBy}
+          options={sortOptions}
+          onchange={handleSort}
+          class="op-ip__sort-select"
+        ></lightning-combobox>
+        <lightning-button-icon
+          icon-name="utility:arrowdown"
+          variant="border-filled"
+          alternative-text="Toggle sort direction"
+          onclick={toggleSortDir}
+        ></lightning-button-icon>
+      </div>
+
+      <!-- Selection bar (only when something is selected) -->
+      <template if:true={hasSelection}>
+        <div class="op-ip__selection-bar">
+          <span class="op-ip__selection-count">
+            {selectionCount} selected
+          </span>
+          <div class="op-ip__selection-actions">
+            <lightning-button
+              variant="brand"
+              label="Stage for recovery"
+              icon-name="utility:flow"
+              onclick={handleBulkStage}
+              disabled={busy}
+            ></lightning-button>
+            <lightning-button
+              variant="neutral"
+              label="Hide"
+              icon-name="utility:hide"
+              onclick={handleBulkHide}
+              disabled={busy}
+            ></lightning-button>
+            <lightning-button
+              variant="base"
+              label="Clear"
+              onclick={handleClearSelection}
+            ></lightning-button>
+          </div>
+        </div>
+      </template>
+
+      <!-- Result meta -->
+      <p class="op-ip__meta">
+        Showing {filteredCount} of {totalCount}
+      </p>
+
+      <!-- Findings list -->
+      <template if:false={hasFindings}>
+        <p class="op-ip__empty">No findings in the latest scan.</p>
+      </template>
+
+      <ul class="op-ip__list">
+        <template for:each={filteredFindings} for:item="f">
+          <li
+            key={f.id}
+            data-id={f.id}
+            class={f.rowClass}
+            onclick={handleRowClick}
+          >
+            <input
+              type="checkbox"
+              checked={f.selected}
+              data-id={f.id}
+              data-role="checkbox"
+              onclick={handleRowToggle}
+              class="op-ip__checkbox"
+              aria-label={f.title}
+            />
+            <c-severity-badge severity={f.severity}></c-severity-badge>
+            <span class="op-ip__title">{f.title}</span>
+            <span class="op-ip__detector">{f.detectorId}</span>
+            <span class="op-ip__gap">{f.gapFmt}</span>
+          </li>
+        </template>
+      </ul>
+    </template>
+  </c-dashboard-card>
+</template>

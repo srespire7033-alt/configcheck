@@ -1,0 +1,59 @@
+.op-card {
+  background: var(--op-color-bg-card, #ffffff);
+  border: 1px solid var(--op-color-border-default, #e5e7eb);
+  border-radius: var(--op-radius-xl, 16px);
+  box-shadow: var(--op-shadow-sm, 0 1px 2px rgba(0,0,0,0.05));
+  padding: var(--op-space-6, 24px);
+  display: block;
+}
+
+.op-card--outlined {
+  box-shadow: none;
+}
+
+.op-card--flat {
+  box-shadow: none;
+  border: none;
+  background: transparent;
+  padding: 0;
+}
+
+.op-card__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--op-space-3, 12px);
+  margin-bottom: var(--op-space-4, 16px);
+}
+
+.op-card__title-block {
+  min-width: 0;
+  flex: 1;
+}
+
+.op-card__title {
+  font-size: var(--op-font-heading, 20px);
+  font-weight: 600;
+  color: var(--op-color-text-strong, #111827);
+  margin: 0;
+  line-height: 1.3;
+}
+
+.op-card__subtitle {
+  font-size: var(--op-font-body, 14px);
+  color: var(--op-color-text-muted, #6b7280);
+  margin: var(--op-space-1, 4px) 0 0;
+}
+
+.op-card__actions {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--op-space-2, 8px);
+}
+
+.op-card__body {
+  /* No padding here — the outer .op-card already provides it. Children
+     can override if they need full-bleed (e.g. tables that should touch
+     the card edge). */
+}

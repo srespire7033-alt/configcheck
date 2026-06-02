@@ -1,0 +1,67 @@
+.op-ai__headline {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--op-color-text-strong, #111827);
+  margin: 0 0 12px;
+  line-height: 1.5;
+}
+
+.op-ai__bullets {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.op-ai__bullet {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.op-ai__bullet-marker {
+  color: var(--op-color-brand-primary, #2563eb);
+  font-size: 16px;
+  line-height: 1.2;
+  flex-shrink: 0;
+}
+
+.op-ai__bullet-text {
+  color: var(--op-color-text-body, #374151);
+}
+
+.op-ai__bullet-meta {
+  color: var(--op-color-text-muted, #6b7280);
+  font-feature-settings: 'tnum';
+}
+
+.op-ai__link {
+  background: none;
+  border: none;
+  color: var(--op-color-brand-primary, #2563eb);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 4px 0;
+}
+.op-ai__link:hover {
+  text-decoration: underline;
+}
+
+.op-ai__loading {
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.op-ai__empty,
+.op-ai__error {
+  font-size: 13px;
+  color: var(--op-color-text-muted, #6b7280);
+  margin: 0;
+  padding: 12px 0;
+}

@@ -1,0 +1,229 @@
+<apex:page controller="ExecutiveReportController"
+           renderAs="pdf"
+           applyHtmlTag="false"
+           applyBodyTag="false"
+           showHeader="false"
+           sidebar="false"
+           standardStylesheets="false">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <title>OrgPrism Executive Report</title>
+  <style type="text/css">
+    @page {
+      size: A4;
+      margin: 18mm 16mm 22mm;
+      @bottom-center {
+        content: "OrgPrism · Confidential · " counter(page) " / " counter(pages);
+        font-family: Helvetica, Arial, sans-serif;
+        font-size: 9pt;
+        color: #6b7280;
+      }
+    }
+    body {
+      font-family: Helvetica, Arial, sans-serif;
+      font-size: 10.5pt;
+      color: #1f2937;
+      line-height: 1.45;
+      margin: 0;
+    }
+    h1, h2, h3 { color: #111827; margin: 0; }
+    h1 { font-size: 26pt; font-weight: 700; }
+    h2 { font-size: 15pt; font-weight: 600; margin: 18pt 0 8pt; padding-top: 6pt; border-top: 1px solid #e5e7eb; }
+    h3 { font-size: 12pt; font-weight: 600; margin: 12pt 0 4pt; }
+    p { margin: 4pt 0; }
+
+    .hero {
+      padding: 14pt 0 16pt;
+      border-bottom: 2px solid #111827;
+    }
+    .brand-row { color: #6b7280; font-size: 10pt; letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 6pt; }
+    .hero-dollar { font-size: 40pt; font-weight: 700; color: #047857; letter-spacing: -0.01em; }
+    .hero-label  { font-size: 10pt; font-weight: 700; color: #047857; letter-spacing: 0.08em; text-transform: uppercase; }
+    .hero-meta   { color: #6b7280; font-size: 10pt; margin-top: 8pt; }
+
+    .tile-row { width: 100%; border-collapse: separate; border-spacing: 8pt 0; margin-top: 14pt; }
+    .tile     { padding: 10pt 14pt; border-radius: 8pt; }
+    .tile.crit { background: #fef2f2; color: #b91c1c; }
+    .tile.warn { background: #fffbeb; color: #b45309; }
+    .tile.info { background: #f3f4f6; color: #374151; }
+    .tile-num   { font-size: 22pt; font-weight: 700; }
+    .tile-label { font-size: 9.5pt; opacity: 0.85; margin-top: 2pt; }
+
+    .empty { color: #9ca3af; font-style: italic; padding: 20pt 0; }
+
+    .section-meta {
+      color: #6b7280;
+      font-size: 10pt;
+      margin-bottom: 6pt;
+    }
+
+    table.bucket-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 6pt;
+      font-size: 10pt;
+    }
+    table.bucket-table th {
+      text-align: left;
+      background: #f3f4f6;
+      color: #374151;
+      padding: 6pt 8pt;
+      font-weight: 600;
+      font-size: 9.5pt;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+    table.bucket-table td {
+      padding: 6pt 8pt;
+      border-bottom: 1px solid #f3f4f6;
+      vertical-align: top;
+    }
+    .col-num    { width: 14%; text-align: right; font-weight: 600; }
+    .col-money  { text-align: right; color: #047857; font-weight: 700; }
+    .col-sev    { width: 12%; }
+    .sev-crit { color: #b91c1c; font-weight: 700; }
+    .sev-warn { color: #b45309; font-weight: 700; }
+    .sev-info { color: #374151; font-weight: 600; }
+
+    .finding-block {
+      page-break-inside: avoid;
+      margin: 8pt 0;
+      padding: 10pt 12pt;
+      background: #f9fafb;
+      border-left: 3pt solid #047857;
+      border-radius: 4pt;
+    }
+    .finding-title { font-weight: 700; font-size: 11pt; }
+    .finding-meta { color: #6b7280; font-size: 9.5pt; margin-top: 2pt; }
+    .finding-desc { color: #374151; font-size: 10pt; margin-top: 6pt; }
+
+    .footer-tag {
+      margin-top: 16pt;
+      color: #9ca3af;
+      font-size: 9pt;
+    }
+  </style>
+</head>
+<body>
+
+<!-- Hero block -->
+<div class="hero">
+  <div class="brand-row">OrgPrism · Forensic Audit · Executive Report</div>
+  <apex:outputPanel rendered="{!scan != null}" layout="block">
+    <h1>Revenue Recovery Opportunity</h1>
+    <div style="margin-top: 18pt;">
+      <span class="hero-dollar">
+        <apex:outputText value="{0, number, $###,###,###,##0}">
+          <apex:param value="{!IF(scan.TotalLeakageUsd__c == null, 0, scan.TotalLeakageUsd__c)}"/>
+        </apex:outputText>
+      </span>
+      <span class="hero-label">  · Verified Leakage</span>
+    </div>
+    <p class="hero-meta">
+      <apex:outputText value="{!scan.Name}"/> ·
+      <apex:outputText value="{!scan.ProductType__c}"/> ·
+      <apex:outputText value="{0, number, ##,##0}">
+        <apex:param value="{!IF(scan.FindingCount__c == null, 0, scan.FindingCount__c)}"/>
+      </apex:outputText> findings ·
+      Scan completed <apex:outputText value="{0,date,MMM d, yyyy}">
+        <apex:param value="{!scan.CompletedAt__c}"/>
+      </apex:outputText>
+    </p>
+  </apex:outputPanel>
+  <apex:outputPanel rendered="{!scan == null}" layout="block">
+    <h1>No completed scan available</h1>
+    <p class="hero-meta">Run a forensic scan from the OrgPrism app to generate this report.</p>
+  </apex:outputPanel>
+</div>
+
+<apex:outputPanel rendered="{!scan != null}" layout="block">
+
+  <!-- Severity tiles -->
+  <table class="tile-row">
+    <tr>
+      <td class="tile crit" width="33%">
+        <div class="tile-num">{!criticalCount}</div>
+        <div class="tile-label">CRITICAL</div>
+      </td>
+      <td class="tile warn" width="34%">
+        <div class="tile-num">{!warningCount}</div>
+        <div class="tile-label">WARNINGS</div>
+      </td>
+      <td class="tile info" width="33%">
+        <div class="tile-num">{!infoCount}</div>
+        <div class="tile-label">INFO</div>
+      </td>
+    </tr>
+  </table>
+
+  <!-- Executive summary by detector -->
+  <h2>Recovery opportunities by detector</h2>
+  <p class="section-meta">Top patterns driving leakage in this scan, ranked by total recoverable $.</p>
+
+  <apex:outputPanel rendered="{!detectorGroups.size == 0}" layout="block">
+    <div class="empty">No findings emitted by this scan.</div>
+  </apex:outputPanel>
+
+  <table class="bucket-table" rendered="{!detectorGroups.size > 0}">
+    <thead>
+      <tr>
+        <th>Pattern</th>
+        <th class="col-num">Findings</th>
+        <th class="col-money">Recoverable</th>
+      </tr>
+    </thead>
+    <tbody>
+      <apex:repeat value="{!detectorGroups}" var="g">
+        <tr>
+          <td>{!g.label} <span style="color:#9ca3af; font-size:9pt;">({!g.detectorId})</span></td>
+          <td class="col-num">{!g.count}</td>
+          <td class="col-money">
+            <apex:outputText value="{0, number, $###,###,##0}">
+              <apex:param value="{!g.totalUsd}"/>
+            </apex:outputText>
+          </td>
+        </tr>
+      </apex:repeat>
+    </tbody>
+  </table>
+
+  <!-- Top 20 detailed findings -->
+  <h2>Top {!findings.size} findings — detailed</h2>
+  <apex:outputPanel rendered="{!findings.size == 0}" layout="block">
+    <div class="empty">No findings to detail.</div>
+  </apex:outputPanel>
+
+  <apex:repeat value="{!findings}" var="f">
+    <div class="finding-block">
+      <div class="finding-title">{!f.Title__c}</div>
+      <div class="finding-meta">
+        <span class="sev-{!IF(f.Severity__c == 'Critical', 'crit', IF(f.Severity__c == 'Warning', 'warn', 'info'))}">{!f.Severity__c}</span>
+        · {!f.DetectorId__c}
+        ·
+        <apex:outputText value="{0, number, $###,###,##0}">
+          <apex:param value="{!IF(f.GapUsd__c == null, 0, f.GapUsd__c)}"/>
+        </apex:outputText> recoverable
+        <apex:outputPanel rendered="{!f.RecoverabilityScore__c != null}">
+          ·
+          <apex:outputText value="{0, number, 0%}">
+            <apex:param value="{!f.RecoverabilityScore__c}"/>
+          </apex:outputText> confidence
+        </apex:outputPanel>
+      </div>
+      <apex:outputPanel rendered="{!NOT(ISBLANK(f.Description__c))}" layout="block">
+        <div class="finding-desc">{!f.Description__c}</div>
+      </apex:outputPanel>
+    </div>
+  </apex:repeat>
+
+  <p class="footer-tag">
+    Report generated <apex:outputText value="{0,date,MMM d, yyyy 'at' h:mm a}">
+      <apex:param value="{!reportDate}"/>
+    </apex:outputText>
+    · OrgPrism Forensic Audit
+  </p>
+</apex:outputPanel>
+
+</body>
+</html>
+</apex:page>

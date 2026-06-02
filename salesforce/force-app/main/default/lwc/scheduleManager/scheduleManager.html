@@ -1,0 +1,162 @@
+<template>
+  <c-dashboard-card title="Scheduled scans" subtitle="Set up recurring forensic scans on a cron schedule">
+    <lightning-button
+      slot="actions"
+      variant="brand"
+      label="New schedule"
+      icon-name="utility:add"
+      onclick={handleOpen}
+    ></lightning-button>
+
+    <template if:true={loading}>
+      <div class="op-sm__loading">
+        <lightning-spinner alternative-text="Loading" size="small"></lightning-spinner>
+      </div>
+    </template>
+
+    <template if:true={error}>
+      <p class="op-sm__error">{error}</p>
+    </template>
+
+    <template if:true={isEmpty}>
+      <p class="op-sm__empty">
+        No scheduled scans yet. Click <strong>New schedule</strong> to set up a recurring forensic scan.
+      </p>
+    </template>
+
+    <template if:true={hasSchedules}>
+      <table class="op-sm__table">
+        <thead>
+          <tr>
+            <th>Schedule</th>
+            <th>Type</th>
+            <th>Status</th>
+            <th>Last run</th>
+            <th>Next run</th>
+            <th class="op-sm__th-actions">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <template for:each={rows} for:item="r">
+            <tr key={r.id}>
+              <td>
+                <div class="op-sm__name">{r.label}</div>
+                <div class="op-sm__cron">{r.cronExpression}</div>
+              </td>
+              <td>{r.productType}</td>
+              <td>
+                <span class={r.statusBadge.cls}>{r.statusBadge.label}</span>
+              </td>
+              <td>{r.lastRunFmt}</td>
+              <td>{r.nextRunFmt}</td>
+              <td class="op-sm__td-actions">
+                <lightning-button
+                  variant="base"
+                  label="Run now"
+                  data-id={r.id}
+                  onclick={handleRunNow}
+                  disabled={busy}
+                ></lightning-button>
+                <lightning-button
+                  variant="base"
+                  label={r.toggleLabel}
+                  data-id={r.id}
+                  onclick={handleToggle}
+                  disabled={busy}
+                ></lightning-button>
+                <lightning-button
+                  variant="base"
+                  label="Delete"
+                  data-id={r.id}
+                  onclick={handleDelete}
+                  disabled={busy}
+                ></lightning-button>
+              </td>
+            </tr>
+          </template>
+        </tbody>
+      </table>
+    </template>
+
+    <!-- Modal -->
+    <template if:true={showModal}>
+      <div class="op-sm__overlay" onclick={handleClose}></div>
+      <section class="op-sm__modal" role="dialog" aria-labelledby="modal-heading">
+        <header class="op-sm__modal-header">
+          <h2 id="modal-heading">New scheduled scan</h2>
+          <lightning-button-icon
+            icon-name="utility:close"
+            variant="bare"
+            alternative-text="Close"
+            onclick={handleClose}
+            disabled={busy}
+          ></lightning-button-icon>
+        </header>
+
+        <div class="op-sm__modal-body">
+          <div class="op-sm__field">
+            <label>Label (optional)</label>
+            <lightning-input
+              type="text"
+              variant="label-hidden"
+              placeholder="e.g. Weekly CPQ audit"
+              value={newLabel}
+              onchange={handleLabelChange}
+            ></lightning-input>
+          </div>
+
+          <div class="op-sm__field">
+            <label>When should it run?</label>
+            <div class="op-sm__presets">
+              <template for:each={presetOptions} for:item="p">
+                <button
+                  key={p.id}
+                  type="button"
+                  class={p.cls}
+                  data-id={p.id}
+                  onclick={handlePresetPick}
+                  disabled={busy}
+                >{p.label}</button>
+              </template>
+            </div>
+          </div>
+
+          <details class="op-sm__advanced">
+            <summary class="op-sm__advanced-summary">Advanced — edit cron expression</summary>
+            <div class="op-sm__advanced-body">
+              <lightning-input
+                type="text"
+                label="Cron expression"
+                value={newCron}
+                onchange={handleCronChange}
+              ></lightning-input>
+              <p class="op-sm__cron-hint">
+                Format: <code>Seconds Minutes Hours Day Month Day-of-week</code>. Minimum frequency: hourly.
+              </p>
+            </div>
+          </details>
+
+          <p class="op-sm__detected">
+            <lightning-icon icon-name="utility:info_alt" size="xx-small" class="op-sm__detected-icon"></lightning-icon>
+            {productDetectedLabel}
+          </p>
+        </div>
+
+        <footer class="op-sm__modal-footer">
+          <lightning-button
+            variant="neutral"
+            label="Cancel"
+            onclick={handleClose}
+            disabled={busy}
+          ></lightning-button>
+          <lightning-button
+            variant="brand"
+            label="Create schedule"
+            onclick={handleCreate}
+            disabled={busy}
+          ></lightning-button>
+        </footer>
+      </section>
+    </template>
+  </c-dashboard-card>
+</template>

@@ -7,5 +7,5 @@
     <relationshipName>RecoveryActions</relationshipName>
     <relationshipLabel>Recovery Actions</relationshipLabel>
     <required>true</required>
-    <deleteConstraint>SetNull</deleteConstraint>
+    <deleteConstraint>Restrict</deleteConstraint>
 </CustomField>

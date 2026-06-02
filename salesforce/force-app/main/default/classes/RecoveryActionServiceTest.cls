@@ -21,8 +21,8 @@
 private class RecoveryActionServiceTest {
 
     private static ForensicFinding__c makeFinding() {
-        ForensicScan__c scan = TestDataFactory.makeScan('CPQ');
-        return TestDataFactory.makeFinding(scan.Id, 'REN-001');
+        ForensicScan__c scan = OrgPrismTestDataFactory.makeScan('CPQ');
+        return OrgPrismTestDataFactory.makeFinding(scan.Id, 'REN-001');
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -88,10 +88,10 @@ private class RecoveryActionServiceTest {
 
     @isTest
     static void bulkStage_handlesMixedStates() {
-        ForensicScan__c scan = TestDataFactory.makeScan('CPQ');
-        ForensicFinding__c f1 = TestDataFactory.makeFinding(scan.Id, 'REN-001');
-        ForensicFinding__c f2 = TestDataFactory.makeFinding(scan.Id, 'REN-002');
-        ForensicFinding__c f3 = TestDataFactory.makeFinding(scan.Id, 'DSC-FOR-001');
+        ForensicScan__c scan = OrgPrismTestDataFactory.makeScan('CPQ');
+        ForensicFinding__c f1 = OrgPrismTestDataFactory.makeFinding(scan.Id, 'REN-001');
+        ForensicFinding__c f2 = OrgPrismTestDataFactory.makeFinding(scan.Id, 'REN-002');
+        ForensicFinding__c f3 = OrgPrismTestDataFactory.makeFinding(scan.Id, 'DSC-FOR-001');
 
         // f1 already pending (via single stage)
         RecoveryActionService.stageFinding(f1.Id);

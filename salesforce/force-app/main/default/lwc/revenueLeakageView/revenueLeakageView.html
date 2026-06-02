@@ -1,0 +1,54 @@
+<template>
+  <c-dashboard-card title="Revenue Leakage" subtitle="Findings grouped by detector — click a row to expand">
+    <template if:true={isLoading}>
+      <div class="op-rl__loading">
+        <lightning-spinner alternative-text="Loading" size="small"></lightning-spinner>
+      </div>
+    </template>
+
+    <template if:true={hasError}>
+      <p class="op-rl__error">{error}</p>
+    </template>
+
+    <template if:true={isEmpty}>
+      <p class="op-rl__empty">No revenue-leakage findings in the latest scan.</p>
+    </template>
+
+    <template if:true={hasData}>
+      <div class="op-rl__header">
+        <span class="op-rl__total">{totalLabel}</span>
+        <span class="op-rl__meta">{findingCount} findings across detector groups</span>
+      </div>
+
+      <ul class="op-rl__list">
+        <template for:each={detectorRows} for:item="row">
+          <li key={row.detectorId} class={row.rowClass}>
+            <button
+              type="button"
+              class="op-rl__row-header"
+              data-id={row.detectorId}
+              onclick={handleToggle}
+            >
+              <span class={row.chevronClass}>▸</span>
+              <span class="op-rl__row-label">{row.label}</span>
+              <span class="op-rl__row-count">{row.count}</span>
+              <span class="op-rl__row-total">{row.totalFmt}</span>
+            </button>
+
+            <template if:true={row.isOpen}>
+              <ul class="op-rl__findings">
+                <template for:each={row.findings} for:item="f">
+                  <li key={f.id} class="op-rl__finding" data-id={f.id} onclick={handleFindingClick}>
+                    <span class={f.sevClass}></span>
+                    <span class="op-rl__finding-title">{f.title}</span>
+                    <span class="op-rl__finding-gap">{f.gapFmt}</span>
+                  </li>
+                </template>
+              </ul>
+            </template>
+          </li>
+        </template>
+      </ul>
+    </template>
+  </c-dashboard-card>
+</template>

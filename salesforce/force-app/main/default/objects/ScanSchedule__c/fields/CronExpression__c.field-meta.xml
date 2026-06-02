@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>CronExpression__c</fullName>
+    <label>Cron Expression</label>
+    <description>Salesforce cron format: Seconds Minutes Hours Day-of-month Month Day-of-week [Year]</description>
+    <type>Text</type>
+    <length>100</length>
+    <required>true</required>
+</CustomField>

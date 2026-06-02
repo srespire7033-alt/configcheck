@@ -1,0 +1,22 @@
+<template>
+  <article class={cardClass}>
+    <template if:true={hasHeader}>
+      <header class="op-card__header">
+        <div class="op-card__title-block">
+          <template if:true={title}>
+            <h3 class="op-card__title">{title}</h3>
+          </template>
+          <template if:true={subtitle}>
+            <p class="op-card__subtitle">{subtitle}</p>
+          </template>
+        </div>
+        <div class="op-card__actions">
+          <slot name="actions"></slot>
+        </div>
+      </header>
+    </template>
+    <div class="op-card__body">
+      <slot></slot>
+    </div>
+  </article>
+</template>

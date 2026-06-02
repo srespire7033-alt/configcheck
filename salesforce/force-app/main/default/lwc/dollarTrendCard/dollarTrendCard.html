@@ -1,0 +1,55 @@
+<template>
+  <c-dashboard-card title="$ Trend" subtitle="Recoverable leakage across recent scans — your recovery progress">
+    <template if:true={isLoading}>
+      <div class="op-trend__loading">
+        <lightning-spinner alternative-text="Loading" size="small"></lightning-spinner>
+      </div>
+    </template>
+
+    <template if:true={hasError}>
+      <p class="op-trend__error">{error}</p>
+    </template>
+
+    <template if:true={isEmpty}>
+      <p class="op-trend__empty">Trend needs at least 2 completed scans to plot.</p>
+    </template>
+
+    <template if:true={hasEnoughData}>
+      <div class="op-trend__header">
+        <c-money-display value={latestValue} size="large" accent></c-money-display>
+        <span class={deltaClass}>{deltaLabel}</span>
+      </div>
+
+      <div class="op-trend__chart">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 320 80"
+          preserveAspectRatio="none"
+          class="op-trend__svg"
+          role="img"
+          aria-label="Dollar trend across recent scans"
+        >
+          <!-- Sparkline polyline -->
+          <polyline
+            points={sparkline.polyline}
+            class="op-trend__line"
+          ></polyline>
+          <!-- Each scan as a clickable dot -->
+          <template for:each={sparkline.dots} for:item="d">
+            <circle
+              key={d.scanId}
+              data-id={d.scanId}
+              cx={d.cx}
+              cy={d.cy}
+              r="4"
+              class="op-trend__dot"
+              onclick={handleDotClick}
+            >
+              <title>{d.title}</title>
+            </circle>
+          </template>
+        </svg>
+      </div>
+    </template>
+  </c-dashboard-card>
+</template>

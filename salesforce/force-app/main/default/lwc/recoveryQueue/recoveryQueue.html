@@ -1,0 +1,58 @@
+<template>
+  <c-dashboard-card title="Recovery Queue" subtitle="Recovery actions grouped by approval status">
+    <template if:true={isLoading}>
+      <lightning-spinner alternative-text="Loading" size="small"></lightning-spinner>
+    </template>
+
+    <template if:true={hasError}>
+      <p class="op-rq__error">{error}</p>
+    </template>
+
+    <template if:true={isEmpty}>
+      <p class="op-rq__empty">
+        No recovery actions yet. Stage a finding from the All Findings panel above to add it to this queue.
+      </p>
+    </template>
+
+    <template if:true={hasData}>
+      <div class="op-rq__summary">
+        <div class="op-rq__summary-block">
+          <p class="op-rq__summary-label">In flight</p>
+          <p class="op-rq__summary-value">{totalCount}</p>
+        </div>
+        <div class="op-rq__summary-block">
+          <p class="op-rq__summary-label">Projected reclaim</p>
+          <p class="op-rq__summary-value op-rq__summary-value--money">{totalProjectedFmt}</p>
+        </div>
+      </div>
+
+      <div class="op-rq__groups">
+        <template for:each={groups} for:item="g">
+          <div key={g.status} class={g.groupClass}>
+            <div class="op-rq__group-header">
+              <span class="op-rq__group-status">{g.status}</span>
+              <span class="op-rq__group-count">{g.countLabel}</span>
+              <span class="op-rq__group-total">{g.projectedFmt}</span>
+            </div>
+            <ul class="op-rq__actions">
+              <template for:each={g.actions} for:item="a">
+                <li
+                  key={a.id}
+                  data-id={a.findingId}
+                  class="op-rq__action"
+                  onclick={handleActionClick}
+                >
+                  <span class="op-rq__action-title">{a.findingTitle}</span>
+                  <template if:true={a.verifiedBadge}>
+                    <span class="op-rq__action-badge">{a.verifiedBadge}</span>
+                  </template>
+                  <span class="op-rq__action-gap">{a.projectedFmt}</span>
+                </li>
+              </template>
+            </ul>
+          </div>
+        </template>
+      </div>
+    </template>
+  </c-dashboard-card>
+</template>

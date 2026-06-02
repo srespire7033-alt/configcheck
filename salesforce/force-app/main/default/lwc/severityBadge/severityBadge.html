@@ -1,0 +1,9 @@
+<template>
+  <span class={rootClass}>
+    <span class="op-sev__dot"></span>
+    <template if:true={hasCount}>
+      <span class="op-sev__count">{count}</span>
+    </template>
+    <span class="op-sev__label">{displayLabel}</span>
+  </span>
+</template>

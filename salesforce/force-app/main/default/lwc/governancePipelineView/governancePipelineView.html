@@ -1,0 +1,47 @@
+<template>
+  <div class="op-gp">
+    <c-dashboard-card title="Governance" subtitle="Process and control failures">
+      <template if:true={isLoading}>
+        <lightning-spinner alternative-text="Loading" size="small"></lightning-spinner>
+      </template>
+      <template if:false={isLoading}>
+        <template if:true={hasGovernance}>
+          <p class="op-gp__total">{governanceTotal} <span class="op-gp__count">across {governance.findingCount} findings</span></p>
+          <ul class="op-gp__list">
+            <template for:each={governanceRows} for:item="r">
+              <li key={r.detectorId} class="op-gp__row">
+                <span class="op-gp__label">{r.label}</span>
+                <span class="op-gp__meta">{r.count} · {r.totalFmt}</span>
+              </li>
+            </template>
+          </ul>
+        </template>
+        <template if:false={hasGovernance}>
+          <p class="op-gp__empty">No governance findings in this scan. Governance detectors include approval skips, contract gaps, and amendment errors.</p>
+        </template>
+      </template>
+    </c-dashboard-card>
+
+    <c-dashboard-card title="Pipeline" subtitle="Forecast and renewal risk">
+      <template if:true={isLoading}>
+        <lightning-spinner alternative-text="Loading" size="small"></lightning-spinner>
+      </template>
+      <template if:false={isLoading}>
+        <template if:true={hasPipeline}>
+          <p class="op-gp__total">{pipelineTotal} <span class="op-gp__count">across {pipeline.findingCount} findings</span></p>
+          <ul class="op-gp__list">
+            <template for:each={pipelineRows} for:item="r">
+              <li key={r.detectorId} class="op-gp__row">
+                <span class="op-gp__label">{r.label}</span>
+                <span class="op-gp__meta">{r.count} · {r.totalFmt}</span>
+              </li>
+            </template>
+          </ul>
+        </template>
+        <template if:false={hasPipeline}>
+          <p class="op-gp__empty">No pipeline findings in this scan. Pipeline detectors flag stale renewals and forecast slippage.</p>
+        </template>
+      </template>
+    </c-dashboard-card>
+  </div>
+</template>

@@ -1,0 +1,39 @@
+<template>
+  <c-dashboard-card title="Run scan" subtitle="Trigger a forensic scan against this org">
+    <div class="op-sl">
+      <p class="op-sl__caption">{lastScanCaption}</p>
+
+      <div class="op-sl__pills">
+        <template for:each={pills} for:item="p">
+          <button
+            key={p.id}
+            type="button"
+            class={p.cls}
+            data-id={p.id}
+            onclick={handlePillClick}
+            disabled={running}
+          >{p.label}</button>
+        </template>
+      </div>
+
+      <div class="op-sl__action">
+        <lightning-button
+          variant="brand"
+          label={buttonLabel}
+          icon-name="utility:refresh"
+          onclick={handleRun}
+          disabled={running}
+        ></lightning-button>
+        <template if:true={running}>
+          <span class="op-sl__spinner-wrap">
+            <lightning-spinner alternative-text="Running" size="small"></lightning-spinner>
+          </span>
+        </template>
+      </div>
+
+      <template if:true={lastError}>
+        <p class="op-sl__error">{lastError}</p>
+      </template>
+    </div>
+  </c-dashboard-card>
+</template>

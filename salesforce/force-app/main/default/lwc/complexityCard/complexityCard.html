@@ -1,0 +1,56 @@
+<template>
+  <c-dashboard-card title="Forensic Complexity" subtitle="What this scan touched and how confident the findings are">
+    <template if:true={isLoading}>
+      <div class="op-cmp__loading">
+        <lightning-spinner alternative-text="Loading" size="small"></lightning-spinner>
+      </div>
+    </template>
+
+    <template if:true={hasError}>
+      <p class="op-cmp__error">{error}</p>
+    </template>
+
+    <template if:true={isEmpty}>
+      <p class="op-cmp__empty">No findings yet — complexity metrics light up after a scan emits findings.</p>
+    </template>
+
+    <template if:true={hasData}>
+      <!-- Detector coverage -->
+      <div class="op-cmp__row">
+        <div class="op-cmp__label-row">
+          <span class="op-cmp__label">Detector coverage</span>
+          <span class="op-cmp__value">{detectorCoverage.triggered} / {detectorCoverage.total} detectors fired</span>
+        </div>
+        <div class="op-cmp__bar-track">
+          <div class="op-cmp__bar op-cmp__bar--coverage" style={coverageBarStyle}></div>
+        </div>
+      </div>
+
+      <!-- Severity mix — stacked bar -->
+      <div class="op-cmp__row">
+        <div class="op-cmp__label-row">
+          <span class="op-cmp__label">Severity mix</span>
+          <span class="op-cmp__value">
+            {severityMix.critical} crit · {severityMix.warning} warn · {severityMix.info} info
+          </span>
+        </div>
+        <div class="op-cmp__bar-track op-cmp__bar-track--stacked">
+          <div class="op-cmp__seg op-cmp__seg--critical" style={criticalBarStyle}></div>
+          <div class="op-cmp__seg op-cmp__seg--warning" style={warningBarStyle}></div>
+          <div class="op-cmp__seg op-cmp__seg--info" style={infoBarStyle}></div>
+        </div>
+      </div>
+
+      <!-- Avg recoverability -->
+      <div class="op-cmp__row">
+        <div class="op-cmp__label-row">
+          <span class="op-cmp__label">Avg recoverability</span>
+          <span class="op-cmp__value">{avgRecoverability.pct}% · {avgRecoverability.label}</span>
+        </div>
+        <div class="op-cmp__bar-track">
+          <div class="op-cmp__bar op-cmp__bar--recovery" style={recoverabilityBarStyle}></div>
+        </div>
+      </div>
+    </template>
+  </c-dashboard-card>
+</template>

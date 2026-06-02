@@ -1,0 +1,80 @@
+.op-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 8px;
+}
+
+.op-preview__heading {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.op-preview__caption {
+  font-size: 12px;
+  color: #6b7280;
+  margin: 0;
+}
+
+.op-preview__caption code {
+  background: #f3f4f6;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 11px;
+}
+
+/* Hero composition */
+.op-preview__hero {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+.op-preview__hero-money {
+  display: flex;
+  flex-direction: column;
+}
+.op-preview__hero-label {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: #047857;
+  margin: 4px 0 0;
+}
+.op-preview__hero-tiles {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+/* Grid of card variants */
+.op-preview__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+}
+.op-preview__grid--two {
+  /* For side-by-side hero pairs like Complexity + AI Analysis. */
+  grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+}
+.op-preview__chips {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+
+/* Money size row */
+.op-preview__money-row {
+  display: flex;
+  gap: 32px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+.op-preview__size-label {
+  font-size: 11px;
+  color: #9ca3af;
+  margin: 4px 0 0;
+}

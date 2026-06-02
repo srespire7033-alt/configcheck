@@ -99,4 +99,136 @@ private class ForensicScanServiceTest {
         System.assertEquals(50000, sr.financials.get('total'));
         System.assertEquals('Activated', sr.financials.get('status'));
     }
+
+    /**
+     * End-to-end: inject stub rows into REN001 so the orchestrator
+     * actually emits findings, exercising the toFindingRecord +
+     * persistence path that's normally only hit when CPQ data exists.
+     */
+    @isTest
+    static void startScan_persistsFindings_whenDetectorEmitsResults() {
+        REN001RenewalUpliftDetector.testStubRows = new List<Map<String, Object>>{
+            new Map<String, Object>{
+                'lineId' => UserInfo.getUserId(),
+                'lineName' => 'QL-001',
+                'netPrice' => 50000,
+                'listPrice' => 100000,
+                'originalPrice' => 100000,
+                'upliftPct' => 20,
+                'quoteName' => 'Q-001',
+                'accountName' => 'Acme',
+                'subscriptionId' => UserInfo.getUserId(),
+                'currencyIsoCode' => 'USD'
+            }
+        };
+
+        Test.startTest();
+        Id scanId = ForensicScanService.startScan('CPQ');
+        Test.stopTest();
+
+        ForensicScan__c scan = [
+            SELECT Status__c, FindingCount__c, TotalLeakageUsd__c
+            FROM ForensicScan__c WHERE Id = :scanId
+        ];
+        System.assertEquals('Completed', scan.Status__c);
+        System.assertEquals(1, scan.FindingCount__c, 'Should persist 1 finding');
+        System.assert(scan.TotalLeakageUsd__c > 0, 'Should have leakage > 0');
+
+        List<ForensicFinding__c> findings = [
+            SELECT Id, DetectorId__c, Severity__c, GapUsd__c, Title__c,
+                   PrimaryRecordType__c, PrimaryRecordId__c, SourceRecordRefs__c, Metadata__c
+            FROM ForensicFinding__c WHERE ForensicScan__c = :scanId
+        ];
+        System.assertEquals(1, findings.size());
+        System.assertEquals('REN-001', findings[0].DetectorId__c);
+        System.assertEquals('Critical', findings[0].Severity__c);
+        System.assertNotEquals(null, findings[0].SourceRecordRefs__c);
+        System.assertNotEquals(null, findings[0].Metadata__c);
+        System.assertEquals('SBQQ__QuoteLine__c', findings[0].PrimaryRecordType__c);
+
+        REN001RenewalUpliftDetector.testStubRows = null;
+    }
+
+    @isTest
+    static void toFindingRecord_serializesPrimaryAndMetadata() {
+        ForensicScan__c scan = new ForensicScan__c(
+            Status__c = 'Running', ProductType__c = 'CPQ', StartedAt__c = System.now()
+        );
+        insert scan;
+
+        DetectorResult dr = new DetectorResult();
+        dr.detectorId = 'REN-001';
+        dr.severity = 'Warning';
+        dr.entitledUsd = 10000;
+        dr.realizedUsd = 6000;
+        dr.computeGap();
+        dr.currencyIsoCode = 'USD';
+        dr.recoverabilityScore = 0.75;
+        dr.title = 'Test finding';
+        dr.description = 'Test description';
+        dr.primaryRecord = new SourceRecord('Account', UserInfo.getUserId(), 'Acme')
+            .withFinancial('total', 1000);
+        dr.metadata.put('source', 'test');
+
+        ForensicFinding__c f = ForensicScanService.toFindingRecord(scan.Id, dr);
+        System.assertEquals(scan.Id, f.ForensicScan__c);
+        System.assertEquals('REN-001', f.DetectorId__c);
+        System.assertEquals('Account', f.PrimaryRecordType__c);
+        System.assertEquals('Open', f.Status__c);
+        System.assertNotEquals(null, f.SourceRecordRefs__c);
+        System.assert(f.SourceRecordRefs__c.contains('Acme'), 'Source refs should serialize primary record');
+        System.assert(f.Metadata__c.contains('test'), 'Metadata should serialize');
+    }
+
+    @isTest
+    static void toFindingRecord_handlesNullPrimary() {
+        ForensicScan__c scan = new ForensicScan__c(
+            Status__c = 'Running', ProductType__c = 'CPQ', StartedAt__c = System.now()
+        );
+        insert scan;
+        DetectorResult dr = new DetectorResult();
+        dr.detectorId = 'X-001';
+        dr.severity = 'Info';
+        dr.entitledUsd = 100;
+        dr.realizedUsd = 50;
+        dr.computeGap();
+        dr.title = 't';
+        dr.description = 'd';
+
+        ForensicFinding__c f = ForensicScanService.toFindingRecord(scan.Id, dr);
+        System.assertEquals(null, f.PrimaryRecordType__c);
+        System.assertEquals(null, f.PrimaryRecordId__c);
+    }
+
+    @isTest
+    static void primaryRecordAsMap_handlesNull() {
+        Map<String, Object> result = ForensicScanService.primaryRecordAsMap(null);
+        System.assertEquals(null, result);
+    }
+
+    @isTest
+    static void primaryRecordAsMap_serializesAllFields() {
+        SourceRecord sr = new SourceRecord('Order', UserInfo.getUserId(), 'O-1')
+            .withFinancial('amount', 5000);
+        Map<String, Object> m = ForensicScanService.primaryRecordAsMap(sr);
+        System.assertEquals('Order', m.get('type'));
+        System.assertEquals('O-1', m.get('name'));
+        System.assertNotEquals(null, m.get('financials'));
+    }
+
+    @isTest
+    static void supportingRecordsAsList_handlesNull() {
+        List<Object> result = ForensicScanService.supportingRecordsAsList(null);
+        System.assertEquals(0, result.size());
+    }
+
+    @isTest
+    static void supportingRecordsAsList_serializesList() {
+        List<SourceRecord> supporting = new List<SourceRecord>{
+            new SourceRecord('Order', UserInfo.getUserId(), 'O-1'),
+            new SourceRecord('Contract', UserInfo.getUserId(), 'C-1')
+        };
+        List<Object> result = ForensicScanService.supportingRecordsAsList(supporting);
+        System.assertEquals(2, result.size());
+    }
 }

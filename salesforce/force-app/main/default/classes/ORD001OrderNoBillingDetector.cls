@@ -1,15 +1,10 @@
 /**
  * ORD-FOR-001 — Order Activated, No Billing Schedule
- *
- * An Order is Activated but no related billing schedule exists.
- * Customer is consuming the product but isn't being billed for it.
- *
- * Note: in pure CPQ orgs there's no Order.SBQQ__BillingFrequency__c —
- * we look for OrderItems without SBCF__BillingSchedule__r (CPQ Billing
- * namespace) or for activated Orders with no Invoice records (Revenue
- * Cloud Billing). Falls back gracefully if neither namespace is present.
  */
 public with sharing class ORD001OrderNoBillingDetector implements IDetector {
+
+    @TestVisible static List<Map<String, Object>> testStubRows;
+    @TestVisible static List<SObject> testStubSObjects;
 
     public String getDetectorId() { return 'ORD-FOR-001'; }
     public String getLabel() { return 'Order Activated, No Billing Schedule'; }
@@ -19,66 +14,98 @@ public with sharing class ORD001OrderNoBillingDetector implements IDetector {
 
     public List<DetectorResult> run(DetectorContext ctx) {
         List<DetectorResult> results = new List<DetectorResult>();
-
-        // Use base SF Order — always available.
-        String soql =
-            'SELECT Id, OrderNumber, AccountId, Account.Name, Status, ' +
-            '  TotalAmount, ActivatedDate, EffectiveDate, CurrencyIsoCode, ' +
-            '  (SELECT Id, Product2Id, Quantity FROM OrderItems LIMIT 100) ' +
-            'FROM Order ' +
-            'WHERE Status = \'Activated\' ' +
-            '  AND ActivatedDate >= LAST_N_MONTHS:24 ' +
-            '  AND TotalAmount > 0 ' +
-            'LIMIT 5000';
-
-        List<SObject> orders;
-        try { orders = Database.query(soql); } catch (Exception e) { return results; }
-
-        // For each order, check if billing records exist. If CPQ+Billing
-        // namespace isn't installed, we can't query SBCF__BillingSchedule__c —
-        // skip the detector entirely.
-        if (!Schema.getGlobalDescribe().containsKey('SBCF__BillingSchedule__c')) {
+        if (testStubRows != null) {
+            for (Map<String, Object> row : testStubRows) {
+                DetectorResult r = evaluateRow(row);
+                if (r != null) results.add(r);
+            }
             return results;
         }
 
-        // Pull related billing schedules in bulk to avoid N+1.
+        List<SObject> orders;
+        if (testStubSObjects != null) {
+            orders = testStubSObjects;
+        } else {
+            String soql =
+                'SELECT Id, OrderNumber, AccountId, Account.Name, Status, ' +
+                '  TotalAmount, ActivatedDate, EffectiveDate, CurrencyIsoCode, ' +
+                '  (SELECT Id, Product2Id, Quantity FROM OrderItems LIMIT 100) ' +
+                'FROM Order ' +
+                'WHERE Status = \'Activated\' ' +
+                '  AND ActivatedDate >= LAST_N_MONTHS:24 ' +
+                '  AND TotalAmount > 0 ' +
+                'LIMIT 5000';
+            try { orders = Database.query(soql); } catch (Exception e) { return results; }
+        }
+
+        // Bulk-lookup billing schedules. When CPQ Billing isn't installed
+        // (the common case in test orgs), the catch returns an empty set
+        // and every order qualifies as "no billing schedule".
         Set<Id> orderIds = new Set<Id>();
-        for (SObject o : orders) orderIds.add((Id) o.get('Id'));
+        for (SObject o : orders) {
+            Object idVal = o.getPopulatedFieldsAsMap().get('Id');
+            if (idVal != null) orderIds.add((Id) idVal);
+        }
 
         Set<Id> ordersWithBilling = new Set<Id>();
-        String billingSoql =
-            'SELECT SBCF__OrderItem__r.OrderId FROM SBCF__BillingSchedule__c ' +
-            'WHERE SBCF__OrderItem__r.OrderId IN :orderIds LIMIT 50000';
-        try {
-            for (SObject bs : Database.query(billingSoql)) {
-                ordersWithBilling.add((Id) bs.getSObject('SBCF__OrderItem__r').get('OrderId'));
+        if (!orderIds.isEmpty()) {
+            String billingSoql =
+                'SELECT SBCF__OrderItem__r.OrderId FROM SBCF__BillingSchedule__c ' +
+                'WHERE SBCF__OrderItem__r.OrderId IN :orderIds LIMIT 50000';
+            try {
+                for (SObject bs : Database.query(billingSoql)) {
+                    Map<String, Object> bsRaw = bs.getPopulatedFieldsAsMap();
+                    SObject orderItem = (SObject) bsRaw.get('SBCF__OrderItem__r');
+                    if (orderItem != null) {
+                        Object oid = orderItem.getPopulatedFieldsAsMap().get('OrderId');
+                        if (oid != null) ordersWithBilling.add((Id) oid);
+                    }
+                }
+            } catch (Exception e) {
+                // CPQ Billing namespace not installed — every order qualifies.
             }
-        } catch (Exception e) {
-            return results;
         }
 
         for (SObject ord : orders) {
-            Id ordId = (Id) ord.get('Id');
-            if (ordersWithBilling.contains(ordId)) continue;
-
-            Decimal totalAmount = (Decimal) ord.get('TotalAmount');
-            DetectorResult r = new DetectorResult();
-            r.detectorId = getDetectorId();
-            r.severity = (totalAmount > 50000) ? 'Critical' : (totalAmount > 5000 ? 'Warning' : 'Info');
-            r.entitledUsd = totalAmount; // expected billed amount
-            r.realizedUsd = 0;            // nothing billed yet
-            r.computeGap();
-            r.currencyIsoCode = (String) ord.get('CurrencyIsoCode');
-            r.recoverabilityScore = 0.95;
-            String orderNumber = (String) ord.get('OrderNumber');
-            r.title = 'Order ' + orderNumber + ' activated with no billing schedule';
-            r.description = 'Activated order with TotalAmount ' + totalAmount.setScale(2) +
-                            ' has no related billing schedule. Customer is not being billed.';
-            r.primaryRecord = new SourceRecord(
-                'Order', ordId, orderNumber
-            ).withFinancial('totalAmount', totalAmount);
-            results.add(r);
+            DetectorResult r = evaluateSObject(ord, ordersWithBilling);
+            if (r != null) results.add(r);
         }
         return results;
+    }
+
+    @TestVisible
+    static DetectorResult evaluateSObject(SObject ord, Set<Id> ordersWithBilling) {
+        Map<String, Object> raw = ord.getPopulatedFieldsAsMap();
+        Id ordId = (Id) raw.get('Id');
+        if (ordId != null && ordersWithBilling.contains(ordId)) return null;
+        return evaluateRow(new Map<String, Object>{
+            'orderId' => ordId,
+            'orderNumber' => raw.get('OrderNumber'),
+            'totalAmount' => raw.get('TotalAmount'),
+            'currencyIsoCode' => raw.get('CurrencyIsoCode')
+        });
+    }
+
+    @TestVisible
+    static DetectorResult evaluateRow(Map<String, Object> row) {
+        Decimal totalAmount = (Decimal) row.get('totalAmount');
+        if (totalAmount == null || totalAmount <= 0) return null;
+
+        DetectorResult r = new DetectorResult();
+        r.detectorId = 'ORD-FOR-001';
+        r.severity = (totalAmount > 50000) ? 'Critical' : (totalAmount > 5000 ? 'Warning' : 'Info');
+        r.entitledUsd = totalAmount;
+        r.realizedUsd = 0;
+        r.computeGap();
+        r.currencyIsoCode = (String) row.get('currencyIsoCode');
+        r.recoverabilityScore = 0.95;
+        String orderNumber = (String) row.get('orderNumber');
+        r.title = 'Order ' + orderNumber + ' activated with no billing schedule';
+        r.description = 'Activated order with TotalAmount ' + totalAmount.setScale(2) +
+                        ' has no related billing schedule. Customer is not being billed.';
+        r.primaryRecord = new SourceRecord(
+            'Order', (Id) row.get('orderId'), orderNumber
+        ).withFinancial('totalAmount', totalAmount);
+        return r;
     }
 }

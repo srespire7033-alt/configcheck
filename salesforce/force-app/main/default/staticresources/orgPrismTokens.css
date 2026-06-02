@@ -1,0 +1,90 @@
+/*
+ * OrgPrism design tokens. Single source of truth for color, spacing,
+ * and typography across every native LWC. Mirrors the Tailwind palette
+ * used in the SaaS dashboard (src/app — Next.js) so the two
+ * experiences feel visually identical.
+ *
+ * Imported by every OrgPrism LWC via a <link> tag in the template.
+ * Static resource path: /resource/orgPrismTokens
+ *
+ * Naming convention: --op-{category}-{semantic-name}
+ *   --op-color-bg-*       backgrounds
+ *   --op-color-text-*     text colors
+ *   --op-color-border-*   border colors
+ *   --op-color-sev-*      severity colors (Critical/Warning/Info)
+ *   --op-color-brand-*    brand accent colors
+ *   --op-space-{n}        spacing scale (4px grid)
+ *   --op-radius-*         border radii
+ *   --op-shadow-*         box shadows
+ *   --op-font-*           font sizing
+ */
+
+:root {
+  /* Backgrounds */
+  --op-color-bg-card: #ffffff;
+  --op-color-bg-page: #f9fafb;             /* gray-50 */
+  --op-color-bg-muted: #f3f4f6;            /* gray-100 */
+  --op-color-bg-hover: rgba(0, 0, 0, 0.04);
+
+  /* Text */
+  --op-color-text-strong: #111827;         /* gray-900 */
+  --op-color-text-body: #374151;           /* gray-700 */
+  --op-color-text-muted: #6b7280;          /* gray-500 */
+  --op-color-text-weak: #9ca3af;           /* gray-400 */
+  --op-color-text-inverse: #ffffff;
+
+  /* Borders */
+  --op-color-border-subtle: #f3f4f6;       /* gray-100 */
+  --op-color-border-default: #e5e7eb;      /* gray-200 */
+  --op-color-border-strong: #d1d5db;       /* gray-300 */
+
+  /* Severity (matches the SaaS app: red/amber/blue) */
+  --op-color-sev-critical-bg: #fef2f2;     /* red-50 */
+  --op-color-sev-critical-fg: #b91c1c;     /* red-700 */
+  --op-color-sev-critical-accent: #ef4444; /* red-500 */
+  --op-color-sev-warning-bg: #fffbeb;      /* amber-50 */
+  --op-color-sev-warning-fg: #b45309;      /* amber-700 */
+  --op-color-sev-warning-accent: #f59e0b;  /* amber-500 */
+  --op-color-sev-info-bg: #f3f4f6;         /* gray-100 */
+  --op-color-sev-info-fg: #374151;         /* gray-700 */
+  --op-color-sev-info-accent: #9ca3af;     /* gray-400 */
+
+  /* Money / verified — the "this is real $ recoverable" color */
+  --op-color-money-fg: #047857;            /* emerald-700 */
+  --op-color-money-accent: #10b981;        /* emerald-500 */
+
+  /* Brand accents (used sparingly — primary CTA, focus rings) */
+  --op-color-brand-primary: #2563eb;       /* blue-600 */
+  --op-color-brand-primary-hover: #1d4ed8; /* blue-700 */
+  --op-color-brand-accent: #0ea5e9;        /* sky-500 */
+  --op-color-brand-purple: #7c3aed;        /* violet-600 */
+
+  /* Spacing (4px scale, matches Tailwind defaults) */
+  --op-space-1: 4px;
+  --op-space-2: 8px;
+  --op-space-3: 12px;
+  --op-space-4: 16px;
+  --op-space-5: 20px;
+  --op-space-6: 24px;
+  --op-space-8: 32px;
+  --op-space-10: 40px;
+  --op-space-12: 48px;
+
+  /* Radii */
+  --op-radius-sm: 6px;
+  --op-radius-md: 12px;
+  --op-radius-lg: 16px;
+  --op-radius-xl: 24px;     /* matches Tailwind rounded-2xl in the SaaS */
+
+  /* Shadows (subtle, matches SaaS shadow-sm) */
+  --op-shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --op-shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+  --op-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.05);
+
+  /* Typography */
+  --op-font-display: 32px;     /* hero $ headline */
+  --op-font-heading: 20px;
+  --op-font-body: 14px;
+  --op-font-caption: 12px;
+  --op-font-micro: 10px;
+}

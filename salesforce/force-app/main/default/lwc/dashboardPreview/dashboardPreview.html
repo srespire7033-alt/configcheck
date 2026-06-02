@@ -1,0 +1,106 @@
+<template>
+  <div class="op-preview">
+    <h2 class="op-preview__heading">OrgPrism Phase 1 — Primitives Preview</h2>
+    <p class="op-preview__caption">
+      Visual sanity check for <code>dashboardCard</code>,
+      <code>severityBadge</code>, and <code>moneyDisplay</code>.
+      Delete this component after Phase 2 lands.
+    </p>
+
+    <!-- ===== Phase 2: Live data cards =====
+         Each LWC reads from DashboardController and renders against
+         the actual scan + findings data. Phase 1 primitive demos
+         remain below for visual reference. -->
+    <c-hero-block></c-hero-block>
+    <c-impact-effort-matrix></c-impact-effort-matrix>
+
+    <!-- Side-by-side: Complexity + AI Analysis -->
+    <div class="op-preview__grid op-preview__grid--two">
+      <c-complexity-card></c-complexity-card>
+      <c-ai-analysis-card></c-ai-analysis-card>
+    </div>
+
+    <!-- $ Trend at bottom of Summary -->
+    <c-dollar-trend-card></c-dollar-trend-card>
+
+    <h3 class="op-preview__heading">Phase 1 primitives — visual reference</h3>
+
+    <!-- ===== Composition 1: Hero block style ===== -->
+    <c-dashboard-card title="Hero composition" subtitle="$ headline + severity tiles row — what users see first">
+      <div class="op-preview__hero">
+        <div class="op-preview__hero-money">
+          <c-money-display value={heroValue} size="hero" accent></c-money-display>
+          <p class="op-preview__hero-label">VERIFIED LEAKAGE</p>
+        </div>
+        <div class="op-preview__hero-tiles">
+          <c-severity-badge severity="Critical" count={criticalCount} variant="tile"></c-severity-badge>
+          <c-severity-badge severity="Warning" count={warningCount} variant="tile"></c-severity-badge>
+          <c-severity-badge severity="Info" count={infoCount} variant="tile"></c-severity-badge>
+        </div>
+      </div>
+    </c-dashboard-card>
+
+    <!-- ===== Composition 2: Card variants ===== -->
+    <div class="op-preview__grid">
+      <c-dashboard-card title="Default card" subtitle="Border + shadow">
+        <p>Standard chrome. Used 95% of the time.</p>
+        <div class="op-preview__chips">
+          <c-severity-badge severity="Critical" count="3"></c-severity-badge>
+          <c-severity-badge severity="Warning" count="7"></c-severity-badge>
+          <c-severity-badge severity="Info" count="2"></c-severity-badge>
+        </div>
+      </c-dashboard-card>
+
+      <c-dashboard-card title="Outlined" subtitle="Border only" variant="outlined">
+        <p>Lighter visual weight. Good for secondary content.</p>
+      </c-dashboard-card>
+
+      <c-dashboard-card title="Flat" variant="flat">
+        <p>No chrome — when nested inside another card.</p>
+      </c-dashboard-card>
+    </div>
+
+    <!-- ===== Composition 3: Money sizes ===== -->
+    <c-dashboard-card title="Money sizes" subtitle="Hero / Large / Medium / Small">
+      <div class="op-preview__money-row">
+        <div>
+          <c-money-display value={millionValue} size="hero" accent></c-money-display>
+          <p class="op-preview__size-label">hero · accent</p>
+        </div>
+        <div>
+          <c-money-display value={largeValue} size="large"></c-money-display>
+          <p class="op-preview__size-label">large</p>
+        </div>
+        <div>
+          <c-money-display value={mediumValue} size="medium"></c-money-display>
+          <p class="op-preview__size-label">medium (default)</p>
+        </div>
+        <div>
+          <c-money-display value={smallValue} size="small"></c-money-display>
+          <p class="op-preview__size-label">small</p>
+        </div>
+        <div>
+          <c-money-display value={zeroValue} size="medium"></c-money-display>
+          <p class="op-preview__size-label">zero → em dash</p>
+        </div>
+      </div>
+    </c-dashboard-card>
+
+    <!-- ===== Composition 4: Card with header actions slot ===== -->
+    <c-dashboard-card title="Card with actions" subtitle="Slot demo">
+      <lightning-button-icon
+        slot="actions"
+        icon-name="utility:refresh"
+        alternative-text="Refresh"
+        variant="bare"
+      ></lightning-button-icon>
+      <lightning-button-icon
+        slot="actions"
+        icon-name="utility:settings"
+        alternative-text="Settings"
+        variant="bare"
+      ></lightning-button-icon>
+      <p>Right-side controls go in the <code>actions</code> slot. Body content goes in the default slot.</p>
+    </c-dashboard-card>
+  </div>
+</template>

@@ -1,0 +1,27 @@
+.op-money {
+  font-feature-settings: 'tnum';
+  font-weight: 600;
+  color: var(--op-color-text-strong, #111827);
+  line-height: 1.1;
+  display: inline-block;
+}
+
+.op-money--hero {
+  font-size: 48px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+.op-money--large {
+  font-size: 28px;
+  font-weight: 700;
+}
+.op-money--medium {
+  font-size: 18px;
+}
+.op-money--small {
+  font-size: 14px;
+}
+
+.op-money--accent {
+  color: var(--op-color-money-fg, #047857);
+}

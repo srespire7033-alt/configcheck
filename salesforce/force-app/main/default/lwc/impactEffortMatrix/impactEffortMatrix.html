@@ -1,0 +1,73 @@
+<template>
+  <c-dashboard-card title="Impact × Effort" subtitle="Where to start — bubbles sized by $ recoverable, placed by effort">
+    <template if:true={isLoading}>
+      <div class="op-matrix__loading">
+        <lightning-spinner alternative-text="Loading matrix" size="small"></lightning-spinner>
+      </div>
+    </template>
+
+    <template if:true={hasError}>
+      <p class="op-matrix__error">Couldn&rsquo;t load matrix data: {error}</p>
+    </template>
+
+    <template if:true={isEmpty}>
+      <div class="op-matrix__empty">
+        <p>No findings to plot yet — run a forensic scan to populate the matrix.</p>
+      </div>
+    </template>
+
+    <template if:true={hasFindings}>
+      <!-- Quadrant summary chips -->
+      <div class="op-matrix__quadrants">
+        <template for:each={quadrants} for:item="q">
+          <div key={q.key} class={q.cls}>
+            <p class="op-quad__label">{q.label}</p>
+            <p class="op-quad__count">{q.count}</p>
+            <p class="op-quad__total">{q.total}</p>
+          </div>
+        </template>
+      </div>
+
+      <!-- The plot -->
+      <div class="op-matrix__plot">
+        <!-- Y-axis label -->
+        <div class="op-matrix__y-label">High $ →</div>
+
+        <!-- The plotting area -->
+        <div class="op-matrix__area">
+          <!-- Quadrant separator lines -->
+          <div class="op-matrix__hline"></div>
+          <div class="op-matrix__vline"></div>
+
+          <!-- Quadrant labels (faint) -->
+          <span class="op-matrix__quad-label op-matrix__quad-label--tl">Quick wins</span>
+          <span class="op-matrix__quad-label op-matrix__quad-label--tr">Big bets</span>
+          <span class="op-matrix__quad-label op-matrix__quad-label--bl">Tidy-ups</span>
+          <span class="op-matrix__quad-label op-matrix__quad-label--br">Defer</span>
+
+          <!-- The bubbles -->
+          <template for:each={bubbles} for:item="b">
+            <button
+              key={b.id}
+              data-id={b.id}
+              type="button"
+              class="op-matrix__bubble"
+              style={b.style}
+              title={b.tooltip}
+              aria-label={b.tooltip}
+              onclick={handleBubbleClick}
+            >
+              <span class="slds-assistive-text">{b.title}</span>
+            </button>
+          </template>
+        </div>
+
+        <!-- X-axis label -->
+        <div class="op-matrix__x-label">
+          <span>← Low effort</span>
+          <span>High effort →</span>
+        </div>
+      </div>
+    </template>
+  </c-dashboard-card>
+</template>

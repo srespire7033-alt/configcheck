@@ -37,6 +37,7 @@ public with sharing class ForensicScanService {
      * Kick off a new scan. Returns the ForensicScan__c Id immediately;
      * findings are persisted as each detector completes.
      */
+    @AuraEnabled
     public static Id startScan(String productType) {
         ForensicScan__c scan = new ForensicScan__c(
             Status__c = 'Running',
@@ -83,6 +84,7 @@ public with sharing class ForensicScanService {
     }
 
     /** DetectorResult DTO → ForensicFinding__c sObject. */
+    @TestVisible
     private static ForensicFinding__c toFindingRecord(Id scanId, DetectorResult r) {
         ForensicFinding__c f = new ForensicFinding__c(
             ForensicScan__c = scanId,
@@ -117,6 +119,7 @@ public with sharing class ForensicScanService {
         return f;
     }
 
+    @TestVisible
     private static Map<String, Object> primaryRecordAsMap(SourceRecord sr) {
         if (sr == null) return null;
         return new Map<String, Object>{
@@ -127,6 +130,7 @@ public with sharing class ForensicScanService {
         };
     }
 
+    @TestVisible
     private static List<Object> supportingRecordsAsList(List<SourceRecord> list1) {
         List<Object> out = new List<Object>();
         if (list1 == null) return out;

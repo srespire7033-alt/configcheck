@@ -1,0 +1,76 @@
+<template>
+  <c-dashboard-card>
+    <!-- LOADING -->
+    <template if:true={isLoading}>
+      <div class="op-hero op-hero--loading">
+        <lightning-spinner alternative-text="Loading dashboard" size="small"></lightning-spinner>
+      </div>
+    </template>
+
+    <!-- ERROR -->
+    <template if:true={hasError}>
+      <div class="op-hero op-hero--error">
+        <p class="op-hero__error-msg">Couldn&rsquo;t load dashboard data: {error}</p>
+      </div>
+    </template>
+
+    <!-- EMPTY: no scans -->
+    <template if:true={isEmpty}>
+      <div class="op-hero op-hero--empty">
+        <div class="op-hero__empty-body">
+          <h2 class="op-hero__empty-title">No forensic scans yet</h2>
+          <p class="op-hero__empty-caption">
+            Run your first scan to surface verified revenue leakage in this org.
+          </p>
+        </div>
+        <lightning-button
+          variant="brand"
+          label="View Forensic Scans"
+          onclick={handleViewScans}
+        ></lightning-button>
+      </div>
+    </template>
+
+    <!-- NO FINDINGS: scan exists but came back clean (or empty CPQ) -->
+    <template if:true={hasNoFindings}>
+      <div class="op-hero op-hero--clean">
+        <div class="op-hero__clean-body">
+          <h2 class="op-hero__clean-title">No revenue leakage detected</h2>
+          <p class="op-hero__caption">{caption}</p>
+        </div>
+        <lightning-button
+          variant="neutral"
+          label="View scan"
+          onclick={handleViewScan}
+        ></lightning-button>
+      </div>
+    </template>
+
+    <!-- ACTIVE: findings exist -->
+    <template if:true={hasFindings}>
+      <div class="op-hero">
+        <div class="op-hero__main">
+          <div class="op-hero__money">
+            <c-money-display value={totalVerifiedUsd} size="hero" accent></c-money-display>
+            <p class="op-hero__label">VERIFIED LEAKAGE</p>
+            <p class="op-hero__caption">{caption}</p>
+          </div>
+          <div class="op-hero__tiles">
+            <c-severity-badge severity="Critical" count={criticalCount} variant="tile"></c-severity-badge>
+            <c-severity-badge severity="Warning" count={warningCount} variant="tile"></c-severity-badge>
+            <c-severity-badge severity="Info" count={infoCount} variant="tile"></c-severity-badge>
+          </div>
+        </div>
+        <div class="op-hero__footer">
+          <lightning-button
+            variant="neutral"
+            label="View scan detail"
+            icon-name="utility:open"
+            icon-position="right"
+            onclick={handleViewScan}
+          ></lightning-button>
+        </div>
+      </div>
+    </template>
+  </c-dashboard-card>
+</template>

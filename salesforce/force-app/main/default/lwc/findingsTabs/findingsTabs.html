@@ -1,0 +1,31 @@
+<template>
+  <div class="op-tabs">
+    <!-- Sub-pill switcher -->
+    <div class="op-tabs__pills">
+      <template for:each={pills} for:item="p">
+        <button
+          key={p.id}
+          data-id={p.id}
+          class={p.cls}
+          onclick={handlePillClick}
+          type="button"
+        >
+          {p.label}
+        </button>
+      </template>
+    </div>
+
+    <!-- Active sub-view -->
+    <div class="op-tabs__body">
+      <template if:true={showLeakage}>
+        <c-revenue-leakage-view></c-revenue-leakage-view>
+      </template>
+      <template if:true={showGovernance}>
+        <c-governance-pipeline-view></c-governance-pipeline-view>
+      </template>
+      <template if:true={showPricing}>
+        <c-pricing-discipline-view></c-pricing-discipline-view>
+      </template>
+    </div>
+  </div>
+</template>

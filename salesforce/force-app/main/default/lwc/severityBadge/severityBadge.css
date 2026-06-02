@@ -1,0 +1,75 @@
+.op-sev {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  padding: 2px 10px;
+  font-weight: 600;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.op-sev__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.op-sev__count {
+  font-weight: 700;
+  font-feature-settings: 'tnum';
+}
+
+/* Critical */
+.op-sev--critical {
+  background: var(--op-color-sev-critical-bg, #fef2f2);
+  color: var(--op-color-sev-critical-fg, #b91c1c);
+  border-color: var(--op-color-sev-critical-bg, #fef2f2);
+}
+.op-sev--critical .op-sev__dot {
+  background: var(--op-color-sev-critical-accent, #ef4444);
+}
+
+/* Warning */
+.op-sev--warning {
+  background: var(--op-color-sev-warning-bg, #fffbeb);
+  color: var(--op-color-sev-warning-fg, #b45309);
+  border-color: var(--op-color-sev-warning-bg, #fffbeb);
+}
+.op-sev--warning .op-sev__dot {
+  background: var(--op-color-sev-warning-accent, #f59e0b);
+}
+
+/* Info */
+.op-sev--info {
+  background: var(--op-color-sev-info-bg, #f3f4f6);
+  color: var(--op-color-sev-info-fg, #374151);
+  border-color: var(--op-color-sev-info-bg, #f3f4f6);
+}
+.op-sev--info .op-sev__dot {
+  background: var(--op-color-sev-info-accent, #9ca3af);
+}
+
+/* Tile variant — large stacked block used in the hero row */
+.op-sev--tile {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  font-size: 14px;
+  min-width: 90px;
+}
+.op-sev--tile .op-sev__count {
+  font-size: 24px;
+  font-weight: 700;
+}
+.op-sev--tile .op-sev__label {
+  font-size: 13px;
+  opacity: 0.85;
+}
+.op-sev--tile .op-sev__dot {
+  display: none;
+}
