@@ -110,12 +110,16 @@ export function CategoryRiskCard({ orgId, category }: Props) {
               <p className="text-sm text-gray-500 dark:text-gray-400">{copy.subtitle}</p>
             </div>
           </div>
-          <div className="text-right">
-            <p className={`text-3xl font-bold ${colorClasses.chip}`}>{data.total_findings}</p>
-            <p className="text-xs text-gray-500 dark:text-gray-400">
+          <div
+            className={`flex flex-col items-center justify-center rounded-xl border ${colorClasses.border} ${colorClasses.accent} px-4 py-2 min-w-[88px] flex-shrink-0`}
+          >
+            <p className={`text-2xl font-bold leading-tight ${colorClasses.chip}`}>
+              {data.total_findings}
+            </p>
+            <p className="text-[10px] uppercase tracking-wider opacity-80 mt-0.5">
               {category === 'pipeline' && data.total_at_risk_usd > 0
                 ? formatMoney(data.total_at_risk_usd) + ' ARR'
-                : data.total_findings === 1 ? '1 finding' : `${data.total_findings} findings`}
+                : data.total_findings === 1 ? '1 finding' : 'findings'}
             </p>
           </div>
         </div>

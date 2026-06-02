@@ -83,28 +83,56 @@ export async function GET(req: NextRequest, { params }: { params: { orgId: strin
     });
   }
 
-  // Pull findings for this org + these detectors.
-  // NOTE: forensic_findings has no created_at column — selecting it
-  // causes the WHOLE query to error and data becomes null. Use
-  // detected_at if needed (the actual timestamp column).
-  const { data: rows, error: findingsErr } = await supabase
+  // Only count findings from the latest completed forensic scan.
+  // Without this filter, a record flagged across N scans appears N
+  // times — visually it looks like duplicates ('Q-00180 × 5'). Per
+  // forensic_scan_id, each (detector, source_record) is unique.
+  const { data: latestScans } = await supabase
+    .from('forensic_scans')
+    .select('id')
+    .eq('organization_id', params.orgId)
+    .in('status', ['completed', 'partial'])
+    .order('completed_at', { ascending: false })
+    .limit(1);
+  const latestScanId = (latestScans?.[0] as { id?: string } | undefined)?.id ?? null;
+
+  const baseQuery = supabase
     .from('forensic_findings')
-    .select('id, detector_id, title, gap_usd, severity, detected_at')
+    .select('id, detector_id, title, gap_usd, severity, detected_at, source_record_refs')
     .eq('organization_id', params.orgId)
     .eq('user_id', user.id)
     .in('detector_id', detectorIdsInCategory);
+  const { data: rows, error: findingsErr } = latestScanId
+    ? await baseQuery.eq('forensic_scan_id', latestScanId)
+    : await baseQuery;
   if (findingsErr) {
     console.error(`[category-risk] findings SELECT failed: ${findingsErr.message}`);
   }
 
-  const findings = (rows ?? []) as Array<{
+  const rawFindings = (rows ?? []) as Array<{
     id: string;
     detector_id: string;
     title: string;
     gap_usd: number | string;
     severity: string;
     detected_at: string;
+    source_record_refs: { primary_record?: { id?: string } } | null;
   }>;
+
+  // Belt-and-braces dedup: even within a single scan, defend against
+  // duplicate (detector_id, primary_record.id) rows that could appear
+  // if a detector accidentally double-emits. Keep the highest-gap row
+  // when fingerprints collide.
+  const fingerprintMap = new Map<string, typeof rawFindings[number]>();
+  for (const f of rawFindings) {
+    const pid = f.source_record_refs?.primary_record?.id ?? f.id; // fallback so non-fingerprinted findings still survive
+    const fp = `${f.detector_id}::${pid}`;
+    const existing = fingerprintMap.get(fp);
+    if (!existing || Number(f.gap_usd ?? 0) > Number(existing.gap_usd ?? 0)) {
+      fingerprintMap.set(fp, f);
+    }
+  }
+  const findings = Array.from(fingerprintMap.values());
 
   // Aggregate per detector.
   const byDetector = new Map<string, { count: number; total: number }>();
