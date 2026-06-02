@@ -270,16 +270,16 @@ export function ImpactEffortMatrix({ findings, currency = 'USD', orgId }: Props)
           <div className="flex flex-col justify-between py-2 text-right">
             <div className="flex flex-col items-end h-full justify-between">
               <div>
-                <p className="text-[11px] font-semibold text-gray-700 dark:text-gray-300">High</p>
-                <p className="text-[9px] text-gray-500 dark:text-gray-400">≥{formatMoney(IMPACT_HIGH_THRESHOLD, currency)}</p>
+                <p className="text-sm font-bold text-gray-800 dark:text-gray-200">High</p>
+                <p className="text-[11px] text-gray-500 dark:text-gray-400">≥{formatMoney(IMPACT_HIGH_THRESHOLD, currency)}</p>
               </div>
               <div>
-                <p className="text-[11px] font-semibold text-gray-700 dark:text-gray-300">Medium</p>
-                <p className="text-[9px] text-gray-500 dark:text-gray-400">≥{formatMoney(IMPACT_LOW_THRESHOLD, currency)}</p>
+                <p className="text-sm font-bold text-gray-800 dark:text-gray-200">Medium</p>
+                <p className="text-[11px] text-gray-500 dark:text-gray-400">≥{formatMoney(IMPACT_LOW_THRESHOLD, currency)}</p>
               </div>
               <div>
-                <p className="text-[11px] font-semibold text-gray-700 dark:text-gray-300">Low</p>
-                <p className="text-[9px] text-gray-500 dark:text-gray-400">&lt;{formatMoney(IMPACT_LOW_THRESHOLD, currency)}</p>
+                <p className="text-sm font-bold text-gray-800 dark:text-gray-200">Low</p>
+                <p className="text-[11px] text-gray-500 dark:text-gray-400">&lt;{formatMoney(IMPACT_LOW_THRESHOLD, currency)}</p>
               </div>
             </div>
           </div>
@@ -303,30 +303,30 @@ export function ImpactEffortMatrix({ findings, currency = 'USD', orgId }: Props)
                       key={key}
                       type={isEmpty ? undefined : 'button'}
                       onClick={isEmpty ? undefined : () => setOpenCell(key)}
-                      className={`relative rounded-lg p-3 min-h-[80px] flex flex-col justify-between text-left w-full ${meta.bg} ${meta.ring} ${isEmpty ? 'opacity-40 cursor-default' : 'cursor-pointer hover:shadow-md hover:scale-[1.02] transition-all'}`}
+                      className={`relative rounded-lg p-4 min-h-[110px] flex flex-col justify-between text-left w-full ${meta.bg} ${meta.ring} ${isEmpty ? 'opacity-50 cursor-default' : 'cursor-pointer hover:shadow-md hover:scale-[1.02] transition-all'}`}
                       aria-label={isEmpty ? undefined : `Open ${meta.label} findings (${count} findings, ${formatMoney(total, currency)})`}
                     >
                       <div className="flex items-start justify-between gap-1">
-                        <p className={`text-[10px] font-semibold uppercase tracking-wider ${meta.text}`}>
+                        <p className={`text-xs font-bold uppercase tracking-wider ${meta.text}`}>
                           {meta.label}
                         </p>
                         {meta.highlight && !isEmpty && (
-                          <Sparkles className="h-3 w-3 text-emerald-500 dark:text-emerald-400 flex-shrink-0" />
+                          <Sparkles className="h-3.5 w-3.5 text-emerald-500 dark:text-emerald-400 flex-shrink-0" />
                         )}
                       </div>
                       <div>
-                        <p className={`text-2xl font-bold leading-none ${meta.text}`}>{count}</p>
+                        <p className={`text-3xl font-bold leading-none ${meta.text}`}>{count}</p>
                         {!isEmpty ? (
-                          <div className="mt-1 space-y-0.5">
-                            <p className={`text-[11px] font-mono ${meta.text} opacity-80`}>
+                          <div className="mt-1.5 space-y-0.5">
+                            <p className={`text-sm font-mono font-semibold ${meta.text}`}>
                               {formatMoney(total, currency)}
                             </p>
-                            <p className={`text-[10px] ${meta.text} opacity-70`}>
+                            <p className={`text-xs font-medium ${meta.text} opacity-90`}>
                               ~{formatHours(cell.totalHours)}
                             </p>
                           </div>
                         ) : (
-                          <p className={`text-[11px] font-mono mt-1 ${meta.text} opacity-80`}>—</p>
+                          <p className={`text-sm font-mono mt-1.5 ${meta.text} opacity-60`}>—</p>
                         )}
                       </div>
                     </CellElement>
@@ -335,9 +335,9 @@ export function ImpactEffortMatrix({ findings, currency = 'USD', orgId }: Props)
               )}
             </div>
             {/* X-axis labels under the grid */}
-            <div className="grid grid-cols-3 gap-2 mt-2">
+            <div className="grid grid-cols-3 gap-2 mt-3">
               {EFFORT_ORDER.map((effort) => (
-                <p key={effort} className="text-center text-[11px] font-semibold text-gray-700 dark:text-gray-300 capitalize">
+                <p key={effort} className="text-center text-sm font-bold text-gray-800 dark:text-gray-200 capitalize">
                   {effort} effort
                 </p>
               ))}
