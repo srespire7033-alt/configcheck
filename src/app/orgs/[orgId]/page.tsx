@@ -12,6 +12,7 @@ import { GroupedIssueList } from '@/components/issues/grouped-issue-list';
 import { IssueDetailModal } from '@/components/issues/issue-detail-modal';
 import { SeverityModal } from '@/components/issues/severity-modal';
 import { RevenueLeakageCard, type RevenueLeakageData, type VerifiedLeakage } from '@/components/scan/revenue-leakage-card';
+import { ImpactEffortMatrix } from '@/components/scan/impact-effort-matrix';
 import { PricingDisciplineCard } from '@/components/scan/pricing-discipline-card';
 import { SinceLastScanCard } from '@/components/scan/since-last-scan-card';
 import { CategoryRiskCard } from '@/components/scan/category-risk-card';
@@ -454,7 +455,11 @@ export default function OrgDetailPage() {
             finding_count: findings.length,
             status: fScan.status,
             forensic_scan_id: forensicScanId,
-            top_findings: findings.slice(0, 50).map((f) => ({
+            // No top-N cap (consistent with the streaming case above).
+            // The matrix + theme grouping rely on all findings being
+            // present — a slice would hide small-\$ Low/Medium-impact
+            // findings the matrix legitimately wants to surface.
+            top_findings: findings.map((f) => ({
               id: f.id,
               detector_id: f.detector_id,
               title: f.title,
@@ -1705,6 +1710,19 @@ export default function OrgDetailPage() {
           <div className="mb-8">
             <SinceLastScanCard orgId={orgId} />
           </div>
+
+          {/* ===== \$-IMPACT × EFFORT MATRIX =====
+              Sits ABOVE Revenue Leakage — it's the 'what to fix first'
+              overview that consultants screenshot for client pitches.
+              Self-hides when there are no verified findings (so it
+              doesn't dominate empty-state orgs). Hubbl has the same
+              shape with severity×effort; ours is denominated in dollars,
+              which is the wedge they can't match without reading data. */}
+          {verifiedLeakage && verifiedLeakage.top_findings.length > 0 && (
+            <div className="mb-8">
+              <ImpactEffortMatrix findings={verifiedLeakage.top_findings} currency="USD" />
+            </div>
+          )}
 
           {(() => {
             const meta = scan.metadata as Record<string, unknown> | null;
