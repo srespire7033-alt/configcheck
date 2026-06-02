@@ -58,9 +58,9 @@ const DSC_FOR_002: ForensicDetector = {
     const partnerSelect = hasPartner ? 'SBQQ__PartnerDiscount__c,' : '';
     const sinceIso = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString();
 
-    // Pull lines that ALREADY look discounted (NetPrice < ListPrice).
-    // We don't filter on Discount__c alone because some orgs put the
-    // discount in different fields.
+    // Pull lines with a list price + recent CreatedDate. SOQL doesn't
+    // allow column-to-column comparison (NetPrice < ListPrice) — that
+    // filter happens in JS below.
     const res = await ctx.conn.query<QlRow>(`
       SELECT Id, Name,
              SBQQ__Quote__c, SBQQ__Quote__r.Name,
@@ -72,7 +72,7 @@ const DSC_FOR_002: ForensicDetector = {
       FROM SBQQ__QuoteLine__c
       WHERE SBQQ__ListPrice__c > 0
         AND SBQQ__NetPrice__c > 0
-        AND SBQQ__NetPrice__c < SBQQ__ListPrice__c
+        AND SBQQ__Discount__c > 0
         AND CreatedDate >= ${sinceIso}
     `);
     console.log(`[DSC-FOR-002] Candidate discounted lines: ${res.records.length}`);
