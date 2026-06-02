@@ -6,6 +6,7 @@ import { ShieldAlert, TrendingDown, ChevronRight, AlertTriangle, EyeOff } from '
 import Link from 'next/link';
 import type { CategoryRiskResponse } from '@/app/api/orgs/[orgId]/category-risk/route';
 import { getDetectorEffort, type EffortLevel } from '@/lib/forensics/types';
+import { FindingsFilterBar, useFindingsFilter } from './findings-filter';
 
 const EFFORT_META: Record<EffortLevel, { label: string; bg: string; text: string }> = {
   low: { label: 'Low effort', bg: 'bg-emerald-50 dark:bg-emerald-900/20', text: 'text-emerald-700 dark:text-emerald-300' },
@@ -47,6 +48,17 @@ export function CategoryRiskCard({ orgId, category }: Props) {
   const [loading, setLoading] = useState(true);
   const [locallyHidden, setLocallyHidden] = useState<Set<string>>(new Set());
   const copy = COPY[category];
+
+  // Filter hook MUST be called at top level (Rules of Hooks). Feed
+  // it a derived list that's empty until data loads, then becomes
+  // the not-hidden findings. URL params scoped per-category so
+  // Governance + Pipeline don't clobber each other.
+  const notHiddenFindings = (data?.top_findings ?? []).filter(
+    (f) => !locallyHidden.has(f.id)
+  );
+  const filterState = useFindingsFilter(notHiddenFindings, {
+    paramScope: category === 'governance' ? 'gov' : 'pip',
+  });
 
   async function handleHide(findingId: string) {
     // Optimistic local hide. The server-side update would survive a
@@ -180,16 +192,23 @@ export function CategoryRiskCard({ orgId, category }: Props) {
         )}
 
         {(() => {
-          const visibleTop = data.top_findings.filter((f) => !locallyHidden.has(f.id));
-          if (visibleTop.length === 0) return null;
+          const visibleTop = filterState.filtered;
+          if (notHiddenFindings.length === 0) return null;
           return (
             <div>
               <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">
-                Top {Math.min(5, visibleTop.length)} findings
-                {locallyHidden.size > 0 && ` (${locallyHidden.size} hidden)`}
+                Findings
+                {locallyHidden.size > 0 && ` (${locallyHidden.size} dismissed)`}
               </p>
+              <FindingsFilterBar
+                {...filterState}
+                totalCount={notHiddenFindings.length}
+                filteredCount={visibleTop.length}
+                showHiddenToggle={false}
+                placeholder="Search findings…"
+              />
               <div className="space-y-1">
-                {visibleTop.slice(0, 5).map((f) => {
+                {visibleTop.slice(0, 10).map((f) => {
                   const effort = getDetectorEffort(f.detector_id);
                   const effortMeta = EFFORT_META[effort];
                   return (

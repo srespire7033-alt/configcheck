@@ -491,17 +491,16 @@ function VerifiedFindingsSection({
     });
   };
 
-  // Search + effort filter on top of the not-hidden findings. Filter
-  // runs client-side via useMemo — all findings are already in memory.
+  // Search + effort + severity + hidden filter on top of the not-
+  // hidden findings. Filter runs client-side via useMemo — all
+  // findings are already in memory. URL-scoped to 'rl' so it
+  // co-exists with Governance + Pipeline filter bars on the same
+  // page without param collisions.
+  const filterState = useFindingsFilter(notHiddenFindings, { paramScope: 'rl' });
   const {
     filtered: visibleFindings,
-    search,
-    setSearch,
-    effortFilter,
-    toggleEffort,
-    clearAll,
     isActive: filterActive,
-  } = useFindingsFilter(notHiddenFindings);
+  } = filterState;
 
   if (notHiddenFindings.length === 0) return null;
 
@@ -558,14 +557,11 @@ function VerifiedFindingsSection({
           Below the header so users see the count first, then the
           filter affordances. */}
       <FindingsFilterBar
-        search={search}
-        setSearch={setSearch}
-        effortFilter={effortFilter}
-        toggleEffort={toggleEffort}
-        clearAll={clearAll}
-        isActive={filterActive}
+        {...filterState}
         totalCount={notHiddenFindings.length}
         filteredCount={visibleCount}
+        showSeverity={false}
+        showHiddenToggle={false}
         placeholder="Search by record name, detector, or title…"
       />
 
