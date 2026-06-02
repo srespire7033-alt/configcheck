@@ -811,24 +811,27 @@ function FindingRow({
   }
 
   return (
-    <a
-      href={`/orgs/${orgId}/forensics/${finding.id}`}
-      className={`flex items-center justify-between gap-3 px-3 py-2 rounded-lg border border-green-200 dark:border-green-800/40 bg-green-50/40 dark:bg-green-900/10 hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors group ${
-        compact ? 'border-transparent bg-transparent dark:bg-transparent hover:bg-white/40 dark:hover:bg-gray-800/30' : ''
-      } ${isSelected ? 'ring-2 ring-blue-400 dark:ring-blue-500' : ''}`}
-    >
+    // Checkbox sits OUTSIDE the <a> as a sibling — when it was inside,
+    // a click on the checkbox followed the anchor's href and navigated
+    // away (stopPropagation on the <input> doesn't prevent the anchor's
+    // default action, only the bubble). Sibling pattern matches what
+    // category-risk-card already does.
+    <div className={`flex items-center gap-2 group ${onToggleSelect ? 'pl-2' : ''}`}>
       {onToggleSelect && (
         <input
           type="checkbox"
           checked={!!isSelected}
           onChange={() => onToggleSelect(finding.id)}
-          // Stop click bubbling so toggling the checkbox doesn't also
-          // navigate to the finding detail page (the parent <a>).
-          onClick={(e) => e.stopPropagation()}
           className="h-3.5 w-3.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 flex-shrink-0 cursor-pointer"
           aria-label={`Select finding ${finding.detector_id}`}
         />
       )}
+      <a
+        href={`/orgs/${orgId}/forensics/${finding.id}`}
+        className={`flex-1 min-w-0 flex items-center justify-between gap-3 px-3 py-2 rounded-lg border border-green-200 dark:border-green-800/40 bg-green-50/40 dark:bg-green-900/10 hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors ${
+          compact ? 'border-transparent bg-transparent dark:bg-transparent hover:bg-white/40 dark:hover:bg-gray-800/30' : ''
+        } ${isSelected ? 'ring-2 ring-blue-400 dark:ring-blue-500' : ''}`}
+      >
       <div className="flex items-center gap-2 min-w-0">
         {!compact && (
           <code className="text-xs font-mono text-green-700 dark:text-green-400 flex-shrink-0">
@@ -896,15 +899,16 @@ function FindingRow({
             <EyeOff className="h-3.5 w-3.5 text-gray-500" />
           </button>
         )}
-        <NotePopover
-          open={noteOpen}
-          anchorRef={noteAnchorRef}
-          findingId={finding.id}
-          initialNote={localNote}
-          onSaved={(next) => setLocalNote(next)}
-          onClose={() => setNoteOpen(false)}
-        />
       </div>
     </a>
+      <NotePopover
+        open={noteOpen}
+        anchorRef={noteAnchorRef}
+        findingId={finding.id}
+        initialNote={localNote}
+        onSaved={(next) => setLocalNote(next)}
+        onClose={() => setNoteOpen(false)}
+      />
+    </div>
   );
 }
