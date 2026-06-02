@@ -1611,18 +1611,23 @@ export default function OrgDetailPage() {
             );
           })()}
 
-          {/* ===== CATEGORY SCORES — 5-column grid ===== */}
-          <div className="mb-6">
-            {scan.category_scores && (
-              <CategoryBreakdown
-                scores={scan.category_scores}
-                issues={issues}
-                layout="horizontal"
-                selectedCategory={selectedCategory}
-                onCategoryClick={(cat) => setSelectedCategory(selectedCategory === cat ? null : cat)}
-              />
-            )}
-          </div>
+          {/* ===== CATEGORY SCORES — 5-column grid (Issues tab) =====
+              The 'CPQ Products / Approvals / Bundles / ...' breakdown.
+              Logically lives with the issues list since clicking a card
+              opens the category-issues modal. */}
+          {activeTab === 'issues' && (
+            <div className="mb-6">
+              {scan.category_scores && (
+                <CategoryBreakdown
+                  scores={scan.category_scores}
+                  issues={issues}
+                  layout="horizontal"
+                  selectedCategory={selectedCategory}
+                  onCategoryClick={(cat) => setSelectedCategory(selectedCategory === cat ? null : cat)}
+                />
+              )}
+            </div>
+          )}
 
           {/* ===== CATEGORY ISSUES MODAL ===== */}
           {selectedCategory && (() => {
@@ -1999,22 +2004,25 @@ export default function OrgDetailPage() {
             </div>
           )}
 
-          {/* ===== SCHEDULED SCANS =====
-              onRunNow lets the user kick off a scan when a scheduled run is
-              overdue (cron lag, server clock drift, etc.). Reuses the same
-              handleScan() that the top-of-page Run Scan button calls. */}
-          <ScheduleList
-            schedules={schedules}
-            onToggle={handleToggleSchedule}
-            onDelete={handleDeleteSchedule}
-            onCreateClick={() => setShowScheduleModal(true)}
-            onRunNow={async () => {
-              await handleScan();
-            }}
-          />
+          {/* ===== SCHEDULED SCANS — Summary tab =====
+              Scan scheduling lives with the summary view as a global
+              org-management surface. onRunNow lets the user kick off
+              a scan when a scheduled run is overdue (cron lag, clock
+              drift). Reuses the same handleScan() the top button calls. */}
+          {activeTab === 'summary' && (
+            <ScheduleList
+              schedules={schedules}
+              onToggle={handleToggleSchedule}
+              onDelete={handleDeleteSchedule}
+              onCreateClick={() => setShowScheduleModal(true)}
+              onRunNow={async () => {
+                await handleScan();
+              }}
+            />
+          )}
 
-          {/* No issues state */}
-          {issues.length === 0 && (
+          {/* No issues state — Issues tab only */}
+          {activeTab === 'issues' && issues.length === 0 && (
             <div className="bg-white dark:bg-[#111827] rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 text-center py-16">
               <div className="inline-flex p-4 bg-green-50 dark:bg-green-900/30 rounded-2xl mb-3">
                 <svg className="w-10 h-10 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
