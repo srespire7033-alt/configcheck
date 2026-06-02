@@ -41,7 +41,11 @@ const REN_003: ForensicDetector = {
 
   async run(ctx: DetectorContext): Promise<DetectorResult[]> {
     const todayIso = new Date().toISOString().slice(0, 10);
+    // Use date-only (YYYY-MM-DD) for SBQQ__ExpirationDate__c / EndDate
+    // (which are DATE fields), but full ISO datetime for CreatedDate
+    // (which is a DATETIME field — SOQL rejects date-only literals).
     const ninetyDaysAgoIso = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    const ninetyDaysAgoDt = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
 
     // Probe for SBQQ__ExpirationDate__c — not in every org.
     let hasExpirationDate = false;
@@ -87,7 +91,7 @@ const REN_003: ForensicDetector = {
           FROM SBQQ__Quote__c
           WHERE SBQQ__Account__c IN (${chunk.map((id) => `'${id}'`).join(',')})
             AND SBQQ__Type__c = 'Renewal'
-            AND CreatedDate >= ${ninetyDaysAgoIso}
+            AND CreatedDate >= ${ninetyDaysAgoDt}
         `);
         for (const r of renRes.records) {
           const list = renewalsByAccount.get(r.SBQQ__Account__c) ?? [];
