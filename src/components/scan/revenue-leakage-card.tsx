@@ -596,23 +596,23 @@ function ThemeCard({
             <Icon className={`h-3.5 w-3.5 ${bucket.accentText}`} />
           </div>
           <p
-            className={`text-base font-bold leading-tight ${isEmpty ? 'text-gray-400 dark:text-gray-600' : bucket.accentText}`}
+            className={`text-lg font-bold leading-tight ${isEmpty ? 'text-gray-400 dark:text-gray-600' : bucket.accentText}`}
           >
             {isEmpty ? '—' : formatMoney(bucket.total, currency)}
           </p>
         </div>
         <div className="mt-1.5 flex items-center gap-1.5">
-          <h3 className="text-sm font-semibold text-gray-900 dark:text-white truncate">
+          <h3 className="text-base font-bold text-gray-900 dark:text-white truncate">
             {bucket.label}
           </h3>
-          <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${bucket.accentBg} ${bucket.accentText} flex-shrink-0`}>
+          <span className={`text-xs font-semibold px-1.5 py-0.5 rounded-full ${bucket.accentBg} ${bucket.accentText} flex-shrink-0`}>
             {bucket.items.length}
           </span>
         </div>
       </div>
 
       {isEmpty ? (
-        <div className="flex-1 px-3 py-3 text-[11px] text-gray-500 dark:text-gray-400 italic">
+        <div className="flex-1 px-3 py-3 text-xs text-gray-500 dark:text-gray-400 italic">
           No findings.
         </div>
       ) : (
@@ -623,7 +623,7 @@ function ThemeCard({
           {hidden > 0 && !expanded && (
             <button
               onClick={() => setExpanded(true)}
-              className="w-full text-left text-[11px] text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 px-2 py-1 transition-colors"
+              className="w-full text-left text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 px-2 py-1 transition-colors"
             >
               + {hidden} more →
             </button>
@@ -684,22 +684,22 @@ function FindingRow({
     >
       <div className="flex items-center gap-2 min-w-0">
         {!compact && (
-          <code className="text-[11px] font-mono text-green-700 dark:text-green-400 flex-shrink-0">
+          <code className="text-xs font-mono text-green-700 dark:text-green-400 flex-shrink-0">
             {finding.detector_id}
           </code>
         )}
-        <span className={`text-sm text-gray-800 dark:text-gray-200 truncate ${compact ? 'text-xs' : ''}`}>
+        <span className={`text-gray-800 dark:text-gray-200 truncate ${compact ? 'text-sm' : 'text-base'}`}>
           {finding.title}
         </span>
         <span
-          className={`inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-semibold uppercase tracking-wider ring-1 ring-inset flex-shrink-0 ${effortMeta.bg} ${effortMeta.text} ${effortMeta.ring}`}
+          className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider ring-1 ring-inset flex-shrink-0 ${effortMeta.bg} ${effortMeta.text} ${effortMeta.ring}`}
           title={`${effortMeta.label} — heuristic estimate of how much work to fix`}
         >
           {effort}
         </span>
       </div>
       <div className="flex items-center gap-2 flex-shrink-0">
-        <span className={`font-mono font-semibold text-green-700 dark:text-green-300 ${compact ? 'text-xs' : ''}`}>
+        <span className={`font-mono font-semibold text-green-700 dark:text-green-300 ${compact ? 'text-sm' : 'text-base'}`}>
           {formatMoney(finding.gap_usd, currency)}
         </span>
         {onHide && (

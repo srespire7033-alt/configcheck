@@ -200,17 +200,17 @@ export function CategoryRiskCard({ orgId, category }: Props) {
                       >
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2">
-                            <p className="text-[10px] font-mono text-gray-500 dark:text-gray-400 uppercase">
+                            <p className="text-xs font-mono text-gray-500 dark:text-gray-400 uppercase">
                               {f.detector_id}
                             </p>
                             <span
-                              className={`inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-semibold uppercase tracking-wider ${effortMeta.bg} ${effortMeta.text}`}
+                              className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider ${effortMeta.bg} ${effortMeta.text}`}
                               title={`${effortMeta.label} — heuristic estimate of how much work to fix`}
                             >
                               {effort}
                             </span>
                           </div>
-                          <p className="text-sm truncate">{f.title}</p>
+                          <p className="text-base truncate">{f.title}</p>
                         </div>
                         {category === 'pipeline' && f.gap_usd > 0 && (
                           <span className={`text-sm font-semibold ${colorClasses.chip} flex-shrink-0`}>
