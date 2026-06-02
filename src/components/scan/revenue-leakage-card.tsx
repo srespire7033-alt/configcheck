@@ -246,9 +246,14 @@ export function RevenueLeakageCard({ leakage, verified, orgId, currency = 'USD' 
         {/* Top contributors */}
         {leakage.top_contributors.length > 0 && (
           <div className="mb-4">
-            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-2">
-              Top {Math.min(5, leakage.top_contributors.length)} contributors
-            </p>
+            <div className="flex items-baseline justify-between mb-2">
+              <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                Biggest revenue leaks
+              </p>
+              <p className="text-[10px] text-gray-400 dark:text-gray-500">
+                Top {Math.min(5, leakage.top_contributors.length)} by $ impact
+              </p>
+            </div>
             <div className="space-y-1.5">
               {leakage.top_contributors.slice(0, 5).map((c, i) => (
                 <div
