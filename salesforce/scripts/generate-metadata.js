@@ -268,4 +268,116 @@ for (const [apiName, spec] of Object.entries(objects)) {
   }
 }
 
-console.log(`Generated ${objectCount} objects, ${fieldCount} fields.`);
+// ───────────────────────────────────────────────────────────────
+// Custom Tab — one for ForensicScan__c (entry point into the app)
+// ───────────────────────────────────────────────────────────────
+const TABS_DIR = path.resolve(__dirname, '..', 'force-app', 'main', 'default', 'tabs');
+ensureDir(TABS_DIR);
+fs.writeFileSync(
+  path.join(TABS_DIR, 'ForensicScan__c.tab-meta.xml'),
+  `<?xml version="1.0" encoding="UTF-8"?>
+<CustomTab xmlns="http://soap.sforce.com/2006/04/metadata">
+    <customObject>true</customObject>
+    <motif>Custom17: Bell</motif>
+</CustomTab>
+`
+);
+
+// ───────────────────────────────────────────────────────────────
+// Permission Set — OrgPrismUser
+// Grants object + field perms on all 5 objects, exposes Apex classes,
+// makes the ForensicScan__c tab visible.
+// ───────────────────────────────────────────────────────────────
+const APEX_CLASSES = [
+  'DetectorContext',
+  'DetectorResult',
+  'SourceRecord',
+  'ForensicScanService',
+  'REN001RenewalUpliftDetector',
+  'REN002RenewalBelowListDetector',
+  'DSC001PromoRolloffDetector',
+  'ORD001OrderNoBillingDetector',
+  'QL001BundleZeroPriceDetector',
+];
+
+const PERMSET_DIR = path.resolve(__dirname, '..', 'force-app', 'main', 'default', 'permissionsets');
+ensureDir(PERMSET_DIR);
+
+function buildPermissionSet() {
+  let xml = `<?xml version="1.0" encoding="UTF-8"?>
+<PermissionSet xmlns="http://soap.sforce.com/2006/04/metadata">
+    <description>OrgPrism — read/write access to forensic findings + ability to invoke detectors</description>
+    <label>OrgPrism User</label>
+    <hasActivationRequired>false</hasActivationRequired>
+    <license>Salesforce</license>
+`;
+
+  // Object + field permissions for every Custom Object we own.
+  for (const [apiName, spec] of Object.entries(objects)) {
+    xml += `    <objectPermissions>\n`;
+    xml += `        <object>${apiName}</object>\n`;
+    xml += `        <allowCreate>true</allowCreate>\n`;
+    xml += `        <allowRead>true</allowRead>\n`;
+    xml += `        <allowEdit>true</allowEdit>\n`;
+    xml += `        <allowDelete>true</allowDelete>\n`;
+    xml += `        <viewAllRecords>false</viewAllRecords>\n`;
+    xml += `        <modifyAllRecords>false</modifyAllRecords>\n`;
+    xml += `    </objectPermissions>\n`;
+
+    // Field-level permissions for every non-required field on the object.
+    // Required + master-detail fields can't be set FLS=hidden anyway,
+    // but Picklist/Text/etc. need explicit grants.
+    for (const f of spec.fields) {
+      // Lookup-required and master-detail fields fail PermissionSet
+      // validation; skip them.
+      if (f.type === 'Lookup' && f.required) continue;
+      xml += `    <fieldPermissions>\n`;
+      xml += `        <field>${apiName}.${f.name}</field>\n`;
+      xml += `        <readable>true</readable>\n`;
+      xml += `        <editable>true</editable>\n`;
+      xml += `    </fieldPermissions>\n`;
+    }
+  }
+
+  // Apex class access — all the public-API classes plus the detectors.
+  for (const cls of APEX_CLASSES) {
+    xml += `    <classAccesses>\n`;
+    xml += `        <apexClass>${cls}</apexClass>\n`;
+    xml += `        <enabled>true</enabled>\n`;
+    xml += `    </classAccesses>\n`;
+  }
+
+  // Tab visibility — make the ForensicScan__c tab visible by default.
+  xml += `    <tabSettings>\n`;
+  xml += `        <tab>ForensicScan__c</tab>\n`;
+  xml += `        <visibility>Visible</visibility>\n`;
+  xml += `    </tabSettings>\n`;
+
+  xml += `</PermissionSet>\n`;
+  return xml;
+}
+
+fs.writeFileSync(
+  path.join(PERMSET_DIR, 'OrgPrismUser.permissionset-meta.xml'),
+  buildPermissionSet()
+);
+
+// ───────────────────────────────────────────────────────────────
+// Custom Application — OrgPrism navigation + tab
+// ───────────────────────────────────────────────────────────────
+const APPS_DIR = path.resolve(__dirname, '..', 'force-app', 'main', 'default', 'applications');
+ensureDir(APPS_DIR);
+fs.writeFileSync(
+  path.join(APPS_DIR, 'OrgPrism.app-meta.xml'),
+  `<?xml version="1.0" encoding="UTF-8"?>
+<CustomApplication xmlns="http://soap.sforce.com/2006/04/metadata">
+    <description>OrgPrism — CPQ + Revenue Cloud audit and recovery</description>
+    <label>OrgPrism</label>
+    <navType>Standard</navType>
+    <tabs>ForensicScan__c</tabs>
+    <uiType>Lightning</uiType>
+</CustomApplication>
+`
+);
+
+console.log(`Generated ${objectCount} objects, ${fieldCount} fields, 1 permission set, 1 app, 1 tab.`);
