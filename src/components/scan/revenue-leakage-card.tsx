@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { TrendingDown, Info, ChevronDown, ChevronUp, AlertCircle, Sparkles, Network, ChevronRight, ShieldCheck, FileDown } from 'lucide-react';
+import { TrendingDown, Info, ChevronDown, ChevronUp, AlertCircle, Sparkles, Network, ChevronRight, ShieldCheck, FileDown, RefreshCw, Percent, Receipt, Layers, Lock } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 
 interface TopContributor {
@@ -380,21 +380,75 @@ export function RevenueLeakageCard({ leakage, verified, orgId, currency = 'USD' 
  * page until card-scrolling becomes truly painful.
  */
 /**
- * Theme groupings for the verified-findings tabs. Each tab tells one
- * coherent story a consultant can lead a conversation around. 'all'
- * is the default catch-all and shows every revenue-leakage finding.
+ * Theme groupings for the verified-findings cards. Each theme tells
+ * one coherent story a consultant can lead a conversation around.
  *
  * Keep in sync with DETECTOR_CATEGORY in lib/forensics/types.ts — every
  * revenue_leakage detector ID should appear in exactly one theme group.
+ * Detectors not in any theme still surface under 'Other' (back-compat).
  */
-const FINDING_THEMES: ReadonlyArray<{ key: string; label: string; detectorIds: ReadonlyArray<string> }> = [
-  { key: 'all', label: 'All', detectorIds: [] }, // empty = include everything
-  { key: 'renewals', label: 'Renewals', detectorIds: ['REN-001', 'REN-002'] },
-  { key: 'discounting', label: 'Discounting', detectorIds: ['DSC-FOR-001', 'DSC-FOR-002', 'QL-FOR-001'] },
-  { key: 'orders', label: 'Orders & Billing', detectorIds: ['ORD-FOR-001', 'ORD-FOR-002', 'ORD-FOR-003', 'AST-FOR-001'] },
-  { key: 'subs', label: 'Subscriptions', detectorIds: ['SUB-FOR-001', 'PROV-FOR-001', 'PROV-FOR-002'] },
-  { key: 'pricing', label: 'Pricing Locks', detectorIds: ['CT-FOR-001', 'MDQ-FOR-001'] },
-] as const;
+interface FindingTheme {
+  key: string;
+  label: string;
+  description: string;
+  detectorIds: ReadonlyArray<string>;
+  icon: typeof RefreshCw;
+  accentText: string;
+  accentBg: string;
+  accentBorder: string;
+}
+const FINDING_THEMES: ReadonlyArray<FindingTheme> = [
+  {
+    key: 'renewals',
+    label: 'Renewals',
+    description: 'Uplift suppressed, renewal below current list.',
+    detectorIds: ['REN-001', 'REN-002'],
+    icon: RefreshCw,
+    accentText: 'text-blue-700 dark:text-blue-300',
+    accentBg: 'bg-blue-100 dark:bg-blue-900/30',
+    accentBorder: 'border-blue-200 dark:border-blue-800/40',
+  },
+  {
+    key: 'discounting',
+    label: 'Discounting',
+    description: 'Discounts kept past their date, options given away free, caps exceeded.',
+    detectorIds: ['DSC-FOR-001', 'DSC-FOR-002', 'QL-FOR-001'],
+    icon: Percent,
+    accentText: 'text-amber-700 dark:text-amber-300',
+    accentBg: 'bg-amber-100 dark:bg-amber-900/30',
+    accentBorder: 'border-amber-200 dark:border-amber-800/40',
+  },
+  {
+    key: 'orders',
+    label: 'Orders & Billing',
+    description: 'Q→O variance, activated orders with no billing schedule, terminated assets still billing.',
+    detectorIds: ['ORD-FOR-001', 'ORD-FOR-002', 'ORD-FOR-003', 'AST-FOR-001'],
+    icon: Receipt,
+    accentText: 'text-indigo-700 dark:text-indigo-300',
+    accentBg: 'bg-indigo-100 dark:bg-indigo-900/30',
+    accentBorder: 'border-indigo-200 dark:border-indigo-800/40',
+  },
+  {
+    key: 'subs',
+    label: 'Subscriptions',
+    description: 'Subscription quantity vs Asset drift, provisioning gaps.',
+    detectorIds: ['SUB-FOR-001', 'PROV-FOR-001', 'PROV-FOR-002'],
+    icon: Layers,
+    accentText: 'text-emerald-700 dark:text-emerald-300',
+    accentBg: 'bg-emerald-100 dark:bg-emerald-900/30',
+    accentBorder: 'border-emerald-200 dark:border-emerald-800/40',
+  },
+  {
+    key: 'pricing',
+    label: 'Pricing Locks',
+    description: 'Expired contracted prices, multi-year flat segments.',
+    detectorIds: ['CT-FOR-001', 'MDQ-FOR-001'],
+    icon: Lock,
+    accentText: 'text-slate-700 dark:text-slate-300',
+    accentBg: 'bg-slate-100 dark:bg-slate-800',
+    accentBorder: 'border-slate-200 dark:border-slate-700',
+  },
+];
 
 function VerifiedFindingsSection({
   findings,
@@ -407,171 +461,148 @@ function VerifiedFindingsSection({
   orgId: string;
   currency: string;
 }) {
-  const FLAT_THRESHOLD = 5;
-  const [expandedDetectors, setExpandedDetectors] = useState<Set<string>>(new Set());
-  const [activeTheme, setActiveTheme] = useState<string>('all');
+  if (findings.length === 0) return null;
 
-  // Compute per-theme counts + totals from the ENTIRE finding set —
-  // these populate the tab badges regardless of which tab is active.
-  // Findings whose detector_id isn't in any theme still appear in 'All'
-  // (back-compat for any future detector we forget to classify here).
-  const themeStats = FINDING_THEMES.map((theme) => {
-    const matched = theme.key === 'all'
-      ? findings
-      : findings.filter((f) => theme.detectorIds.includes(f.detector_id));
+  // Build per-theme buckets up front.
+  const themedBuckets = FINDING_THEMES.map((theme) => {
+    const matched = findings.filter((f) => theme.detectorIds.includes(f.detector_id));
     return {
       ...theme,
-      count: matched.length,
+      items: matched,
       total: matched.reduce((s, f) => s + f.gap_usd, 0),
     };
   });
-  const activeThemeStats = themeStats.find((t) => t.key === activeTheme) ?? themeStats[0];
-  const themeMatched = activeTheme === 'all'
-    ? findings
-    : findings.filter((f) => (FINDING_THEMES.find((t) => t.key === activeTheme)?.detectorIds ?? []).includes(f.detector_id));
+  // Anything that didn't match a theme falls through to 'Other'.
+  const themedIds = new Set(FINDING_THEMES.flatMap((t) => t.detectorIds));
+  const otherItems = findings.filter((f) => !themedIds.has(f.detector_id));
+  if (otherItems.length > 0) {
+    themedBuckets.push({
+      key: 'other',
+      label: 'Other',
+      description: 'Detectors not in a named theme.',
+      detectorIds: [],
+      icon: Sparkles,
+      accentText: 'text-gray-700 dark:text-gray-300',
+      accentBg: 'bg-gray-100 dark:bg-gray-800',
+      accentBorder: 'border-gray-200 dark:border-gray-700',
+      items: otherItems,
+      total: otherItems.reduce((s, f) => s + f.gap_usd, 0),
+    });
+  }
 
-  const verifiedTotalUsd = themeMatched.reduce((sum, f) => sum + f.gap_usd, 0);
-  const headerLabel = activeTheme === 'all'
-    ? findings.length < totalCount
+  const grandTotal = findings.reduce((s, f) => s + f.gap_usd, 0);
+  const headerLabel =
+    findings.length < totalCount
       ? `✓ Top ${findings.length} of ${totalCount} verified findings`
-      : `✓ Verified findings (${totalCount})`
-    : `✓ ${activeThemeStats.label} (${themeMatched.length})`;
-
-  // Tab strip — render only when there's enough cross-theme variety
-  // that filtering is useful. If 4 or fewer findings total, just show
-  // the flat list (the tabs would feel like dead weight).
-  const tabsWorthShowing = findings.length > FLAT_THRESHOLD &&
-    themeStats.filter((t) => t.key !== 'all' && t.count > 0).length >= 2;
-  const tabStrip = tabsWorthShowing ? (
-    <div className="mb-3 -mx-1 px-1 flex gap-1 overflow-x-auto pb-0.5">
-      {themeStats
-        .filter((t) => t.key === 'all' || t.count > 0)
-        .map((t) => {
-          const active = t.key === activeTheme;
-          return (
-            <button
-              key={t.key}
-              onClick={() => {
-                setActiveTheme(t.key);
-                // Collapse all expanded detector groups when changing
-                // tab so the new view starts clean.
-                setExpandedDetectors(new Set());
-              }}
-              className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
-                active
-                  ? 'bg-green-600 dark:bg-green-700 text-white border-green-600 dark:border-green-700'
-                  : 'bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:border-green-400 dark:hover:border-green-600'
-              }`}
-            >
-              {t.label}
-              <span className={`ml-1.5 ${active ? 'opacity-80' : 'text-gray-400 dark:text-gray-500'}`}>
-                ({t.count})
-              </span>
-            </button>
-          );
-        })}
-    </div>
-  ) : null;
-
-  // Flat list for small N — keeps simple cases simple.
-  if (themeMatched.length <= FLAT_THRESHOLD) {
-    return (
-      <div className="mb-5">
-        {tabStrip}
-        <p className="text-xs font-semibold uppercase tracking-wide text-green-700 dark:text-green-400 mb-2 flex items-center gap-1.5">
-          {headerLabel}
-        </p>
-        {themeMatched.length === 0 ? (
-          <div className="rounded-lg border border-dashed border-gray-200 dark:border-gray-700 px-4 py-6 text-center text-xs text-gray-500 dark:text-gray-400">
-            No {activeThemeStats.label.toLowerCase()} findings in this scan.
-          </div>
-        ) : (
-          <div className="space-y-1.5">
-            {themeMatched.map((f) => (
-              <FindingRow key={f.id} finding={f} orgId={orgId} currency={currency} />
-            ))}
-          </div>
-        )}
-      </div>
-    );
-  }
-
-  // Group by detector_id; sort groups by their total $ desc.
-  const groups = new Map<string, typeof findings>();
-  for (const f of themeMatched) {
-    const list = groups.get(f.detector_id) ?? [];
-    list.push(f);
-    groups.set(f.detector_id, list);
-  }
-  const sortedGroups = Array.from(groups.entries())
-    .map(([detectorId, items]) => ({
-      detectorId,
-      items: items.sort((a, b) => b.gap_usd - a.gap_usd),
-      totalGap: items.reduce((sum, f) => sum + f.gap_usd, 0),
-      // Use the first finding's title as a representative label —
-      // findings in the same detector tend to share the same title shape.
-      representativeTitle: items[0].title,
-    }))
-    .sort((a, b) => b.totalGap - a.totalGap);
+      : `✓ Verified findings (${totalCount})`;
 
   return (
     <div className="mb-5">
-      {tabStrip}
-      <div className="flex items-baseline justify-between mb-2">
-        <p className="text-xs font-semibold uppercase tracking-wide text-green-700 dark:text-green-400 flex items-center gap-1.5">
+      <div className="flex items-baseline justify-between mb-3">
+        <p className="text-xs font-semibold uppercase tracking-wide text-green-700 dark:text-green-400">
           {headerLabel}
         </p>
         <span className="text-[11px] font-mono text-green-700 dark:text-green-400">
-          {formatMoney(verifiedTotalUsd, currency)} total
+          {formatMoney(grandTotal, currency)} total
         </span>
       </div>
-      <div className="space-y-1.5">
-        {sortedGroups.map((group) => {
-          const isExpanded = expandedDetectors.has(group.detectorId);
-          return (
-            <div key={group.detectorId} className="rounded-lg border border-green-200 dark:border-green-800/40 bg-green-50/40 dark:bg-green-900/10">
-              <button
-                onClick={() => {
-                  const next = new Set(expandedDetectors);
-                  if (next.has(group.detectorId)) next.delete(group.detectorId);
-                  else next.add(group.detectorId);
-                  setExpandedDetectors(next);
-                }}
-                className="w-full flex items-center justify-between gap-3 px-3 py-2 text-left hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors"
-              >
-                <div className="flex items-center gap-2 min-w-0">
-                  <code className="text-[11px] font-mono text-green-700 dark:text-green-400 flex-shrink-0">
-                    {group.detectorId}
-                  </code>
-                  <span className="text-sm text-gray-800 dark:text-gray-200 truncate">
-                    {group.representativeTitle}
-                  </span>
-                  <span className="text-[11px] text-gray-500 dark:text-gray-400 flex-shrink-0">
-                    · {group.items.length} finding{group.items.length === 1 ? '' : 's'}
-                  </span>
-                </div>
-                <div className="flex items-center gap-1.5 flex-shrink-0">
-                  <span className="font-mono font-semibold text-green-700 dark:text-green-300">
-                    {formatMoney(group.totalGap, currency)}
-                  </span>
-                  {isExpanded ? (
-                    <ChevronUp className="h-3.5 w-3.5 text-gray-400" />
-                  ) : (
-                    <ChevronDown className="h-3.5 w-3.5 text-gray-400" />
-                  )}
-                </div>
-              </button>
-              {isExpanded && (
-                <div className="px-2 pb-2 pt-1 space-y-1 border-t border-green-100 dark:border-green-900/30">
-                  {group.items.map((f) => (
-                    <FindingRow key={f.id} finding={f} orgId={orgId} currency={currency} compact />
-                  ))}
-                </div>
-              )}
-            </div>
-          );
-        })}
+
+      {/* Sort populated themes by total $ desc; empty themes appear
+          last in their declared order. Empty cards still render —
+          they prove the check ran cleanly for that bucket. */}
+      <div className="space-y-3">
+        {[...themedBuckets].sort((a, b) => b.total - a.total).map((bucket) => (
+          <ThemeCard
+            key={bucket.key}
+            bucket={bucket}
+            orgId={orgId}
+            currency={currency}
+          />
+        ))}
       </div>
+    </div>
+  );
+}
+
+interface ThemeBucket extends FindingTheme {
+  items: Array<{ id: string; detector_id: string; title: string; gap_usd: number }>;
+  total: number;
+}
+
+function ThemeCard({
+  bucket,
+  orgId,
+  currency,
+}: {
+  bucket: ThemeBucket;
+  orgId: string;
+  currency: string;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const Icon = bucket.icon;
+  const isEmpty = bucket.items.length === 0;
+  const VISIBLE_LIMIT = 5;
+
+  // Sort items inside the theme by $ desc.
+  const sorted = [...bucket.items].sort((a, b) => b.gap_usd - a.gap_usd);
+  const visible = expanded ? sorted : sorted.slice(0, VISIBLE_LIMIT);
+  const hidden = Math.max(0, sorted.length - VISIBLE_LIMIT);
+
+  return (
+    <div
+      className={`rounded-xl border ${bucket.accentBorder} bg-white dark:bg-gray-900/40 ${isEmpty ? 'opacity-70' : ''}`}
+    >
+      <div className="px-4 py-3 flex items-start justify-between gap-3 border-b border-gray-100 dark:border-gray-800">
+        <div className="flex gap-3 min-w-0">
+          <div className={`rounded-lg p-2 flex-shrink-0 ${bucket.accentBg}`}>
+            <Icon className={`h-4 w-4 ${bucket.accentText}`} />
+          </div>
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-white">{bucket.label}</h3>
+              <span className={`text-[11px] font-medium ${bucket.accentText}`}>
+                {bucket.items.length} finding{bucket.items.length === 1 ? '' : 's'}
+              </span>
+            </div>
+            <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5 truncate">
+              {bucket.description}
+            </p>
+          </div>
+        </div>
+        <div className="text-right flex-shrink-0">
+          <p className={`text-lg font-bold ${isEmpty ? 'text-gray-400 dark:text-gray-600' : bucket.accentText}`}>
+            {isEmpty ? '—' : formatMoney(bucket.total, currency)}
+          </p>
+        </div>
+      </div>
+
+      {isEmpty ? (
+        <div className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400 italic">
+          No {bucket.label.toLowerCase()} findings detected in this scan.
+        </div>
+      ) : (
+        <div className="px-2 py-2 space-y-1">
+          {visible.map((f) => (
+            <FindingRow key={f.id} finding={f} orgId={orgId} currency={currency} compact />
+          ))}
+          {hidden > 0 && !expanded && (
+            <button
+              onClick={() => setExpanded(true)}
+              className="w-full text-left text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 px-2 py-1 transition-colors"
+            >
+              + {hidden} more finding{hidden === 1 ? '' : 's'} in {bucket.label} →
+            </button>
+          )}
+          {expanded && hidden > 0 && (
+            <button
+              onClick={() => setExpanded(false)}
+              className="w-full text-left text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 px-2 py-1 transition-colors"
+            >
+              ↑ Show fewer
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }
