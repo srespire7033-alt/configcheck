@@ -31,6 +31,10 @@ export interface CategoryRiskResponse {
     gap_usd: number;
     severity: string;
     created_at: string;
+    /** Optional — passed through so the finding row can show a small
+     *  StickyNote icon to indicate consultant has captured engagement
+     *  context. Truncated client-side for the tooltip preview. */
+    consultant_note?: string | null;
   }>;
 }
 
@@ -98,7 +102,7 @@ export async function GET(req: NextRequest, { params }: { params: { orgId: strin
 
   const baseQuery = supabase
     .from('forensic_findings')
-    .select('id, detector_id, title, gap_usd, severity, detected_at, source_record_refs')
+    .select('id, detector_id, title, gap_usd, severity, detected_at, source_record_refs, consultant_note')
     .eq('organization_id', params.orgId)
     .eq('user_id', user.id)
     .in('detector_id', detectorIdsInCategory)
@@ -123,6 +127,7 @@ export async function GET(req: NextRequest, { params }: { params: { orgId: strin
     severity: string;
     detected_at: string;
     source_record_refs: { primary_record?: { id?: string } } | null;
+    consultant_note: string | null;
   }>;
 
   // Belt-and-braces dedup: even within a single scan, defend against
@@ -175,6 +180,7 @@ export async function GET(req: NextRequest, { params }: { params: { orgId: strin
         gap_usd: Number(f.gap_usd ?? 0),
         severity: f.severity,
         created_at: f.detected_at, // expose as created_at for UI back-compat
+        consultant_note: f.consultant_note,
       })),
   };
 

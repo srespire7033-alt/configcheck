@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { ShieldAlert, TrendingDown, ChevronRight, AlertTriangle, EyeOff } from 'lucide-react';
+import { ShieldAlert, TrendingDown, ChevronRight, AlertTriangle, EyeOff, StickyNote } from 'lucide-react';
 import Link from 'next/link';
 import type { CategoryRiskResponse } from '@/app/api/orgs/[orgId]/category-risk/route';
 import { getDetectorEffort, type EffortLevel } from '@/lib/forensics/types';
@@ -236,7 +236,18 @@ export function CategoryRiskCard({ orgId, category }: Props) {
                               {effort}
                             </span>
                           </div>
-                          <p className="text-base truncate">{f.title}</p>
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <p className="text-base truncate">{f.title}</p>
+                            {f.consultant_note && (
+                              <span
+                                className="flex-shrink-0"
+                                title={`Note: ${f.consultant_note.slice(0, 200)}${f.consultant_note.length > 200 ? '…' : ''}`}
+                                aria-label="This finding has a private note"
+                              >
+                                <StickyNote className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
+                              </span>
+                            )}
+                          </div>
                         </div>
                         {category === 'pipeline' && f.gap_usd > 0 && (
                           <span className={`text-sm font-semibold ${colorClasses.chip} flex-shrink-0`}>

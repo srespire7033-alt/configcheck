@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { TrendingDown, Info, ChevronDown, ChevronUp, AlertCircle, Sparkles, Network, ChevronRight, ShieldCheck, FileDown, RefreshCw, Percent, Receipt, Layers, Lock, EyeOff } from 'lucide-react';
+import { TrendingDown, Info, ChevronDown, ChevronUp, AlertCircle, Sparkles, Network, ChevronRight, ShieldCheck, FileDown, RefreshCw, Percent, Receipt, Layers, Lock, EyeOff, StickyNote } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { getDetectorEffort, type EffortLevel } from '@/lib/forensics/types';
 import { FindingsFilterBar, useFindingsFilter } from './findings-filter';
@@ -56,6 +56,14 @@ export interface VerifiedLeakage {
     detector_id: string;
     title: string;
     gap_usd: number;
+    /** Optional — passed from the org page so the filter bar can offer
+     *  severity chips, and so the matrix modal can color rows by signal.
+     *  Older callers that don't pass severity still work. */
+    severity?: 'critical' | 'warning' | 'info' | string;
+    /** Optional — when present, the row shows a small note indicator
+     *  icon so consultants can see at a glance which findings have
+     *  engagement-context notes attached. */
+    consultant_note?: string | null;
   }>;
 }
 
@@ -560,7 +568,6 @@ function VerifiedFindingsSection({
         {...filterState}
         totalCount={notHiddenFindings.length}
         filteredCount={visibleCount}
-        showSeverity={false}
         showHiddenToggle={false}
         placeholder="Search by record name, detector, or title…"
       />
@@ -675,7 +682,13 @@ function FindingRow({
   compact,
   onHide,
 }: {
-  finding: { id: string; detector_id: string; title: string; gap_usd: number };
+  finding: {
+    id: string;
+    detector_id: string;
+    title: string;
+    gap_usd: number;
+    consultant_note?: string | null;
+  };
   orgId: string;
   currency: string;
   compact?: boolean;
@@ -723,6 +736,18 @@ function FindingRow({
         >
           {effort}
         </span>
+        {finding.consultant_note && (
+          // Span wrapper carries the native title-tooltip — lucide-react
+          // icons don't accept a title prop directly. First 200 chars
+          // give the user a preview; full note lives on the detail page.
+          <span
+            className="flex-shrink-0"
+            title={`Note: ${finding.consultant_note.slice(0, 200)}${finding.consultant_note.length > 200 ? '…' : ''}`}
+            aria-label="This finding has a private note"
+          >
+            <StickyNote className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
+          </span>
+        )}
       </div>
       <div className="flex items-center gap-2 flex-shrink-0">
         <span className={`font-mono font-semibold text-green-700 dark:text-green-300 ${compact ? 'text-sm' : 'text-base'}`}>

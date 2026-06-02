@@ -226,7 +226,7 @@ export default function OrgDetailPage() {
             .then(async (fScan) => {
               if (!fScan) return;
               const findingsRes = await fetch(`/api/forensic-findings?forensicScanId=${fScan.id}`);
-              const allFindings: Array<{ id: string; detector_id: string; title: string; gap_usd: number }> =
+              const allFindings: Array<{ id: string; detector_id: string; title: string; gap_usd: number; severity?: string; consultant_note?: string | null }> =
                 findingsRes.ok ? await findingsRes.json() : [];
               // Filter to revenue_leakage category only — governance and
               // pipeline findings live in their own cards on this page,
@@ -252,6 +252,8 @@ export default function OrgDetailPage() {
                   detector_id: f.detector_id,
                   title: f.title,
                   gap_usd: Number(f.gap_usd),
+                  severity: f.severity,
+                  consultant_note: f.consultant_note,
                 })),
               });
             })
@@ -459,7 +461,7 @@ export default function OrgDetailPage() {
         // Live update the verified card as findings stream in.
         try {
           const findingsRes = await fetch(`/api/forensic-findings?forensicScanId=${forensicScanId}`);
-          const findings: Array<{ id: string; detector_id: string; title: string; gap_usd: number }> =
+          const findings: Array<{ id: string; detector_id: string; title: string; gap_usd: number; severity?: string; consultant_note?: string | null }> =
             findingsRes.ok ? await findingsRes.json() : [];
           const liveVerifiedUsd = findings.reduce((sum, f) => sum + Number(f.gap_usd || 0), 0);
           setVerifiedLeakage({
@@ -476,6 +478,8 @@ export default function OrgDetailPage() {
               detector_id: f.detector_id,
               title: f.title,
               gap_usd: Number(f.gap_usd),
+              severity: f.severity,
+              consultant_note: f.consultant_note,
             })),
           });
         } catch {
