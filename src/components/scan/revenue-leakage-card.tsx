@@ -127,7 +127,7 @@ export function RevenueLeakageCard({ leakage, verified, orgId, currency = 'USD' 
               <TrendingDown className="h-5 w-5 text-amber-600 dark:text-amber-400" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-gray-900 dark:text-white">
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white">
                 Revenue Leakage
               </h2>
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">

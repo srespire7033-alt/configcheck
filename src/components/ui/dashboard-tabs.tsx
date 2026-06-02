@@ -148,7 +148,7 @@ function SortableTabButton({
       <button
         type="button"
         onClick={onClick}
-        className={`relative px-4 py-3 text-[15px] font-semibold transition-colors whitespace-nowrap ${
+        className={`relative px-4 py-3 text-base font-semibold transition-colors whitespace-nowrap ${
           isActive
             ? 'text-gray-900 dark:text-white'
             : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'

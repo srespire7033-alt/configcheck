@@ -62,7 +62,7 @@ export function ComplexityCard({ complexity }: Props) {
             <Layers className="w-5 h-5 text-purple-600" />
           </div>
           <div>
-            <h3 className="text-base font-bold text-gray-900 dark:text-white">CPQ Complexity Score</h3>
+            <h3 className="text-lg font-bold text-gray-900 dark:text-white">CPQ Complexity Score</h3>
             <p className="text-xs text-gray-500 dark:text-gray-400">Compared to healthy Salesforce orgs of similar size</p>
           </div>
         </div>

@@ -82,8 +82,8 @@ export function SinceLastScanCard({ orgId }: { orgId: string }) {
               )}
             </div>
             <div>
-              <h2 className="text-lg font-bold">Since your last scan</h2>
-              <p className="text-sm text-gray-500 dark:text-gray-400">
+              <h2 className="text-xl font-bold">Since your last scan</h2>
+              <p className="text-base text-gray-500 dark:text-gray-400">
                 {fromDate} → {toDate}
               </p>
             </div>
