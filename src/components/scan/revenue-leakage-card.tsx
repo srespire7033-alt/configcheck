@@ -5,6 +5,7 @@ import { TrendingDown, Info, ChevronDown, ChevronUp, AlertCircle, Sparkles, Netw
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { getDetectorEffort, type EffortLevel } from '@/lib/forensics/types';
 import { FindingsFilterBar, useFindingsFilter } from './findings-filter';
+import { BulkActionBar } from './bulk-action-bar';
 
 // Effort badge — borrowed pattern from Hubbl's severity×effort matrix.
 // Lets a consultant glance at a finding and know if it's a quick win
@@ -510,6 +511,63 @@ function VerifiedFindingsSection({
     isActive: filterActive,
   } = filterState;
 
+  // Bulk-select state lifted here so checkboxes inside ThemeCards can
+  // share one selection set across all themes. Stays in sync with the
+  // visible list — when the filter narrows, selections referring to
+  // newly-invisible rows are kept (we don't auto-clear) so the user
+  // can stage a cross-theme selection by toggling filters between.
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const visibleIds = visibleFindings.map((f) => f.id);
+  const visibleSelectedCount = visibleIds.filter((id) => selectedIds.has(id)).length;
+
+  function toggleSelect(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  async function handleBulkStage(ids: string[]) {
+    try {
+      const r = await fetch('/api/forensic-findings/bulk-stage', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ findingIds: ids }),
+      });
+      if (r.ok) {
+        // Clear selection on success — the recovery queue is the next
+        // surface the user will visit to act on these.
+        setSelectedIds(new Set());
+      }
+    } catch (e) {
+      console.error('[bulk-stage] failed', e);
+    }
+  }
+
+  async function handleBulkHide(ids: string[]) {
+    try {
+      const r = await fetch('/api/forensic-findings/bulk-hide', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ findingIds: ids }),
+      });
+      if (r.ok) {
+        // Optimistically drop them locally too so they disappear
+        // immediately without a refresh.
+        setLocallyHidden((prev) => {
+          const next = new Set(prev);
+          for (const id of ids) next.add(id);
+          return next;
+        });
+        setSelectedIds(new Set());
+      }
+    } catch (e) {
+      console.error('[bulk-hide] failed', e);
+    }
+  }
+
   if (notHiddenFindings.length === 0) return null;
 
   // Build per-theme buckets up front.
@@ -572,6 +630,16 @@ function VerifiedFindingsSection({
         placeholder="Search by record name, detector, or title…"
       />
 
+      <BulkActionBar
+        selectedCount={visibleSelectedCount}
+        totalVisible={visibleIds.length}
+        allVisibleIds={visibleIds}
+        selectedIds={selectedIds}
+        setSelectedIds={setSelectedIds}
+        onStage={handleBulkStage}
+        onHide={handleBulkHide}
+      />
+
       {/* 3-per-row grid keeps the dashboard short. Each card is
           self-contained: theme + count + \$ in the header, top 3
           findings inline. Empty themes stay visible (muted) so the
@@ -584,6 +652,8 @@ function VerifiedFindingsSection({
             orgId={orgId}
             currency={currency}
             onHide={handleHide}
+            selectedIds={selectedIds}
+            onToggleSelect={toggleSelect}
           />
         ))}
       </div>
@@ -601,11 +671,16 @@ function ThemeCard({
   orgId,
   currency,
   onHide,
+  selectedIds,
+  onToggleSelect,
 }: {
   bucket: ThemeBucket;
   orgId: string;
   currency: string;
   onHide?: (findingId: string) => void;
+  /** When passed, finding rows render a selection checkbox tied to this set. */
+  selectedIds?: Set<string>;
+  onToggleSelect?: (id: string) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const Icon = bucket.icon;
@@ -651,7 +726,16 @@ function ThemeCard({
       ) : (
         <div className="flex-1 px-1.5 py-1.5 space-y-0.5">
           {visible.map((f) => (
-            <FindingRow key={f.id} finding={f} orgId={orgId} currency={currency} compact onHide={onHide} />
+            <FindingRow
+              key={f.id}
+              finding={f}
+              orgId={orgId}
+              currency={currency}
+              compact
+              onHide={onHide}
+              isSelected={selectedIds?.has(f.id)}
+              onToggleSelect={onToggleSelect}
+            />
           ))}
           {hidden > 0 && !expanded && (
             <button
@@ -681,6 +765,8 @@ function FindingRow({
   currency,
   compact,
   onHide,
+  isSelected,
+  onToggleSelect,
 }: {
   finding: {
     id: string;
@@ -694,6 +780,9 @@ function FindingRow({
   compact?: boolean;
   /** Called after a successful hide so the parent can drop the row. */
   onHide?: (findingId: string) => void;
+  /** When passed, a selection checkbox is rendered at the start of the row. */
+  isSelected?: boolean;
+  onToggleSelect?: (id: string) => void;
 }) {
   const [hiding, setHiding] = useState(false);
   const effort = getDetectorEffort(finding.detector_id);
@@ -719,8 +808,20 @@ function FindingRow({
       href={`/orgs/${orgId}/forensics/${finding.id}`}
       className={`flex items-center justify-between gap-3 px-3 py-2 rounded-lg border border-green-200 dark:border-green-800/40 bg-green-50/40 dark:bg-green-900/10 hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors group ${
         compact ? 'border-transparent bg-transparent dark:bg-transparent hover:bg-white/40 dark:hover:bg-gray-800/30' : ''
-      }`}
+      } ${isSelected ? 'ring-2 ring-blue-400 dark:ring-blue-500' : ''}`}
     >
+      {onToggleSelect && (
+        <input
+          type="checkbox"
+          checked={!!isSelected}
+          onChange={() => onToggleSelect(finding.id)}
+          // Stop click bubbling so toggling the checkbox doesn't also
+          // navigate to the finding detail page (the parent <a>).
+          onClick={(e) => e.stopPropagation()}
+          className="h-3.5 w-3.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 flex-shrink-0 cursor-pointer"
+          aria-label={`Select finding ${finding.detector_id}`}
+        />
+      )}
       <div className="flex items-center gap-2 min-w-0">
         {!compact && (
           <code className="text-xs font-mono text-green-700 dark:text-green-400 flex-shrink-0">
