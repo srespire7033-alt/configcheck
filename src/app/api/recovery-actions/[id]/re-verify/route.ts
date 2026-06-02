@@ -49,11 +49,14 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
   try {
     ({ conn } = await createRefreshableConnection(finding.organization_id));
   } catch (e) {
-    const msg = e instanceof Error ? e.message : 'Connection failed';
-    return NextResponse.json(
-      { error: `Could not connect to Salesforce: ${msg}` },
-      { status: 502 }
-    );
+    // jsforce throws an Error with empty .message when a refresh
+    // token has been revoked. Log raw, surface actionable copy.
+    console.error('[re-verify] Salesforce connection failed:', e);
+    const rawMsg = e instanceof Error ? e.message.trim() : '';
+    const userMsg = rawMsg
+      ? `Couldn't reach Salesforce: ${rawMsg}. Try reconnecting from the org settings.`
+      : `Couldn't reach Salesforce — your session may have expired. Try reconnecting from the org settings.`;
+    return NextResponse.json({ error: userMsg }, { status: 502 });
   }
 
   const verif = await verifyCommit(

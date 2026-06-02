@@ -43,8 +43,14 @@ export function SinceLastScanCard({ orgId }: { orgId: string }) {
     // Show errors but don't block other cards.
     return (
       <Card>
-        <CardContent className="py-4 text-xs text-amber-600 dark:text-amber-400 flex items-center gap-2">
-          <AlertTriangle className="h-4 w-4" /> Diff unavailable: {error}
+        <CardContent className="py-4 text-sm text-amber-700 dark:text-amber-300 flex items-start gap-2">
+          <AlertTriangle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+          <div>
+            <p className="font-medium">Couldn&rsquo;t compare to your last scan</p>
+            <p className="text-xs text-amber-600/80 dark:text-amber-400/80 mt-0.5">
+              {error || 'Unknown error — please refresh the page or try again.'}
+            </p>
+          </div>
         </CardContent>
       </Card>
     );
