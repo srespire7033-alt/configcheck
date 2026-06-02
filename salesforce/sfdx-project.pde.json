@@ -1,4 +1,5 @@
 {
+  "_comment": "Use this as sfdx-project.json once PDE arrives and we go managed. cp sfdx-project.pde.json sfdx-project.json",
   "packageDirectories": [
     {
       "path": "force-app",
@@ -9,6 +10,7 @@
       "definitionFile": "config/project-scratch-def.json"
     }
   ],
+  "namespace": "OrgPrism",
   "sfdcLoginUrl": "https://login.salesforce.com",
   "sourceApiVersion": "60.0",
   "name": "OrgPrism",
