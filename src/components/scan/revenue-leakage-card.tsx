@@ -507,10 +507,11 @@ function VerifiedFindingsSection({
         </span>
       </div>
 
-      {/* Sort populated themes by total $ desc; empty themes appear
-          last in their declared order. Empty cards still render —
-          they prove the check ran cleanly for that bucket. */}
-      <div className="space-y-3">
+      {/* 3-per-row grid keeps the dashboard short. Each card is
+          self-contained: theme + count + \$ in the header, top 3
+          findings inline. Empty themes stay visible (muted) so the
+          consultant can point at 'we checked, nothing here.' */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
         {[...themedBuckets].sort((a, b) => b.total - a.total).map((bucket) => (
           <ThemeCard
             key={bucket.key}
@@ -541,62 +542,61 @@ function ThemeCard({
   const [expanded, setExpanded] = useState(false);
   const Icon = bucket.icon;
   const isEmpty = bucket.items.length === 0;
-  const VISIBLE_LIMIT = 5;
+  // Compact mode shows 3 in the default state. The grid is 1/3 of
+  // the screen width so anything more starts wrapping.
+  const VISIBLE_LIMIT = 3;
 
-  // Sort items inside the theme by $ desc.
   const sorted = [...bucket.items].sort((a, b) => b.gap_usd - a.gap_usd);
   const visible = expanded ? sorted : sorted.slice(0, VISIBLE_LIMIT);
   const hidden = Math.max(0, sorted.length - VISIBLE_LIMIT);
 
   return (
     <div
-      className={`rounded-xl border ${bucket.accentBorder} bg-white dark:bg-gray-900/40 ${isEmpty ? 'opacity-70' : ''}`}
+      className={`rounded-xl border ${bucket.accentBorder} bg-white dark:bg-gray-900/40 flex flex-col ${isEmpty ? 'opacity-60' : ''}`}
     >
-      <div className="px-4 py-3 flex items-start justify-between gap-3 border-b border-gray-100 dark:border-gray-800">
-        <div className="flex gap-3 min-w-0">
-          <div className={`rounded-lg p-2 flex-shrink-0 ${bucket.accentBg}`}>
-            <Icon className={`h-4 w-4 ${bucket.accentText}`} />
+      {/* Compact header — icon on left, $ on right, theme + count below */}
+      <div className="px-3 py-2.5 border-b border-gray-100 dark:border-gray-800">
+        <div className="flex items-start justify-between gap-2">
+          <div className={`rounded-lg p-1.5 flex-shrink-0 ${bucket.accentBg}`}>
+            <Icon className={`h-3.5 w-3.5 ${bucket.accentText}`} />
           </div>
-          <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <h3 className="text-sm font-semibold text-gray-900 dark:text-white">{bucket.label}</h3>
-              <span className={`text-[11px] font-medium ${bucket.accentText}`}>
-                {bucket.items.length} finding{bucket.items.length === 1 ? '' : 's'}
-              </span>
-            </div>
-            <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5 truncate">
-              {bucket.description}
-            </p>
-          </div>
-        </div>
-        <div className="text-right flex-shrink-0">
-          <p className={`text-lg font-bold ${isEmpty ? 'text-gray-400 dark:text-gray-600' : bucket.accentText}`}>
+          <p
+            className={`text-base font-bold leading-tight ${isEmpty ? 'text-gray-400 dark:text-gray-600' : bucket.accentText}`}
+          >
             {isEmpty ? '—' : formatMoney(bucket.total, currency)}
           </p>
+        </div>
+        <div className="mt-1.5 flex items-center gap-1.5">
+          <h3 className="text-sm font-semibold text-gray-900 dark:text-white truncate">
+            {bucket.label}
+          </h3>
+          <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${bucket.accentBg} ${bucket.accentText} flex-shrink-0`}>
+            {bucket.items.length}
+          </span>
         </div>
       </div>
 
       {isEmpty ? (
-        <div className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400 italic">
-          No {bucket.label.toLowerCase()} findings detected in this scan.
+        <div className="flex-1 px-3 py-3 text-[11px] text-gray-500 dark:text-gray-400 italic">
+          No findings.
         </div>
       ) : (
-        <div className="px-2 py-2 space-y-1">
+        <div className="flex-1 px-1.5 py-1.5 space-y-0.5">
           {visible.map((f) => (
             <FindingRow key={f.id} finding={f} orgId={orgId} currency={currency} compact />
           ))}
           {hidden > 0 && !expanded && (
             <button
               onClick={() => setExpanded(true)}
-              className="w-full text-left text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 px-2 py-1 transition-colors"
+              className="w-full text-left text-[11px] text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 px-2 py-1 transition-colors"
             >
-              + {hidden} more finding{hidden === 1 ? '' : 's'} in {bucket.label} →
+              + {hidden} more →
             </button>
           )}
           {expanded && hidden > 0 && (
             <button
               onClick={() => setExpanded(false)}
-              className="w-full text-left text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 px-2 py-1 transition-colors"
+              className="w-full text-left text-[11px] text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 px-2 py-1 transition-colors"
             >
               ↑ Show fewer
             </button>
