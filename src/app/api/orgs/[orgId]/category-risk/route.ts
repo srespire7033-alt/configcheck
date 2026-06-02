@@ -93,6 +93,27 @@ export async function GET(req: NextRequest, { params }: { params: { orgId: strin
     .eq('user_id', user.id)
     .in('detector_id', detectorIdsInCategory);
 
+  // ── DEBUG: count without each filter to find which one's killing it ──
+  const { count: orgOnlyCount } = await supabase
+    .from('forensic_findings')
+    .select('id', { count: 'exact', head: true })
+    .eq('organization_id', params.orgId)
+    .in('detector_id', detectorIdsInCategory);
+  const { count: detectorOnlyCount } = await supabase
+    .from('forensic_findings')
+    .select('id', { count: 'exact', head: true })
+    .in('detector_id', detectorIdsInCategory);
+  const { count: bothCount } = await supabase
+    .from('forensic_findings')
+    .select('id', { count: 'exact', head: true })
+    .eq('organization_id', params.orgId)
+    .eq('user_id', user.id)
+    .in('detector_id', detectorIdsInCategory);
+  console.log(
+    `[category-risk] DEBUG counts — user.id=${user.id.slice(0, 8)}, org.user_id=${org.user_id?.slice(0, 8)}, ` +
+    `detector_only=${detectorOnlyCount}, org_only=${orgOnlyCount}, both_filters=${bothCount}, rows=${rows?.length ?? 0}`
+  );
+
   const findings = (rows ?? []) as Array<{
     id: string;
     detector_id: string;
@@ -116,11 +137,22 @@ export async function GET(req: NextRequest, { params }: { params: { orgId: strin
     total += Number(f.gap_usd ?? 0);
   }
 
-  const resp: CategoryRiskResponse = {
+  const resp: CategoryRiskResponse & {
+    _debug_user_id_short?: string;
+    _debug_org_user_id_short?: string;
+    _debug_count_detector_only?: number | null;
+    _debug_count_org_only?: number | null;
+    _debug_count_both_filters?: number | null;
+  } = {
     category,
     total_findings: findings.length,
     total_at_risk_usd: round2(total),
     _debug_detector_ids_in_category: detectorIdsInCategory,
+    _debug_user_id_short: user.id.slice(0, 8),
+    _debug_org_user_id_short: org.user_id?.slice(0, 8) ?? null,
+    _debug_count_detector_only: detectorOnlyCount ?? null,
+    _debug_count_org_only: orgOnlyCount ?? null,
+    _debug_count_both_filters: bothCount ?? null,
     by_detector: Array.from(byDetector.entries()).map(([id, a]) => ({
       detector_id: id,
       label: DETECTOR_LABELS[id] ?? id,
