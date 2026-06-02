@@ -7,22 +7,37 @@
  * or a Price Rule wiped it). Customer received the option for free —
  * that's the leak.
  *
- * Detection model:
- *   1. Pull Quote Lines where SBQQ__RequiredBy__c IS NOT NULL
- *      (these are the bundle option lines tied to a parent line)
- *      AND SBQQ__NetPrice__c = 0
- *      AND the line was created in the last 24 months.
- *   2. Look up the Product2 of each affected line. If Product2.ListPrice
- *      OR a current Pricebook entry has UnitPrice > 0, flag it.
- *   3. Gap per finding = the resolved current price × quantity
- *      (or List as fallback). That's the "should have charged" amount.
+ * Why this needs bundle-aware guards (was previously disabled):
+ *   Inclusive bundle pricing is legitimate — "starter kit $1000,
+ *   includes free installation". The installation line will have
+ *   NetPrice=0 and SBQQ__RequiredBy__c set. Without guards, the
+ *   detector flags every legitimate inclusive bundle as a leak.
  *
- * What we deliberately don't flag:
- *   - Lines with NetPrice > 0 (priced normally)
- *   - Lines whose product genuinely has no list price set (those
- *     route through Class E with lower confidence — covered separately)
- *   - Non-bundle lines (top-of-cart products that intentionally have
- *     promotional zero pricing)
+ * Four guards (in order):
+ *
+ *   GUARD 1 — SBQQ__Bundled__c = true → SKIP
+ *     CPQ itself sets this flag when the line's price is rolled up
+ *     into the parent. Cleanest signal of "intentional free."
+ *
+ *   GUARD 2 — Parent line covers the option's list price → SKIP
+ *     If parent_net_total >= option_list_price × quantity (with 5%
+ *     slack), the parent is already paying for the option. Common
+ *     for "all-in" bundle SKUs.
+ *
+ *   GUARD 3 — Product has no resolvable list price → emit as
+ *             'unresolved_price' (low confidence)
+ *     Same behavior as the v1 detector — Class E tracer reports
+ *     this with OPTION_PRICE_UNRESOLVED reason code.
+ *
+ *   GUARD 4 — Product IS charged on other quote lines → boost
+ *             confidence (HIGH)
+ *     If the same Product2 has any other quote line with NetPrice>0,
+ *     it CAN be charged. Being $0 here is suspect — strong signal
+ *     of a real leak. Recoverability stays at 0.9, severity
+ *     escalates per gap size.
+ *
+ *   No guard matches → emit as 'isolated_free_option' (moderate
+ *     confidence — manual review, recoverability 0.6).
  */
 
 import type { DetectorContext, DetectorResult, ForensicDetector, SourceRecord } from '../types';
@@ -33,11 +48,13 @@ interface BundleOptionLineRow {
   SBQQ__Quote__c: string;
   SBQQ__Quote__r?: { Name: string };
   SBQQ__RequiredBy__c: string;
+  SBQQ__RequiredBy__r?: { Id: string; SBQQ__NetTotal__c?: string | number | null };
   SBQQ__Product__c: string;
   SBQQ__Product__r?: { Name: string; SBQQ__ChargeType__c?: string | null };
   SBQQ__NetPrice__c: string;
   SBQQ__ListPrice__c: string;
   SBQQ__Quantity__c: string;
+  SBQQ__Bundled__c?: boolean | null;
 }
 
 interface PricebookEntryRow {
@@ -46,42 +63,52 @@ interface PricebookEntryRow {
   UnitPrice: string;
 }
 
+interface PaidCountRow {
+  SBQQ__Product__c: string;
+  paid_count: number;
+}
+
 const QL_FOR_001: ForensicDetector = {
   id: 'QL-FOR-001',
   label: 'Bundle required option charged at $0',
-  // DISABLED: the detector as written false-positives on customers
-  // using inclusive bundle pricing (parent ListPrice covers options,
-  // so option NetPrice = 0 is intentional). Real-world version needs
-  // 4 disqualifying-signal checks (SBQQ__Bundled__c, ProductOption
-  // Discount=100, math-based inclusive check, OptionType=Related) to
-  // avoid massive false positives. Keeping the code as the reference
-  // implementation of Class E attribution; not running it on scans
-  // until the false-positive guards are added.
-  appliesTo: [],
+  // Re-activated in Slice 13 with the 4-guard system above.
+  appliesTo: ['cpq', 'cpq_billing'],
   freeTier: false,
+  category: 'revenue_leakage',
 
   async run(ctx: DetectorContext): Promise<DetectorResult[]> {
     const sinceIso = new Date(Date.now() - 730 * 24 * 60 * 60 * 1000).toISOString();
 
-    // 1. Required-bundle-option lines with $0 NetPrice.
-    const linesQuery = `
+    // Probe for SBQQ__Bundled__c — present in most CPQ installs but
+    // not guaranteed. If absent, Guard 1 silently skips (everything
+    // falls through to other guards).
+    let hasBundledField = false;
+    try {
+      const qlDesc = await ctx.conn.describe('SBQQ__QuoteLine__c');
+      hasBundledField = (qlDesc.fields ?? []).some((f) => f.name === 'SBQQ__Bundled__c');
+    } catch {
+      hasBundledField = false;
+    }
+
+    // 1. Candidate lines: required-bundle-option with $0 net price.
+    const bundledFieldSelect = hasBundledField ? 'SBQQ__Bundled__c,' : '';
+    const linesRes = await ctx.conn.query<BundleOptionLineRow>(`
       SELECT Id, Name,
         SBQQ__Quote__c, SBQQ__Quote__r.Name,
-        SBQQ__RequiredBy__c,
+        SBQQ__RequiredBy__c, SBQQ__RequiredBy__r.SBQQ__NetTotal__c,
         SBQQ__Product__c, SBQQ__Product__r.Name,
-        SBQQ__NetPrice__c, SBQQ__ListPrice__c, SBQQ__Quantity__c
+        SBQQ__NetPrice__c, SBQQ__ListPrice__c, SBQQ__Quantity__c,
+        ${bundledFieldSelect}
+        CreatedDate
       FROM SBQQ__QuoteLine__c
       WHERE SBQQ__RequiredBy__c != null
         AND SBQQ__NetPrice__c = 0
         AND CreatedDate >= ${sinceIso}
-    `;
-    const linesRes = await ctx.conn.query<BundleOptionLineRow>(linesQuery);
-    console.log(`[QL-FOR-001] Bundle-option zero-price lines: ${linesRes.records.length}`);
+    `);
+    console.log(`[QL-FOR-001] Candidate zero-price bundle-option lines: ${linesRes.records.length}`);
     if (linesRes.records.length === 0) return [];
 
-    // 2. Look up current Pricebook entries for these products. List
-    //    price on the Quote Line is one signal; the current Pricebook
-    //    UnitPrice is the more reliable one for "should have charged."
+    // 2. Pricebook list prices for those products.
     const productIds = Array.from(new Set(linesRes.records.map((l) => l.SBQQ__Product__c).filter(Boolean)));
     const pbeByProduct = new Map<string, PricebookEntryRow>();
     if (productIds.length > 0) {
@@ -98,21 +125,53 @@ const QL_FOR_001: ForensicDetector = {
       }
     }
 
-    // 3. Reconcile per-line.
+    // 3. GUARD 4 prep — count other quote lines per product with NetPrice > 0.
+    //    These are the "this product CAN be paid" signals.
+    const paidCountByProduct = new Map<string, number>();
+    if (productIds.length > 0) {
+      for (let i = 0; i < productIds.length; i += 500) {
+        const chunk = productIds.slice(i, i + 500);
+        const paidRes = await ctx.conn.query<PaidCountRow>(`
+          SELECT SBQQ__Product__c, COUNT(Id) paid_count
+          FROM SBQQ__QuoteLine__c
+          WHERE SBQQ__Product__c IN (${chunk.map((id) => `'${id}'`).join(',')})
+            AND SBQQ__NetPrice__c > 0
+          GROUP BY SBQQ__Product__c
+        `);
+        for (const r of paidRes.records) {
+          if (r.SBQQ__Product__c) paidCountByProduct.set(r.SBQQ__Product__c, Number(r.paid_count ?? 0));
+        }
+      }
+    }
+
+    // 4. Per-line evaluation through the guards.
     const findings: DetectorResult[] = [];
+    let skippedByGuard1 = 0;
+    let skippedByGuard2 = 0;
+
     for (const line of linesRes.records) {
+      // GUARD 1: CPQ-declared bundled. Skip outright.
+      if (hasBundledField && line.SBQQ__Bundled__c === true) {
+        skippedByGuard1 += 1;
+        continue;
+      }
+
       const lineList = parseFloat(line.SBQQ__ListPrice__c || '0');
       const pbeList = parseFloat(pbeByProduct.get(line.SBQQ__Product__c)?.UnitPrice || '0');
-      // Prefer Pricebook list price; fall back to line list. If neither
-      // is set, the product genuinely has no current price — Class E
-      // tracer will surface this as OPTION_PRICE_UNRESOLVED with lower
-      // confidence rather than skipping outright.
       const resolvedList = pbeList > 0 ? pbeList : lineList;
       const quantity = parseFloat(line.SBQQ__Quantity__c || '1') || 1;
+      const expectedRevenue = resolvedList * quantity;
 
-      // No resolvable list price → emit a finding but mark recoverability
-      // lower; the rep can't have been expected to charge a price the
-      // product doesn't carry.
+      // GUARD 2: parent line's NetTotal covers the option's list price.
+      //   parent_net_total >= expected_revenue × 0.95 (5% slack for
+      //   rounding / partial discount).
+      const parentNetTotal = Number(line.SBQQ__RequiredBy__r?.SBQQ__NetTotal__c ?? 0);
+      if (expectedRevenue > 0 && parentNetTotal >= expectedRevenue * 0.95) {
+        skippedByGuard2 += 1;
+        continue;
+      }
+
+      // GUARD 3: no resolvable list price → emit as unresolved.
       if (resolvedList <= 0) {
         findings.push({
           detectorId: 'QL-FOR-001',
@@ -131,13 +190,27 @@ const QL_FOR_001: ForensicDetector = {
             line_list_price: lineList,
             product_list_price: pbeList,
             quantity,
+            parent_net_total: parentNetTotal,
+            paid_count_elsewhere: paidCountByProduct.get(line.SBQQ__Product__c) ?? 0,
           },
         });
         continue;
       }
 
-      const gap = resolvedList * quantity;
+      const gap = expectedRevenue;
       if (gap < 1) continue;
+
+      // GUARD 4: Has this product been charged anywhere else?
+      const paidCountElsewhere = paidCountByProduct.get(line.SBQQ__Product__c) ?? 0;
+      const productPaidElsewhere = paidCountElsewhere > 0;
+
+      // High-confidence leak vs moderate-confidence outlier:
+      //   - Same product is paid elsewhere → strong signal it CAN be
+      //     charged. Original behavior, full recoverability.
+      //   - Same product is never paid anywhere → could be a "free
+      //     options product" by design. Surface with lower confidence
+      //     and tag for manual review.
+      const isHighConfidence = productPaidElsewhere;
 
       findings.push({
         detectorId: 'QL-FOR-001',
@@ -146,25 +219,40 @@ const QL_FOR_001: ForensicDetector = {
         realizedUsd: 0,
         gapUsd: round2(gap),
         currencyIsoCode: ctx.defaultCurrencyIsoCode,
-        // Highly recoverable: this is a re-pricing on the next quote/
-        // amendment, not a clawback. Customer-facing it's "this required
-        // add-on is part of the bundle and carries a standard price."
-        recoverabilityScore: 0.9,
+        recoverabilityScore: isHighConfidence ? 0.9 : 0.6,
         primaryRecord: lineRecord(line, gap),
         supportingRecords: supportingRecords(line, resolvedList),
-        title: `Required bundle option "${line.SBQQ__Product__r?.Name ?? 'option'}" given away free (${ctx.defaultCurrencyIsoCode} ${Math.round(gap).toLocaleString()})`,
-        description: `Quote line ${line.Name} is a required bundle option (linked to parent ${line.SBQQ__RequiredBy__c}) but was priced at $0. Current list is ${ctx.defaultCurrencyIsoCode} ${resolvedList.toLocaleString()}/unit × ${quantity}.`,
+        title: isHighConfidence
+          ? `Required bundle option "${line.SBQQ__Product__r?.Name ?? 'option'}" given away free (${ctx.defaultCurrencyIsoCode} ${Math.round(gap).toLocaleString()})`
+          : `Required bundle option "${line.SBQQ__Product__r?.Name ?? 'option'}" free on this Quote — paid status elsewhere unknown (${ctx.defaultCurrencyIsoCode} ${Math.round(gap).toLocaleString()})`,
+        description: isHighConfidence
+          ? `Quote line ${line.Name} is a required bundle option (linked to parent ${line.SBQQ__RequiredBy__c}) priced at $0. This product is paid on ${paidCountElsewhere} other line${paidCountElsewhere === 1 ? '' : 's'} — strong signal the $0 here is unintentional. Current list ${ctx.defaultCurrencyIsoCode} ${resolvedList.toLocaleString()}/unit × ${quantity}.`
+          : `Quote line ${line.Name} is a required bundle option priced at $0. The product has never been charged on any other quote line, so the $0 may be by design. Manual review needed before treating as a leak.`,
         metadata: {
-          sub_case: 'price_override_missing',
+          sub_case: isHighConfidence ? 'price_override_missing' : 'isolated_free_option',
           line_list_price: lineList,
           product_list_price: pbeList,
           resolved_list_price: resolvedList,
           quantity,
+          parent_net_total: parentNetTotal,
+          paid_count_elsewhere: paidCountElsewhere,
+          // Surface guard outcomes for transparency in the UI
+          guards: {
+            cpq_bundled: false,
+            parent_covers_option: false,
+            unresolved_price: false,
+            product_paid_elsewhere: productPaidElsewhere,
+          },
         },
       });
     }
 
-    console.log(`[QL-FOR-001] Emitting ${findings.length} findings (sum gap = $${Math.round(findings.reduce((s, f) => s + f.gapUsd, 0)).toLocaleString()})`);
+    console.log(
+      `[QL-FOR-001] Emitting ${findings.length} findings ` +
+      `(skipped by Guard 1 SBQQ__Bundled__c: ${skippedByGuard1}, ` +
+      `skipped by Guard 2 parent-covers-option: ${skippedByGuard2}, ` +
+      `sum gap = $${Math.round(findings.reduce((s, f) => s + f.gapUsd, 0)).toLocaleString()})`
+    );
     return findings;
   },
 };
