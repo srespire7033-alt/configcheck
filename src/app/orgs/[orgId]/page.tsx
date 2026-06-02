@@ -15,6 +15,7 @@ import { RevenueLeakageCard, type RevenueLeakageData, type VerifiedLeakage } fro
 import { ImpactEffortMatrix } from '@/components/scan/impact-effort-matrix';
 import { DashboardTabs, type DashboardTab } from '@/components/ui/dashboard-tabs';
 import { IssuesFilterBar, useIssuesFilter } from '@/components/scan/issues-filter';
+import { IssuesBulkSection } from '@/components/scan/issues-bulk-section';
 import { PricingDisciplineCard } from '@/components/scan/pricing-discipline-card';
 import { SinceLastScanCard } from '@/components/scan/since-last-scan-card';
 import { CategoryRiskCard } from '@/components/scan/category-risk-card';
@@ -1649,6 +1650,20 @@ export default function OrgDetailPage() {
                   onCategoryClick={(cat) => setSelectedCategory(selectedCategory === cat ? null : cat)}
                 />
               )}
+            </div>
+          )}
+
+          {/* ===== ISSUES BULK ACTIONS (Issues tab only) =====
+              Below the curated Top 5, the full filtered list with
+              checkboxes + bulk Acknowledge / Resolve / Not relevant
+              actions. The filter above narrows what shows here too. */}
+          {activeTab === 'issues' && filteredIssues.length > 0 && (
+            <div className="mb-6">
+              <IssuesBulkSection
+                issues={filteredIssues}
+                orgId={orgId}
+                onIssueClick={(issue) => setSelectedIssue(issue)}
+              />
             </div>
           )}
 
