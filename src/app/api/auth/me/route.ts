@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
   const supabase = createServiceClient();
   const { data, error } = await supabase
     .from('users')
-    .select('id, email, full_name, phone, job_title, location, company_name, company_logo_url, report_branding_color, timezone, plan, is_admin, email_notifications_enabled, notification_emails, notification_settings, onboarding_completed, referral_source, role, company_size, checklist_dismissed, checklist_progress, revenue_assumptions, created_at')
+    .select('id, email, full_name, avatar_url, phone, job_title, location, company_name, company_logo_url, report_branding_color, timezone, plan, is_admin, email_notifications_enabled, notification_emails, notification_settings, onboarding_completed, referral_source, role, company_size, checklist_dismissed, checklist_progress, revenue_assumptions, created_at')
     .eq('id', user.id)
     .single();
 
@@ -113,7 +113,7 @@ export async function PUT(request: NextRequest) {
       .from('users')
       .update(updates)
       .eq('id', user.id)
-      .select('id, email, full_name, phone, job_title, location, company_name, company_logo_url, report_branding_color, timezone, plan, is_admin, email_notifications_enabled, notification_emails, notification_settings, onboarding_completed, referral_source, role, company_size, checklist_dismissed, checklist_progress, revenue_assumptions, created_at')
+      .select('id, email, full_name, avatar_url, phone, job_title, location, company_name, company_logo_url, report_branding_color, timezone, plan, is_admin, email_notifications_enabled, notification_emails, notification_settings, onboarding_completed, referral_source, role, company_size, checklist_dismissed, checklist_progress, revenue_assumptions, created_at')
       .single();
 
     if (error) {
