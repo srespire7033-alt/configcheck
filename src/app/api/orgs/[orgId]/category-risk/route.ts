@@ -32,6 +32,12 @@ export interface CategoryRiskResponse {
     severity: string;
     created_at: string;
   }>;
+  /**
+   * Debug field — what this build thinks belongs in this category.
+   * If empty, the DETECTOR_CATEGORY map on the running build doesn't
+   * have entries for this category yet (most likely cause: deploy lag).
+   */
+  _debug_detector_ids_in_category?: string[];
 }
 
 const DETECTOR_LABELS: Record<string, string> = {
@@ -75,6 +81,7 @@ export async function GET(req: NextRequest, { params }: { params: { orgId: strin
       total_at_risk_usd: 0,
       by_detector: [],
       top_findings: [],
+      _debug_detector_ids_in_category: [],
     });
   }
 
@@ -113,6 +120,7 @@ export async function GET(req: NextRequest, { params }: { params: { orgId: strin
     category,
     total_findings: findings.length,
     total_at_risk_usd: round2(total),
+    _debug_detector_ids_in_category: detectorIdsInCategory,
     by_detector: Array.from(byDetector.entries()).map(([id, a]) => ({
       detector_id: id,
       label: DETECTOR_LABELS[id] ?? id,
