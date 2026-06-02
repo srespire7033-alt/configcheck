@@ -1,0 +1,178 @@
+<template>
+  <template if:true={detail}>
+    <lightning-card icon-name="custom:custom17" title={cardTitle}>
+      <div slot="actions">
+        <lightning-badge label={detail.finding.severity}
+                          class={severityBadgeClass}>
+        </lightning-badge>
+      </div>
+
+      <div class="slds-p-horizontal_medium slds-p-vertical_small">
+        <!-- Gap headline -->
+        <div class="slds-grid slds-grid_align-spread slds-grid_vertical-align-center slds-m-bottom_medium">
+          <div>
+            <p class="slds-text-heading_label slds-text-color_weak">Verified gap</p>
+            <p class="slds-text-heading_large slds-text-color_destructive">
+              <lightning-formatted-number
+                value={detail.finding.gapUsd}
+                format-style="currency"
+                currency-code={detail.finding.currencyIsoCode}>
+              </lightning-formatted-number>
+            </p>
+          </div>
+          <div>
+            <p class="slds-text-heading_label slds-text-color_weak">Entitled vs realized</p>
+            <p class="slds-text-body_regular">
+              <lightning-formatted-number value={detail.raw.EntitledUsd__c} format-style="currency" currency-code={detail.finding.currencyIsoCode}></lightning-formatted-number>
+              &nbsp;-&nbsp;
+              <lightning-formatted-number value={detail.raw.RealizedUsd__c} format-style="currency" currency-code={detail.finding.currencyIsoCode}></lightning-formatted-number>
+            </p>
+          </div>
+        </div>
+
+        <!-- Description -->
+        <template if:true={detail.raw.Description__c}>
+          <div class="slds-box slds-box_x-small slds-m-bottom_medium">
+            <p class="slds-text-body_regular">{detail.raw.Description__c}</p>
+          </div>
+        </template>
+
+        <!-- Affected record link -->
+        <template if:true={hasAffectedRecord}>
+          <div class="slds-m-bottom_medium">
+            <p class="slds-text-heading_label slds-text-color_weak">Affected record</p>
+            <a onclick={openAffectedRecord} class="slds-text-link">
+              {detail.finding.primaryRecordType} ({detail.finding.primaryRecordId})
+              <lightning-icon icon-name="utility:new_window" size="xx-small"
+                              class="slds-m-left_xx-small"></lightning-icon>
+            </a>
+          </div>
+        </template>
+
+        <!-- Attribution traces -->
+        <template if:true={hasTraces}>
+          <div class="slds-section slds-is-open">
+            <h3 class="slds-section__title">
+              <span class="slds-truncate slds-p-horizontal_small">Root cause</span>
+            </h3>
+            <div class="slds-section__content slds-p-around_small">
+              <template for:each={detail.traces} for:item="trace">
+                <div key={trace.Id} class="slds-box slds-box_x-small slds-m-bottom_small">
+                  <p class="slds-text-heading_small">
+                    Class {trace.RootCauseClass__c} · {trace.RootConfigName__c}
+                  </p>
+                  <p class="slds-text-body_small slds-text-color_weak">
+                    {trace.RootConfigType__c} · {trace.ReasonCode__c} · Confidence {trace.Confidence__c}
+                  </p>
+                  <template if:true={trace.AiExplanation__c}>
+                    <p class="slds-m-top_x-small">{trace.AiExplanation__c}</p>
+                  </template>
+                  <template if:true={trace.AiSuggestedFix__c}>
+                    <p class="slds-m-top_x-small slds-text-color_success">
+                      <strong>Suggested fix:</strong> {trace.AiSuggestedFix__c}
+                    </p>
+                  </template>
+                </div>
+              </template>
+            </div>
+          </div>
+        </template>
+
+        <!-- Recovery state machine buttons -->
+        <div class="slds-section slds-is-open slds-m-top_medium">
+          <h3 class="slds-section__title">
+            <span class="slds-truncate slds-p-horizontal_small">Recovery</span>
+          </h3>
+          <div class="slds-section__content slds-p-around_small">
+            <template if:true={detail.recoveryAction}>
+              <p class="slds-m-bottom_small">
+                Status: <strong>{detail.recoveryAction.ApprovalStatus__c}</strong>
+                <template if:true={detail.recoveryAction.ProjectedReclaimUsd__c}>
+                  · Projected reclaim:
+                  <lightning-formatted-number
+                    value={detail.recoveryAction.ProjectedReclaimUsd__c}
+                    format-style="currency"
+                    currency-code={detail.finding.currencyIsoCode}>
+                  </lightning-formatted-number>
+                </template>
+              </p>
+            </template>
+            <template if:false={detail.recoveryAction}>
+              <p class="slds-text-body_small slds-text-color_weak slds-m-bottom_small">
+                Not yet staged for recovery.
+              </p>
+            </template>
+
+            <div class="slds-button-group">
+              <template if:true={showStageButton}>
+                <lightning-button label="Stage" variant="brand" icon-name="utility:apex"
+                                  onclick={handleStage} disabled={busy}>
+                </lightning-button>
+              </template>
+              <template if:true={showApproveButton}>
+                <lightning-button label="Approve" variant="success" icon-name="utility:approval"
+                                  onclick={handleApprove} disabled={busy}>
+                </lightning-button>
+                <lightning-button label="Reject" variant="destructive" icon-name="utility:close"
+                                  onclick={handleReject} disabled={busy}>
+                </lightning-button>
+              </template>
+              <template if:true={showCommitButton}>
+                <lightning-button label="Mark Committed" variant="brand" icon-name="utility:save"
+                                  onclick={handleCommit} disabled={busy}>
+                </lightning-button>
+                <lightning-button label="Reject" variant="destructive" icon-name="utility:close"
+                                  onclick={handleReject} disabled={busy}>
+                </lightning-button>
+              </template>
+              <template if:true={showRestageButton}>
+                <lightning-button label="Restage" variant="neutral" icon-name="utility:refresh"
+                                  onclick={handleRestage} disabled={busy}>
+                </lightning-button>
+              </template>
+            </div>
+          </div>
+        </div>
+
+        <!-- Consultant note -->
+        <div class="slds-section slds-is-open slds-m-top_medium">
+          <h3 class="slds-section__title">
+            <span class="slds-truncate slds-p-horizontal_small">Private note</span>
+          </h3>
+          <div class="slds-section__content slds-p-around_small">
+            <lightning-textarea
+              label="Your private note"
+              variant="label-hidden"
+              max-length="4000"
+              placeholder="e.g. 'Client says by design — save for Phase 2'"
+              value={noteDraft}
+              onchange={handleNoteChange}>
+            </lightning-textarea>
+            <template if:true={noteDirty}>
+              <lightning-button
+                label="Save note"
+                variant="brand"
+                icon-name="utility:save"
+                class="slds-m-top_x-small"
+                onclick={handleNoteSave}
+                disabled={busy}>
+              </lightning-button>
+            </template>
+            <template if:true={detail.raw.ConsultantNoteUpdatedAt__c}>
+              <p class="slds-text-body_small slds-text-color_weak slds-m-top_x-small">
+                Last edited
+                <lightning-formatted-date-time
+                  value={detail.raw.ConsultantNoteUpdatedAt__c}>
+                </lightning-formatted-date-time>
+              </p>
+            </template>
+          </div>
+        </div>
+      </div>
+    </lightning-card>
+  </template>
+
+  <template if:true={busy}>
+    <lightning-spinner alternative-text="Loading..." size="small"></lightning-spinner>
+  </template>
+</template>

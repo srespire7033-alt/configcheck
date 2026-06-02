@@ -1,0 +1,100 @@
+<template>
+  <lightning-card title="Findings" icon-name="custom:custom17">
+    <div slot="actions" class="slds-text-body_small slds-text-color_weak">
+      <template if:true={scan}>
+        {findingCount} findings · {formattedLeakage} verified
+      </template>
+    </div>
+
+    <div class="slds-p-around_medium">
+      <!-- Toolbar -->
+      <div class="slds-grid slds-grid_vertical-align-center slds-m-bottom_small">
+        <div class="slds-col">
+          <lightning-input
+            type="search"
+            label="Search"
+            variant="label-hidden"
+            placeholder="Search by title or detector ID..."
+            value={searchTerm}
+            onchange={handleSearch}>
+          </lightning-input>
+        </div>
+        <div class="slds-col slds-no-flex slds-p-left_small">
+          <lightning-button-group>
+            <lightning-button label="All" variant={allVariant}
+                              data-severity="" onclick={handleSeverityFilter}>
+            </lightning-button>
+            <lightning-button label="Critical" variant={criticalVariant}
+                              data-severity="Critical" onclick={handleSeverityFilter}>
+            </lightning-button>
+            <lightning-button label="Warning" variant={warningVariant}
+                              data-severity="Warning" onclick={handleSeverityFilter}>
+            </lightning-button>
+          </lightning-button-group>
+        </div>
+        <div class="slds-col slds-no-flex slds-p-left_small">
+          <lightning-input
+            type="checkbox"
+            label="Show hidden"
+            checked={showHidden}
+            onchange={handleShowHiddenToggle}>
+          </lightning-input>
+        </div>
+      </div>
+
+      <!-- Bulk action bar -->
+      <template if:true={hasSelection}>
+        <div class="slds-box slds-box_small slds-m-bottom_small slds-theme_default">
+          <div class="slds-grid slds-grid_vertical-align-center">
+            <div class="slds-col">
+              <strong>{selectedCount}</strong> selected
+            </div>
+            <div class="slds-col slds-no-flex">
+              <lightning-button label="Stage for recovery"
+                                variant="brand"
+                                icon-name="utility:apex"
+                                onclick={handleBulkStage}
+                                disabled={busy}
+                                class="slds-m-right_x-small">
+              </lightning-button>
+              <lightning-button label="Hide"
+                                variant="neutral"
+                                icon-name="utility:hide"
+                                onclick={handleBulkHide}
+                                disabled={busy}>
+              </lightning-button>
+            </div>
+          </div>
+        </div>
+      </template>
+
+      <!-- Empty state -->
+      <template if:true={isEmpty}>
+        <div class="slds-illustration slds-illustration_small slds-text-align_center slds-p-around_large">
+          <p class="slds-text-heading_small">No findings to show</p>
+          <p class="slds-text-body_small slds-text-color_weak">
+            Run a scan from the launcher above to find revenue leakage in your org.
+          </p>
+        </div>
+      </template>
+
+      <!-- Datatable -->
+      <template if:false={isEmpty}>
+        <lightning-datatable
+          key-field="id"
+          data={visibleFindings}
+          columns={columns}
+          onrowaction={handleRowAction}
+          onrowselection={handleRowSelection}
+          show-row-number-column>
+        </lightning-datatable>
+      </template>
+
+      <!-- Loading spinner -->
+      <template if:true={busy}>
+        <lightning-spinner alternative-text="Loading..." size="small">
+        </lightning-spinner>
+      </template>
+    </div>
+  </lightning-card>
+</template>

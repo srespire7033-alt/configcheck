@@ -324,6 +324,10 @@
         <enabled>true</enabled>
     </classAccesses>
     <classAccesses>
+        <apexClass>FindingsListController</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <classAccesses>
         <apexClass>REN001RenewalUpliftDetector</apexClass>
         <enabled>true</enabled>
     </classAccesses>

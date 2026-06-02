@@ -1,0 +1,61 @@
+<template>
+  <lightning-card title="Run OrgPrism Scan" icon-name="custom:custom17">
+    <div class="slds-p-around_medium">
+      <p class="slds-text-body_regular slds-m-bottom_medium">
+        Run a forensic audit across your CPQ + Billing data. Findings will
+        appear in the OrgPrism dashboard with $-impact, severity, and
+        suggested recovery actions.
+      </p>
+
+      <div class="slds-form-element slds-m-bottom_medium">
+        <label class="slds-form-element__label" for="productType">Product type</label>
+        <div class="slds-form-element__control">
+          <select id="productType"
+                  class="slds-select"
+                  value={productType}
+                  onchange={handleProductTypeChange}>
+            <option value="CPQ">CPQ</option>
+            <option value="CPQ+Billing">CPQ + Billing</option>
+            <option value="ARM">Revenue Cloud (ARM)</option>
+          </select>
+        </div>
+      </div>
+
+      <lightning-button
+        variant="brand"
+        label="Run Scan"
+        title="Start a forensic scan"
+        icon-name="utility:play"
+        onclick={handleRunScan}
+        disabled={running}
+        class="slds-m-right_small">
+      </lightning-button>
+
+      <template if:true={running}>
+        <lightning-spinner alternative-text="Running scan..." size="small">
+        </lightning-spinner>
+      </template>
+
+      <template if:true={lastScanId}>
+        <div class="slds-m-top_medium slds-box slds-theme_success">
+          <p class="slds-text-body_small">
+            <lightning-icon icon-name="utility:success" size="x-small"
+                            class="slds-m-right_x-small"></lightning-icon>
+            Scan completed: <strong>{lastScanName}</strong>
+            ({findingCount} findings, {formattedLeakage} total leakage)
+          </p>
+        </div>
+      </template>
+
+      <template if:true={errorMessage}>
+        <div class="slds-m-top_medium slds-box slds-theme_error">
+          <p class="slds-text-body_small">
+            <lightning-icon icon-name="utility:error" size="x-small"
+                            class="slds-m-right_x-small"></lightning-icon>
+            {errorMessage}
+          </p>
+        </div>
+      </template>
+    </div>
+  </lightning-card>
+</template>
