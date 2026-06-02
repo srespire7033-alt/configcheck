@@ -4,6 +4,35 @@ import { Layers, ChevronDown, ChevronUp } from 'lucide-react';
 import { useState } from 'react';
 import type { ComplexityBreakdown } from '@/types';
 
+// Industry benchmarks for a 'healthy' mid-market Salesforce CPQ org.
+// These are educated estimates based on consultant experience (Maulik's
+// Salesforce CPQ practice + Salesforce Well-Architected guidance).
+// When a factor's count exceeds the benchmark, the bar's benchmark
+// tick mark sits to the LEFT of the user's value — visually signaling
+// 'you're above average here.' Below the benchmark = under-utilizing
+// or just simpler than peers. Keyed by the factor label (case-sensitive
+// — matches what the scan emits in metadata.complexity.factors[].label).
+const FACTOR_BENCHMARKS: Record<string, number> = {
+  // CPQ catalog complexity
+  'Active Products': 50,
+  'Product Options (Bundles)': 30,
+  'Discount Schedules': 5,
+  'Active Price Rules': 5,
+  'Contracted Prices': 50,
+  // Salesforce automation hygiene
+  'Workflows': 5,
+  'Process Builders': 5,
+  'Process Builder': 5,
+  'Flows': 25,
+  'Triggers': 30,
+  'Active Approval Processes': 3,
+  // Catalog dimension
+  'Standard Objects': 40,
+  'Custom Objects': 30,
+  'Custom Metadata': 5,
+  'Custom Settings': 10,
+};
+
 interface Props {
   complexity: ComplexityBreakdown;
 }
@@ -76,19 +105,65 @@ export function ComplexityCard({ complexity }: Props) {
           {complexity.factors
             .filter((f) => f.count > 0)
             .sort((a, b) => b.contribution - a.contribution)
-            .map((factor) => (
-              <div key={factor.label} className="flex items-center gap-2">
-                <span className="text-xs text-gray-600 w-44 truncate">{factor.label}</span>
-                <span className="text-xs font-medium text-gray-900 w-10 text-right">{factor.count}</span>
-                <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                  <div
-                    className="h-full rounded-full bg-purple-400"
-                    style={{ width: `${Math.min((factor.contribution / 20) * 100, 100)}%` }}
-                  />
+            .map((factor) => {
+              const benchmark = FACTOR_BENCHMARKS[factor.label];
+              // Scale: bar width is contribution / 20 capped at 100%. The
+              // benchmark tick mark needs to land on the SAME scale so it's
+              // visually meaningful next to the user's bar. We translate
+              // 'benchmark count' to 'where that count would land on the
+              // contribution scale' by interpolating against the user's
+              // own count↔contribution ratio. Defensive: if the user has
+              // zero count we skip (the .filter above already handles
+              // this) so we never divide by zero.
+              const userBarPct = Math.min((factor.contribution / 20) * 100, 100);
+              const benchmarkPct =
+                benchmark !== undefined
+                  ? Math.min((benchmark / factor.count) * userBarPct, 100)
+                  : null;
+              const aboveBenchmark = benchmark !== undefined && factor.count > benchmark;
+              return (
+                <div key={factor.label} className="flex items-center gap-2">
+                  <span className="text-xs text-gray-600 dark:text-gray-400 w-44 truncate">{factor.label}</span>
+                  <span className="text-xs font-medium text-gray-900 dark:text-white w-10 text-right">{factor.count}</span>
+                  <div className="flex-1 h-1.5 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden relative">
+                    <div
+                      className="h-full rounded-full bg-purple-400"
+                      style={{ width: `${userBarPct}%` }}
+                    />
+                    {/* Benchmark tick — small grey vertical line at the
+                        position the industry-average count would occupy
+                        on the same scale. Sits ABOVE the bar so it's
+                        readable even when the user bar overlaps it. */}
+                    {benchmarkPct !== null && (
+                      <div
+                        className="absolute top-0 h-full w-0.5 bg-gray-500 dark:bg-gray-400 pointer-events-none"
+                        style={{ left: `${benchmarkPct}%` }}
+                        title={`Benchmark: ${benchmark} (industry-average healthy org)`}
+                      />
+                    )}
+                  </div>
+                  <span
+                    className={`text-[10px] w-8 text-right ${
+                      aboveBenchmark ? 'text-amber-600 dark:text-amber-400 font-semibold' : 'text-gray-400'
+                    }`}
+                    title={benchmark !== undefined ? `Industry benchmark: ${benchmark}` : 'No benchmark'}
+                  >
+                    +{factor.contribution}
+                  </span>
                 </div>
-                <span className="text-[10px] text-gray-400 w-8 text-right">+{factor.contribution}</span>
-              </div>
-            ))}
+              );
+            })}
+          {/* Legend so users know what the grey tick means. */}
+          <div className="flex items-center gap-3 pt-2 mt-1 border-t border-gray-100 dark:border-gray-800">
+            <div className="flex items-center gap-1.5">
+              <div className="h-1.5 w-3 rounded bg-purple-400" />
+              <span className="text-[10px] text-gray-500 dark:text-gray-400">Your count</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="h-2.5 w-0.5 bg-gray-500 dark:bg-gray-400" />
+              <span className="text-[10px] text-gray-500 dark:text-gray-400">Industry benchmark</span>
+            </div>
+          </div>
         </div>
       )}
     </div>

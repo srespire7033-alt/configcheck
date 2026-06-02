@@ -55,13 +55,19 @@ export async function GET(request: NextRequest) {
   }
 
   if (forensicScanId) {
-    const { data } = await supabase
+    // includeHidden=true lets the UI surface dismissed findings on
+    // demand (e.g. for a 'show hidden' toggle on the queue). Default
+    // is to filter them out so the dashboard counts/$ stay clean.
+    const includeHidden = request.nextUrl.searchParams.get('includeHidden') === 'true';
+    let q = supabase
       .from('forensic_findings')
-      .select('id, detector_id, severity, gap_usd, entitled_usd, realized_usd, currency_iso_code, title, status, detected_at, source_record_refs')
+      .select('id, detector_id, severity, gap_usd, entitled_usd, realized_usd, currency_iso_code, title, status, detected_at, source_record_refs, hidden_at')
       .eq('forensic_scan_id', forensicScanId)
       .eq('user_id', user.id)
       .order('gap_usd', { ascending: false })
       .limit(200);
+    if (!includeHidden) q = q.is('hidden_at', null);
+    const { data } = await q;
     return NextResponse.json(data ?? [], { headers: { 'Cache-Control': 'no-store' } });
   }
 

@@ -101,7 +101,13 @@ export async function GET(req: NextRequest, { params }: { params: { orgId: strin
     .select('id, detector_id, title, gap_usd, severity, detected_at, source_record_refs')
     .eq('organization_id', params.orgId)
     .eq('user_id', user.id)
-    .in('detector_id', detectorIdsInCategory);
+    .in('detector_id', detectorIdsInCategory)
+    // Hide-affordance: consultants dismiss known false-positives per-
+    // engagement. Hidden findings still exist in the DB (and on the
+    // recovery queue if staged) but disappear from default counts +
+    // top-findings lists. To resurface them, the user can restore from
+    // the per-finding detail page.
+    .is('hidden_at', null);
   const { data: rows, error: findingsErr } = latestScanId
     ? await baseQuery.eq('forensic_scan_id', latestScanId)
     : await baseQuery;

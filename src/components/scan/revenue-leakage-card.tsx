@@ -1,8 +1,18 @@
 'use client';
 
 import { useState } from 'react';
-import { TrendingDown, Info, ChevronDown, ChevronUp, AlertCircle, Sparkles, Network, ChevronRight, ShieldCheck, FileDown, RefreshCw, Percent, Receipt, Layers, Lock } from 'lucide-react';
+import { TrendingDown, Info, ChevronDown, ChevronUp, AlertCircle, Sparkles, Network, ChevronRight, ShieldCheck, FileDown, RefreshCw, Percent, Receipt, Layers, Lock, EyeOff } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { getDetectorEffort, type EffortLevel } from '@/lib/forensics/types';
+
+// Effort badge — borrowed pattern from Hubbl's severity×effort matrix.
+// Lets a consultant glance at a finding and know if it's a quick win
+// (Low effort + high \$) or a deeper engagement (High effort).
+const EFFORT_META: Record<EffortLevel, { label: string; bg: string; text: string; ring: string }> = {
+  low: { label: 'Low effort', bg: 'bg-emerald-50 dark:bg-emerald-900/20', text: 'text-emerald-700 dark:text-emerald-300', ring: 'ring-emerald-200/60 dark:ring-emerald-800/40' },
+  medium: { label: 'Medium effort', bg: 'bg-amber-50 dark:bg-amber-900/20', text: 'text-amber-700 dark:text-amber-300', ring: 'ring-amber-200/60 dark:ring-amber-800/40' },
+  high: { label: 'High effort', bg: 'bg-rose-50 dark:bg-rose-900/20', text: 'text-rose-700 dark:text-rose-300', ring: 'ring-rose-200/60 dark:ring-rose-800/40' },
+};
 
 interface TopContributor {
   check_id: string;
@@ -466,11 +476,25 @@ function VerifiedFindingsSection({
   orgId: string;
   currency: string;
 }) {
-  if (findings.length === 0) return null;
+  // Local hide-state — when the user clicks the eye-off on a finding
+  // we drop it from view immediately (optimistic). The server-side
+  // DELETE of hidden_at would survive a refresh anyway, but reactive
+  // local state means the user doesn't have to refresh to see it go.
+  const [locallyHidden, setLocallyHidden] = useState<Set<string>>(new Set());
+  const visibleFindings = findings.filter((f) => !locallyHidden.has(f.id));
+  const handleHide = (id: string) => {
+    setLocallyHidden((prev) => {
+      const next = new Set(prev);
+      next.add(id);
+      return next;
+    });
+  };
+
+  if (visibleFindings.length === 0) return null;
 
   // Build per-theme buckets up front.
   const themedBuckets = FINDING_THEMES.map((theme) => {
-    const matched = findings.filter((f) => theme.detectorIds.includes(f.detector_id));
+    const matched = visibleFindings.filter((f) => theme.detectorIds.includes(f.detector_id));
     return {
       ...theme,
       items: matched,
@@ -479,7 +503,7 @@ function VerifiedFindingsSection({
   });
   // Anything that didn't match a theme falls through to 'Other'.
   const themedIds = new Set(FINDING_THEMES.flatMap((t) => t.detectorIds));
-  const otherItems = findings.filter((f) => !themedIds.has(f.detector_id));
+  const otherItems = visibleFindings.filter((f) => !themedIds.has(f.detector_id));
   if (otherItems.length > 0) {
     themedBuckets.push({
       key: 'other',
@@ -495,11 +519,14 @@ function VerifiedFindingsSection({
     });
   }
 
-  const grandTotal = findings.reduce((s, f) => s + f.gap_usd, 0);
+  const grandTotal = visibleFindings.reduce((s, f) => s + f.gap_usd, 0);
+  const visibleCount = visibleFindings.length;
   const headerLabel =
-    findings.length < totalCount
-      ? `✓ Top ${findings.length} of ${totalCount} verified findings`
-      : `✓ Verified findings (${totalCount})`;
+    locallyHidden.size > 0
+      ? `✓ ${visibleCount} verified finding${visibleCount === 1 ? '' : 's'} (${locallyHidden.size} hidden)`
+      : visibleCount < totalCount
+        ? `✓ Top ${visibleCount} of ${totalCount} verified findings`
+        : `✓ Verified findings (${totalCount})`;
 
   return (
     <div className="mb-5">
@@ -523,6 +550,7 @@ function VerifiedFindingsSection({
             bucket={bucket}
             orgId={orgId}
             currency={currency}
+            onHide={handleHide}
           />
         ))}
       </div>
@@ -539,10 +567,12 @@ function ThemeCard({
   bucket,
   orgId,
   currency,
+  onHide,
 }: {
   bucket: ThemeBucket;
   orgId: string;
   currency: string;
+  onHide?: (findingId: string) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const Icon = bucket.icon;
@@ -588,7 +618,7 @@ function ThemeCard({
       ) : (
         <div className="flex-1 px-1.5 py-1.5 space-y-0.5">
           {visible.map((f) => (
-            <FindingRow key={f.id} finding={f} orgId={orgId} currency={currency} compact />
+            <FindingRow key={f.id} finding={f} orgId={orgId} currency={currency} compact onHide={onHide} />
           ))}
           {hidden > 0 && !expanded && (
             <button
@@ -617,16 +647,38 @@ function FindingRow({
   orgId,
   currency,
   compact,
+  onHide,
 }: {
   finding: { id: string; detector_id: string; title: string; gap_usd: number };
   orgId: string;
   currency: string;
   compact?: boolean;
+  /** Called after a successful hide so the parent can drop the row. */
+  onHide?: (findingId: string) => void;
 }) {
+  const [hiding, setHiding] = useState(false);
+  const effort = getDetectorEffort(finding.detector_id);
+  const effortMeta = EFFORT_META[effort];
+
+  async function handleHide(e: React.MouseEvent) {
+    // The row is wrapped in an <a> — stop the navigation before firing
+    // the POST or the user jumps to the detail page mid-action.
+    e.preventDefault();
+    e.stopPropagation();
+    if (hiding) return;
+    setHiding(true);
+    try {
+      const r = await fetch(`/api/forensic-findings/${finding.id}/hide`, { method: 'POST' });
+      if (r.ok) onHide?.(finding.id);
+    } finally {
+      setHiding(false);
+    }
+  }
+
   return (
     <a
       href={`/orgs/${orgId}/forensics/${finding.id}`}
-      className={`flex items-center justify-between gap-3 px-3 py-2 rounded-lg border border-green-200 dark:border-green-800/40 bg-green-50/40 dark:bg-green-900/10 hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors ${
+      className={`flex items-center justify-between gap-3 px-3 py-2 rounded-lg border border-green-200 dark:border-green-800/40 bg-green-50/40 dark:bg-green-900/10 hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors group ${
         compact ? 'border-transparent bg-transparent dark:bg-transparent hover:bg-white/40 dark:hover:bg-gray-800/30' : ''
       }`}
     >
@@ -639,10 +691,29 @@ function FindingRow({
         <span className={`text-sm text-gray-800 dark:text-gray-200 truncate ${compact ? 'text-xs' : ''}`}>
           {finding.title}
         </span>
+        <span
+          className={`inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-semibold uppercase tracking-wider ring-1 ring-inset flex-shrink-0 ${effortMeta.bg} ${effortMeta.text} ${effortMeta.ring}`}
+          title={`${effortMeta.label} — heuristic estimate of how much work to fix`}
+        >
+          {effort}
+        </span>
       </div>
-      <span className={`font-mono font-semibold text-green-700 dark:text-green-300 flex-shrink-0 ${compact ? 'text-xs' : ''}`}>
-        {formatMoney(finding.gap_usd, currency)}
-      </span>
+      <div className="flex items-center gap-2 flex-shrink-0">
+        <span className={`font-mono font-semibold text-green-700 dark:text-green-300 ${compact ? 'text-xs' : ''}`}>
+          {formatMoney(finding.gap_usd, currency)}
+        </span>
+        {onHide && (
+          <button
+            onClick={handleHide}
+            disabled={hiding}
+            className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-50"
+            title="Hide this finding (you can restore it later)"
+            aria-label="Hide finding"
+          >
+            <EyeOff className="h-3.5 w-3.5 text-gray-500" />
+          </button>
+        )}
+      </div>
     </a>
   );
 }

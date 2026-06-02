@@ -187,6 +187,61 @@ export function getDetectorCategory(detectorId: string): 'revenue_leakage' | 'go
 }
 
 /**
+ * Effort-to-fix classification per detector. Used by the UI to surface
+ * a 'Low/Med/High effort' badge on each finding and to drive the
+ * \$-Impact × Effort matrix card.
+ *
+ * Heuristic (consultant rule of thumb):
+ *   low    — single point-and-click change, one workflow toggle, or a
+ *            small bulk data update via Data Loader (one CSV upload).
+ *   medium — non-trivial data correction (per-quote/per-order fixes),
+ *            an approval-policy change, or a config rule rewrite.
+ *   high   — schema work, system integration, code change, or a
+ *            finance-process change that touches accounting.
+ *
+ * Defaults to 'medium' when omitted (back-compat).
+ */
+export type EffortLevel = 'low' | 'medium' | 'high';
+
+export const DETECTOR_EFFORT: Record<string, EffortLevel> = {
+  // Renewals — most are data fixes via Data Loader (medium); the
+  // governance/pipeline-flavored ones are workflow-light (low).
+  'REN-001': 'medium',
+  'REN-002': 'medium',
+  'REN-003': 'low',
+  'REN-004': 'low',
+  // Discounts — policy + data work.
+  'DSC-FOR-001': 'medium',
+  'DSC-FOR-002': 'medium',
+  // Quote Lines.
+  'QL-FOR-001': 'medium',
+  'QL-FOR-002': 'low',
+  // Orders — Q↔O variance is data correction; missing billing schedule
+  // is a system-integration / process redesign.
+  'ORD-FOR-001': 'high',
+  'ORD-FOR-002': 'medium',
+  'ORD-FOR-003': 'medium',
+  // Subscriptions / provisioning.
+  'SUB-FOR-001': 'medium',
+  'PROV-FOR-001': 'high',
+  'PROV-FOR-002': 'medium',
+  // Governance.
+  'OPP-FOR-001': 'low',
+  'CON-FOR-001': 'low',
+  'AMD-FOR-001': 'low',
+  // Asset terminations touch credit-memo accounting — high.
+  'AST-FOR-001': 'high',
+  // Contracted prices.
+  'CT-FOR-001': 'medium',
+  // MDQ — config + data, high.
+  'MDQ-FOR-001': 'high',
+};
+
+export function getDetectorEffort(detectorId: string): EffortLevel {
+  return DETECTOR_EFFORT[detectorId] ?? 'medium';
+}
+
+/**
  * What an attribution tracer implements. One tracer per root cause
  * class. The orchestrator runs all 5 tracers against each finding and
  * keeps the highest-confidence candidate (or all above a threshold).

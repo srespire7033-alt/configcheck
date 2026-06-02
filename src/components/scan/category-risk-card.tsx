@@ -2,9 +2,16 @@
 
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { ShieldAlert, TrendingDown, ChevronRight, AlertTriangle } from 'lucide-react';
+import { ShieldAlert, TrendingDown, ChevronRight, AlertTriangle, EyeOff } from 'lucide-react';
 import Link from 'next/link';
 import type { CategoryRiskResponse } from '@/app/api/orgs/[orgId]/category-risk/route';
+import { getDetectorEffort, type EffortLevel } from '@/lib/forensics/types';
+
+const EFFORT_META: Record<EffortLevel, { label: string; bg: string; text: string }> = {
+  low: { label: 'Low effort', bg: 'bg-emerald-50 dark:bg-emerald-900/20', text: 'text-emerald-700 dark:text-emerald-300' },
+  medium: { label: 'Medium effort', bg: 'bg-amber-50 dark:bg-amber-900/20', text: 'text-amber-700 dark:text-amber-300' },
+  high: { label: 'High effort', bg: 'bg-rose-50 dark:bg-rose-900/20', text: 'text-rose-700 dark:text-rose-300' },
+};
 
 interface Props {
   orgId: string;
@@ -38,7 +45,29 @@ export function CategoryRiskCard({ orgId, category }: Props) {
   const [data, setData] = useState<CategoryRiskResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [locallyHidden, setLocallyHidden] = useState<Set<string>>(new Set());
   const copy = COPY[category];
+
+  async function handleHide(findingId: string) {
+    // Optimistic local hide. The server-side update would survive a
+    // refresh; the local Set just means the user doesn't have to wait
+    // for the next API roundtrip to see the row disappear.
+    setLocallyHidden((prev) => {
+      const next = new Set(prev);
+      next.add(findingId);
+      return next;
+    });
+    try {
+      await fetch(`/api/forensic-findings/${findingId}/hide`, { method: 'POST' });
+    } catch {
+      // If the API call fails, roll back so the row reappears.
+      setLocallyHidden((prev) => {
+        const next = new Set(prev);
+        next.delete(findingId);
+        return next;
+      });
+    }
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -150,35 +179,61 @@ export function CategoryRiskCard({ orgId, category }: Props) {
           </div>
         )}
 
-        {data.top_findings.length > 0 && (
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">
-              Top {Math.min(5, data.top_findings.length)} findings
-            </p>
-            <div className="space-y-1">
-              {data.top_findings.slice(0, 5).map((f) => (
-                <Link
-                  key={f.id}
-                  href={`/orgs/${orgId}/forensics/${f.id}`}
-                  className="flex items-center justify-between gap-3 px-3 py-2 -mx-1 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors"
-                >
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[10px] font-mono text-gray-500 dark:text-gray-400 uppercase">
-                      {f.detector_id}
-                    </p>
-                    <p className="text-sm truncate">{f.title}</p>
-                  </div>
-                  {category === 'pipeline' && f.gap_usd > 0 && (
-                    <span className={`text-sm font-semibold ${colorClasses.chip} flex-shrink-0`}>
-                      {formatMoney(f.gap_usd)}
-                    </span>
-                  )}
-                  <ChevronRight className="h-4 w-4 text-gray-400 flex-shrink-0" />
-                </Link>
-              ))}
+        {(() => {
+          const visibleTop = data.top_findings.filter((f) => !locallyHidden.has(f.id));
+          if (visibleTop.length === 0) return null;
+          return (
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">
+                Top {Math.min(5, visibleTop.length)} findings
+                {locallyHidden.size > 0 && ` (${locallyHidden.size} hidden)`}
+              </p>
+              <div className="space-y-1">
+                {visibleTop.slice(0, 5).map((f) => {
+                  const effort = getDetectorEffort(f.detector_id);
+                  const effortMeta = EFFORT_META[effort];
+                  return (
+                    <div key={f.id} className="group flex items-center gap-2 -mx-1">
+                      <Link
+                        href={`/orgs/${orgId}/forensics/${f.id}`}
+                        className="flex-1 flex items-center justify-between gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            <p className="text-[10px] font-mono text-gray-500 dark:text-gray-400 uppercase">
+                              {f.detector_id}
+                            </p>
+                            <span
+                              className={`inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-semibold uppercase tracking-wider ${effortMeta.bg} ${effortMeta.text}`}
+                              title={`${effortMeta.label} — heuristic estimate of how much work to fix`}
+                            >
+                              {effort}
+                            </span>
+                          </div>
+                          <p className="text-sm truncate">{f.title}</p>
+                        </div>
+                        {category === 'pipeline' && f.gap_usd > 0 && (
+                          <span className={`text-sm font-semibold ${colorClasses.chip} flex-shrink-0`}>
+                            {formatMoney(f.gap_usd)}
+                          </span>
+                        )}
+                        <ChevronRight className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                      </Link>
+                      <button
+                        onClick={() => handleHide(f.id)}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 flex-shrink-0"
+                        title="Hide this finding (you can restore it later)"
+                        aria-label="Hide finding"
+                      >
+                        <EyeOff className="h-3.5 w-3.5 text-gray-500" />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
       </CardContent>
     </Card>
   );
