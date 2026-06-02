@@ -379,6 +379,23 @@ export function RevenueLeakageCard({ leakage, verified, orgId, currency = 'USD' 
  * customers run scans across many checks. Defers a dedicated /forensics
  * page until card-scrolling becomes truly painful.
  */
+/**
+ * Theme groupings for the verified-findings tabs. Each tab tells one
+ * coherent story a consultant can lead a conversation around. 'all'
+ * is the default catch-all and shows every revenue-leakage finding.
+ *
+ * Keep in sync with DETECTOR_CATEGORY in lib/forensics/types.ts — every
+ * revenue_leakage detector ID should appear in exactly one theme group.
+ */
+const FINDING_THEMES: ReadonlyArray<{ key: string; label: string; detectorIds: ReadonlyArray<string> }> = [
+  { key: 'all', label: 'All', detectorIds: [] }, // empty = include everything
+  { key: 'renewals', label: 'Renewals', detectorIds: ['REN-001', 'REN-002'] },
+  { key: 'discounting', label: 'Discounting', detectorIds: ['DSC-FOR-001', 'DSC-FOR-002', 'QL-FOR-001'] },
+  { key: 'orders', label: 'Orders & Billing', detectorIds: ['ORD-FOR-001', 'ORD-FOR-002', 'ORD-FOR-003', 'AST-FOR-001'] },
+  { key: 'subs', label: 'Subscriptions', detectorIds: ['SUB-FOR-001', 'PROV-FOR-001', 'PROV-FOR-002'] },
+  { key: 'pricing', label: 'Pricing Locks', detectorIds: ['CT-FOR-001', 'MDQ-FOR-001'] },
+] as const;
+
 function VerifiedFindingsSection({
   findings,
   totalCount,
@@ -392,32 +409,96 @@ function VerifiedFindingsSection({
 }) {
   const FLAT_THRESHOLD = 5;
   const [expandedDetectors, setExpandedDetectors] = useState<Set<string>>(new Set());
+  const [activeTheme, setActiveTheme] = useState<string>('all');
 
-  const verifiedTotalUsd = findings.reduce((sum, f) => sum + f.gap_usd, 0);
-  const headerLabel =
-    findings.length < totalCount
+  // Compute per-theme counts + totals from the ENTIRE finding set —
+  // these populate the tab badges regardless of which tab is active.
+  // Findings whose detector_id isn't in any theme still appear in 'All'
+  // (back-compat for any future detector we forget to classify here).
+  const themeStats = FINDING_THEMES.map((theme) => {
+    const matched = theme.key === 'all'
+      ? findings
+      : findings.filter((f) => theme.detectorIds.includes(f.detector_id));
+    return {
+      ...theme,
+      count: matched.length,
+      total: matched.reduce((s, f) => s + f.gap_usd, 0),
+    };
+  });
+  const activeThemeStats = themeStats.find((t) => t.key === activeTheme) ?? themeStats[0];
+  const themeMatched = activeTheme === 'all'
+    ? findings
+    : findings.filter((f) => (FINDING_THEMES.find((t) => t.key === activeTheme)?.detectorIds ?? []).includes(f.detector_id));
+
+  const verifiedTotalUsd = themeMatched.reduce((sum, f) => sum + f.gap_usd, 0);
+  const headerLabel = activeTheme === 'all'
+    ? findings.length < totalCount
       ? `✓ Top ${findings.length} of ${totalCount} verified findings`
-      : `✓ Verified findings (${totalCount})`;
+      : `✓ Verified findings (${totalCount})`
+    : `✓ ${activeThemeStats.label} (${themeMatched.length})`;
+
+  // Tab strip — render only when there's enough cross-theme variety
+  // that filtering is useful. If 4 or fewer findings total, just show
+  // the flat list (the tabs would feel like dead weight).
+  const tabsWorthShowing = findings.length > FLAT_THRESHOLD &&
+    themeStats.filter((t) => t.key !== 'all' && t.count > 0).length >= 2;
+  const tabStrip = tabsWorthShowing ? (
+    <div className="mb-3 -mx-1 px-1 flex gap-1 overflow-x-auto pb-0.5">
+      {themeStats
+        .filter((t) => t.key === 'all' || t.count > 0)
+        .map((t) => {
+          const active = t.key === activeTheme;
+          return (
+            <button
+              key={t.key}
+              onClick={() => {
+                setActiveTheme(t.key);
+                // Collapse all expanded detector groups when changing
+                // tab so the new view starts clean.
+                setExpandedDetectors(new Set());
+              }}
+              className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+                active
+                  ? 'bg-green-600 dark:bg-green-700 text-white border-green-600 dark:border-green-700'
+                  : 'bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:border-green-400 dark:hover:border-green-600'
+              }`}
+            >
+              {t.label}
+              <span className={`ml-1.5 ${active ? 'opacity-80' : 'text-gray-400 dark:text-gray-500'}`}>
+                ({t.count})
+              </span>
+            </button>
+          );
+        })}
+    </div>
+  ) : null;
 
   // Flat list for small N — keeps simple cases simple.
-  if (findings.length <= FLAT_THRESHOLD) {
+  if (themeMatched.length <= FLAT_THRESHOLD) {
     return (
       <div className="mb-5">
+        {tabStrip}
         <p className="text-xs font-semibold uppercase tracking-wide text-green-700 dark:text-green-400 mb-2 flex items-center gap-1.5">
           {headerLabel}
         </p>
-        <div className="space-y-1.5">
-          {findings.map((f) => (
-            <FindingRow key={f.id} finding={f} orgId={orgId} currency={currency} />
-          ))}
-        </div>
+        {themeMatched.length === 0 ? (
+          <div className="rounded-lg border border-dashed border-gray-200 dark:border-gray-700 px-4 py-6 text-center text-xs text-gray-500 dark:text-gray-400">
+            No {activeThemeStats.label.toLowerCase()} findings in this scan.
+          </div>
+        ) : (
+          <div className="space-y-1.5">
+            {themeMatched.map((f) => (
+              <FindingRow key={f.id} finding={f} orgId={orgId} currency={currency} />
+            ))}
+          </div>
+        )}
       </div>
     );
   }
 
   // Group by detector_id; sort groups by their total $ desc.
   const groups = new Map<string, typeof findings>();
-  for (const f of findings) {
+  for (const f of themeMatched) {
     const list = groups.get(f.detector_id) ?? [];
     list.push(f);
     groups.set(f.detector_id, list);
@@ -435,6 +516,7 @@ function VerifiedFindingsSection({
 
   return (
     <div className="mb-5">
+      {tabStrip}
       <div className="flex items-baseline justify-between mb-2">
         <p className="text-xs font-semibold uppercase tracking-wide text-green-700 dark:text-green-400 flex items-center gap-1.5">
           {headerLabel}
