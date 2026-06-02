@@ -1742,13 +1742,18 @@ export default function OrgDetailPage() {
               users into thinking we had two competing $ numbers. The
               Leakage card is the canonical $ surface; complexity is a
               separate dimension and stays. */}
+          {/* Side-by-side grid: CPQ Complexity (left) + AI Analysis (right).
+              Both are independent IIFEs — if one returns null the grid
+              shows a single column gracefully. Each block lost its mb-8
+              (margin lives on the grid wrapper now). */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8 items-start">
           {(() => {
             const meta = scan.metadata as Record<string, unknown> | null;
             if (!meta) return null;
             const comp = meta.complexity as ComplexityBreakdown | undefined;
             if (!comp) return null;
             return (
-              <div className="mb-8">
+              <div className="h-full">
                 <ComplexityCard complexity={comp} />
               </div>
             );
@@ -1810,7 +1815,7 @@ export default function OrgDetailPage() {
                 : `Your org has ${infoCount} best-practice nudge${infoCount !== 1 ? 's' : ''}.`;
 
             return (
-              <div className="bg-gradient-to-r from-blue-50 to-teal-50 dark:from-blue-900/20 dark:to-teal-900/20 rounded-2xl border border-blue-100 dark:border-blue-800 p-6 mb-8">
+              <div className="bg-gradient-to-r from-blue-50 to-teal-50 dark:from-blue-900/20 dark:to-teal-900/20 rounded-2xl border border-blue-100 dark:border-blue-800 p-6 h-full">
                 <div className="flex items-start gap-4">
                   <div className="w-12 h-12 bg-white dark:bg-gray-800 rounded-xl flex items-center justify-center shadow-sm flex-shrink-0">
                     <Sparkles className="w-7 h-7 text-blue-600 dark:text-blue-400" />
@@ -1886,6 +1891,8 @@ export default function OrgDetailPage() {
               </div>
             );
           })()}
+          </div>
+          {/* /side-by-side grid */}
 
           {/* ===== REMEDIATION PLAN ===== */}
           {issues.length > 0 && (
