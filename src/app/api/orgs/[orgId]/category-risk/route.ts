@@ -81,10 +81,10 @@ export async function GET(req: NextRequest, { params }: { params: { orgId: strin
   // Pull findings for this org + these detectors.
   // NOTE: forensic_findings has no created_at column — selecting it
   // causes the WHOLE query to error and data becomes null. Use
-  // inserted_at if needed (the actual timestamp column).
+  // detected_at if needed (the actual timestamp column).
   const { data: rows, error: findingsErr } = await supabase
     .from('forensic_findings')
-    .select('id, detector_id, title, gap_usd, severity, inserted_at')
+    .select('id, detector_id, title, gap_usd, severity, detected_at')
     .eq('organization_id', params.orgId)
     .eq('user_id', user.id)
     .in('detector_id', detectorIdsInCategory);
@@ -98,7 +98,7 @@ export async function GET(req: NextRequest, { params }: { params: { orgId: strin
     title: string;
     gap_usd: number | string;
     severity: string;
-    inserted_at: string;
+    detected_at: string;
   }>;
 
   // Aggregate per detector.
@@ -135,7 +135,7 @@ export async function GET(req: NextRequest, { params }: { params: { orgId: strin
         title: f.title,
         gap_usd: Number(f.gap_usd ?? 0),
         severity: f.severity,
-        created_at: f.inserted_at, // expose as created_at for UI back-compat
+        created_at: f.detected_at, // expose as created_at for UI back-compat
       })),
   };
 
