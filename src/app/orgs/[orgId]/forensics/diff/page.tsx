@@ -47,9 +47,9 @@ export default function ForensicDiffPage() {
       >
         <ArrowLeft className="h-4 w-4" /> Back to org
       </Link>
-      <h1 className="text-3xl font-bold mb-1">Forensic Diff</h1>
+      <h1 className="text-3xl font-bold mb-1">What&rsquo;s changed</h1>
       <p className="text-gray-500 dark:text-gray-400 mb-6">
-        What changed between the latest two forensic scans for this org.
+        Findings added, resolved, or worsened between the last two scans.
       </p>
 
       {loading && <p className="text-sm text-gray-500">Loading…</p>}

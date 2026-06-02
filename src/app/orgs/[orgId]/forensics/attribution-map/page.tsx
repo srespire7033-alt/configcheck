@@ -151,7 +151,7 @@ export default function AttributionMapPage() {
             No forensic scan yet
           </h2>
           <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-            Run a forensic scan first — the attribution map aggregates verified findings by their root config objects.
+            Run a forensic scan first — this view groups related issues by the Salesforce configuration that&rsquo;s causing them.
           </p>
           <Link
             href={`/orgs/${orgId}`}
@@ -194,8 +194,7 @@ export default function AttributionMapPage() {
           <div className="flex-1 min-w-0">
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Attribution Map</h1>
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-              {orgName ?? 'Org'} · Root config objects ranked by $ at risk.
-              One fix can resolve every finding under a root.
+              {orgName ?? 'Org'} · Configuration objects ranked by revenue at risk. Fixing one item often resolves multiple issues at once.
             </p>
           </div>
           <Link
@@ -353,7 +352,7 @@ export default function AttributionMapPage() {
                     {row.primary_suggested_fix && (
                       <div className="rounded-lg bg-green-50/40 dark:bg-green-900/10 border border-green-200 dark:border-green-800/40 p-3 mb-3">
                         <p className="text-[11px] uppercase tracking-wider text-green-700 dark:text-green-400 mb-1 flex items-center gap-1">
-                          <Wrench className="h-3 w-3" /> One-fix recovery
+                          <Wrench className="h-3 w-3" /> One change fixes all of these
                         </p>
                         <p className="text-sm text-gray-800 dark:text-gray-200 leading-relaxed">
                           {row.primary_suggested_fix}
@@ -371,7 +370,7 @@ export default function AttributionMapPage() {
                         className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg"
                       >
                         {isExpanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
-                        {row.finding_count} finding{row.finding_count === 1 ? '' : 's'} {isExpanded ? 'collapsed' : 'attributed'}
+                        {row.finding_count} finding{row.finding_count === 1 ? '' : 's'} {isExpanded ? 'shown' : 'linked to this'}
                       </button>
                       <div className="flex items-center gap-2 flex-wrap">
                         <button

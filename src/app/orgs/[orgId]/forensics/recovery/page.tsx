@@ -303,18 +303,18 @@ export default function RecoveryDashboardPage() {
             <ol className="list-decimal list-inside mt-1 space-y-0.5">
               <li>Select the actions you want to commit</li>
               <li>Click <b>Download CSV</b> — you'll get a single Data Loader-ready file</li>
-              <li>Open Salesforce Data Loader, upload the CSV (Upsert with Id as external ID)</li>
+              <li>Open Salesforce Data Loader and upload the CSV — choose <b>Upsert</b> and select <b>Id</b> as the match field</li>
               <li>Come back here, re-select the same rows, click <b>Mark committed</b> to record that the upload succeeded</li>
             </ol>
             <p className="mt-1.5 opacity-80">
-              v1 trusts your attestation — we don&apos;t auto-verify the Salesforce-side write. v2 will re-query the records after commit to confirm.
+              We trust your confirmation for now. After you mark it committed, we&rsquo;ll re-query Salesforce to verify the change actually landed.
             </p>
           </div>
         )}
         {tab === 'committed' && data.counts.committed > 0 && (
           <div className="px-4 py-3 rounded-lg bg-green-50/40 dark:bg-green-900/10 border border-green-200 dark:border-green-800/40 text-xs text-green-800 dark:text-green-300">
-            <strong>Done.</strong> These actions are the audit trail of what your engagement actually recovered.
-            Hand the committed list (and the CSVs you uploaded) to the client as the deliverable.
+            <strong>Done.</strong> This is your audit trail — the final list of issues your team fixed.
+            Hand it (and the CSVs you uploaded) to the client as proof of work.
           </div>
         )}
         {tab === 'rejected' && data.counts.rejected > 0 && (
@@ -537,7 +537,7 @@ export default function RecoveryDashboardPage() {
                             <p className="font-medium mb-1">
                               {action.metadata.commit_verification.verified
                                 ? '✓ Verification passed'
-                                : '⚠ Verification failed — Salesforce doesn\'t reflect the patch'}
+                                : '⚠ Verification failed — Salesforce data doesn\'t match what we uploaded'}
                             </p>
                             <p className="opacity-90 leading-relaxed mb-2">
                               {action.metadata.commit_verification.message}

@@ -247,7 +247,7 @@ export default function ForensicFindingPage() {
                   {formatMoney(recoverableUsd, finding.currency_iso_code)}
                 </p>
                 <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-0.5">
-                  {Math.round(finding.recoverability_score * 100)}% recoverability
+                  {Math.round(finding.recoverability_score * 100)}% expected to recover
                 </p>
               </div>
               <div>
@@ -302,7 +302,7 @@ export default function ForensicFindingPage() {
                 Root cause
               </h2>
               <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-                Identified by the attribution engine; explained in plain English.
+                Our root-cause analysis, explained in plain English.
               </p>
             </CardHeader>
             <CardContent>
@@ -345,7 +345,7 @@ export default function ForensicFindingPage() {
               {primaryTrace.ai_explanation && (
                 <div className="rounded-xl bg-blue-50/40 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800/40 p-4 mb-3">
                   <p className="text-[11px] uppercase tracking-wider text-blue-700 dark:text-blue-400 mb-1 flex items-center gap-1">
-                    <Sparkles className="h-3 w-3" /> Plain-English explanation
+                    <Sparkles className="h-3 w-3" /> What we found
                   </p>
                   <p className="text-sm text-gray-800 dark:text-gray-200 leading-relaxed">
                     {primaryTrace.ai_explanation}
@@ -375,7 +375,7 @@ export default function ForensicFindingPage() {
                 onClick={() => setEvidenceOpen((v) => !v)}
                 className="mt-3 w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700"
               >
-                <span>Evidence — the deterministic facts behind this attribution</span>
+                <span>Show the evidence behind this diagnosis</span>
                 {evidenceOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
               </button>
               {evidenceOpen && (
@@ -389,8 +389,9 @@ export default function ForensicFindingPage() {
           <Card>
             <CardContent>
               <p className="text-sm text-gray-500 dark:text-gray-400">
-                No attribution trace was produced for this finding — the rules engine could not identify a
-                deterministic root cause. Manual investigation in Salesforce Setup is required.
+                We couldn&rsquo;t pin this finding to a single root configuration — the underlying cause
+                may span multiple settings or involve custom logic. Open the record in Salesforce Setup
+                or check with your Salesforce admin to investigate further.
               </p>
             </CardContent>
           </Card>
@@ -408,7 +409,7 @@ export default function ForensicFindingPage() {
                   Recovery
                 </h2>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-                  Stage → Approve → Download CSV → Upload via Data Loader → Mark Committed.
+                  Stage this finding, approve it, download the CSV, upload to Salesforce via Data Loader, then mark complete.
                 </p>
               </CardHeader>
               <CardContent>
