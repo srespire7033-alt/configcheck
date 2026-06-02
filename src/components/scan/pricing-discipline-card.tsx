@@ -45,8 +45,12 @@ export function PricingDisciplineCard({ orgId }: { orgId: string }) {
   if (error) {
     return (
       <Card>
-        <CardContent className="py-6 text-sm text-amber-600 dark:text-amber-400 flex items-center gap-2">
-          <AlertTriangle className="h-4 w-4" /> Pricing discipline unavailable: {error}
+        <CardContent className="py-6 text-sm text-amber-700 dark:text-amber-300 flex items-start gap-2">
+          <AlertTriangle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+          <div>
+            <p className="font-medium">Pricing discipline couldn&rsquo;t load</p>
+            <p className="text-xs text-amber-600/80 dark:text-amber-400/80 mt-0.5">{error}</p>
+          </div>
         </CardContent>
       </Card>
     );

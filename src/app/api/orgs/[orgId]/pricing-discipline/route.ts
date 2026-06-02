@@ -124,8 +124,16 @@ export async function GET(_req: NextRequest, { params }: { params: { orgId: stri
   try {
     ({ conn } = await createRefreshableConnection(params.orgId));
   } catch (e) {
-    const msg = e instanceof Error ? e.message : 'Connection failed';
-    return NextResponse.json({ error: `Salesforce: ${msg}` }, { status: 502 });
+    // The underlying error message is often empty (e.g., when a
+    // refresh token has been revoked, jsforce throws an Error with
+    // no message). Always log the raw exception for debugging, and
+    // surface a user-actionable message to the UI.
+    console.error('[pricing-discipline] Salesforce connection failed:', e);
+    const rawMsg = e instanceof Error ? e.message.trim() : '';
+    const userMsg = rawMsg
+      ? `Couldn't reach Salesforce: ${rawMsg}. Try reconnecting from the org settings.`
+      : `Couldn't reach Salesforce — your session may have expired. Try reconnecting from the org settings.`;
+    return NextResponse.json({ error: userMsg }, { status: 502 });
   }
 
   const sinceIso = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString();
