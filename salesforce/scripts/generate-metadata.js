@@ -293,6 +293,8 @@ const APEX_CLASSES = [
   'DetectorResult',
   'SourceRecord',
   'ForensicScanService',
+  'RecoveryActionService',
+  'RecoveryActionTriggerHandler',
   'REN001RenewalUpliftDetector',
   'REN002RenewalBelowListDetector',
   'DSC001PromoRolloffDetector',
