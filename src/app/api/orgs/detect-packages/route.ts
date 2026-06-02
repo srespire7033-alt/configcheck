@@ -35,8 +35,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Organization not found' }, { status: 404 });
     }
 
-    // Connect to Salesforce
-    const { conn } = await createRefreshableConnection(org.id);
+    // Connect to Salesforce — wrap so we can return an actionable
+    // error if the refresh token has been revoked (jsforce can throw
+    // an Error with empty .message in that case).
+    let conn;
+    try {
+      ({ conn } = await createRefreshableConnection(org.id));
+    } catch (e) {
+      console.error('[detect-packages] Salesforce connection failed:', e);
+      const rawMsg = e instanceof Error ? e.message.trim() : '';
+      const userMsg = rawMsg
+        ? `Couldn't reach Salesforce: ${rawMsg}. Try reconnecting from the org settings.`
+        : `Couldn't reach Salesforce — your session may have expired. Try reconnecting from the org settings.`;
+      return NextResponse.json({ error: userMsg }, { status: 502 });
+    }
 
     // Detect packages
     const detected = await detectInstalledPackages(conn);

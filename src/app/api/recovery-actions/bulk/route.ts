@@ -236,15 +236,22 @@ async function runCommitVerifications(
     try {
       ({ conn } = await createRefreshableConnection(orgIdKey));
     } catch (e) {
-      // Org connection failed — mark all its actions as 'verification not possible.'
-      const msg = e instanceof Error ? e.message : 'Connection failed';
+      // Org connection failed — mark all its actions as 'verification
+      // not possible.' jsforce can throw an Error with empty .message
+      // when a refresh token has been revoked; guard for that so the
+      // DB note doesn't end in a dangling colon.
+      console.error(`[recovery-actions/bulk] Salesforce connection failed for org ${orgIdKey}:`, e);
+      const rawMsg = e instanceof Error ? e.message.trim() : '';
+      const userMsg = rawMsg
+        ? `Verification skipped — couldn't reach Salesforce: ${rawMsg}. Reconnect from org settings.`
+        : `Verification skipped — Salesforce session may have expired. Reconnect from org settings.`;
       for (const row of orgRows) {
         result.set(row.id, {
           verified: false,
           verified_at: new Date().toISOString(),
           expected_value: null,
           actual_value: null,
-          message: `Verification skipped — could not connect to Salesforce org: ${msg}`,
+          message: userMsg,
         });
       }
       continue;
