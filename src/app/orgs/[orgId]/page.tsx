@@ -14,6 +14,7 @@ import { SeverityModal } from '@/components/issues/severity-modal';
 import { RevenueLeakageCard, type RevenueLeakageData, type VerifiedLeakage } from '@/components/scan/revenue-leakage-card';
 import { ImpactEffortMatrix } from '@/components/scan/impact-effort-matrix';
 import { DashboardTabs, type DashboardTab } from '@/components/ui/dashboard-tabs';
+import { StatusBar, type StatusItem, type StatusSeverity } from '@/components/ui/status-bar';
 import { IssuesFilterBar, useIssuesFilter } from '@/components/scan/issues-filter';
 import { IssuesBulkSection } from '@/components/scan/issues-bulk-section';
 import { PricingDisciplineCard } from '@/components/scan/pricing-discipline-card';
@@ -66,11 +67,37 @@ export default function OrgDetailPage() {
   // the most useful at-a-glance view (matrix + complexity + AI analysis
   // + diff). Reads ?tab=<id> from the URL on first render to honor
   // shareable URLs.
-  type TabId = 'summary' | 'leakage' | 'risk' | 'pricing' | 'issues' | 'plan';
-  const initialTab = (typeof window !== 'undefined'
-    ? (new URLSearchParams(window.location.search).get('tab') as TabId | null)
-    : null) || 'summary';
+  //
+  // Six tabs collapsed to four: the three category-specific tabs
+  // (Revenue Leakage / Governance & Pipeline / Pricing Discipline) are
+  // unified into a single "Findings" tab with a sub-pill selector. The
+  // legacy 'leakage' | 'risk' | 'pricing' IDs are still accepted from
+  // the URL (back-compat for any shared link) but they all resolve to
+  // the 'findings' tab, with the matching sub-pill pre-selected.
+  type TabId = 'summary' | 'findings' | 'issues' | 'plan';
+  type FindingsSubTab = 'leakage' | 'risk' | 'pricing';
+
+  const rawTab = typeof window !== 'undefined'
+    ? new URLSearchParams(window.location.search).get('tab')
+    : null;
+  const legacyToSub: Record<string, FindingsSubTab> = {
+    leakage: 'leakage',
+    risk: 'risk',
+    pricing: 'pricing',
+  };
+  const initialTab: TabId = (() => {
+    if (!rawTab) return 'summary';
+    if (rawTab === 'summary' || rawTab === 'findings' || rawTab === 'issues' || rawTab === 'plan') {
+      return rawTab;
+    }
+    if (rawTab in legacyToSub) return 'findings';
+    return 'summary';
+  })();
+  const initialSub: FindingsSubTab = (rawTab && rawTab in legacyToSub)
+    ? legacyToSub[rawTab]
+    : 'leakage';
   const [activeTab, setActiveTab] = useState<TabId>(initialTab);
+  const [findingsSub, setFindingsSub] = useState<FindingsSubTab>(initialSub);
 
   // Filter on the issues array drives both the CategoryBreakdown tile
   // counts and the Top Issues 'pick 5' below. Hook called at top level
@@ -653,13 +680,10 @@ export default function OrgDetailPage() {
 
   return (
     <div>
-      {/* Error Banner */}
-      {error && (
-        <div className="mb-6 flex items-center gap-3 p-4 bg-amber-50 border border-amber-200 rounded-xl">
-          <AlertTriangle className="h-5 w-5 text-amber-600 flex-shrink-0" />
-          <p className="text-sm font-medium text-amber-800">{error}</p>
-        </div>
-      )}
+      {/* Status banners are now rendered together inside the org strip
+          via StatusBar (consolidates error / forensic complete / recent
+          failed into one stack of compact one-line rows). The legacy
+          per-banner JSX further down is replaced inline. */}
 
       {/* Back Navigation */}
       <button
@@ -773,104 +797,65 @@ export default function OrgDetailPage() {
         </div>
       ) : (
         <>
-          {/* Forensic completion banner. Pops up when a forensic scan
-              the user kicked off in THIS session reaches terminal. Auto-
-              clears on the next scan; user can dismiss with the X. */}
-          {forensicComplete && (
-            <div className={`mb-6 rounded-2xl p-4 sm:p-5 border ${
-              forensicComplete.status === 'completed'
-                ? 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-900/50'
+          {/* Unified compact status bar — collapses what used to be
+              three separate full-width banners (error / forensic
+              complete / recent failed) into one stack of one-line
+              rows. Each row exposes inline action + dismiss + optional
+              expand-for-detail. Multiple active conditions still
+              stack but at ~⅕ the previous vertical height. */}
+          {(() => {
+            const items: StatusItem[] = [];
+            if (error) {
+              items.push({
+                id: 'error',
+                severity: 'warning',
+                message: error,
+              });
+            }
+            if (recentFailedScan) {
+              items.push({
+                id: 'recent-failed',
+                severity: 'error',
+                message: `Last scan failed ${formatTimeAgo(recentFailedScan.created_at)} — showing most recent successful scan below`,
+                detail: (
+                  <>
+                    <div className="mb-1 break-words">
+                      {recentFailedScan.error_message ||
+                        'No error detail recorded. The scan failed before it could complete — most often because the Salesforce session expired or the OAuth token was revoked.'}
+                    </div>
+                    <div className="opacity-70">
+                      Try reconnecting the org and running a new scan.
+                    </div>
+                  </>
+                ),
+                action: {
+                  label: scanning ? 'Retrying…' : 'Retry',
+                  onClick: () => handleScan(),
+                  disabled: scanning,
+                },
+                onDismiss: () => setRecentFailedScan(null),
+              });
+            }
+            if (forensicComplete) {
+              const sev: StatusSeverity = forensicComplete.status === 'failed'
+                ? 'error'
                 : forensicComplete.status === 'partial'
-                  ? 'bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-900/50'
-                  : 'bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-900/50'
-            }`}>
-              <div className="flex items-start gap-3">
-                <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                  forensicComplete.status === 'failed'
-                    ? 'bg-red-100 dark:bg-red-900/50'
-                    : 'bg-green-100 dark:bg-green-900/50'
-                }`}>
-                  {forensicComplete.status === 'failed' ? (
-                    <AlertCircle className="w-4 h-4 text-red-600 dark:text-red-400" />
-                  ) : (
-                    <TrendingDown className={`w-4 h-4 ${
-                      forensicComplete.status === 'completed'
-                        ? 'text-green-600 dark:text-green-400'
-                        : 'text-amber-600 dark:text-amber-400'
-                    }`} />
-                  )}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className={`text-sm font-semibold ${
-                    forensicComplete.status === 'completed'
-                      ? 'text-green-800 dark:text-green-300'
-                      : forensicComplete.status === 'partial'
-                        ? 'text-amber-800 dark:text-amber-300'
-                        : 'text-red-800 dark:text-red-300'
-                  }`}>
-                    {forensicComplete.status === 'failed'
-                      ? 'Forensic scan failed'
-                      : forensicComplete.status === 'partial'
-                        ? `Forensic scan partial — ${forensicComplete.findingCount} finding${forensicComplete.findingCount === 1 ? '' : 's'} (${forensicComplete.currency} ${forensicComplete.verifiedUsd.toLocaleString()} verified)`
-                        : `Forensic scan complete — ${forensicComplete.findingCount} finding${forensicComplete.findingCount === 1 ? '' : 's'} (${forensicComplete.currency} ${forensicComplete.verifiedUsd.toLocaleString()} verified)`
-                    }
-                  </p>
-                  <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">
-                    Verified gaps appear in the Revenue Leakage card below. Click any finding to see the attribution drill-down.
-                  </p>
-                </div>
-                <button
-                  onClick={() => setForensicComplete(null)}
-                  className="p-1 -m-1 rounded text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
-                  aria-label="Dismiss"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Recent-failure banner — shown when a scan failed AFTER the latest
-              completed scan. Explains why the data below is stale and how to
-              recover, instead of leaving the user guessing why "Run scan" did
-              nothing. */}
-          {recentFailedScan && (
-            <div className="mb-6 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 rounded-2xl p-4 sm:p-5">
-              <div className="flex items-start gap-3">
-                <div className="w-8 h-8 bg-red-100 dark:bg-red-900/50 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <AlertCircle className="w-4 h-4 text-red-600 dark:text-red-400" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-red-800 dark:text-red-300">
-                    Last scan failed {formatTimeAgo(recentFailedScan.created_at)}
-                  </p>
-                  <p className="text-sm text-red-700 dark:text-red-400 mt-1 break-words">
-                    {recentFailedScan.error_message ||
-                      'No error detail recorded. The scan failed before it could complete — most often because the Salesforce session expired or the OAuth token was revoked.'}
-                  </p>
-                  <p className="text-xs text-red-600/80 dark:text-red-400/80 mt-2">
-                    The data shown below is from the most recent successful scan. Try reconnecting the org and running a new scan.
-                  </p>
-                  <div className="flex items-center gap-2 mt-3">
-                    <button
-                      onClick={() => handleScan()}
-                      disabled={scanning}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg disabled:opacity-50 transition"
-                    >
-                      <RefreshCw className={`w-3.5 h-3.5 ${scanning ? 'animate-spin' : ''}`} />
-                      {scanning ? 'Retrying…' : 'Retry scan'}
-                    </button>
-                    <button
-                      onClick={() => setRecentFailedScan(null)}
-                      className="px-3 py-1.5 text-xs font-medium text-red-700 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40 rounded-lg transition"
-                    >
-                      Dismiss
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
+                  ? 'warning'
+                  : 'success';
+              const headline =
+                forensicComplete.status === 'failed'
+                  ? 'Forensic scan failed'
+                  : `Forensic scan ${forensicComplete.status} — ${forensicComplete.findingCount} finding${forensicComplete.findingCount === 1 ? '' : 's'} (${forensicComplete.currency} ${forensicComplete.verifiedUsd.toLocaleString()} verified)`;
+              items.push({
+                id: 'forensic-complete',
+                severity: sev,
+                message: headline,
+                detail: 'Verified gaps appear in the Impact × Effort matrix and Revenue Leakage card. Click any finding to see the attribution drill-down.',
+                onDismiss: () => setForensicComplete(null),
+              });
+            }
+            return <StatusBar items={items} />;
+          })()}
 
           {/* Data observed panel — only shown for ARM scans. Surfaces the
               per-object row counts OrgPrism observed during the fetch
@@ -1176,7 +1161,43 @@ export default function OrgDetailPage() {
 
               {/* Score Breakdown */}
               <div className="flex-1 w-full">
-                <h2 className="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white mb-4 text-center lg:text-left flex items-center justify-center lg:justify-start gap-1">
+                {/* $ HEADLINE — promoted to the primary hero number when a
+                    forensic scan produced findings. The whole product pitch
+                    is "consultants close 6-figure recovery deals" — so when
+                    we have a $ to show, it leads. When forensics hasn't run
+                    or returned zero findings, this block self-hides and the
+                    Health Score title takes the hero slot as before. */}
+                {verifiedLeakage && verifiedLeakage.finding_count > 0 && verifiedLeakage.total_verified_usd > 0 && (
+                  <div className="mb-4 text-center lg:text-left">
+                    <div className="flex items-baseline gap-2 justify-center lg:justify-start flex-wrap">
+                      <span className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 dark:text-white">
+                        ${
+                          verifiedLeakage.total_verified_usd >= 1_000_000
+                            ? `${(verifiedLeakage.total_verified_usd / 1_000_000).toFixed(2)}M`
+                            : verifiedLeakage.total_verified_usd >= 1_000
+                            ? `${(verifiedLeakage.total_verified_usd / 1_000).toFixed(0)}K`
+                            : verifiedLeakage.total_verified_usd.toLocaleString()
+                        }
+                      </span>
+                      <span className="text-xs sm:text-sm font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
+                        Verified Leakage
+                      </span>
+                    </div>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                      {verifiedLeakage.finding_count} {verifiedLeakage.finding_count === 1 ? 'finding' : 'findings'} ready for triage — see the Impact × Effort matrix below
+                    </p>
+                  </div>
+                )}
+
+                {/* When a $ headline is showing, demote the Health Score
+                    title to a smaller weight so it reads as a secondary
+                    label. When there's no $ headline, keep the original
+                    larger title styling. */}
+                <h2 className={`${
+                  verifiedLeakage && verifiedLeakage.finding_count > 0 && verifiedLeakage.total_verified_usd > 0
+                    ? 'text-sm sm:text-base text-gray-600 dark:text-gray-400 mb-2'
+                    : 'text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white mb-4'
+                } text-center lg:text-left flex items-center justify-center lg:justify-start gap-1`}>
                   Your {scan.product_type ? getProductTypeLabel(scan.product_type) : 'CPQ'} Health Score
                   <ScoreFormulaTooltip />
                 </h2>
@@ -1446,9 +1467,7 @@ export default function OrgDetailPage() {
             const totalIssues = issues.length;
             const tabs: DashboardTab[] = [
               { id: 'summary', label: 'Summary' },
-              { id: 'leakage', label: 'Revenue Leakage' },
-              { id: 'risk', label: 'Governance & Pipeline' },
-              { id: 'pricing', label: 'Pricing Discipline' },
+              { id: 'findings', label: 'Findings' },
               { id: 'issues', label: 'Issues', count: totalIssues > 0 ? totalIssues : null },
               { id: 'plan', label: 'Plan' },
             ];
@@ -1760,61 +1779,90 @@ export default function OrgDetailPage() {
             );
           })()}
 
-          {/* ===== SCORE TREND CHART (Summary tab) ===== */}
-          {activeTab === 'summary' && (() => {
-            const sameTypeScans = allScans.filter((s) => s.product_type === scan.product_type);
-            if (sameTypeScans.length < 2) return null;
-            return (
-              <ScoreTrend
-                scans={sameTypeScans}
-                onViewHistory={() => router.push(`/orgs/${orgId}/history`)}
-              />
-            );
-          })()}
-
-          {/* ===== REVENUE LEAKAGE (NEW — TechTorch ask) =====
-              Headline $ number derived from org's actual SF data + per-
-              check formulas with recoverability + LTV multipliers. Sits
-              ABOVE the older revenue-risk card because this is the
-              consultant-deliverable headline. */}
-          {/* ===== SINCE LAST SCAN (DIFF) — Summary tab ===== */}
-          {activeTab === 'summary' && (
-            <div className="mb-8">
-              <SinceLastScanCard orgId={orgId} />
-            </div>
-          )}
-
-          {/* ===== \$-IMPACT × EFFORT MATRIX — Summary tab ===== */}
+          {/* ===== \$-IMPACT × EFFORT MATRIX — Summary tab =====
+              Hoisted to first position on the Summary tab. This is the
+              consultant wedge play: $ recoverable, plotted by effort to
+              capture. Whatever else lives below, the matrix is what
+              answers "where do I start?" — so it leads. Only renders
+              when a forensic scan produced findings (otherwise we have
+              nothing to plot and the empty card would lead the page). */}
           {activeTab === 'summary' && verifiedLeakage && verifiedLeakage.top_findings.length > 0 && (
             <div className="mb-8">
               <ImpactEffortMatrix findings={verifiedLeakage.top_findings} currency="USD" orgId={orgId} />
             </div>
           )}
 
-          {/* ===== REVENUE LEAKAGE — Revenue Leakage tab ===== */}
-          {activeTab === 'leakage' && (() => {
-            const meta = scan.metadata as Record<string, unknown> | null;
-            const leakage = meta?.revenue_leakage as RevenueLeakageData | undefined;
-            if (!leakage) return null;
-            return (
-              <div className="mb-8">
-                <RevenueLeakageCard leakage={leakage} verified={verifiedLeakage} orgId={orgId} />
-              </div>
-            );
-          })()}
-
-          {/* ===== GOVERNANCE + PIPELINE RISK — Risk tab ===== */}
-          {activeTab === 'risk' && (
-            <div className="mb-8 grid grid-cols-1 md:grid-cols-2 gap-6">
-              <CategoryRiskCard orgId={orgId} category="governance" />
-              <CategoryRiskCard orgId={orgId} category="pipeline" />
+          {/* ===== SINCE LAST SCAN (DIFF) — Summary tab =====
+              Sits second so returning users see "what changed?" right
+              after "where's the $?". For first-time scans this card
+              self-hides (no prior scan to diff against). */}
+          {activeTab === 'summary' && (
+            <div className="mb-8">
+              <SinceLastScanCard orgId={orgId} />
             </div>
           )}
 
-          {/* ===== PRICING DISCIPLINE — Pricing tab ===== */}
-          {activeTab === 'pricing' && (
+          {/* ===== FINDINGS TAB =====
+              Unifies what used to be three separate top-level tabs
+              (Revenue Leakage / Governance & Pipeline / Pricing
+              Discipline) under one "Findings" tab with a sub-pill
+              selector. Six top-level tabs were doing the work of four —
+              the three category views are conceptually "different
+              cuts of findings" and live more comfortably as sibling
+              pills sharing a parent. */}
+          {activeTab === 'findings' && (
             <div className="mb-8">
-              <PricingDisciplineCard orgId={orgId} />
+              {/* Sub-pill selector — lightweight, no URL sync (the
+                  parent tab is URL-synced; for sub-pill state, in-memory
+                  is fine. Most users navigate Findings → pick a sub-view
+                  → triage; deep-link to a specific sub-view is rare. */}
+              <div className="inline-flex rounded-xl bg-gray-100 dark:bg-gray-800 p-1 border border-gray-200 dark:border-gray-700 mb-6">
+                {([
+                  { id: 'leakage' as const, label: 'Revenue Leakage' },
+                  { id: 'risk' as const, label: 'Governance & Pipeline' },
+                  { id: 'pricing' as const, label: 'Pricing Discipline' },
+                ]).map(({ id, label }) => (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => setFindingsSub(id)}
+                    className={`px-3 sm:px-4 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all duration-200 ${
+                      findingsSub === id
+                        ? 'bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-sm'
+                        : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Revenue Leakage sub-view */}
+              {findingsSub === 'leakage' && (() => {
+                const meta = scan.metadata as Record<string, unknown> | null;
+                const leakage = meta?.revenue_leakage as RevenueLeakageData | undefined;
+                if (!leakage) {
+                  return (
+                    <div className="bg-white dark:bg-[#111827] rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-8 text-center">
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                        Revenue Leakage data is not available for this scan.
+                      </p>
+                    </div>
+                  );
+                }
+                return <RevenueLeakageCard leakage={leakage} verified={verifiedLeakage} orgId={orgId} />;
+              })()}
+
+              {/* Governance & Pipeline sub-view (side-by-side cards) */}
+              {findingsSub === 'risk' && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <CategoryRiskCard orgId={orgId} category="governance" />
+                  <CategoryRiskCard orgId={orgId} category="pipeline" />
+                </div>
+              )}
+
+              {/* Pricing Discipline sub-view */}
+              {findingsSub === 'pricing' && <PricingDisciplineCard orgId={orgId} />}
             </div>
           )}
 
@@ -1971,6 +2019,27 @@ export default function OrgDetailPage() {
           </div>
           )}
           {/* /side-by-side grid */}
+
+          {/* ===== SCORE TREND CHART — Summary tab (LAST POSITION) =====
+              Demoted from the top of Summary. Trend over time is useful
+              for orgs with multiple scans on file, but it's not what
+              consultants come to find on first load — they come for $
+              recovery (matrix) and what's new (diff). Living at the
+              bottom lets the score chart play the role it actually
+              plays: a glance-down to confirm momentum after the
+              decision-making content above. */}
+          {activeTab === 'summary' && (() => {
+            const sameTypeScans = allScans.filter((s) => s.product_type === scan.product_type);
+            if (sameTypeScans.length < 2) return null;
+            return (
+              <div className="mb-8">
+                <ScoreTrend
+                  scans={sameTypeScans}
+                  onViewHistory={() => router.push(`/orgs/${orgId}/history`)}
+                />
+              </div>
+            );
+          })()}
 
           {/* ===== REMEDIATION PLAN — Plan tab ===== */}
           {activeTab === 'plan' && issues.length > 0 && (

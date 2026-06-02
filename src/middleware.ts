@@ -57,8 +57,24 @@ export async function middleware(request: NextRequest) {
         setAll(cookiesToSet) {
           cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
           supabaseResponse = NextResponse.next({ request });
+          // Force SameSite=None + Secure so the session cookie survives
+          // a cross-site iframe context (e.g. when OrgPrism is embedded
+          // inside Salesforce via the orgPrismDashboard LWC). Default
+          // SameSite=Lax causes the browser to drop the cookie on the
+          // sign-in POST when the page is loaded as a third-party
+          // iframe — which is why login appeared to hang silently.
+          //
+          // Safe to set unconditionally: the SaaS runs on HTTPS in
+          // production (Vercel), and SameSite=None requires Secure
+          // anyway. Local dev over http://localhost still works
+          // because modern browsers treat localhost as a secure
+          // context.
           cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options)
+            supabaseResponse.cookies.set(name, value, {
+              ...options,
+              sameSite: 'none',
+              secure: true,
+            })
           );
         },
       },
