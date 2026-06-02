@@ -7,6 +7,7 @@ import Link from 'next/link';
 import type { CategoryRiskResponse } from '@/app/api/orgs/[orgId]/category-risk/route';
 import { getDetectorEffort, type EffortLevel } from '@/lib/forensics/types';
 import { FindingsFilterBar, useFindingsFilter } from './findings-filter';
+import { BulkActionBar } from './bulk-action-bar';
 
 const EFFORT_META: Record<EffortLevel, { label: string; bg: string; text: string }> = {
   low: { label: 'Low effort', bg: 'bg-emerald-50 dark:bg-emerald-900/20', text: 'text-emerald-700 dark:text-emerald-300' },
@@ -59,6 +60,57 @@ export function CategoryRiskCard({ orgId, category }: Props) {
   const filterState = useFindingsFilter(notHiddenFindings, {
     paramScope: category === 'governance' ? 'gov' : 'pip',
   });
+
+  // Bulk-select state. Mirrors the Revenue Leakage pattern — Set of
+  // selected finding IDs, scoped to this card so Governance + Pipeline
+  // selections stay independent (a consultant might want to stage
+  // governance findings without touching pipeline ones, and vice versa).
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const visibleIds = filterState.filtered.map((f) => f.id);
+  const visibleSelectedCount = visibleIds.filter((id) => selectedIds.has(id)).length;
+
+  function toggleSelect(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  async function handleBulkStage(ids: string[]) {
+    try {
+      const r = await fetch('/api/forensic-findings/bulk-stage', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ findingIds: ids }),
+      });
+      if (r.ok) setSelectedIds(new Set());
+    } catch (e) {
+      console.error('[category-risk bulk-stage] failed', e);
+    }
+  }
+
+  async function handleBulkHide(ids: string[]) {
+    try {
+      const r = await fetch('/api/forensic-findings/bulk-hide', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ findingIds: ids }),
+      });
+      if (r.ok) {
+        // Optimistic drop so rows vanish without refresh.
+        setLocallyHidden((prev) => {
+          const next = new Set(prev);
+          for (const id of ids) next.add(id);
+          return next;
+        });
+        setSelectedIds(new Set());
+      }
+    } catch (e) {
+      console.error('[category-risk bulk-hide] failed', e);
+    }
+  }
 
   async function handleHide(findingId: string) {
     // Optimistic local hide. The server-side update would survive a
@@ -207,22 +259,41 @@ export function CategoryRiskCard({ orgId, category }: Props) {
                 showHiddenToggle={false}
                 placeholder="Search findings…"
               />
+              <BulkActionBar
+                selectedCount={visibleSelectedCount}
+                totalVisible={visibleIds.length}
+                allVisibleIds={visibleIds}
+                selectedIds={selectedIds}
+                setSelectedIds={setSelectedIds}
+                onStage={handleBulkStage}
+                onHide={handleBulkHide}
+              />
               <div className="space-y-1">
                 {visibleTop.slice(0, 10).map((f) => {
                   const effort = getDetectorEffort(f.detector_id);
                   const effortMeta = EFFORT_META[effort];
+                  const isSelected = selectedIds.has(f.id);
                   return (
                     <div key={f.id} className="group flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => toggleSelect(f.id)}
+                        // Stop bubbling so clicking the checkbox doesn't
+                        // also follow the Link to the detail page.
+                        onClick={(e) => e.stopPropagation()}
+                        className="h-3.5 w-3.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 flex-shrink-0 cursor-pointer ml-2"
+                        aria-label={`Select finding ${f.detector_id}`}
+                      />
                       <Link
                         href={`/orgs/${orgId}/forensics/${f.id}`}
                         // min-w-0 is critical for truncate to work down the
                         // tree. Without it, flexbox lets the title's full
                         // width push this Link wider than its flex-1
-                        // allotment, defeating the truncate on the title
-                        // block below. -mx-1 was also pulling the row past
-                        // the card border, which is what made the right-
-                        // side \$ chip render outside the card.
-                        className="flex-1 min-w-0 flex items-center justify-between gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors"
+                        // allotment.
+                        className={`flex-1 min-w-0 flex items-center justify-between gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors ${
+                          isSelected ? 'ring-2 ring-blue-400 dark:ring-blue-500' : ''
+                        }`}
                       >
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2">
