@@ -32,12 +32,6 @@ export interface CategoryRiskResponse {
     severity: string;
     created_at: string;
   }>;
-  /**
-   * Debug field — what this build thinks belongs in this category.
-   * If empty, the DETECTOR_CATEGORY map on the running build doesn't
-   * have entries for this category yet (most likely cause: deploy lag).
-   */
-  _debug_detector_ids_in_category?: string[];
 }
 
 const DETECTOR_LABELS: Record<string, string> = {
@@ -81,38 +75,22 @@ export async function GET(req: NextRequest, { params }: { params: { orgId: strin
       total_at_risk_usd: 0,
       by_detector: [],
       top_findings: [],
-      _debug_detector_ids_in_category: [],
     });
   }
 
   // Pull findings for this org + these detectors.
-  const { data: rows } = await supabase
+  // NOTE: forensic_findings has no created_at column — selecting it
+  // causes the WHOLE query to error and data becomes null. Use
+  // inserted_at if needed (the actual timestamp column).
+  const { data: rows, error: findingsErr } = await supabase
     .from('forensic_findings')
-    .select('id, detector_id, title, gap_usd, severity, created_at')
+    .select('id, detector_id, title, gap_usd, severity, inserted_at')
     .eq('organization_id', params.orgId)
     .eq('user_id', user.id)
     .in('detector_id', detectorIdsInCategory);
-
-  // ── DEBUG: count without each filter to find which one's killing it ──
-  const { count: orgOnlyCount } = await supabase
-    .from('forensic_findings')
-    .select('id', { count: 'exact', head: true })
-    .eq('organization_id', params.orgId)
-    .in('detector_id', detectorIdsInCategory);
-  const { count: detectorOnlyCount } = await supabase
-    .from('forensic_findings')
-    .select('id', { count: 'exact', head: true })
-    .in('detector_id', detectorIdsInCategory);
-  const { count: bothCount } = await supabase
-    .from('forensic_findings')
-    .select('id', { count: 'exact', head: true })
-    .eq('organization_id', params.orgId)
-    .eq('user_id', user.id)
-    .in('detector_id', detectorIdsInCategory);
-  console.log(
-    `[category-risk] DEBUG counts — user.id=${user.id.slice(0, 8)}, org.user_id=${org.user_id?.slice(0, 8)}, ` +
-    `detector_only=${detectorOnlyCount}, org_only=${orgOnlyCount}, both_filters=${bothCount}, rows=${rows?.length ?? 0}`
-  );
+  if (findingsErr) {
+    console.error(`[category-risk] findings SELECT failed: ${findingsErr.message}`);
+  }
 
   const findings = (rows ?? []) as Array<{
     id: string;
@@ -120,7 +98,7 @@ export async function GET(req: NextRequest, { params }: { params: { orgId: strin
     title: string;
     gap_usd: number | string;
     severity: string;
-    created_at: string;
+    inserted_at: string;
   }>;
 
   // Aggregate per detector.
@@ -137,22 +115,10 @@ export async function GET(req: NextRequest, { params }: { params: { orgId: strin
     total += Number(f.gap_usd ?? 0);
   }
 
-  const resp: CategoryRiskResponse & {
-    _debug_user_id_short?: string;
-    _debug_org_user_id_short?: string;
-    _debug_count_detector_only?: number | null;
-    _debug_count_org_only?: number | null;
-    _debug_count_both_filters?: number | null;
-  } = {
+  const resp: CategoryRiskResponse = {
     category,
     total_findings: findings.length,
     total_at_risk_usd: round2(total),
-    _debug_detector_ids_in_category: detectorIdsInCategory,
-    _debug_user_id_short: user.id.slice(0, 8),
-    _debug_org_user_id_short: org.user_id?.slice(0, 8) ?? null,
-    _debug_count_detector_only: detectorOnlyCount ?? null,
-    _debug_count_org_only: orgOnlyCount ?? null,
-    _debug_count_both_filters: bothCount ?? null,
     by_detector: Array.from(byDetector.entries()).map(([id, a]) => ({
       detector_id: id,
       label: DETECTOR_LABELS[id] ?? id,
@@ -169,7 +135,7 @@ export async function GET(req: NextRequest, { params }: { params: { orgId: strin
         title: f.title,
         gap_usd: Number(f.gap_usd ?? 0),
         severity: f.severity,
-        created_at: f.created_at,
+        created_at: f.inserted_at, // expose as created_at for UI back-compat
       })),
   };
 
