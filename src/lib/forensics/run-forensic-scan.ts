@@ -40,6 +40,14 @@ import PROV_FOR_001 from './detectors/prov-for-001-provisioned-not-billed';
 import OPP_FOR_001 from './detectors/opp-for-001-closed-won-no-quote';
 import CON_FOR_001 from './detectors/con-for-001-contract-no-active-subs';
 import REN_003 from './detectors/ren-003-expired-quote-no-renewal';
+import REN_004 from './detectors/ren-004-renewal-quote-stuck-draft';
+import PROV_FOR_002 from './detectors/prov-for-002-sub-no-asset';
+import AMD_FOR_001 from './detectors/amd-for-001-amendment-no-effective-date';
+import AST_FOR_001 from './detectors/ast-for-001-terminated-no-credit';
+import DSC_FOR_002 from './detectors/dsc-for-002-stacked-discounts';
+import CT_FOR_001 from './detectors/ct-for-001-expired-contracted-price';
+import MDQ_FOR_001 from './detectors/mdq-for-001-segment-pricing';
+import QL_FOR_002 from './detectors/ql-for-002-approval-skipped';
 import CLASS_A_TRACER from './attribution/class-a-system-disconnect';
 import CLASS_B_TRACER from './attribution/class-b-manual-override';
 import CLASS_C_TRACER from './attribution/class-c-conflicting';
@@ -57,13 +65,14 @@ import type { DetectorContext, ForensicDetector, AttributionTracer, DetectorResu
  */
 const DETECTORS: ForensicDetector[] = [
   // Revenue Leakage detectors ($-quantifiable, retrospective)
-  REN_001, REN_002, DSC_FOR_001, QL_FOR_001,
+  REN_001, REN_002, DSC_FOR_001, DSC_FOR_002, QL_FOR_001,
   ORD_FOR_001, ORD_FOR_002, ORD_FOR_003,
-  SUB_FOR_001, PROV_FOR_001,
+  SUB_FOR_001, PROV_FOR_001, PROV_FOR_002,
+  AST_FOR_001, CT_FOR_001, MDQ_FOR_001,
   // Governance detectors (process/audit, $ ambiguous)
-  OPP_FOR_001, CON_FOR_001,
+  OPP_FOR_001, CON_FOR_001, AMD_FOR_001, QL_FOR_002,
   // Pipeline detectors (prospective, at-risk ARR)
-  REN_003,
+  REN_003, REN_004,
 ];
 
 /**

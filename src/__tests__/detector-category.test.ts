@@ -7,27 +7,28 @@ import { describe, it, expect } from 'vitest';
 import { DETECTOR_CATEGORY, getDetectorCategory } from '@/lib/forensics/types';
 
 describe('DETECTOR_CATEGORY', () => {
-  it('classifies all 12 known detectors', () => {
+  it('classifies all 20 known detectors', () => {
     const ids = Object.keys(DETECTOR_CATEGORY);
-    expect(ids).toContain('REN-001');
-    expect(ids).toContain('REN-002');
-    expect(ids).toContain('REN-003');
-    expect(ids).toContain('DSC-FOR-001');
-    expect(ids).toContain('QL-FOR-001');
-    expect(ids).toContain('ORD-FOR-001');
-    expect(ids).toContain('ORD-FOR-002');
-    expect(ids).toContain('ORD-FOR-003');
-    expect(ids).toContain('SUB-FOR-001');
-    expect(ids).toContain('PROV-FOR-001');
-    expect(ids).toContain('OPP-FOR-001');
-    expect(ids).toContain('CON-FOR-001');
+    const expected = [
+      'REN-001', 'REN-002', 'REN-003', 'REN-004',
+      'DSC-FOR-001', 'DSC-FOR-002',
+      'QL-FOR-001', 'QL-FOR-002',
+      'ORD-FOR-001', 'ORD-FOR-002', 'ORD-FOR-003',
+      'SUB-FOR-001', 'PROV-FOR-001', 'PROV-FOR-002',
+      'OPP-FOR-001', 'CON-FOR-001', 'AMD-FOR-001',
+      'AST-FOR-001', 'CT-FOR-001', 'MDQ-FOR-001',
+    ];
+    for (const e of expected) {
+      expect(ids).toContain(e);
+    }
   });
 
   it('puts $-quantifiable retrospective leaks in revenue_leakage', () => {
     const revenueLeakage = [
-      'REN-001', 'REN-002', 'DSC-FOR-001', 'QL-FOR-001',
+      'REN-001', 'REN-002', 'DSC-FOR-001', 'DSC-FOR-002', 'QL-FOR-001',
       'ORD-FOR-001', 'ORD-FOR-002', 'ORD-FOR-003',
-      'SUB-FOR-001', 'PROV-FOR-001',
+      'SUB-FOR-001', 'PROV-FOR-001', 'PROV-FOR-002',
+      'AST-FOR-001', 'CT-FOR-001', 'MDQ-FOR-001',
     ];
     for (const id of revenueLeakage) {
       expect(DETECTOR_CATEGORY[id]).toBe('revenue_leakage');
@@ -37,10 +38,13 @@ describe('DETECTOR_CATEGORY', () => {
   it('puts process/audit detectors in governance', () => {
     expect(DETECTOR_CATEGORY['OPP-FOR-001']).toBe('governance');
     expect(DETECTOR_CATEGORY['CON-FOR-001']).toBe('governance');
+    expect(DETECTOR_CATEGORY['AMD-FOR-001']).toBe('governance');
+    expect(DETECTOR_CATEGORY['QL-FOR-002']).toBe('governance');
   });
 
   it('puts prospective ARR-at-risk detectors in pipeline', () => {
     expect(DETECTOR_CATEGORY['REN-003']).toBe('pipeline');
+    expect(DETECTOR_CATEGORY['REN-004']).toBe('pipeline');
   });
 });
 

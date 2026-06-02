@@ -35,9 +35,14 @@ export interface CategoryRiskResponse {
 }
 
 const DETECTOR_LABELS: Record<string, string> = {
+  // Governance
   'OPP-FOR-001': 'Closed-Won, no Quote',
   'CON-FOR-001': 'Contract activated, all subs expired',
+  'AMD-FOR-001': 'Amendment missing effective date',
+  'QL-FOR-002': 'Discount above threshold, no approval',
+  // Pipeline
   'REN-003': 'Quote expired, no renewal action',
+  'REN-004': 'Renewal Quote stuck past contract end',
 };
 
 export async function GET(req: NextRequest, { params }: { params: { orgId: string } }) {

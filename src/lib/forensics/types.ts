@@ -157,18 +157,29 @@ export interface ForensicDetector {
  * behavior — every detector that existed before Slice 12 is a $-leak).
  */
 export const DETECTOR_CATEGORY: Record<string, 'revenue_leakage' | 'governance' | 'pipeline'> = {
+  // Revenue Leakage (\$-quantifiable, retrospective)
   'REN-001': 'revenue_leakage',
   'REN-002': 'revenue_leakage',
-  'REN-003': 'pipeline',
   'DSC-FOR-001': 'revenue_leakage',
+  'DSC-FOR-002': 'revenue_leakage',
   'QL-FOR-001': 'revenue_leakage',
   'ORD-FOR-001': 'revenue_leakage',
   'ORD-FOR-002': 'revenue_leakage',
   'ORD-FOR-003': 'revenue_leakage',
   'SUB-FOR-001': 'revenue_leakage',
   'PROV-FOR-001': 'revenue_leakage',
+  'PROV-FOR-002': 'revenue_leakage',
+  'AST-FOR-001': 'revenue_leakage',
+  'CT-FOR-001': 'revenue_leakage',
+  'MDQ-FOR-001': 'revenue_leakage',
+  // Governance (process/audit, no \$ claim)
   'OPP-FOR-001': 'governance',
   'CON-FOR-001': 'governance',
+  'AMD-FOR-001': 'governance',
+  'QL-FOR-002': 'governance',
+  // Pipeline (prospective ARR at risk)
+  'REN-003': 'pipeline',
+  'REN-004': 'pipeline',
 };
 
 export function getDetectorCategory(detectorId: string): 'revenue_leakage' | 'governance' | 'pipeline' {
