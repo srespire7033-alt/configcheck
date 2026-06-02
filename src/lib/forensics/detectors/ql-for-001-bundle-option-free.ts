@@ -19,10 +19,13 @@
  *     CPQ itself sets this flag when the line's price is rolled up
  *     into the parent. Cleanest signal of "intentional free."
  *
- *   GUARD 2 — Parent line covers the option's list price → SKIP
- *     If parent_net_total >= option_list_price × quantity (with 5%
- *     slack), the parent is already paying for the option. Common
- *     for "all-in" bundle SKUs.
+ *   GUARD 2 — REMOVED in v2.
+ *     The 'parent NetTotal >= option_expected × 0.95' heuristic was
+ *     too greedy. A \$54K PC bundle being expensive doesn't mean a
+ *     \$5K CPU option inside it is 'included' — they could be priced
+ *     independently. SBQQ__Bundled__c (Guard 1) is the CPQ-native
+ *     signal of intentional inclusion. The math-based check produced
+ *     false negatives on real leakage in test orgs.
  *
  *   GUARD 3 — Product has no resolvable list price → emit as
  *             'unresolved_price' (low confidence)
@@ -147,7 +150,6 @@ const QL_FOR_001: ForensicDetector = {
     // 4. Per-line evaluation through the guards.
     const findings: DetectorResult[] = [];
     let skippedByGuard1 = 0;
-    let skippedByGuard2 = 0;
 
     for (const line of linesRes.records) {
       // GUARD 1: CPQ-declared bundled. Skip outright.
@@ -161,15 +163,7 @@ const QL_FOR_001: ForensicDetector = {
       const resolvedList = pbeList > 0 ? pbeList : lineList;
       const quantity = parseFloat(line.SBQQ__Quantity__c || '1') || 1;
       const expectedRevenue = resolvedList * quantity;
-
-      // GUARD 2: parent line's NetTotal covers the option's list price.
-      //   parent_net_total >= expected_revenue × 0.95 (5% slack for
-      //   rounding / partial discount).
       const parentNetTotal = Number(line.SBQQ__RequiredBy__r?.SBQQ__NetTotal__c ?? 0);
-      if (expectedRevenue > 0 && parentNetTotal >= expectedRevenue * 0.95) {
-        skippedByGuard2 += 1;
-        continue;
-      }
 
       // GUARD 3: no resolvable list price → emit as unresolved.
       if (resolvedList <= 0) {
@@ -239,7 +233,6 @@ const QL_FOR_001: ForensicDetector = {
           // Surface guard outcomes for transparency in the UI
           guards: {
             cpq_bundled: false,
-            parent_covers_option: false,
             unresolved_price: false,
             product_paid_elsewhere: productPaidElsewhere,
           },
@@ -250,7 +243,6 @@ const QL_FOR_001: ForensicDetector = {
     console.log(
       `[QL-FOR-001] Emitting ${findings.length} findings ` +
       `(skipped by Guard 1 SBQQ__Bundled__c: ${skippedByGuard1}, ` +
-      `skipped by Guard 2 parent-covers-option: ${skippedByGuard2}, ` +
       `sum gap = $${Math.round(findings.reduce((s, f) => s + f.gapUsd, 0)).toLocaleString()})`
     );
     return findings;

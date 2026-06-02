@@ -110,47 +110,25 @@ describe('QL-FOR-001 — Guard 1 (SBQQ__Bundled__c)', () => {
   });
 });
 
-describe('QL-FOR-001 — Guard 2 (parent covers option)', () => {
-  it('skips when parent NetTotal >= option_list × qty × 0.95', async () => {
+// Guard 2 (parent-covers-option math) was removed in v2 — it was
+// too greedy on real org data. SBQQ__Bundled__c (Guard 1) is the
+// canonical signal of intentional inclusion. Test removed.
+describe('QL-FOR-001 — Guard 2 was removed', () => {
+  it('does NOT skip when parent NetTotal is much larger (Guard 2 gone)', async () => {
     const state: QlState = {
       candidateLines: [baseLine({
         SBQQ__Quantity__c: 10,
-        SBQQ__RequiredBy__r: { SBQQ__NetTotal__c: 1000 }, // covers $100 × 10 = $1000
+        SBQQ__RequiredBy__r: { SBQQ__NetTotal__c: 50_000 }, // parent way bigger
       })],
       pbe: [{ Id: 'PBE1', Product2Id: 'P1', UnitPrice: 100 }],
       paidCounts: [{ SBQQ__Product__c: 'P1', paid_count: 5 }],
       hasBundledField: true,
     };
-    const findings = await QL_FOR_001.run(ctx(buildMockConn(state)));
-    expect(findings).toHaveLength(0);
-  });
-
-  it('allows 5% slack — parent at 95% of expected still skips', async () => {
-    const state: QlState = {
-      candidateLines: [baseLine({
-        SBQQ__Quantity__c: 10,
-        SBQQ__RequiredBy__r: { SBQQ__NetTotal__c: 950 }, // 95% of $1000
-      })],
-      pbe: [{ Id: 'PBE1', Product2Id: 'P1', UnitPrice: 100 }],
-      paidCounts: [{ SBQQ__Product__c: 'P1', paid_count: 5 }],
-      hasBundledField: true,
-    };
-    const findings = await QL_FOR_001.run(ctx(buildMockConn(state)));
-    expect(findings).toHaveLength(0);
-  });
-
-  it('flags when parent only covers less than 95%', async () => {
-    const state: QlState = {
-      candidateLines: [baseLine({
-        SBQQ__Quantity__c: 10,
-        SBQQ__RequiredBy__r: { SBQQ__NetTotal__c: 800 }, // 80% of $1000 — not enough
-      })],
-      pbe: [{ Id: 'PBE1', Product2Id: 'P1', UnitPrice: 100 }],
-      paidCounts: [{ SBQQ__Product__c: 'P1', paid_count: 5 }],
-      hasBundledField: true,
-    };
+    // Previously this would have been skipped by Guard 2. Now Guard 1
+    // (Bundled=false default) lets it through and Guard 4 boosts conf.
     const findings = await QL_FOR_001.run(ctx(buildMockConn(state)));
     expect(findings).toHaveLength(1);
+    expect(findings[0].metadata?.sub_case).toBe('price_override_missing');
   });
 });
 
@@ -225,8 +203,6 @@ describe('QL-FOR-001 — combined scenarios', () => {
       candidateLines: [
         // GUARD 1 hit — should skip
         baseLine({ Id: 'A', SBQQ__Bundled__c: true }),
-        // GUARD 2 hit — parent covers $200 (2 × $100)
-        baseLine({ Id: 'B', SBQQ__Quantity__c: 2, SBQQ__RequiredBy__r: { SBQQ__NetTotal__c: 200 } }),
         // High-confidence flag — product paid elsewhere
         baseLine({ Id: 'C', SBQQ__Quantity__c: 5 }),
         // Unresolved — no PBE
@@ -240,7 +216,7 @@ describe('QL-FOR-001 — combined scenarios', () => {
       hasBundledField: true,
     };
     const findings = await QL_FOR_001.run(ctx(buildMockConn(state)));
-    // Expect: A skipped, B skipped, C flagged, D unresolved → 2 findings
+    // Expect: A skipped, C flagged, D unresolved → 2 findings
     expect(findings).toHaveLength(2);
     const byId = new Map(findings.map((f) => [f.primaryRecord.id, f]));
     expect(byId.get('C')?.metadata?.sub_case).toBe('price_override_missing');
