@@ -61,7 +61,7 @@ export async function GET(request: NextRequest) {
     const includeHidden = request.nextUrl.searchParams.get('includeHidden') === 'true';
     let q = supabase
       .from('forensic_findings')
-      .select('id, detector_id, severity, gap_usd, entitled_usd, realized_usd, currency_iso_code, title, status, detected_at, source_record_refs, hidden_at')
+      .select('id, detector_id, severity, gap_usd, entitled_usd, realized_usd, currency_iso_code, title, status, detected_at, source_record_refs, hidden_at, consultant_note, consultant_note_updated_at')
       .eq('forensic_scan_id', forensicScanId)
       .eq('user_id', user.id)
       .order('gap_usd', { ascending: false })

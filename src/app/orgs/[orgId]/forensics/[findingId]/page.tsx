@@ -32,6 +32,8 @@ import {
   ExternalLink,
   ChevronDown,
   ChevronRight,
+  StickyNote,
+  Save,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { LoadingScreen } from '@/components/ui/loading-screen';
@@ -61,6 +63,8 @@ interface Finding {
     supporting_records: SourceRecord[];
   };
   metadata: Record<string, unknown>;
+  consultant_note: string | null;
+  consultant_note_updated_at: string | null;
 }
 
 interface RecoveryActionData {
@@ -292,6 +296,17 @@ export default function ForensicFindingPage() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Consultant note — private free-text capture. Lives high in
+            the page (between gap headline and attribution) because
+            during a client review the consultant wants the note next
+            to the finding context, not buried below the recovery
+            workflow. */}
+        <NoteEditor
+          findingId={finding.id}
+          initialNote={finding.consultant_note}
+          initialUpdatedAt={finding.consultant_note_updated_at}
+        />
 
         {/* 2. Attribution trace — THE hero panel */}
         {primaryTrace ? (
@@ -552,5 +567,132 @@ export default function ForensicFindingPage() {
         )}
       </div>
     </div>
+  );
+}
+
+/**
+ * NoteEditor — collapsed by default when empty (just a 'add note'
+ * affordance); expanded inline when a note exists or the user clicks
+ * to add. Save is explicit (a button) rather than on-blur so a
+ * consultant who wanders off mid-thought doesn't lose work to an
+ * accidental autosave.
+ */
+function NoteEditor({
+  findingId,
+  initialNote,
+  initialUpdatedAt,
+}: {
+  findingId: string;
+  initialNote: string | null;
+  initialUpdatedAt: string | null;
+}) {
+  const [note, setNote] = useState(initialNote ?? '');
+  const [savedNote, setSavedNote] = useState(initialNote ?? '');
+  const [updatedAt, setUpdatedAt] = useState(initialUpdatedAt);
+  const [expanded, setExpanded] = useState(!!initialNote);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const dirty = note !== savedNote;
+
+  async function handleSave() {
+    if (saving) return;
+    setSaving(true);
+    setError(null);
+    try {
+      const r = await fetch(`/api/forensic-findings/${findingId}/note`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ note: note.trim() === '' ? null : note }),
+      });
+      if (!r.ok) {
+        const j = (await r.json().catch(() => ({}))) as { error?: string };
+        throw new Error(j.error || `HTTP ${r.status}`);
+      }
+      const data = (await r.json()) as {
+        consultant_note: string | null;
+        consultant_note_updated_at: string | null;
+      };
+      setSavedNote(data.consultant_note ?? '');
+      setNote(data.consultant_note ?? '');
+      setUpdatedAt(data.consultant_note_updated_at);
+      // Collapse back when the note was cleared.
+      if (!data.consultant_note) setExpanded(false);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to save');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (!expanded) {
+    return (
+      <button
+        type="button"
+        onClick={() => setExpanded(true)}
+        className="w-full flex items-center gap-2 px-4 py-3 rounded-xl border border-dashed border-gray-300 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-gray-400 dark:hover:border-gray-600 hover:text-gray-700 dark:hover:text-gray-200 transition-colors text-sm"
+      >
+        <StickyNote className="h-4 w-4" />
+        Add a private note for this finding…
+      </button>
+    );
+  }
+
+  return (
+    <Card>
+      <CardContent>
+        <div className="flex items-center justify-between gap-2 mb-2">
+          <div className="flex items-center gap-2">
+            <StickyNote className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+            <p className="text-sm font-semibold text-gray-900 dark:text-white">
+              Your private note
+            </p>
+          </div>
+          {updatedAt && !dirty && (
+            <p className="text-[11px] text-gray-400">
+              Last edited {new Date(updatedAt).toLocaleString()}
+            </p>
+          )}
+        </div>
+        <textarea
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          maxLength={4000}
+          rows={3}
+          placeholder="e.g. 'Client says this is by design — save for Phase 2'"
+          className="w-full px-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-300 dark:focus:ring-amber-700/40"
+        />
+        <div className="mt-2 flex items-center justify-between gap-2">
+          <p className="text-[11px] text-gray-500 dark:text-gray-400">
+            Private to you. {note.length}/4000 characters.
+          </p>
+          <div className="flex items-center gap-2">
+            {error && (
+              <p className="text-[11px] text-amber-700 dark:text-amber-400">{error}</p>
+            )}
+            {!savedNote && (
+              <button
+                type="button"
+                onClick={() => {
+                  setNote('');
+                  setExpanded(false);
+                }}
+                className="px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+              >
+                Cancel
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={saving || !dirty}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-amber-600 text-white hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              <Save className="h-3 w-3" />
+              {saving ? 'Saving…' : 'Save note'}
+            </button>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 }

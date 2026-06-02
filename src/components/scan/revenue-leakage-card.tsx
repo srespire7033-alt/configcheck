@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { TrendingDown, Info, ChevronDown, ChevronUp, AlertCircle, Sparkles, Network, ChevronRight, ShieldCheck, FileDown, RefreshCw, Percent, Receipt, Layers, Lock, EyeOff } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { getDetectorEffort, type EffortLevel } from '@/lib/forensics/types';
+import { FindingsFilterBar, useFindingsFilter } from './findings-filter';
 
 // Effort badge — borrowed pattern from Hubbl's severity×effort matrix.
 // Lets a consultant glance at a finding and know if it's a quick win
@@ -481,7 +482,7 @@ function VerifiedFindingsSection({
   // DELETE of hidden_at would survive a refresh anyway, but reactive
   // local state means the user doesn't have to refresh to see it go.
   const [locallyHidden, setLocallyHidden] = useState<Set<string>>(new Set());
-  const visibleFindings = findings.filter((f) => !locallyHidden.has(f.id));
+  const notHiddenFindings = findings.filter((f) => !locallyHidden.has(f.id));
   const handleHide = (id: string) => {
     setLocallyHidden((prev) => {
       const next = new Set(prev);
@@ -490,7 +491,19 @@ function VerifiedFindingsSection({
     });
   };
 
-  if (visibleFindings.length === 0) return null;
+  // Search + effort filter on top of the not-hidden findings. Filter
+  // runs client-side via useMemo — all findings are already in memory.
+  const {
+    filtered: visibleFindings,
+    search,
+    setSearch,
+    effortFilter,
+    toggleEffort,
+    clearAll,
+    isActive: filterActive,
+  } = useFindingsFilter(notHiddenFindings);
+
+  if (notHiddenFindings.length === 0) return null;
 
   // Build per-theme buckets up front.
   const themedBuckets = FINDING_THEMES.map((theme) => {
@@ -524,9 +537,11 @@ function VerifiedFindingsSection({
   const headerLabel =
     locallyHidden.size > 0
       ? `✓ ${visibleCount} verified finding${visibleCount === 1 ? '' : 's'} (${locallyHidden.size} hidden)`
-      : visibleCount < totalCount
-        ? `✓ Top ${visibleCount} of ${totalCount} verified findings`
-        : `✓ Verified findings (${totalCount})`;
+      : filterActive
+        ? `✓ ${visibleCount} of ${notHiddenFindings.length} verified findings shown`
+        : visibleCount < totalCount
+          ? `✓ Top ${visibleCount} of ${totalCount} verified findings`
+          : `✓ Verified findings (${totalCount})`;
 
   return (
     <div className="mb-5">
@@ -538,6 +553,21 @@ function VerifiedFindingsSection({
           {formatMoney(grandTotal, currency)} total
         </span>
       </div>
+
+      {/* Filter bar — only shows once we have findings to filter over.
+          Below the header so users see the count first, then the
+          filter affordances. */}
+      <FindingsFilterBar
+        search={search}
+        setSearch={setSearch}
+        effortFilter={effortFilter}
+        toggleEffort={toggleEffort}
+        clearAll={clearAll}
+        isActive={filterActive}
+        totalCount={notHiddenFindings.length}
+        filteredCount={visibleCount}
+        placeholder="Search by record name, detector, or title…"
+      />
 
       {/* 3-per-row grid keeps the dashboard short. Each card is
           self-contained: theme + count + \$ in the header, top 3
