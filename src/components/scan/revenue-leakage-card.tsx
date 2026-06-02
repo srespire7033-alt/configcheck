@@ -75,7 +75,7 @@ const CONFIDENCE_STYLES: Record<
     textClass: 'text-amber-700 dark:text-amber-300',
   },
   unknown: {
-    label: 'Estimate only',
+    label: 'Projected (formula-based)',
     bgClass: 'bg-gray-100 dark:bg-gray-800',
     textClass: 'text-gray-600 dark:text-gray-400',
   },
@@ -329,12 +329,12 @@ export function RevenueLeakageCard({ leakage, verified, orgId, currency = 'USD' 
               (drives LTV multiplier — SaaS deals compound over multi-year subscriptions, one-time deals don&rsquo;t)
             </p>
             <p>
-              <strong>Coverage:</strong> {leakage.coverage.issues_with_impact} of {leakage.coverage.issues_evaluated}{' '}
-              findings have defensible $ formulas (the rest stay qualitative)
+              <strong>How much we sized:</strong> {leakage.coverage.issues_with_impact} of {leakage.coverage.issues_evaluated}{' '}
+              issues had enough data to attach a dollar figure. The rest are flagged qualitatively.
             </p>
             <p>
-              <strong>Recoverability factors:</strong> Each formula includes a per-check recoverability % so we don&rsquo;t
-              overpromise. Some leakage is structurally non-recoverable (e.g., legitimate promo deals).
+              <strong>What you can realistically recover:</strong> Every formula is multiplied by a recovery % so we don&rsquo;t
+              overpromise. Some leakage is structurally unrecoverable (e.g., legitimate promo deals already honored).
             </p>
             <p>
               <strong>Forward-looking:</strong> This is the annualized $ you would lose <em>going forward</em> if

@@ -85,13 +85,13 @@ export function PricingDisciplineCard({ orgId }: { orgId: string }) {
               className="text-xs text-gray-500 dark:text-gray-400 mt-1 inline-flex items-center gap-1 cursor-help"
               title={data.approved_threshold_source}
             >
-              Approved threshold: {data.approved_threshold_pct}% <Info className="h-3 w-3 opacity-60" />
+              Max allowed discount: {data.approved_threshold_pct}% <Info className="h-3 w-3 opacity-60" />
             </p>
             <p className="text-sm mt-2">
               <span className={data.pct_lines_above_threshold > 30 ? 'text-amber-600 dark:text-amber-400 font-medium' : 'text-gray-600 dark:text-gray-300'}>
                 {data.pct_lines_above_threshold.toFixed(1)}%
               </span>{' '}
-              of lines exceed threshold ({data.lines_above_threshold.toLocaleString()} lines)
+              of lines discounted beyond the limit ({data.lines_above_threshold.toLocaleString()} lines)
             </p>
           </div>
 
@@ -100,7 +100,7 @@ export function PricingDisciplineCard({ orgId }: { orgId: string }) {
             <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">Manual price overrides</p>
             <p className="text-3xl font-bold">{data.override_pct.toFixed(1)}%</p>
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-              {data.override_count.toLocaleString()} lines with PricingMethod=Manual
+              {data.override_count.toLocaleString()} lines with prices typed in manually (CPQ&rsquo;s calculation bypassed)
             </p>
             <p className="text-sm mt-2 text-gray-600 dark:text-gray-300">
               {data.override_pct > 25

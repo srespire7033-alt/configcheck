@@ -97,7 +97,7 @@ export function ScoreTrend({ scans, onViewHistory }: ScoreTrendProps) {
           <div>
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Score Trend</h3>
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              Click any point to set it as the comparison baseline
+              Click any point to compare scans from that date forward
             </p>
           </div>
         </div>
@@ -113,7 +113,7 @@ export function ScoreTrend({ scans, onViewHistory }: ScoreTrendProps) {
       {/* Compare strip — baseline -> latest */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
         <CompareTile
-          label="Baseline"
+          label="Starting scan"
           subLabel={baseline.name + (baseline === trendData[0] ? ' (first scan)' : '')}
           value={`${baseline.score}/100`}
           tone="muted"
@@ -131,11 +131,11 @@ export function ScoreTrend({ scans, onViewHistory }: ScoreTrendProps) {
           deltaText={
             scoreDelta === 0
               ? 'no change'
-              : `${scoreDelta > 0 ? '+' : ''}${scoreDelta} vs baseline`
+              : `${scoreDelta > 0 ? '+' : ''}${scoreDelta} vs start`
           }
         />
         <CompareTile
-          label="Issues delta"
+          label="Issues change"
           subLabel={`${baseline.issues} → ${latest.issues}`}
           value={
             issuesDelta === 0
@@ -145,7 +145,7 @@ export function ScoreTrend({ scans, onViewHistory }: ScoreTrendProps) {
           tone={issuesDelta < 0 ? 'good' : issuesDelta > 0 ? 'bad' : 'muted'}
         />
         <CompareTile
-          label="Critical delta"
+          label="Critical issues change"
           subLabel={`${baseline.critical} → ${latest.critical}`}
           value={
             criticalDelta === 0
