@@ -68,6 +68,32 @@ function bucketImpact(gapUsd: number): ImpactLevel {
   return 'low';
 }
 
+// Effort → hours-per-finding heuristic. Lets consultants put a real
+// hours number on each cell so the matrix doubles as a rough SOW
+// estimator: 'Worth doing cell = \$8M opportunity, ~28 hrs to deliver.'
+//
+// Numbers are conservative averages from Maulik's CPQ consulting
+// experience. A Low-effort finding is a 30-min Salesforce setting
+// flip or 1 CSV row update. A Medium is per-record data correction
+// with sign-off. High is code/schema work touching accounting.
+//
+// Cell hours = count × per-finding hours. So a cell with 14 medium-
+// effort findings becomes 14 × 2 = 28 hours.
+const EFFORT_HOURS_PER_FINDING: Record<EffortLevel, number> = {
+  low: 0.5,
+  medium: 2,
+  high: 8,
+};
+
+function formatHours(hours: number): string {
+  if (hours < 1) return `${Math.round(hours * 60)} min`;
+  if (hours < 10) return `${hours.toFixed(1)} hrs`;
+  if (hours < 80) return `${Math.round(hours)} hrs`;
+  // Above ~2 weeks of work, switch to days for readability.
+  const days = hours / 8;
+  return `${days.toFixed(0)} days`;
+}
+
 function formatMoney(amount: number, currency: string): string {
   if (amount >= 1_000_000) return `${currency} ${(amount / 1_000_000).toFixed(1)}M`;
   if (amount >= 1_000) return `${currency} ${(amount / 1_000).toFixed(0)}K`;
@@ -148,6 +174,7 @@ const CELL_META: Record<string, CellMeta> = {
 interface Cell {
   count: number;
   totalUsd: number;
+  totalHours: number;
   findings: Finding[];
 }
 
@@ -172,9 +199,10 @@ export function ImpactEffortMatrix({ findings, currency = 'USD', orgId }: Props)
       const impact = bucketImpact(f.gap_usd);
       const effort: EffortLevel = getDetectorEffort(f.detector_id);
       const key = `${impact}-${effort}`;
-      const cell = buckets[key] ?? { count: 0, totalUsd: 0, findings: [] };
+      const cell = buckets[key] ?? { count: 0, totalUsd: 0, totalHours: 0, findings: [] };
       cell.count += 1;
       cell.totalUsd += f.gap_usd;
+      cell.totalHours += EFFORT_HOURS_PER_FINDING[effort];
       cell.findings.push(f);
       buckets[key] = cell;
       totalFindings += 1;
@@ -187,7 +215,8 @@ export function ImpactEffortMatrix({ findings, currency = 'USD', orgId }: Props)
       buckets[key].findings.sort((a, b) => b.gap_usd - a.gap_usd);
     }
 
-    return { buckets, totalFindings, totalUsd };
+    const totalHours = Object.values(buckets).reduce((s, c) => s + c.totalHours, 0);
+    return { buckets, totalFindings, totalUsd, totalHours };
   }, [findings]);
 
   if (matrix.totalFindings === 0) return null;
@@ -287,9 +316,18 @@ export function ImpactEffortMatrix({ findings, currency = 'USD', orgId }: Props)
                       </div>
                       <div>
                         <p className={`text-2xl font-bold leading-none ${meta.text}`}>{count}</p>
-                        <p className={`text-[11px] font-mono mt-1 ${meta.text} opacity-80`}>
-                          {isEmpty ? '—' : formatMoney(total, currency)}
-                        </p>
+                        {!isEmpty ? (
+                          <div className="mt-1 space-y-0.5">
+                            <p className={`text-[11px] font-mono ${meta.text} opacity-80`}>
+                              {formatMoney(total, currency)}
+                            </p>
+                            <p className={`text-[10px] ${meta.text} opacity-70`}>
+                              ~{formatHours(cell.totalHours)}
+                            </p>
+                          </div>
+                        ) : (
+                          <p className={`text-[11px] font-mono mt-1 ${meta.text} opacity-80`}>—</p>
+                        )}
                       </div>
                     </CellElement>
                   );
@@ -311,7 +349,7 @@ export function ImpactEffortMatrix({ findings, currency = 'USD', orgId }: Props)
         <div className="mt-4 pt-3 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between flex-wrap gap-2">
           <p className="text-[11px] text-gray-500 dark:text-gray-400 flex items-center gap-1">
             <Info className="h-3 w-3" />
-            Click any cell to see the findings inside. Effort is a heuristic per detector. {matrix.totalFindings} total finding{matrix.totalFindings === 1 ? '' : 's'}, {formatMoney(matrix.totalUsd, currency)} verified.
+            Click any cell to drill in. {matrix.totalFindings} total finding{matrix.totalFindings === 1 ? '' : 's'} &middot; {formatMoney(matrix.totalUsd, currency)} verified &middot; ~{formatHours(matrix.totalHours)} estimated work.
           </p>
         </div>
       </CardContent>
@@ -350,6 +388,9 @@ export function ImpactEffortMatrix({ findings, currency = 'USD', orgId }: Props)
                   </div>
                   <p className={`text-2xl font-bold leading-tight ${meta.text}`}>
                     {cell.count} finding{cell.count === 1 ? '' : 's'} · {formatMoney(cell.totalUsd, currency)}
+                  </p>
+                  <p className={`text-xs mt-1 ${meta.text} opacity-80`}>
+                    ~{formatHours(cell.totalHours)} estimated work
                   </p>
                 </div>
                 <button
