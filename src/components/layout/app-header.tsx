@@ -22,7 +22,13 @@ export function AppHeader() {
 
   return (
     <header className="bg-white/80 dark:bg-[#111827]/80 backdrop-blur-md border-b border-gray-200/60 dark:border-gray-700/60 sticky top-0 z-50">
-      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+      {/* Matched to org-page layout (max-w-screen-2xl = 1536px). Other
+          pages keep their narrower internal content containers, but
+          the header rail extends to the widest layout so the logo and
+          nav don't appear cramped on a big screen — and so the org page
+          (which is 1536px) doesn't show the visual mismatch of nav-
+          stops-at-1280-while-content-runs-to-1536. */}
+      <div className="max-w-screen-2xl mx-auto px-3 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-14 sm:h-16">
           {/* Logo + Team Switcher */}
           <div className="flex items-center gap-3">
