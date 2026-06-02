@@ -228,7 +228,13 @@ export default function OrgDetailPage() {
                 finding_count: findings.length,
                 status: fScan.status,
                 forensic_scan_id: fScan.id,
-                top_findings: findings.slice(0, 50).map((f) => ({
+                // No top-N cap. The card groups by detector_id and a
+                // detector with only 1–2 small-$ findings would get
+                // squeezed out of a top-50 list dominated by a single
+                // large detector. Pass everything; the card handles
+                // grouping + sort. Payload stays small (each finding
+                // is ~200B JSON; 100s of findings is still ~20KB).
+                top_findings: findings.map((f) => ({
                   id: f.id,
                   detector_id: f.detector_id,
                   title: f.title,
