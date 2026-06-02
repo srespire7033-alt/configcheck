@@ -14,6 +14,7 @@ import { SeverityModal } from '@/components/issues/severity-modal';
 import { RevenueLeakageCard, type RevenueLeakageData, type VerifiedLeakage } from '@/components/scan/revenue-leakage-card';
 import { ImpactEffortMatrix } from '@/components/scan/impact-effort-matrix';
 import { DashboardTabs, type DashboardTab } from '@/components/ui/dashboard-tabs';
+import { IssuesFilterBar, useIssuesFilter } from '@/components/scan/issues-filter';
 import { PricingDisciplineCard } from '@/components/scan/pricing-discipline-card';
 import { SinceLastScanCard } from '@/components/scan/since-last-scan-card';
 import { CategoryRiskCard } from '@/components/scan/category-risk-card';
@@ -69,6 +70,13 @@ export default function OrgDetailPage() {
     ? (new URLSearchParams(window.location.search).get('tab') as TabId | null)
     : null) || 'summary';
   const [activeTab, setActiveTab] = useState<TabId>(initialTab);
+
+  // Filter on the issues array drives both the CategoryBreakdown tile
+  // counts and the Top Issues 'pick 5' below. Hook called at top level
+  // (Rules of Hooks). When issues is empty (loading state) the filter
+  // sits dormant and re-runs once data arrives.
+  const issueFilterState = useIssuesFilter(issues);
+  const filteredIssues = issueFilterState.filtered;
   const [selectedIssue, setSelectedIssue] = useState<DBIssue | null>(null);
   const [severityFilter, setSeverityFilter] = useState<'critical' | 'warning' | 'info' | null>(null);
   const [scanProductType, setScanProductType] = useState<ProductType>('cpq');
@@ -1452,14 +1460,25 @@ export default function OrgDetailPage() {
             );
           })()}
 
+          {/* Issues tab filter — search + severity + status. Filter
+              drives CategoryBreakdown tile counts AND the Top Issues
+              list below. URL-synced under 'iss' scope. */}
+          {activeTab === 'issues' && issues.length > 0 && (
+            <IssuesFilterBar
+              {...issueFilterState}
+              totalCount={issues.length}
+              filteredCount={filteredIssues.length}
+            />
+          )}
+
           {/* ===== TOP ISSUES TO ADDRESS =====
               Sort criticals before warnings, drop info-severity, then run
               the grouper to fold sibling issues like "products missing X"
               under one parent (so the same configuration gap doesn't
               dominate the top-N list with four duplicates). */}
-          {activeTab === 'issues' && issues.length > 0 && (() => {
+          {activeTab === 'issues' && filteredIssues.length > 0 && (() => {
             const seen = new Set<string>();
-            const sorted = [...issues]
+            const sorted = [...filteredIssues]
               .sort((a, b) => {
                 const order = { critical: 0, warning: 1, info: 2 };
                 const aOrder = order[a.severity as keyof typeof order] ?? 3;
@@ -1624,7 +1643,7 @@ export default function OrgDetailPage() {
               {scan.category_scores && (
                 <CategoryBreakdown
                   scores={scan.category_scores}
-                  issues={issues}
+                  issues={filteredIssues}
                   layout="horizontal"
                   selectedCategory={selectedCategory}
                   onCategoryClick={(cat) => setSelectedCategory(selectedCategory === cat ? null : cat)}
