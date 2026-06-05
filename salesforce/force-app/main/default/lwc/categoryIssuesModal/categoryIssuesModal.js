@@ -4,13 +4,16 @@ import { refreshApex } from '@salesforce/apex';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import getCategoryIssues from '@salesforce/apex/AiAnalysisController.getCategoryIssues';
 import getIssuesByDetectorIds from '@salesforce/apex/AiAnalysisController.getIssuesByDetectorIds';
+import getIssuesBySeverity from '@salesforce/apex/AiAnalysisController.getIssuesBySeverity';
 import markFixed from '@salesforce/apex/AiAnalysisController.markFixed';
 
 /**
  * Category Issues modal.
- * Receives `category-label` (e.g. "Product Billing Config"), fetches all
- * issues in that category grouped by severity, renders critical/warning/info
- * sections with Mark Fixed + Details actions per row.
+ * Three lookup modes (pick one):
+ *   - `category-label`  → all issues mapped to that category
+ *   - `detector-ids`    → comma-separated DetectorId__c filter
+ *   - `severity`        → all findings of one severity on the latest scan
+ *                         (Phase 22o — powers the hero tile click drilldown)
  *
  * Fires `closeissuesmodal` event when user closes.
  */
@@ -18,6 +21,10 @@ export default class CategoryIssuesModal extends NavigationMixin(LightningElemen
   @api categoryLabel;
   /** Optional: comma-separated detector IDs. When provided, supersedes categoryLabel. */
   @api detectorIds;
+  /** Optional severity filter — 'critical' | 'warning' | 'info'. Phase 22o. */
+  @api severity;
+  /** Optional: scope to a specific Connected Org. Phase 22o. */
+  @api connectedOrgId;
   @track data;
   @track error;
   @track loading = true;
@@ -27,13 +34,16 @@ export default class CategoryIssuesModal extends NavigationMixin(LightningElemen
   get usesDetectorIds() {
     return typeof this.detectorIds === 'string' && this.detectorIds.length > 0;
   }
+  get usesSeverity() {
+    return typeof this.severity === 'string' && this.severity.length > 0;
+  }
   get detectorIdsList() {
     return this.usesDetectorIds ? this.detectorIds.split(',').map((s) => s.trim()).filter(Boolean) : [];
   }
 
   @wire(getCategoryIssues, { categoryLabel: '$categoryLabel' })
   wireByLabel(result) {
-    if (this.usesDetectorIds) return; // detector-id flow takes over
+    if (this.usesDetectorIds || this.usesSeverity) return; // other modes take over
     this.wiredResult = result;
     this.loading = false;
     if (result.data) {
@@ -46,7 +56,20 @@ export default class CategoryIssuesModal extends NavigationMixin(LightningElemen
 
   @wire(getIssuesByDetectorIds, { detectorIds: '$detectorIdsList', headerLabel: '$categoryLabel' })
   wireByDetectors(result) {
-    if (!this.usesDetectorIds) return;
+    if (!this.usesDetectorIds || this.usesSeverity) return;
+    this.wiredResult = result;
+    this.loading = false;
+    if (result.data) {
+      this.data = result.data;
+      this.error = undefined;
+    } else if (result.error) {
+      this.error = result.error.body?.message || result.error.message;
+    }
+  }
+
+  @wire(getIssuesBySeverity, { severity: '$severity', connectedOrgId: '$connectedOrgId' })
+  wireBySeverity(result) {
+    if (!this.usesSeverity) return;
     this.wiredResult = result;
     this.loading = false;
     if (result.data) {
@@ -61,8 +84,13 @@ export default class CategoryIssuesModal extends NavigationMixin(LightningElemen
   get hasError() { return !this.loading && Boolean(this.error); }
   get hasData() { return !this.loading && !this.error && this.data; }
   get title() {
-    if (!this.data) return this.categoryLabel ? `${this.categoryLabel} Issues` : 'Issues';
-    return `${this.categoryLabel} Issues`;
+    // Apex returns its own label in data.categoryLabel for severity mode
+    // ('Critical Issues' / 'Warnings' / 'Best Practices'). Prefer that
+    // over the @api categoryLabel which may be unset for severity mode.
+    const fromData = this.data?.categoryLabel;
+    if (fromData) return fromData.endsWith('Issues') || fromData.endsWith('Practices') || fromData.endsWith('Warnings')
+      ? fromData : `${fromData} Issues`;
+    return this.categoryLabel ? `${this.categoryLabel} Issues` : 'Issues';
   }
   get totalCountLabel() {
     return this.data ? `(${this.data.totalCount} total)` : '';

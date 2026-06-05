@@ -229,21 +229,29 @@ export default class HeroBlock extends NavigationMixin(LightningElement) {
   // path adds the deep $-analysis pass to the lighter config scan.
   handleForensics() { this.handleNewScan(); }
 
-  /** Clickable severity tile → notify issuesPanel to filter + scroll. */
+  /** Phase 22o — Clickable severity tile opens the issues modal locally.
+   *  Replaces the legacy op:filter-severity window event which depended
+   *  on issuesPanel being present on the same FlexiPage to scroll into
+   *  (often it wasn't, and the click silently no-op'd). The modal lets
+   *  users drill into Critical / Warning / Info findings from anywhere
+   *  the hero renders. The legacy event is still dispatched so existing
+   *  issuesPanel subscribers still filter — additive, not replacement. */
+  @track showSeverityModal = false;
+  @track selectedSeverity = null;
+
   handleTileClick(event) {
     const sev = event.currentTarget.dataset.severity;
-    // Window event so issuesPanel can listen regardless of where it
-    // sits on the FlexiPage. Cross-LWC pub/sub the simple way.
+    if (!sev) return;
+    this.selectedSeverity = sev;
+    this.showSeverityModal = true;
     try {
       window.dispatchEvent(new CustomEvent('op:filter-severity', { detail: { severity: sev } }));
-    } catch (e) {
-      // Locker may sandbox window in some contexts — fall back to
-      // navigating to the all-findings list view.
-      this[NavigationMixin.Navigate]({
-        type: 'standard__objectPage',
-        attributes: { objectApiName: 'ForensicFinding__c', actionName: 'list' },
-      });
-    }
+    } catch (_) { /* sandboxed window; the modal carries the experience */ }
+  }
+
+  handleCloseSeverityModal() {
+    this.showSeverityModal = false;
+    this.selectedSeverity = null;
   }
 
   // ── Report dropdown ──

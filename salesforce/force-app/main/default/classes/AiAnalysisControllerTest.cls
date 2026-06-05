@@ -177,4 +177,121 @@ private class AiAnalysisControllerTest {
         ForensicFinding__c reloaded = [SELECT Status__c FROM ForensicFinding__c WHERE Id = :f.Id];
         System.assertEquals('Resolved', reloaded.Status__c);
     }
+
+    // ─── Phase 22o — getIssuesBySeverity ─────────────────────────
+
+    @isTest
+    static void getIssuesBySeverity_blankReturnsEmpty() {
+        Test.startTest();
+        AiAnalysisController.CategoryIssuesDto dto =
+            AiAnalysisController.getIssuesBySeverity('', null);
+        Test.stopTest();
+        System.assertEquals(0, dto.totalCount);
+        System.assertEquals(0, dto.critical.size());
+    }
+
+    @isTest
+    static void getIssuesBySeverity_unknownSeverityReturnsEmpty() {
+        Test.startTest();
+        AiAnalysisController.CategoryIssuesDto dto =
+            AiAnalysisController.getIssuesBySeverity('unicorn', null);
+        Test.stopTest();
+        System.assertEquals(0, dto.totalCount);
+        System.assertEquals('unicorn', dto.categoryLabel);
+    }
+
+    @isTest
+    static void getIssuesBySeverity_critical_returnsRows() {
+        ForensicScan__c scan = new ForensicScan__c(
+            Status__c = 'Completed', CompletedAt__c = System.now(),
+            TotalLeakageUsd__c = 0, FindingCount__c = 3
+        );
+        insert scan;
+        List<ForensicFinding__c> rows = new List<ForensicFinding__c>{
+            new ForensicFinding__c(
+                ForensicScan__c = scan.Id, DetectorId__c = 'ORD-FOR-001',
+                Title__c = 'Order missing schedule', Description__c = 'No billing schedule',
+                Severity__c = 'Critical', GapUsd__c = 5000,
+                Status__c = 'Open', DetectedAt__c = System.now()
+            ),
+            new ForensicFinding__c(
+                ForensicScan__c = scan.Id, DetectorId__c = 'REN-001',
+                Title__c = 'Renewal short', Description__c = 'Below list',
+                Severity__c = 'Critical', GapUsd__c = 9000,
+                Status__c = 'Open', DetectedAt__c = System.now()
+            ),
+            new ForensicFinding__c(
+                ForensicScan__c = scan.Id, DetectorId__c = 'AP-001',
+                Title__c = 'AP test', Description__c = '...',
+                Severity__c = 'Warning', GapUsd__c = 100,
+                Status__c = 'Open', DetectedAt__c = System.now()
+            )
+        };
+        insert rows;
+
+        Test.startTest();
+        AiAnalysisController.CategoryIssuesDto critDto =
+            AiAnalysisController.getIssuesBySeverity('critical', null);
+        AiAnalysisController.CategoryIssuesDto warnDto =
+            AiAnalysisController.getIssuesBySeverity('Warning', null);
+        AiAnalysisController.CategoryIssuesDto infoDto =
+            AiAnalysisController.getIssuesBySeverity('best practices', null);
+        Test.stopTest();
+
+        System.assertEquals(2, critDto.critical.size(),
+            'Two critical findings should land in the Critical bucket');
+        System.assertEquals('Critical Issues', critDto.categoryLabel);
+        // Ordered by gapUsd DESC: REN-001 (9000) first, ORD-FOR-001 (5000) second.
+        System.assertEquals('REN-001', critDto.critical[0].detectorId);
+        System.assertEquals(1, warnDto.warning.size());
+        System.assertEquals('Warnings', warnDto.categoryLabel);
+        System.assertEquals(0, infoDto.totalCount,
+            'No Info-severity findings → empty Best Practices bucket');
+    }
+
+    @isTest
+    static void getIssuesBySeverity_filtersByConnectedOrg() {
+        // Two scans on two different connected orgs, each with one Critical.
+        // Pulling by connectedOrgId should isolate to that org's findings.
+        ConnectedOrg__c co1 = new ConnectedOrg__c(
+            Name = 'A', NamedCredentialName__c = 'NC_A',
+            InstanceUrl__c = 'https://test-a.my.salesforce.com'
+        );
+        ConnectedOrg__c co2 = new ConnectedOrg__c(
+            Name = 'B', NamedCredentialName__c = 'NC_B',
+            InstanceUrl__c = 'https://test-b.my.salesforce.com'
+        );
+        insert new List<ConnectedOrg__c>{ co1, co2 };
+
+        ForensicScan__c scan1 = new ForensicScan__c(
+            Status__c = 'Completed', CompletedAt__c = System.now().addMinutes(-5),
+            ConnectedOrg__c = co1.Id
+        );
+        ForensicScan__c scan2 = new ForensicScan__c(
+            Status__c = 'Completed', CompletedAt__c = System.now(),
+            ConnectedOrg__c = co2.Id
+        );
+        insert new List<ForensicScan__c>{ scan1, scan2 };
+
+        insert new List<ForensicFinding__c>{
+            new ForensicFinding__c(ForensicScan__c = scan1.Id, DetectorId__c = 'A-001',
+                Title__c = 'a', Severity__c = 'Critical', Status__c = 'Open',
+                DetectedAt__c = System.now(), GapUsd__c = 1),
+            new ForensicFinding__c(ForensicScan__c = scan2.Id, DetectorId__c = 'B-001',
+                Title__c = 'b', Severity__c = 'Critical', Status__c = 'Open',
+                DetectedAt__c = System.now(), GapUsd__c = 1)
+        };
+
+        Test.startTest();
+        AiAnalysisController.CategoryIssuesDto a =
+            AiAnalysisController.getIssuesBySeverity('critical', co1.Id);
+        AiAnalysisController.CategoryIssuesDto b =
+            AiAnalysisController.getIssuesBySeverity('critical', co2.Id);
+        Test.stopTest();
+
+        System.assertEquals(1, a.critical.size());
+        System.assertEquals('A-001', a.critical[0].detectorId);
+        System.assertEquals(1, b.critical.size());
+        System.assertEquals('B-001', b.critical[0].detectorId);
+    }
 }

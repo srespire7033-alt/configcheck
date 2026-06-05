@@ -284,6 +284,93 @@ public with sharing class AiAnalysisController {
         return out;
     }
 
+    /**
+     * Phase 22o — fetch all findings of the given severity on the latest
+     * scan, optionally scoped to a Connected Org. Powers the hero severity
+     * tile click → modal flow so the user can drill into Critical /
+     * Warning / Info findings without scrolling to the issues panel.
+     *
+     * `severity` is case-insensitive Apex side; client passes 'critical',
+     * 'warning', 'info', or 'Best Practices' (mapped to info).
+     * `connectedOrgId` mirrors the dashboard filter; null → most-recent
+     * scan across all orgs.
+     */
+    @AuraEnabled(cacheable=true)
+    public static CategoryIssuesDto getIssuesBySeverity(String severity, Id connectedOrgId) {
+        CategoryIssuesDto out = new CategoryIssuesDto();
+        out.totalCount = 0;
+        out.critical = new List<IssueRow>();
+        out.warning = new List<IssueRow>();
+        out.info = new List<IssueRow>();
+        if (String.isBlank(severity)) return out;
+
+        // Normalize incoming severity to the stored Severity__c picklist.
+        String sevNorm;
+        String key = severity.toLowerCase();
+        if (key == 'critical') { sevNorm = 'Critical'; out.categoryLabel = 'Critical Issues'; }
+        else if (key == 'warning') { sevNorm = 'Warning'; out.categoryLabel = 'Warnings'; }
+        else if (key == 'info' || key == 'best practices' || key == 'best practice') {
+            sevNorm = 'Info'; out.categoryLabel = 'Best Practices';
+        } else {
+            // Unknown severity bucket — return empty rather than throwing.
+            out.categoryLabel = severity;
+            return out;
+        }
+
+        // Match the dashboard's scope: latest Completed/Partial scan,
+        // optionally filtered to the same Connected Org so a customer
+        // who's flipped between orgs sees the right scan.
+        List<ForensicScan__c> scans;
+        if (connectedOrgId != null) {
+            scans = [
+                SELECT Id FROM ForensicScan__c
+                WHERE Status__c IN ('Completed','Partial')
+                  AND ConnectedOrg__c = :connectedOrgId
+                WITH SECURITY_ENFORCED
+                ORDER BY CompletedAt__c DESC NULLS LAST
+                LIMIT 1
+            ];
+        } else {
+            scans = [
+                SELECT Id FROM ForensicScan__c
+                WHERE Status__c IN ('Completed','Partial')
+                WITH SECURITY_ENFORCED
+                ORDER BY CompletedAt__c DESC NULLS LAST
+                LIMIT 1
+            ];
+        }
+        if (scans.isEmpty()) return out;
+
+        for (ForensicFinding__c f : [
+            SELECT Id, Name, Title__c, Description__c, DetectorId__c, Severity__c, Status__c,
+                   GapUsd__c, EntitledUsd__c, RealizedUsd__c, PrimaryRecordId__c,
+                   PrimaryRecordType__c, RecoverabilityScore__c
+            FROM ForensicFinding__c
+            WHERE ForensicScan__c = :scans[0].Id
+              AND Severity__c = :sevNorm
+              AND HiddenAt__c = null
+            WITH SECURITY_ENFORCED
+            ORDER BY GapUsd__c DESC NULLS LAST
+            LIMIT 500
+        ]) {
+            IssueRow r = new IssueRow();
+            r.id = f.Id;
+            r.detectorId = f.DetectorId__c;
+            r.title = f.Title__c;
+            r.description = f.Description__c;
+            r.severity = f.Severity__c;
+            r.status = f.Status__c;
+            r.gapUsd = f.GapUsd__c == null ? 0 : f.GapUsd__c;
+            r.primaryRecordId = f.PrimaryRecordId__c;
+            r.primaryRecordType = f.PrimaryRecordType__c;
+            if (sevNorm == 'Critical')     out.critical.add(r);
+            else if (sevNorm == 'Warning') out.warning.add(r);
+            else                           out.info.add(r);
+        }
+        out.totalCount = out.critical.size() + out.warning.size() + out.info.size();
+        return out;
+    }
+
     /** Mark a finding as resolved (called from category modal's "Mark Fixed" button). */
     @AuraEnabled
     public static void markFixed(Id findingId) {

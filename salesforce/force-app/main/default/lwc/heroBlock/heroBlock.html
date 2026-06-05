@@ -216,4 +216,14 @@
       </template>
     </template>
   </c-dashboard-card>
+
+  <!-- Phase 22o — severity-tile drilldown modal. Renders OUTSIDE the
+       dashboard-card so the backdrop overlays the page properly. -->
+  <template if:true={showSeverityModal}>
+    <c-category-issues-modal
+      severity={selectedSeverity}
+      connected-org-id={connectedOrgId}
+      oncloseissuesmodal={handleCloseSeverityModal}
+    ></c-category-issues-modal>
+  </template>
 </template>
