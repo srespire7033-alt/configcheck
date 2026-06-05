@@ -4,7 +4,7 @@ private class PricingDisciplineControllerTest {
     @isTest
     static void getDisciplineReturnsValidDto() {
         Test.startTest();
-        PricingDisciplineController.DisciplineDto dto = PricingDisciplineController.getDiscipline();
+        PricingDisciplineController.DisciplineDto dto = PricingDisciplineController.getDiscipline(null);
         Test.stopTest();
         System.assertNotEquals(null, dto);
         System.assertEquals(25, dto.maxAllowedDiscount);
@@ -128,5 +128,79 @@ private class PricingDisciplineControllerTest {
         PricingDisciplineController.TopOffenderOverrideComparator ovrC =
             new PricingDisciplineController.TopOffenderOverrideComparator();
         System.assert(ovrC.compare(a, b) > 0, 'Bigger override count comes first');
+    }
+
+    // ─── Phase 22u — remote scoping path ───────────────────────────
+
+    @isTest
+    static void getDisciplineLocal_works() {
+        Test.startTest();
+        PricingDisciplineController.DisciplineDto dto =
+            PricingDisciplineController.getDisciplineLocal();
+        Test.stopTest();
+        System.assertNotEquals(null, dto);
+    }
+
+    @isTest
+    static void invalidConnectedOrgId_fallsBackToLocal() {
+        Id fakeId = '500000000000000AAA';
+        Test.startTest();
+        PricingDisciplineController.DisciplineDto dto =
+            PricingDisciplineController.getDiscipline(fakeId);
+        Test.stopTest();
+        System.assertNotEquals(null, dto);
+        System.assertEquals(25, dto.maxAllowedDiscount);
+    }
+
+    @isTest
+    static void armConnectedOrg_returnsEmptyState() {
+        ConnectedOrg__c co = new ConnectedOrg__c(
+            Name = 'ARM test', NamedCredentialName__c = 'TestNC',
+            InstanceUrl__c = 'https://t.my.salesforce.com', ProductType__c = 'ARM'
+        );
+        insert co;
+        Test.startTest();
+        PricingDisciplineController.DisciplineDto dto =
+            PricingDisciplineController.getDiscipline(co.Id);
+        Test.stopTest();
+        // Pricing discipline is CPQ-only — ARM returns the "no CPQ" empty state.
+        System.assertEquals(false, dto.cpqInstalled,
+            'ARM org should yield cpqInstalled=false (no SBQQ__QuoteLine__c)');
+        System.assertEquals(0, dto.quoteLineCount);
+    }
+
+    public class QuoteLineMock implements HttpCalloutMock {
+        public HttpResponse respond(HttpRequest req) {
+            HttpResponse r = new HttpResponse();
+            r.setStatusCode(200);
+            r.setBody('{"totalSize":2,"done":true,"records":[' +
+                '{"attributes":{"type":"SBQQ__QuoteLine__c"},"Id":"a000000000000AAA",' +
+                '"SBQQ__Discount__c":15,"SBQQ__PricingMethod__c":"List",' +
+                '"SBQQ__Product__c":"01t000000000001",' +
+                '"SBQQ__Product__r":{"attributes":{"type":"Product2"},"Name":"Widget A"}},' +
+                '{"attributes":{"type":"SBQQ__QuoteLine__c"},"Id":"a000000000000BBB",' +
+                '"SBQQ__Discount__c":30,"SBQQ__PricingMethod__c":"Manual",' +
+                '"SBQQ__Product__c":"01t000000000001",' +
+                '"SBQQ__Product__r":{"attributes":{"type":"Product2"},"Name":"Widget A"}}]}');
+            return r;
+        }
+    }
+
+    @isTest
+    static void cpqConnectedOrg_routesThroughCallouts() {
+        ConnectedOrg__c co = new ConnectedOrg__c(
+            Name = 'CPQ test', NamedCredentialName__c = 'TestNC',
+            InstanceUrl__c = 'https://t.my.salesforce.com', ProductType__c = 'CPQ+Billing'
+        );
+        insert co;
+        Test.setMock(HttpCalloutMock.class, new QuoteLineMock());
+        Test.startTest();
+        PricingDisciplineController.DisciplineDto dto =
+            PricingDisciplineController.getDiscipline(co.Id);
+        Test.stopTest();
+        System.assertEquals(true, dto.cpqInstalled);
+        System.assertEquals(2, dto.quoteLineCount);
+        // One row Manual + one List → 50% override rate.
+        System.assertEquals(50.0, dto.overridePct);
     }
 }

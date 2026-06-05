@@ -1,4 +1,5 @@
 import { LightningElement, wire, track } from 'lwc';
+import { CurrentPageReference } from 'lightning/navigation';
 import getDiscipline from '@salesforce/apex/PricingDisciplineController.getDiscipline';
 import getCategoryByKey from '@salesforce/apex/CategoryDisplayController.getByKey';
 
@@ -16,6 +17,17 @@ export default class PricingDisciplineCard extends LightningElement {
   @track loading = true;
   @track expanded = false;
   @track categoryMeta;  // Phase 20d — Category__mdt-backed title/subtitle
+  /** Phase 22u — scope discipline metrics to the active Connected Org so
+   *  CPQ and ARM dashboards stop showing identical host-org numbers. */
+  @track connectedOrgId = null;
+
+  @wire(CurrentPageReference)
+  wirePageRef(pageRef) {
+    if (!pageRef) return;
+    this.connectedOrgId = pageRef.state?.c__connectedOrgId
+      || pageRef.state?.connectedOrgId
+      || null;
+  }
 
   @wire(getCategoryByKey, { categoryKey: 'pricing' })
   wireCategoryMeta({ data }) {
@@ -26,15 +38,35 @@ export default class PricingDisciplineCard extends LightningElement {
     return this.categoryMeta?.title || 'Pricing Discipline';
   }
 
-  @wire(getDiscipline)
-  wireData(result) {
-    this.loading = false;
-    if (result.data) {
-      this.data = result.data;
-      this.error = undefined;
-    } else if (result.error) {
-      this.error = result.error.body?.message || result.error.message;
+  // Phase 22u — imperative call instead of @wire because the multi-arg
+  // overload is non-cacheable (callouts). Re-fetches on connectedOrgId
+  // change + on op:scan-completed.
+  connectedCallback() {
+    window.addEventListener('op:scan-completed', this.handleScanCompleted);
+  }
+  disconnectedCallback() {
+    window.removeEventListener('op:scan-completed', this.handleScanCompleted);
+  }
+  handleScanCompleted = () => { this.fetchDiscipline(); };
+
+  renderedCallback() {
+    if (this._lastFetchedOrgId !== this.connectedOrgId) {
+      this._lastFetchedOrgId = this.connectedOrgId;
+      this.fetchDiscipline();
     }
+  }
+
+  fetchDiscipline() {
+    this.loading = true;
+    getDiscipline({ connectedOrgId: this.connectedOrgId })
+      .then((result) => {
+        this.data = result;
+        this.error = undefined;
+      })
+      .catch((err) => {
+        this.error = err?.body?.message || err?.message || 'Unknown error';
+      })
+      .finally(() => { this.loading = false; });
   }
 
   get isLoading() { return this.loading; }

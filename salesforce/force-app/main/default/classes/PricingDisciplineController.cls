@@ -43,31 +43,37 @@ public with sharing class PricingDisciplineController {
         @AuraEnabled public Integer overrideCount;
     }
 
-    @AuraEnabled(cacheable=true)
-    public static DisciplineDto getDiscipline() {
-        DisciplineDto dto = new DisciplineDto();
-        dto.cpqInstalled = false;
-        dto.quoteLineCount = 0;
-        dto.avgDiscount = 0;
-        dto.medianDiscount = 0;
-        dto.maxAllowedDiscount = DEFAULT_MAX_DISCOUNT_PCT;
-        dto.beyondLimitCount = 0;
-        dto.beyondLimitPct = 0;
-        dto.overrideCount = 0;
-        dto.overridePct = 0;
-        dto.grade = 'A';
-        dto.narrative = '';
-        dto.topDiscountOffenders = new List<TopOffender>();
-        dto.topOverrideOffenders = new List<TopOffender>();
+    /**
+     * Phase 22u — connectedOrgId param. Same scoping bug class as 22m/22r/
+     * 22s/22t: dashboards on different Connected Orgs all showed identical
+     * pricing discipline numbers because the controller queried the HOST
+     * org (techtorch) instead of the target. Null arg preserves host-
+     * local behavior; non-null routes through OrgQueryService.query so
+     * callouts hit the target via Named Credential.
+     *
+     * cacheable=false because callouts are disallowed in cacheable
+     * methods. LWC must call imperatively (matches 22t.1 pattern).
+     */
+    @AuraEnabled
+    public static DisciplineDto getDiscipline(Id connectedOrgId) {
+        if (connectedOrgId == null) return computeLocal();
+        return computeRemote(connectedOrgId);
+    }
 
+    /** Legacy zero-arg signature kept for tests + non-remote contexts. */
+    @AuraEnabled(cacheable=true)
+    public static DisciplineDto getDisciplineLocal() {
+        return computeLocal();
+    }
+
+    private static DisciplineDto computeLocal() {
+        DisciplineDto dto = freshDto();
         Map<String, Schema.SObjectType> g = Schema.getGlobalDescribe();
         if (!g.containsKey('SBQQ__QuoteLine__c')) return dto;
         dto.cpqInstalled = true;
 
         try {
             Datetime since = System.now().addDays(-365);
-            // Fully dynamic — SBQQ__QuoteLine__c may not exist as a compile-time
-            // type when CPQ isn't installed. SObject + Database.query handles both.
             List<SObject> lines = Database.query(
                 'SELECT Id, SBQQ__Discount__c, SBQQ__PricingMethod__c, SBQQ__Product__c, ' +
                 'SBQQ__Product__r.Name ' +
@@ -75,8 +81,6 @@ public with sharing class PricingDisciplineController {
                 'WHERE CreatedDate >= :since ' +
                 'LIMIT 5000'
             );
-            // Project SObjects into a generic Map shape so the aggregation
-            // method can be unit-tested without depending on SBQQ types.
             List<Map<String, Object>> rows = new List<Map<String, Object>>();
             for (SObject s : lines) {
                 Map<String, Object> r = new Map<String, Object>{
@@ -91,10 +95,77 @@ public with sharing class PricingDisciplineController {
             }
             populateDtoFromRows(dto, rows);
         } catch (Exception e) {
-            // Defensive: pricing fields may be missing in some orgs.
             dto.cpqInstalled = true;
             dto.narrative = 'Could not compute pricing discipline: ' + e.getMessage();
         }
+        return dto;
+    }
+
+    private static DisciplineDto computeRemote(Id connectedOrgId) {
+        DisciplineDto dto = freshDto();
+        List<ConnectedOrg__c> cos = [
+            SELECT NamedCredentialName__c, ProductType__c FROM ConnectedOrg__c
+            WHERE Id = :connectedOrgId WITH SECURITY_ENFORCED LIMIT 1
+        ];
+        if (cos.isEmpty()) return computeLocal();
+        // ARM orgs don't have SBQQ__QuoteLine__c — pricing discipline is a
+        // CPQ-only signal. Return the "no CPQ" state so the LWC renders
+        // the empty-state copy instead of a misleading 0%/0% grade A.
+        if (cos[0].ProductType__c == 'ARM') return dto;
+
+        DetectorContext ctx = new DetectorContext(
+            null, 'USD', cos[0].ProductType__c,
+            connectedOrgId, cos[0].NamedCredentialName__c
+        );
+        try {
+            // Single remote SOQL pulls quote-line discount + override data;
+            // queryWithFallback so an org without SBQQ__QuoteLine__c falls
+            // back to the "no CPQ installed" empty-state cleanly.
+            List<Map<String, Object>> remoteRows = OrgQueryService.queryWithFallback(ctx,
+                'SELECT Id, SBQQ__Discount__c, SBQQ__PricingMethod__c, SBQQ__Product__c, ' +
+                'SBQQ__Product__r.Name FROM SBQQ__QuoteLine__c ' +
+                'WHERE CreatedDate = LAST_N_DAYS:365 LIMIT 5000',
+                null);
+            if (remoteRows == null) return dto;
+            dto.cpqInstalled = true;
+            // Re-shape REST nested relationship into the flat key map
+            // computeLocal builds, so populateDtoFromRows works unchanged.
+            List<Map<String, Object>> rows = new List<Map<String, Object>>();
+            for (Map<String, Object> raw : remoteRows) {
+                Map<String, Object> r = new Map<String, Object>{
+                    'discount' => raw.get('SBQQ__Discount__c'),
+                    'pricingMethod' => raw.get('SBQQ__PricingMethod__c'),
+                    'productId' => raw.get('SBQQ__Product__c'),
+                    'productName' => null
+                };
+                Object prodRel = raw.get('SBQQ__Product__r');
+                if (prodRel instanceof Map<String, Object>) {
+                    r.put('productName', ((Map<String, Object>) prodRel).get('Name'));
+                }
+                rows.add(r);
+            }
+            populateDtoFromRows(dto, rows);
+        } catch (Exception e) {
+            dto.narrative = 'Could not compute pricing discipline: ' + e.getMessage();
+        }
+        return dto;
+    }
+
+    private static DisciplineDto freshDto() {
+        DisciplineDto dto = new DisciplineDto();
+        dto.cpqInstalled = false;
+        dto.quoteLineCount = 0;
+        dto.avgDiscount = 0;
+        dto.medianDiscount = 0;
+        dto.maxAllowedDiscount = DEFAULT_MAX_DISCOUNT_PCT;
+        dto.beyondLimitCount = 0;
+        dto.beyondLimitPct = 0;
+        dto.overrideCount = 0;
+        dto.overridePct = 0;
+        dto.grade = 'A';
+        dto.narrative = '';
+        dto.topDiscountOffenders = new List<TopOffender>();
+        dto.topOverrideOffenders = new List<TopOffender>();
         return dto;
     }
 
