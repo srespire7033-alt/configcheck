@@ -48,6 +48,62 @@ public with sharing class OrgQueryService {
     }
 
     /**
+     * Phase 22i — schema-tolerant SOQL. Tries the strict query first.
+     * If it fails with a schema-variance error (INVALID_FIELD/INVALID_TYPE
+     * / "No such column" / "is not supported"), retries with the loose
+     * fallback. If looseSoql is null OR the fallback also fails, returns
+     * an empty list silently — the calling detector then naturally
+     * emits zero findings rather than blowing up the scan.
+     *
+     * Use cases:
+     *   - Strict query selects a field that only exists in newer RC releases;
+     *     loose query omits it. Detector applies the filter client-side.
+     *   - Strict query targets an SObject that may not exist in older releases;
+     *     loose=null means "give up cleanly".
+     *   - Strict query uses one field name (Status); loose uses an alternate
+     *     (IsActive) for older releases.
+     *
+     * Reference: docs/arm-gap-rca.md catalogs the four schema gaps this
+     * was built to handle (PSMO.IsActive, RateCardEntry, UnitOfMeasureClass,
+     * ProductFulfillmentScenario.Status).
+     */
+    public static List<Map<String, Object>> queryWithFallback(
+            DetectorContext ctx, String strictSoql, String looseSoql) {
+        try {
+            return query(ctx, strictSoql);
+        } catch (Exception e) {
+            if (!isSchemaVarianceError(e)) {
+                // Real error (auth, network, syntax) — surface it, don't mask.
+                throw e;
+            }
+            System.debug(LoggingLevel.INFO,
+                '[OrgPrism Fallback] strict SOQL hit schema variance: ' + e.getMessage());
+            if (String.isBlank(looseSoql)) return new List<Map<String, Object>>();
+            try {
+                return query(ctx, looseSoql);
+            } catch (Exception e2) {
+                System.debug(LoggingLevel.INFO,
+                    '[OrgPrism Skip] loose SOQL also failed: ' + e2.getMessage());
+                return new List<Map<String, Object>>();
+            }
+        }
+    }
+
+    @TestVisible
+    private static Boolean isSchemaVarianceError(Exception e) {
+        String m = e.getMessage();
+        if (m == null) return false;
+        // Salesforce REST API surfaces both INVALID_FIELD and INVALID_TYPE
+        // as HTTP 400 with these codes in the body. Local SOQL exceptions
+        // surface the same messages textually. Match either path.
+        return m.contains('INVALID_FIELD')
+            || m.contains('INVALID_TYPE')
+            || m.contains('No such column')
+            || m.contains('is not supported')
+            || m.contains('understand relationship');
+    }
+
+    /**
      * Flatten Database.query results to List<Map>. Recursively
      * unwraps relationship SObjects via getPopulatedFieldsAsMap()
      * so detectors see the same nested-Map shape they get from

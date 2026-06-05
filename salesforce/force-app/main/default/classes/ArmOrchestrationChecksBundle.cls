@@ -24,18 +24,30 @@ public with sharing class ArmOrchestrationChecksBundle implements IDetector {
             deps      = testStubDeps      != null ? testStubDeps      : new List<Map<String, Object>>();
         } else {
             if (!ctx.isRemote() && !SchemaUtil.hasObject('FulfillmentStepDefinition')) return results;
-            steps = safeQ(ctx, 'SELECT Id, Name, FulfillmentStepDefinitionGroupId FROM FulfillmentStepDefinition LIMIT 5000');
-            groups = SchemaUtil.hasObject('FulfillmentStepDefinitionGroup')
-                ? safeQ(ctx, 'SELECT Id, Name FROM FulfillmentStepDefinitionGroup LIMIT 5000')
+            // Phase 22i — schema-tolerant queries. ProductFulfillmentScenario.Status
+            // is missing on older RC releases; fall back to a query without Status
+            // (ARM-048 then trusts the in-memory "Status != Active" guard against
+            // the missing field — treating it as null → not Active → flagged.
+            // For older orgs this still surfaces non-Active scenarios via the
+            // looser query, just without distinguishing Draft from Inactive.)
+            steps = OrgQueryService.queryWithFallback(ctx,
+                'SELECT Id, Name, FulfillmentStepDefinitionGroupId FROM FulfillmentStepDefinition LIMIT 5000', null);
+            groups = (ctx.isRemote() || SchemaUtil.hasObject('FulfillmentStepDefinitionGroup'))
+                ? OrgQueryService.queryWithFallback(ctx,
+                    'SELECT Id, Name FROM FulfillmentStepDefinitionGroup LIMIT 5000', null)
                 : new List<Map<String, Object>>();
-            taskRules = SchemaUtil.hasObject('FulfillmentTaskAssignmentRule')
-                ? safeQ(ctx, 'SELECT Id, Name, Status, AssignedToId FROM FulfillmentTaskAssignmentRule LIMIT 5000')
+            taskRules = (ctx.isRemote() || SchemaUtil.hasObject('FulfillmentTaskAssignmentRule'))
+                ? OrgQueryService.queryWithFallback(ctx,
+                    'SELECT Id, Name, Status, AssignedToId FROM FulfillmentTaskAssignmentRule LIMIT 5000', null)
                 : new List<Map<String, Object>>();
-            scenarios = SchemaUtil.hasObject('ProductFulfillmentScenario')
-                ? safeQ(ctx, 'SELECT Id, Name, Status FROM ProductFulfillmentScenario LIMIT 5000')
+            scenarios = (ctx.isRemote() || SchemaUtil.hasObject('ProductFulfillmentScenario'))
+                ? OrgQueryService.queryWithFallback(ctx,
+                    'SELECT Id, Name, Status FROM ProductFulfillmentScenario LIMIT 5000',
+                    'SELECT Id, Name FROM ProductFulfillmentScenario LIMIT 5000')
                 : new List<Map<String, Object>>();
-            deps = SchemaUtil.hasObject('FulfillmentStepDependencyDef')
-                ? safeQ(ctx, 'SELECT Id, FulfillmentStepDefinitionId, DependsOnStepDefinitionId FROM FulfillmentStepDependencyDef LIMIT 5000')
+            deps = (ctx.isRemote() || SchemaUtil.hasObject('FulfillmentStepDependencyDef'))
+                ? OrgQueryService.queryWithFallback(ctx,
+                    'SELECT Id, FulfillmentStepDefinitionId, DependsOnStepDefinitionId FROM FulfillmentStepDependencyDef LIMIT 5000', null)
                 : new List<Map<String, Object>>();
         }
         if (DetectorCatalogController.isActive('ARM-045')) results.addAll(evaluateARM045(steps));

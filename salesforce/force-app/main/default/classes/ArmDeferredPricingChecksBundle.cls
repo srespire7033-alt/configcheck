@@ -56,8 +56,12 @@ public with sharing class ArmDeferredPricingChecksBundle implements IDetector {
                 && SchemaUtil.hasObject('ProductSellingModelOption')) {
                 pbes = safeQ(ctx,
                     'SELECT Id, Product2Id, ProductSellingModelId, IsActive FROM PricebookEntry WHERE ProductSellingModelId != null LIMIT 10000');
-                psmos = safeQ(ctx,
-                    'SELECT Id, Product2Id, ProductSellingModelId, IsActive FROM ProductSellingModelOption WHERE IsActive = true LIMIT 10000');
+                // Phase 22i — PSMO.IsActive missing on older RC releases.
+                // queryWithFallback drops the WHERE filter; downstream loop
+                // applies it in-memory only when IsActive is actually returned.
+                psmos = OrgQueryService.queryWithFallback(ctx,
+                    'SELECT Id, Product2Id, ProductSellingModelId, IsActive FROM ProductSellingModelOption WHERE IsActive = true LIMIT 10000',
+                    'SELECT Id, Product2Id, ProductSellingModelId FROM ProductSellingModelOption LIMIT 10000');
             }
             // ARM-131: AttributeBasedAdjRule must have the PriceAdjustmentScheduleId lookup
             // AND the parent schedule must expose effective dates. Otherwise the SaaS-style

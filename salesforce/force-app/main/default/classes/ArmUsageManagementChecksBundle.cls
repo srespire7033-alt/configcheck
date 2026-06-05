@@ -20,14 +20,20 @@ public with sharing class ArmUsageManagementChecksBundle implements IDetector {
         } else {
             if (!ctx.isRemote() && !SchemaUtil.hasObject('UnitOfMeasureClass')
                 && !SchemaUtil.hasObject('UsageResource') && !SchemaUtil.hasObject('ProductUsageGrant')) return results;
-            uomClasses = SchemaUtil.hasObject('UnitOfMeasureClass')
-                ? safeQ(ctx, 'SELECT Id, Name, IsActive, DefaultUomId FROM UnitOfMeasureClass LIMIT 5000')
+            // Phase 22i — remote scans can't rely on host-org hasObject;
+            // try the query and let queryWithFallback degrade cleanly when
+            // the object isn't present on the target.
+            uomClasses = (ctx.isRemote() || SchemaUtil.hasObject('UnitOfMeasureClass'))
+                ? OrgQueryService.queryWithFallback(ctx,
+                    'SELECT Id, Name, IsActive, DefaultUomId FROM UnitOfMeasureClass LIMIT 5000', null)
                 : new List<Map<String, Object>>();
-            resources = SchemaUtil.hasObject('UsageResource')
-                ? safeQ(ctx, 'SELECT Id, Name, Status, UnitOfMeasureClassId FROM UsageResource LIMIT 5000')
+            resources = (ctx.isRemote() || SchemaUtil.hasObject('UsageResource'))
+                ? OrgQueryService.queryWithFallback(ctx,
+                    'SELECT Id, Name, Status, UnitOfMeasureClassId FROM UsageResource LIMIT 5000', null)
                 : new List<Map<String, Object>>();
-            grants = SchemaUtil.hasObject('ProductUsageGrant')
-                ? safeQ(ctx, 'SELECT Id, Name, Status, EffectiveStartDate, EffectiveEndDate FROM ProductUsageGrant LIMIT 10000')
+            grants = (ctx.isRemote() || SchemaUtil.hasObject('ProductUsageGrant'))
+                ? OrgQueryService.queryWithFallback(ctx,
+                    'SELECT Id, Name, Status, EffectiveStartDate, EffectiveEndDate FROM ProductUsageGrant LIMIT 10000', null)
                 : new List<Map<String, Object>>();
         }
         if (DetectorCatalogController.isActive('ARM-040')) results.addAll(evaluateARM040(uomClasses));

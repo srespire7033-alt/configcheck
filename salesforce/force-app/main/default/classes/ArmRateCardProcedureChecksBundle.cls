@@ -42,17 +42,27 @@ public with sharing class ArmRateCardProcedureChecksBundle implements IDetector 
                 System.debug(LoggingLevel.INFO, '[OrgPrism Skip] ARM-PRICING-BUNDLE: no RC pricing surface.');
                 return results;
             }
-            rateCards = SchemaUtil.hasObject('RateCard')
-                ? safeQuery(ctx, 'SELECT Id, Name, IsActive, EffectiveEndDate FROM RateCard LIMIT 5000')
+            // Phase 22i — local hasObject check doesn't tell us about the
+            // remote target org's schema. Use queryWithFallback with
+            // loose=null so missing-object failures return empty cleanly
+            // (older RC releases may not have RateCardEntry as a separate
+            // queryable type). Remote scans always attempt; local scans
+            // still benefit from the hasObject pre-gate.
+            rateCards = (ctx.isRemote() || SchemaUtil.hasObject('RateCard'))
+                ? OrgQueryService.queryWithFallback(ctx,
+                    'SELECT Id, Name, IsActive, EffectiveEndDate FROM RateCard LIMIT 5000', null)
                 : new List<Map<String, Object>>();
-            rateCardEntries = SchemaUtil.hasObject('RateCardEntry')
-                ? safeQuery(ctx, 'SELECT Id, RateCardId, Price FROM RateCardEntry LIMIT 10000')
+            rateCardEntries = (ctx.isRemote() || SchemaUtil.hasObject('RateCardEntry'))
+                ? OrgQueryService.queryWithFallback(ctx,
+                    'SELECT Id, RateCardId, Price FROM RateCardEntry LIMIT 10000', null)
                 : new List<Map<String, Object>>();
-            procedures = SchemaUtil.hasObject('ExpressionSet')
-                ? safeQuery(ctx, 'SELECT Id, ApiName, UsageType FROM ExpressionSet LIMIT 5000')
+            procedures = (ctx.isRemote() || SchemaUtil.hasObject('ExpressionSet'))
+                ? OrgQueryService.queryWithFallback(ctx,
+                    'SELECT Id, ApiName, UsageType FROM ExpressionSet LIMIT 5000', null)
                 : new List<Map<String, Object>>();
-            dts = SchemaUtil.hasObject('DecisionTable')
-                ? safeQuery(ctx, 'SELECT Id, MasterLabel, Status FROM DecisionTable LIMIT 5000')
+            dts = (ctx.isRemote() || SchemaUtil.hasObject('DecisionTable'))
+                ? OrgQueryService.queryWithFallback(ctx,
+                    'SELECT Id, MasterLabel, Status FROM DecisionTable LIMIT 5000', null)
                 : new List<Map<String, Object>>();
         }
 

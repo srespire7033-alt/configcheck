@@ -42,8 +42,10 @@ public with sharing class ArmSellingModelChecksBundle implements IDetector {
                 models = OrgQueryService.query(ctx,
                     'SELECT Id, Name, SellingModelType, IsActive' + freqField + pricingTermField + statusField +
                     ' FROM ProductSellingModel LIMIT 5000');
-                psmos = OrgQueryService.query(ctx,
-                    'SELECT Id, Product2Id, ProductSellingModelId, IsActive FROM ProductSellingModelOption LIMIT 10000');
+                // Phase 22i — PSMO.IsActive missing on older RC releases.
+                psmos = OrgQueryService.queryWithFallback(ctx,
+                    'SELECT Id, Product2Id, ProductSellingModelId, IsActive FROM ProductSellingModelOption LIMIT 10000',
+                    'SELECT Id, Product2Id, ProductSellingModelId FROM ProductSellingModelOption LIMIT 10000');
                 pbes = OrgQueryService.query(ctx,
                     SchemaUtil.hasField('PricebookEntry', 'ProductSellingModelId')
                         ? 'SELECT Id, ProductSellingModelId, IsActive FROM PricebookEntry WHERE ProductSellingModelId != null LIMIT 10000'
@@ -122,7 +124,7 @@ public with sharing class ArmSellingModelChecksBundle implements IDetector {
         }
         List<SourceRecord> bad = new List<SourceRecord>();
         for (Map<String, Object> o : psmos) {
-            if (!Boolean.valueOf(o.get('IsActive'))) continue;
+            if (o.containsKey('IsActive') && !Boolean.valueOf(o.get('IsActive'))) continue; // 22i
             Object mid = o.get('ProductSellingModelId');
             if (mid == null || !inactiveModelIds.contains((Id) mid)) continue;
             String label = 'Option → ' + (modelNameById.containsKey((Id) mid) ? modelNameById.get((Id) mid) : 'model') + ' (inactive)';
@@ -142,7 +144,7 @@ public with sharing class ArmSellingModelChecksBundle implements IDetector {
     static List<DetectorResult> evaluateARM019(List<Map<String, Object>> psmos) {
         Map<String, List<Map<String, Object>>> byKey = new Map<String, List<Map<String, Object>>>();
         for (Map<String, Object> o : psmos) {
-            if (!Boolean.valueOf(o.get('IsActive'))) continue;
+            if (o.containsKey('IsActive') && !Boolean.valueOf(o.get('IsActive'))) continue; // 22i
             Object pid = o.get('Product2Id'); Object mid = o.get('ProductSellingModelId');
             if (pid == null || mid == null) continue;
             String k = String.valueOf(pid) + '|' + String.valueOf(mid);
@@ -182,7 +184,7 @@ public with sharing class ArmSellingModelChecksBundle implements IDetector {
         if (draftIds.isEmpty()) return new List<DetectorResult>();
         Set<Id> referenced = new Set<Id>();
         for (Map<String, Object> o : psmos) {
-            if (!Boolean.valueOf(o.get('IsActive'))) continue;
+            if (o.containsKey('IsActive') && !Boolean.valueOf(o.get('IsActive'))) continue; // 22i
             Object mid = o.get('ProductSellingModelId');
             if (mid != null && draftIds.contains((Id) mid)) referenced.add((Id) mid);
         }

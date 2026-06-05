@@ -45,8 +45,13 @@ public with sharing class ArmCatalogChecksBundle implements IDetector {
             try {
                 products = OrgQueryService.query(ctx,
                     'SELECT Id, Name, Family FROM Product2 WHERE IsActive = true LIMIT 10000');
-                psmos = OrgQueryService.query(ctx,
-                    'SELECT Id, Product2Id, ProductSellingModelId, IsActive FROM ProductSellingModelOption LIMIT 10000');
+                // Phase 22i — PSMO.IsActive is missing on older RC Advanced
+                // releases. Try with the field; on schema variance fall back to
+                // selecting without it. evaluateARM001 below treats missing
+                // IsActive as active (the Vercel reference behavior).
+                psmos = OrgQueryService.queryWithFallback(ctx,
+                    'SELECT Id, Product2Id, ProductSellingModelId, IsActive FROM ProductSellingModelOption LIMIT 10000',
+                    'SELECT Id, Product2Id, ProductSellingModelId FROM ProductSellingModelOption LIMIT 10000');
                 pbes = OrgQueryService.query(ctx,
                     'SELECT Id, Product2Id, IsActive FROM PricebookEntry LIMIT 10000');
                 categories = OrgQueryService.query(ctx,
@@ -74,7 +79,9 @@ public with sharing class ArmCatalogChecksBundle implements IDetector {
     static List<DetectorResult> evaluateARM001(List<Map<String, Object>> products, List<Map<String, Object>> psmos) {
         Set<Id> productsWithModel = new Set<Id>();
         for (Map<String, Object> o : psmos) {
-            if (!Boolean.valueOf(o.get('IsActive'))) continue;
+            // Phase 22i — treat missing IsActive (older RC release) as active.
+            // Only skip when IsActive is explicitly present and false.
+            if (o.containsKey('IsActive') && !Boolean.valueOf(o.get('IsActive'))) continue;
             Object pid = o.get('Product2Id');
             if (pid != null) productsWithModel.add((Id) pid);
         }
