@@ -28,15 +28,39 @@ export default class ComplexityCard extends LightningElement {
       || null;
   }
 
-  @wire(getComplexity, { connectedOrgId: '$connectedOrgId' })
-  wireData(result) {
-    this.loading = false;
-    if (result.data) {
-      this.data = result.data;
-      this.error = undefined;
-    } else if (result.error) {
-      this.error = result.error.body?.message || result.error.message;
+  /** Phase 22t — imperative @apex call instead of @wire. The remote
+   *  variant does HTTP callouts which Apex forbids in cacheable methods,
+   *  so the multi-arg signature is non-cacheable and @wire rejects it
+   *  with "must be marked as @AuraEnabled(cacheable=true)." Imperative
+   *  call sidesteps that. We re-fetch when connectedOrgId changes and
+   *  when a scan completes. */
+  connectedCallback() {
+    window.addEventListener('op:scan-completed', this.handleScanCompleted);
+  }
+  disconnectedCallback() {
+    window.removeEventListener('op:scan-completed', this.handleScanCompleted);
+  }
+  handleScanCompleted = () => { this.fetchComplexity(); };
+
+  /** Re-fetch whenever connectedOrgId becomes available or changes. */
+  renderedCallback() {
+    if (this._lastFetchedOrgId !== this.connectedOrgId) {
+      this._lastFetchedOrgId = this.connectedOrgId;
+      this.fetchComplexity();
     }
+  }
+
+  fetchComplexity() {
+    this.loading = true;
+    getComplexity({ connectedOrgId: this.connectedOrgId })
+      .then((result) => {
+        this.data = result;
+        this.error = undefined;
+      })
+      .catch((err) => {
+        this.error = err?.body?.message || err?.message || 'Unknown error';
+      })
+      .finally(() => { this.loading = false; });
   }
 
   get isLoading() { return this.loading; }
