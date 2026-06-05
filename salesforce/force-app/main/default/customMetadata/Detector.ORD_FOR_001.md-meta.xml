@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomMetadata xmlns="http://soap.sforce.com/2006/04/metadata" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" fqn="Detector__mdt.ORD_FOR_001">
+    <label>ORD-FOR-001</label>
+    <protected>false</protected>
+    <values><field>DetectorId__c</field><value xsi:type="xsd:string">ORD-FOR-001</value></values>
+    <values><field>Label__c</field><value xsi:type="xsd:string">Order activated, no billing schedule</value></values>
+    <values><field>Category__c</field><value xsi:type="xsd:string">revenue_leakage</value></values>
+    <values><field>AppliesTo__c</field><value xsi:type="xsd:string">CPQ+Billing</value></values>
+    <values><field>CriticalThresholdUsd__c</field><value xsi:type="xsd:double">50000</value></values>
+    <values><field>WarningThresholdUsd__c</field><value xsi:type="xsd:double">5000</value></values>
+    <values><field>RecoverabilityScore__c</field><value xsi:type="xsd:double">0.95</value></values>
+    <values><field>Effort__c</field><value xsi:type="xsd:string">high</value></values>
+    <values><field>IsActive__c</field><value xsi:type="xsd:boolean">true</value></values>
+    <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
+</CustomMetadata>

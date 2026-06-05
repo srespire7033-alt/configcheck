@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>RequiredSurface__c</fullName>
+    <label>Required Surface</label>
+    <description>Optional. Specifies which managed package or feature surface must be present in the target org for this detector to run. Semicolon-separated; ANY match enables the detector. Examples: "SBQQ" (CPQ), "blng" (Billing), "ProductSellingModel" (Revenue Cloud / ARM). When blank, detector runs regardless. Phase 22a-0.</description>
+    <type>Text</type>
+    <length>255</length>
+    <fieldManageability>SubscriberControlled</fieldManageability>
+</CustomField>

@@ -1,0 +1,217 @@
+/**
+ * Phase 22c-2 — Rate cards + Pricing procedures + Decision tables (7 checks).
+ *
+ *   ARM-021 — Active rate card with no entries (warning)
+ *   ARM-022 — Rate card entry with no/zero price (warning)
+ *   ARM-023 — Expired rate card still active (info)
+ *   ARM-006 — Pricing procedure missing UsageType (warning)
+ *            (Apex re-queries ExpressionSet WITHOUT the UsageType filter the
+ *             SaaS bulk query has, which would otherwise mask this check.)
+ *   ARM-027 — Multiple active pricing procedures (info)
+ *   ARM-008 — Decision tables not Active (warning)
+ *   ARM-029 — All decision tables are Draft (warning)
+ */
+public with sharing class ArmRateCardProcedureChecksBundle implements IDetector {
+
+    @TestVisible static List<Map<String, Object>> testStubRateCards;
+    @TestVisible static List<Map<String, Object>> testStubRateCardEntries;
+    @TestVisible static List<Map<String, Object>> testStubExpressionSetsAll;
+    @TestVisible static List<Map<String, Object>> testStubDecisionTables;
+
+    public String getDetectorId() { return 'ARM-PRICING-BUNDLE'; }
+    public String getLabel() { return 'ARM Rate Card + Procedure + Decision Table checks'; }
+    public Set<String> getAppliesTo() { return new Set<String>{ 'ARM' }; }
+
+    public List<DetectorResult> run(DetectorContext ctx) {
+        List<DetectorResult> results = new List<DetectorResult>();
+        List<Map<String, Object>> rateCards;
+        List<Map<String, Object>> rateCardEntries;
+        List<Map<String, Object>> procedures;
+        List<Map<String, Object>> dts;
+        Boolean usingStubs = (testStubRateCards != null || testStubRateCardEntries != null
+            || testStubExpressionSetsAll != null || testStubDecisionTables != null);
+        if (usingStubs) {
+            rateCards       = testStubRateCards          != null ? testStubRateCards          : new List<Map<String, Object>>();
+            rateCardEntries = testStubRateCardEntries    != null ? testStubRateCardEntries    : new List<Map<String, Object>>();
+            procedures      = testStubExpressionSetsAll  != null ? testStubExpressionSetsAll  : new List<Map<String, Object>>();
+            dts             = testStubDecisionTables     != null ? testStubDecisionTables     : new List<Map<String, Object>>();
+        } else {
+            if (!ctx.isRemote() && !SchemaUtil.hasObject('RateCard')
+                && !SchemaUtil.hasObject('ExpressionSet')
+                && !SchemaUtil.hasObject('DecisionTable')) {
+                System.debug(LoggingLevel.INFO, '[OrgPrism Skip] ARM-PRICING-BUNDLE: no RC pricing surface.');
+                return results;
+            }
+            rateCards = SchemaUtil.hasObject('RateCard')
+                ? safeQuery(ctx, 'SELECT Id, Name, IsActive, EffectiveEndDate FROM RateCard LIMIT 5000')
+                : new List<Map<String, Object>>();
+            rateCardEntries = SchemaUtil.hasObject('RateCardEntry')
+                ? safeQuery(ctx, 'SELECT Id, RateCardId, Price FROM RateCardEntry LIMIT 10000')
+                : new List<Map<String, Object>>();
+            procedures = SchemaUtil.hasObject('ExpressionSet')
+                ? safeQuery(ctx, 'SELECT Id, ApiName, UsageType FROM ExpressionSet LIMIT 5000')
+                : new List<Map<String, Object>>();
+            dts = SchemaUtil.hasObject('DecisionTable')
+                ? safeQuery(ctx, 'SELECT Id, MasterLabel, Status FROM DecisionTable LIMIT 5000')
+                : new List<Map<String, Object>>();
+        }
+
+        if (DetectorCatalogController.isActive('ARM-021')) results.addAll(evaluateARM021(rateCards, rateCardEntries));
+        if (DetectorCatalogController.isActive('ARM-022')) results.addAll(evaluateARM022(rateCardEntries, rateCards));
+        if (DetectorCatalogController.isActive('ARM-023')) results.addAll(evaluateARM023(rateCards));
+        if (DetectorCatalogController.isActive('ARM-006')) results.addAll(evaluateARM006(procedures));
+        if (DetectorCatalogController.isActive('ARM-027')) results.addAll(evaluateARM027(procedures));
+        if (DetectorCatalogController.isActive('ARM-008')) results.addAll(evaluateARM008(dts));
+        if (DetectorCatalogController.isActive('ARM-029')) results.addAll(evaluateARM029(dts));
+        return results;
+    }
+
+    @TestVisible static List<Map<String, Object>> safeQuery(DetectorContext ctx, String soql) {
+        try { return OrgQueryService.query(ctx, soql); }
+        catch (Exception e) { return new List<Map<String, Object>>(); }
+    }
+    static Date parseD(Object o) {
+        if (o == null) return null;
+        if (o instanceof Date) return (Date) o;
+        String s = String.valueOf(o);
+        if (s.length() >= 10) s = s.substring(0, 10);
+        try { return Date.valueOf(s); } catch (Exception e) { return null; }
+    }
+
+    @TestVisible
+    static List<DetectorResult> evaluateARM021(List<Map<String, Object>> cards, List<Map<String, Object>> entries) {
+        Set<Id> cardsWithEntries = new Set<Id>();
+        for (Map<String, Object> e : entries) {
+            Object cid = e.get('RateCardId');
+            if (cid != null) cardsWithEntries.add((Id) cid);
+        }
+        List<SourceRecord> bad = new List<SourceRecord>();
+        for (Map<String, Object> c : cards) {
+            if (!Boolean.valueOf(c.get('IsActive'))) continue;
+            if (cardsWithEntries.contains((Id) c.get('Id'))) continue;
+            bad.add(new SourceRecord('RateCard', (Id) c.get('Id'), (String) c.get('Name')));
+        }
+        if (bad.isEmpty()) return new List<DetectorResult>();
+        DetectorResult dr = new DetectorResult();
+        dr.detectorId = 'ARM-021'; dr.severity = 'Warning'; dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
+        dr.title = bad.size() + ' active rate card(s) with no entries';
+        dr.description = 'Rate cards without entries cannot price anything.';
+        dr.primaryRecord = bad[0];
+        for (Integer i = 1; i < bad.size(); i++) dr.supportingRecords.add(bad[i]);
+        return new List<DetectorResult>{ dr };
+    }
+
+    @TestVisible
+    static List<DetectorResult> evaluateARM022(List<Map<String, Object>> entries, List<Map<String, Object>> cards) {
+        Map<Id, String> cardNames = new Map<Id, String>();
+        for (Map<String, Object> c : cards) cardNames.put((Id) c.get('Id'), (String) c.get('Name'));
+        List<SourceRecord> bad = new List<SourceRecord>();
+        for (Map<String, Object> e : entries) {
+            Object pr = e.get('Price');
+            Decimal v = pr == null ? null : (Decimal) pr;
+            if (v != null && v != 0) continue;
+            String label = cardNames.containsKey((Id) e.get('RateCardId'))
+                ? cardNames.get((Id) e.get('RateCardId')) : 'Entry';
+            bad.add(new SourceRecord('RateCardEntry', (Id) e.get('Id'), label));
+        }
+        if (bad.isEmpty()) return new List<DetectorResult>();
+        DetectorResult dr = new DetectorResult();
+        dr.detectorId = 'ARM-022'; dr.severity = 'Warning'; dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
+        dr.title = bad.size() + ' rate card entry(s) with no price';
+        dr.description = 'Entries with null or zero price will not produce revenue.';
+        dr.primaryRecord = bad[0];
+        for (Integer i = 1; i < bad.size(); i++) dr.supportingRecords.add(bad[i]);
+        return new List<DetectorResult>{ dr };
+    }
+
+    @TestVisible
+    static List<DetectorResult> evaluateARM023(List<Map<String, Object>> cards) {
+        Date td = Date.today();
+        List<SourceRecord> bad = new List<SourceRecord>();
+        for (Map<String, Object> c : cards) {
+            if (!Boolean.valueOf(c.get('IsActive'))) continue;
+            Date ed = parseD(c.get('EffectiveEndDate'));
+            if (ed == null || !(ed < td)) continue;
+            bad.add(new SourceRecord('RateCard', (Id) c.get('Id'), (String) c.get('Name') + ' (ended ' + ed + ')'));
+        }
+        if (bad.isEmpty()) return new List<DetectorResult>();
+        DetectorResult dr = new DetectorResult();
+        dr.detectorId = 'ARM-023'; dr.severity = 'Info'; dr.gapUsd = 0; dr.recoverabilityScore = 1.0;
+        dr.title = bad.size() + ' rate card(s) past end date but active';
+        dr.description = 'Deactivate rate cards once they expire.';
+        dr.primaryRecord = bad[0];
+        for (Integer i = 1; i < bad.size(); i++) dr.supportingRecords.add(bad[i]);
+        return new List<DetectorResult>{ dr };
+    }
+
+    @TestVisible
+    static List<DetectorResult> evaluateARM006(List<Map<String, Object>> procs) {
+        List<SourceRecord> bad = new List<SourceRecord>();
+        for (Map<String, Object> p : procs) {
+            Object ut = p.get('UsageType');
+            if (ut != null && !String.isBlank(String.valueOf(ut))) continue;
+            bad.add(new SourceRecord('ExpressionSet', (Id) p.get('Id'),
+                p.get('ApiName') == null ? 'Procedure' : (String) p.get('ApiName')));
+        }
+        if (bad.isEmpty()) return new List<DetectorResult>();
+        DetectorResult dr = new DetectorResult();
+        dr.detectorId = 'ARM-006'; dr.severity = 'Warning'; dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
+        dr.title = bad.size() + ' pricing procedure(s) without UsageType';
+        dr.description = 'ExpressionSet records without UsageType won\'t route to the pricing engine.';
+        dr.primaryRecord = bad[0];
+        for (Integer i = 1; i < bad.size(); i++) dr.supportingRecords.add(bad[i]);
+        return new List<DetectorResult>{ dr };
+    }
+
+    @TestVisible
+    static List<DetectorResult> evaluateARM027(List<Map<String, Object>> procs) {
+        List<Map<String, Object>> pricing = new List<Map<String, Object>>();
+        for (Map<String, Object> p : procs) {
+            if (String.valueOf(p.get('UsageType')) == 'Pricing') pricing.add(p);
+        }
+        if (pricing.size() <= 1) return new List<DetectorResult>();
+        DetectorResult dr = new DetectorResult();
+        dr.detectorId = 'ARM-027'; dr.severity = 'Info'; dr.gapUsd = 0; dr.recoverabilityScore = 1.0;
+        dr.title = pricing.size() + ' pricing procedures defined';
+        dr.description = 'Multiple active pricing procedures may produce non-deterministic results.';
+        dr.primaryRecord = new SourceRecord('ExpressionSet', (Id) pricing[0].get('Id'),
+            (String) pricing[0].get('ApiName'));
+        Integer cap = Math.min(5, pricing.size());
+        for (Integer i = 1; i < cap; i++) dr.supportingRecords.add(
+            new SourceRecord('ExpressionSet', (Id) pricing[i].get('Id'), (String) pricing[i].get('ApiName')));
+        return new List<DetectorResult>{ dr };
+    }
+
+    @TestVisible
+    static List<DetectorResult> evaluateARM008(List<Map<String, Object>> dts) {
+        List<SourceRecord> bad = new List<SourceRecord>();
+        for (Map<String, Object> d : dts) {
+            String st = String.valueOf(d.get('Status'));
+            if (st == 'Active') continue;
+            bad.add(new SourceRecord('DecisionTable', (Id) d.get('Id'),
+                String.valueOf(d.get('MasterLabel')) + ' (' + st + ')'));
+        }
+        if (bad.isEmpty()) return new List<DetectorResult>();
+        DetectorResult dr = new DetectorResult();
+        dr.detectorId = 'ARM-008'; dr.severity = 'Warning'; dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
+        dr.title = bad.size() + ' decision table(s) not Active';
+        dr.description = 'Decision tables in Draft/Inactive status will not be evaluated by the engine.';
+        dr.primaryRecord = bad[0];
+        for (Integer i = 1; i < bad.size(); i++) dr.supportingRecords.add(bad[i]);
+        return new List<DetectorResult>{ dr };
+    }
+
+    @TestVisible
+    static List<DetectorResult> evaluateARM029(List<Map<String, Object>> dts) {
+        if (dts.isEmpty()) return new List<DetectorResult>();
+        for (Map<String, Object> d : dts) if (String.valueOf(d.get('Status')) == 'Active') return new List<DetectorResult>();
+        DetectorResult dr = new DetectorResult();
+        dr.detectorId = 'ARM-029'; dr.severity = 'Warning'; dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
+        dr.title = dts.size() + ' decision table(s) — none active';
+        dr.description = 'Every decision table in this org is Draft/Inactive. Pricing/eligibility logic will be skipped.';
+        dr.primaryRecord = new SourceRecord('DecisionTable', (Id) dts[0].get('Id'), String.valueOf(dts[0].get('MasterLabel')));
+        for (Integer i = 1; i < dts.size(); i++) dr.supportingRecords.add(
+            new SourceRecord('DecisionTable', (Id) dts[i].get('Id'), String.valueOf(dts[i].get('MasterLabel'))));
+        return new List<DetectorResult>{ dr };
+    }
+}
