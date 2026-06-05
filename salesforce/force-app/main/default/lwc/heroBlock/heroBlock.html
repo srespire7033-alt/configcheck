@@ -52,7 +52,10 @@
 
           <!-- ─── MIDDLE: Title + caption + clickable tiles + progress ─── -->
           <div class="op-hero__main">
-            <h2 class="op-hero__title">{productTitle}</h2>
+            <div class="op-hero__title-row">
+              <h2 class="op-hero__title">{productTitle}</h2>
+              <span class={productBadgeClass} title="Product type detected for this scan">{productBadgeLabel}</span>
+            </div>
             <p class="op-hero__caption">{caption}</p>
 
             <div class="op-hero__tiles">

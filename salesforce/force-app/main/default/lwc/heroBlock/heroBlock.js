@@ -101,6 +101,27 @@ export default class HeroBlock extends NavigationMixin(LightningElement) {
     const t = this.data?.latestScan?.ProductType__c || this.selectedProductType || 'CPQ';
     return `Your ${PRODUCT_TITLE_FRAGMENT[t] || t} Health Score`;
   }
+
+  // Phase 22o-2 — explicit, always-visible product-type badge.
+  // The H2 title contains the type in text, but the user reported it
+  // wasn't visually distinct enough to tell CPQ / CPQ+Billing / ARM
+  // apart at a glance. The badge is a coloured chip that sits next to
+  // the title so the type is unambiguous regardless of how many
+  // product types are configured (the product pills only render on
+  // multi-type orgs).
+  get productType() {
+    return this.data?.latestScan?.ProductType__c || this.selectedProductType || 'CPQ';
+  }
+  get productBadgeLabel() {
+    return PRODUCT_LABELS[this.productType] || this.productType;
+  }
+  get productBadgeClass() {
+    // Map to a color theme per product type for instant recognition.
+    const tone = this.productType === 'ARM' ? 'arm'
+               : this.productType === 'CPQ+Billing' ? 'billing'
+               : 'cpq';
+    return `op-hero__badge op-hero__badge--${tone}`;
+  }
   get caption() {
     if (!this.data?.latestScan) {
       return this.data?.orgName ? `${this.data.orgName} · No scans yet` : 'No scans yet';
