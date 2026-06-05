@@ -1,22 +1,33 @@
 /* ─── Scan-complete banner ─── */
+/* Phase 22z+ — opaque white card + colored 4px left bar + soft shadow.
+   Previous translucent rgba background bled into the topographic page
+   bg, dropping title/sub readability to near-invisible (especially on
+   the green-on-blue success case). Solid surface fixes the contrast
+   and makes the banner read as a discrete element above the page. */
 .op-hero__banner {
   display: grid;
   grid-template-columns: 32px 1fr auto;
   align-items: start;
   gap: 12px;
-  padding: 14px 16px;
+  padding: 14px 16px 14px 18px;
   border-radius: 14px;
-  border: 1px solid;
+  border: 1px solid var(--op-color-border-default, #e5e7eb);
+  background: #ffffff;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
   margin-bottom: 12px;
+  position: relative;
+  overflow: hidden;
 }
-.op-hero__banner--success {
-  background: rgba(16, 185, 129, 0.08);
-  border-color: rgba(16, 185, 129, 0.30);
+.op-hero__banner::before {
+  /* Accent bar — colored by severity, full-height left edge. */
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 4px;
+  background: #10b981;
 }
-.op-hero__banner--error {
-  background: var(--op-color-sev-critical-bg, #fef2f2);
-  border-color: rgba(239, 68, 68, 0.30);
-}
+.op-hero__banner--success::before { background: #10b981; }
+.op-hero__banner--error::before   { background: #ef4444; }
 .op-hero__banner-icon {
   width: 32px;
   height: 32px;

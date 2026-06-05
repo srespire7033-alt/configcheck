@@ -5,6 +5,7 @@ import { refreshApex } from '@salesforce/apex';
 import listConnectedOrgsWithScanStats from '@salesforce/apex/RemoteOrgService.listConnectedOrgsWithScanStats';
 import testConnection from '@salesforce/apex/RemoteOrgService.testConnection';
 import startRemoteScan from '@salesforce/apex/ForensicScanService.startRemoteScan';
+import getScanStatus from '@salesforce/apex/ForensicScanService.getScanStatus';
 
 // Color stripe per product type (matches the web mockup gradient look).
 const STRIPE = {
@@ -39,6 +40,10 @@ export default class ConnectedOrgManager extends NavigationMixin(LightningElemen
   @track loading = true;
   @track testingId = null;
   @track scanningId = null;
+  /** Phase 22y — live progress text for the card the scan is running
+   *  against. Drives the "Connecting…", "Scanning detectors…" status
+   *  line beneath the button so the user sees the scan is alive. */
+  @track scanStage = '';
   @track sortKey = 'name';
   @track view = 'grid';
   wiredResult;
@@ -148,6 +153,8 @@ export default class ConnectedOrgManager extends NavigationMixin(LightningElemen
         cannotScan: !isConnected || isScanning,
         cannotOpen: !r.latestScanId,
         scanBtnLabel: isScanning ? 'Scanning…' : 'Run Scan',
+        scanStageText: isScanning ? this.scanStage : '',
+        showScanProgress: isScanning,
         scanTooltip: isConnected ? 'Run a full OrgPrism scan against this remote org' : 'Test connection first',
         testBtnLabel: this.testingId === r.id ? 'Testing…' : 'Test Connection',
         showError: r.status === 'Auth Failed' || r.status === 'Unreachable',
@@ -212,21 +219,80 @@ export default class ConnectedOrgManager extends NavigationMixin(LightningElemen
 
   async _runScan(connectedOrgId, suppressRedirect = false) {
     this.scanningId = connectedOrgId;
+    this.scanStage = 'Scanning Salesforce org…';
+    // Phase 22z — raise the full-screen overlay too, so when the user
+    // is navigated to the Dashboard mid-scan they see a clear
+    // "scanning" state instead of stale numbers + spinner button.
+    const targetRow = this.rows.find((r) => r.id === connectedOrgId);
+    const orgLabel = targetRow?.name ? `Scanning ${targetRow.name}…` : 'Scanning Salesforce org…';
+    window.dispatchEvent(new CustomEvent('op:scan-starting', {
+      detail: { label: orgLabel }
+    }));
     try {
-      // For now default to CPQ. The org's ProductType__c will eventually
-      // drive a per-product scan (Phase 8b — multi-product scan loop).
-      const scanId = await startRemoteScan({ productType: 'CPQ', connectedOrgId });
+      // Phase 22y — startRemoteScan enqueues a Queueable and returns
+      // immediately with the scanId. The actual detector pass runs
+      // asynchronously, so we poll getScanStatus until terminal before
+      // navigating. Before this fix the LWC reported "Scan complete"
+      // and redirected within ~1s of clicking, while the real scan
+      // was still running — making the button feel like a no-op.
+      const productType = null; // server auto-derives from ConnectedOrg__c.ProductType__c
+      const scanId = await startRemoteScan({ productType, connectedOrgId });
 
-      this.dispatchEvent(new ShowToastEvent({
-        title: 'Scan complete',
-        message: 'Remote scan finished. Opening dashboard...',
-        variant: 'success',
-      }));
+      // Poll every 2.5s, max ~5 min, until status is terminal.
+      const POLL_MS = 2500;
+      const MAX_POLLS = 120;
+      let finalStatus = null;
+      for (let i = 0; i < MAX_POLLS; i++) {
+        // eslint-disable-next-line no-await-in-loop
+        await new Promise((r) => setTimeout(r, POLL_MS));
+        let status;
+        try {
+          // eslint-disable-next-line no-await-in-loop
+          status = await getScanStatus({ scanId });
+        } catch (pollErr) {
+          // Transient errors mid-poll shouldn't abort — keep going.
+          // eslint-disable-next-line no-console
+          console.warn('[connectedOrgManager] poll error', pollErr);
+          continue;
+        }
+        if (status?.isTerminal) {
+          finalStatus = status;
+          break;
+        }
+        // Phase 22y v3 — don't cycle the stage text mid-scan. Every
+        // mutation of `this.scanStage` re-derived `viewRows`, which
+        // re-mounted the progress strip and restarted the CSS slide
+        // animation from frame 0 → visible flicker. The animated bar
+        // alone signals liveness; the text stays put.
+      }
+
+      if (!finalStatus) {
+        this.dispatchEvent(new ShowToastEvent({
+          title: 'Scan still running',
+          message: 'The scan is taking longer than expected. Check the dashboard in a few minutes.',
+          variant: 'warning',
+        }));
+      } else if (finalStatus.status === 'Failed') {
+        this.dispatchEvent(new ShowToastEvent({
+          title: 'Remote scan failed',
+          message: finalStatus.errorMessage || 'See the scan record for details.',
+          variant: 'error',
+          mode: 'sticky',
+        }));
+      } else {
+        const score = finalStatus.healthScore == null ? '—' : finalStatus.healthScore;
+        const count = finalStatus.findingCount || 0;
+        this.dispatchEvent(new ShowToastEvent({
+          title: finalStatus.status === 'Partial' ? 'Scan completed with warnings' : 'Scan complete',
+          message: `Score: ${score} · Findings: ${count}. Opening dashboard…`,
+          variant: finalStatus.status === 'Partial' ? 'warning' : 'success',
+        }));
+      }
 
       window.dispatchEvent(new CustomEvent('op:scan-completed'));
       await refreshApex(this.wiredResult);
 
-      if (!suppressRedirect && scanId) {
+      if (!suppressRedirect && scanId && finalStatus && finalStatus.status !== 'Failed') {
         // Navigate to the OrgPrism Dashboard tab, scoped to this org.
         // The `c__connectedOrgId` state param is picked up by heroBlock's
         // CurrentPageReference wire, which filters the latest-scan query.
@@ -245,6 +311,10 @@ export default class ConnectedOrgManager extends NavigationMixin(LightningElemen
       throw e;
     } finally {
       this.scanningId = null;
+      this.scanStage = '';
+      // Phase 22z — always drop the full-screen overlay even on error
+      // or timeout (the happy path already dispatched this; idempotent).
+      window.dispatchEvent(new CustomEvent('op:scan-completed'));
     }
   }
 

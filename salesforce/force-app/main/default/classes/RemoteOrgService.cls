@@ -54,7 +54,7 @@ public with sharing class RemoteOrgService {
     public static List<ConnectedOrgDto> listConnectedOrgs() {
         List<ConnectedOrgDto> out = new List<ConnectedOrgDto>();
         for (ConnectedOrg__c c : [
-            SELECT Id, Name, InstanceUrl__c, NamedCredentialName__c, OrgType__c, ProductType__c,
+            SELECT Id, Name, RemoteOrgName__c, InstanceUrl__c, NamedCredentialName__c, OrgType__c, ProductType__c,
                    Status__c, RemoteOrgId__c, LastConnectedAt__c, LastError__c
             FROM ConnectedOrg__c
             WITH SECURITY_ENFORCED
@@ -63,7 +63,11 @@ public with sharing class RemoteOrgService {
         ]) {
             ConnectedOrgDto d = new ConnectedOrgDto();
             d.id = c.Id;
-            d.name = c.Name;
+            // Phase 22x — prefer the remote Organization.Name (populated by
+            // testConnection) over the locally-typed record Name so the card
+            // always shows the actual org's name, not the consultant's
+            // bookkeeping label like "Ksolves-Sanjeev (ARM)".
+            d.name = String.isNotBlank(c.RemoteOrgName__c) ? c.RemoteOrgName__c : c.Name;
             d.instanceUrl = c.InstanceUrl__c;
             d.namedCredential = c.NamedCredentialName__c;
             d.orgType = c.OrgType__c;
@@ -220,6 +224,9 @@ public with sharing class RemoteOrgService {
                 String remoteName = String.valueOf(first.get('Name'));
                 row.Status__c = 'Connected';
                 row.RemoteOrgId__c = remoteId;
+                // Phase 22x — persist remote Organization.Name so the card
+                // displays it without an extra round-trip on every list call.
+                row.RemoteOrgName__c = remoteName;
                 row.LastConnectedAt__c = System.now();
                 row.LastError__c = null;
                 saveRow(row);

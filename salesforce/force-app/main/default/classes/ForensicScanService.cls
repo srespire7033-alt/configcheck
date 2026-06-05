@@ -181,6 +181,51 @@ public with sharing class ForensicScanService {
         return startScanInternal(productType, connectedOrgId);
     }
 
+    /** Phase 22y — DTO for the polling endpoint that backs the live
+     *  scan-progress UI on the Connected Orgs card. The LWC's
+     *  Run Scan button polls this every ~2.5s until terminal. */
+    public class ScanStatusDto {
+        @AuraEnabled public Id id;
+        @AuraEnabled public String status;       // Running / Completed / Partial / Failed
+        @AuraEnabled public Integer healthScore; // populated only when terminal
+        @AuraEnabled public Integer findingCount;
+        @AuraEnabled public Datetime completedAt;
+        @AuraEnabled public String errorMessage;
+        @AuraEnabled public Boolean isTerminal;  // convenience for the poller
+    }
+
+    /** Phase 22y — lightweight status read for in-progress scan polling.
+     *  Non-cacheable so the LWC sees fresh values each tick.
+     *  No callouts, single SOQL — safe to call in a 2-3s poll. */
+    @AuraEnabled
+    public static ScanStatusDto getScanStatus(Id scanId) {
+        if (scanId == null) {
+            throw new AuraHandledException('scanId is required');
+        }
+        List<ForensicScan__c> rows = [
+            SELECT Id, Status__c, HealthScore__c, FindingCount__c,
+                   CompletedAt__c, ErrorMessage__c
+            FROM ForensicScan__c
+            WHERE Id = :scanId
+            WITH SECURITY_ENFORCED LIMIT 1
+        ];
+        if (rows.isEmpty()) {
+            throw new AuraHandledException('Scan not found: ' + scanId);
+        }
+        ForensicScan__c s = rows[0];
+        ScanStatusDto dto = new ScanStatusDto();
+        dto.id = s.Id;
+        dto.status = s.Status__c;
+        dto.healthScore = s.HealthScore__c == null ? null : Integer.valueOf(s.HealthScore__c);
+        dto.findingCount = s.FindingCount__c == null ? 0 : Integer.valueOf(s.FindingCount__c);
+        dto.completedAt = s.CompletedAt__c;
+        dto.errorMessage = s.ErrorMessage__c;
+        dto.isTerminal = (s.Status__c == 'Completed'
+                       || s.Status__c == 'Partial'
+                       || s.Status__c == 'Failed');
+        return dto;
+    }
+
     private static Id startScanInternal(String productType, Id connectedOrgId) {
         String namedCredentialName = null;
         if (connectedOrgId != null) {

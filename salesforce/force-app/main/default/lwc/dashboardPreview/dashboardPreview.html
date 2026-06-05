@@ -1,4 +1,10 @@
 <template>
+  <!-- Phase 22z — full-screen scan-in-progress overlay. Listens for
+       op:scan-starting / op:scan-completed window events, so any LWC
+       that kicks off a scan (heroBlock, connectedOrgManager, scanLauncher)
+       can raise the overlay without holding a direct reference. -->
+  <c-scan-overlay></c-scan-overlay>
+
   <div class="op-preview">
     <h2 class="op-preview__heading">OrgPrism Phase 1 — Primitives Preview</h2>
     <p class="op-preview__caption">

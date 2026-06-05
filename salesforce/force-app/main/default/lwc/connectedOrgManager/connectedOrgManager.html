@@ -28,10 +28,9 @@
           <lightning-icon icon-name="utility:merge" size="xx-small" class="op-co__btn-icon"></lightning-icon>
           Compare two orgs
         </button>
-        <button class="op-co__btn op-co__btn--primary" onclick={handleAddNew}>
-          <lightning-icon icon-name="utility:add" size="xx-small" class="op-co__btn-icon"></lightning-icon>
-          Add Connected Org
-        </button>
+        <!-- Phase 22x — removed duplicate "Add Connected Org" primary
+             button. The "Connect another Salesforce Org" placeholder
+             card in the grid is the single entry point now. -->
       </div>
     </header>
 
@@ -126,6 +125,20 @@
               </template>
             </div>
 
+            <!-- Phase 22y v4 — replaced the custom keyframe slide bar
+                 (which re-mounted on every reactive update and flickered
+                 hard) with the platform `lightning-spinner`. SF renders
+                 it in its own shadow root so LWC reconciliation can't
+                 touch it. -->
+            <template if:true={r.showScanProgress}>
+              <div class="op-co__scan-progress" role="status" aria-live="polite">
+                <div class="op-co__scan-spinner-wrap">
+                  <lightning-spinner alternative-text="Scanning" size="small" variant="brand"></lightning-spinner>
+                </div>
+                <p class="op-co__scan-progress-text">{r.scanStageText}</p>
+              </div>
+            </template>
+
             <div class="op-co__card-actions">
               <button
                 class="op-co__btn op-co__btn--primary op-co__card-scan"
@@ -166,10 +179,10 @@
           </article>
         </template>
 
-        <!-- "Connect another sandbox" placeholder card -->
+        <!-- "Connect another Salesforce Org" placeholder card (Phase 22x — single entry point) -->
         <button class="op-co__card op-co__card--add" onclick={handleAddNew}>
           <div class="op-co__add-icon"><lightning-icon icon-name="utility:add" size="medium"></lightning-icon></div>
-          <h3 class="op-co__add-title">Connect another sandbox</h3>
+          <h3 class="op-co__add-title">Connect another Salesforce Org</h3>
           <p class="op-co__add-sub"><lightning-icon icon-name="utility:lock" size="xx-small"></lightning-icon> OAuth login required</p>
         </button>
       </div>

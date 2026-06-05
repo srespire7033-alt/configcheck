@@ -1,0 +1,15 @@
+<template>
+  <template if:true={visible}>
+    <!-- Fixed full-viewport scrim. role="alert" + aria-live so screen
+         readers announce the progress label when it appears. -->
+    <div class="op-so" role="alert" aria-live="assertive">
+      <div class="op-so__panel">
+        <div class="op-so__spinner-wrap">
+          <lightning-spinner alternative-text="Scanning" size="large" variant="brand"></lightning-spinner>
+        </div>
+        <h2 class="op-so__label">{label}</h2>
+        <p class="op-so__sub">{sub}</p>
+      </div>
+    </div>
+  </template>
+</template>

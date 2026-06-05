@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>RemoteOrgName__c</fullName>
+    <label>Remote Org Name</label>
+    <description>Populated automatically on Test Connection from Organization.Name on the remote org. Preferred over the local Connected Org record Name for display so the card always shows the actual remote org's name.</description>
+    <length>255</length>
+    <type>Text</type>
+</CustomField>

@@ -14,7 +14,10 @@
 }
 .op-co__head-left { flex: 1 1 auto; min-width: 0; }
 .op-co__title { font-size: 22px; font-weight: 700; margin: 0 0 4px; color: #111827; }
-.op-co__subtitle { font-size: 13px; color: #6b7280; margin: 0; }
+/* Phase 22x — darker subtitle. #6b7280 on the topographic blue
+   page background washed out to near-invisible; #374151 + 500 weight
+   keeps it readable without competing with the title. */
+.op-co__subtitle { font-size: 13px; font-weight: 500; color: #374151; margin: 0; }
 
 .op-co__head-right {
   display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
@@ -202,6 +205,29 @@
 .op-co__add-sub {
   font-size: 12px; color: #9ca3af; margin: 0;
   display: inline-flex; align-items: center; gap: 4px;
+}
+
+/* ─── Phase 22y v4 — live scan progress (lightning-spinner) ─── */
+.op-co__scan-progress {
+  margin: 4px 0 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0;
+}
+/* lightning-spinner positions absolutely by default; wrap to give it
+   a fixed footprint inline with the text. */
+.op-co__scan-spinner-wrap {
+  position: relative;
+  width: 20px;
+  height: 20px;
+  flex: 0 0 20px;
+}
+.op-co__scan-progress-text {
+  margin: 0;
+  font-size: 12px;
+  color: #3b82f6;
+  font-weight: 500;
 }
 
 /* ─── WCAG 2.1 AA accessibility ─── */

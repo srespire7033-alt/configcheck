@@ -5,6 +5,8 @@ import { NavigationMixin } from 'lightning/navigation';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import getDashboardSummary from '@salesforce/apex/DashboardController.getDashboardSummary';
 import startScan from '@salesforce/apex/ForensicScanService.startScan';
+import startRemoteScan from '@salesforce/apex/ForensicScanService.startRemoteScan';
+import getScanStatus from '@salesforce/apex/ForensicScanService.getScanStatus';
 import getFindingsCsv from '@salesforce/apex/ExportController.getFindingsCsv';
 import getRecoveryActionsCsv from '@salesforce/apex/ExportController.getRecoveryActionsCsv';
 
@@ -187,8 +189,56 @@ export default class HeroBlock extends NavigationMixin(LightningElement) {
     if (this.running) return;
     this.running = true;
     this.scanCompleteBanner = null;
+    // Phase 22z+ — when a Connected Org is in scope (URL state
+    // c__connectedOrgId), route to startRemoteScan + poll, so the
+    // scan actually hits the remote org via Named Credential
+    // instead of scanning the host org with productType only. Before
+    // this fix the Forensics button finished in ~3s because it
+    // scanned the host (which has almost no CPQ data) and surfaced
+    // stale Connected-Org numbers.
+    const isRemote = Boolean(this.connectedOrgId);
+    window.dispatchEvent(new CustomEvent('op:scan-starting', {
+      detail: {
+        label: isRemote ? 'Scanning remote Salesforce org…' : 'Scanning Salesforce org…',
+        sub: isRemote
+          ? 'Running detectors via Named Credential — typically 30–90s.'
+          : 'This usually takes a few seconds.'
+      }
+    }));
     try {
-      await startScan({ productType: this.selectedProductType });
+      if (isRemote) {
+        // startRemoteScan enqueues a Queueable and returns immediately;
+        // poll the scan status every 2.5s up to ~5 min until terminal.
+        const scanId = await startRemoteScan({
+          productType: null, // server auto-derives from ConnectedOrg__c
+          connectedOrgId: this.connectedOrgId,
+        });
+        const POLL_MS = 2500;
+        const MAX_POLLS = 120;
+        let finalStatus = null;
+        for (let i = 0; i < MAX_POLLS; i++) {
+          // eslint-disable-next-line no-await-in-loop
+          await new Promise((r) => setTimeout(r, POLL_MS));
+          let status;
+          try {
+            // eslint-disable-next-line no-await-in-loop
+            status = await getScanStatus({ scanId });
+          } catch (pollErr) {
+            // eslint-disable-next-line no-console
+            console.warn('[heroBlock] poll error', pollErr);
+            continue;
+          }
+          if (status?.isTerminal) {
+            finalStatus = status;
+            break;
+          }
+        }
+        if (finalStatus && finalStatus.status === 'Failed') {
+          throw new Error(finalStatus.errorMessage || 'Remote scan failed.');
+        }
+      } else {
+        await startScan({ productType: this.selectedProductType });
+      }
       // Refresh the wire so all dependent metrics (score, severity
       // counts, $ totals) recompute against the new scan.
       await refreshApex(this.wiredResult);
@@ -227,6 +277,10 @@ export default class HeroBlock extends NavigationMixin(LightningElement) {
       };
     } finally {
       this.running = false;
+      // Phase 22z — always drop the overlay, success or failure. The
+      // success path also dispatches op:scan-completed mid-try for
+      // refresh-cascading; this guards the failure path.
+      window.dispatchEvent(new CustomEvent('op:scan-completed'));
     }
   }
 

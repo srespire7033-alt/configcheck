@@ -410,4 +410,90 @@ private class ForensicScanServiceTest {
         ];
         System.assertEquals('Partial', result.Status__c);
     }
+
+    // ─── Phase 22y — getScanStatus polling endpoint ────────────────
+
+    @isTest
+    static void getScanStatus_runningScan_isNotTerminal() {
+        ForensicScan__c scan = new ForensicScan__c(
+            Status__c = 'Running', StartedAt__c = System.now(), ProductType__c = 'CPQ'
+        );
+        insert scan;
+
+        Test.startTest();
+        ForensicScanService.ScanStatusDto dto = ForensicScanService.getScanStatus(scan.Id);
+        Test.stopTest();
+
+        System.assertEquals('Running', dto.status);
+        System.assertEquals(false, dto.isTerminal);
+        System.assertEquals(scan.Id, dto.id);
+    }
+
+    @isTest
+    static void getScanStatus_completedScan_isTerminal_withScoreAndCount() {
+        ForensicScan__c scan = new ForensicScan__c(
+            Status__c = 'Completed', StartedAt__c = System.now(),
+            CompletedAt__c = System.now(), ProductType__c = 'CPQ',
+            HealthScore__c = 87, FindingCount__c = 3
+        );
+        insert scan;
+
+        ForensicScanService.ScanStatusDto dto = ForensicScanService.getScanStatus(scan.Id);
+
+        System.assertEquals(true, dto.isTerminal);
+        System.assertEquals('Completed', dto.status);
+        System.assertEquals(87, dto.healthScore);
+        System.assertEquals(3, dto.findingCount);
+        System.assertNotEquals(null, dto.completedAt);
+    }
+
+    @isTest
+    static void getScanStatus_failedScan_surfacesErrorMessage() {
+        ForensicScan__c scan = new ForensicScan__c(
+            Status__c = 'Failed', StartedAt__c = System.now(),
+            ErrorMessage__c = 'Named Credential timeout', ProductType__c = 'CPQ'
+        );
+        insert scan;
+
+        ForensicScanService.ScanStatusDto dto = ForensicScanService.getScanStatus(scan.Id);
+
+        System.assertEquals(true, dto.isTerminal);
+        System.assertEquals('Failed', dto.status);
+        System.assertEquals('Named Credential timeout', dto.errorMessage);
+    }
+
+    @isTest
+    static void getScanStatus_partialScan_isTerminal() {
+        ForensicScan__c scan = new ForensicScan__c(
+            Status__c = 'Partial', StartedAt__c = System.now(),
+            CompletedAt__c = System.now(), ProductType__c = 'CPQ',
+            HealthScore__c = 60
+        );
+        insert scan;
+
+        ForensicScanService.ScanStatusDto dto = ForensicScanService.getScanStatus(scan.Id);
+
+        System.assertEquals(true, dto.isTerminal);
+        System.assertEquals('Partial', dto.status);
+    }
+
+    @isTest
+    static void getScanStatus_nullId_throws() {
+        try {
+            ForensicScanService.getScanStatus(null);
+            System.assert(false, 'Expected AuraHandledException for null scanId');
+        } catch (AuraHandledException e) {
+            // expected
+        }
+    }
+
+    @isTest
+    static void getScanStatus_unknownId_throws() {
+        try {
+            ForensicScanService.getScanStatus('a00000000000000AAA');
+            System.assert(false, 'Expected AuraHandledException for unknown scanId');
+        } catch (AuraHandledException e) {
+            // expected
+        }
+    }
 }
