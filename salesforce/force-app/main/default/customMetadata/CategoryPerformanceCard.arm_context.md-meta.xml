@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomMetadata xmlns="http://soap.sforce.com/2006/04/metadata" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" fqn="CategoryPerformanceCard__mdt.arm_context">
+    <label>Context Definitions</label>
+    <protected>false</protected>
+    <values><field>SectionKey__c</field><value xsi:type="xsd:string">arm</value></values>
+    <values><field>CardKey__c</field><value xsi:type="xsd:string">arm_context</value></values>
+    <values><field>Label__c</field><value xsi:type="xsd:string">Context Definitions</value></values>
+    <values><field>IconName__c</field><value xsi:type="xsd:string">utility:settings</value></values>
+    <values><field>DetectorIds__c</field><value xsi:type="xsd:string">ARM-009,ARM-030</value></values>
+    <values><field>Sequence__c</field><value xsi:type="xsd:double">7</value></values>
+    <values><field>IsActive__c</field><value xsi:type="xsd:boolean">true</value></values>
+</CustomMetadata>

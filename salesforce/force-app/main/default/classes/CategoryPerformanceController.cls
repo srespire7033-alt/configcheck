@@ -44,8 +44,42 @@ public with sharing class CategoryPerformanceController {
         'cpq' => 1, 'billing' => 2, 'arm' => 3
     };
 
+    /**
+     * Phase 22r — connectedOrgId param. When present, look up the
+     * ConnectedOrg__c.ProductType__c and filter the returned sections
+     * accordingly so an ARM org sees only ARM cards (no CPQ/BILLING
+     * clutter) and vice-versa. Null arg preserves the legacy "show all
+     * sections" behavior — existing tests + the Apex local-scan callers
+     * keep working unchanged.
+     */
     @AuraEnabled(cacheable=true)
-    public static List<CategorySection> getCategoryScores() {
+    public static List<CategorySection> getCategoryScores(Id connectedOrgId) {
+        String productType = null;
+        if (connectedOrgId != null) {
+            List<ConnectedOrg__c> cos = [
+                SELECT ProductType__c FROM ConnectedOrg__c
+                WHERE Id = :connectedOrgId WITH SECURITY_ENFORCED LIMIT 1
+            ];
+            if (!cos.isEmpty() && String.isNotBlank(cos[0].ProductType__c)) {
+                productType = cos[0].ProductType__c;
+            }
+        }
+        return getCategoryScoresInternal(productType);
+    }
+
+    /**
+     * Maps a ConnectedOrg__c.ProductType__c value to the set of
+     * SectionKey__c values the dashboard should render. Returning null
+     * means "no filter — show every section".
+     */
+    private static Set<String> sectionsForProductType(String productType) {
+        if (productType == 'CPQ')         return new Set<String>{ 'cpq' };
+        if (productType == 'CPQ+Billing') return new Set<String>{ 'cpq', 'billing' };
+        if (productType == 'ARM')         return new Set<String>{ 'arm' };
+        return null;
+    }
+
+    private static List<CategorySection> getCategoryScoresInternal(String productType) {
         Map<String, Map<String, Integer>> countsByDetector = loadCountsByDetector();
         List<CategoryPerformanceCard__mdt> defs;
         try {
@@ -81,6 +115,16 @@ public with sharing class CategoryPerformanceController {
         // keeps existing tests + dashboard layout stable.
         List<CategorySection> out = new List<CategorySection>(sectionsByKey.values());
         out.sort(new CategorySectionComparator());
+
+        // Phase 22r — filter by product type if specified. An ARM org
+        // should not see CPQ + BILLING sections (and vice-versa); they
+        // create noise + confuse users. Null filter shows everything.
+        Set<String> allowed = sectionsForProductType(productType);
+        if (allowed != null) {
+            List<CategorySection> filtered = new List<CategorySection>();
+            for (CategorySection s : out) if (allowed.contains(s.key)) filtered.add(s);
+            return filtered;
+        }
         return out;
     }
 

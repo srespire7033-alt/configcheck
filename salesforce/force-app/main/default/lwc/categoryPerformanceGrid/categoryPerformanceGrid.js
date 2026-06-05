@@ -1,4 +1,5 @@
 import { LightningElement, wire, track } from 'lwc';
+import { CurrentPageReference } from 'lightning/navigation';
 import { refreshApex } from '@salesforce/apex';
 import getCategoryScores from '@salesforce/apex/CategoryPerformanceController.getCategoryScores';
 
@@ -21,7 +22,18 @@ export default class CategoryPerformanceGrid extends LightningElement {
   @track orderOverrides = {}; // { cpq: ['products', ...], billing: [...] }
   @track draggingKey = null;
   @track draggingSection = null;
+  /** Phase 22r — scope cards to the current Connected Org's product type
+   *  so an ARM dashboard shows only the ARM section (and vice-versa). */
+  @track connectedOrgId = null;
   wiredResult;
+
+  @wire(CurrentPageReference)
+  wirePageRef(pageRef) {
+    if (!pageRef) return;
+    this.connectedOrgId = pageRef.state?.c__connectedOrgId
+      || pageRef.state?.connectedOrgId
+      || null;
+  }
 
   connectedCallback() {
     this.loadOrderOverrides();
@@ -49,7 +61,7 @@ export default class CategoryPerformanceGrid extends LightningElement {
     } catch (e) { /* ignore */ }
   }
 
-  @wire(getCategoryScores)
+  @wire(getCategoryScores, { connectedOrgId: '$connectedOrgId' })
   wireData(result) {
     this.wiredResult = result;
     this.loading = false;
