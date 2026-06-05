@@ -30,22 +30,22 @@ public with sharing class ArmBillingPolicyChecksBundle implements IDetector {
                 && !SchemaUtil.hasObject('BillingArrangement')
                 && !SchemaUtil.hasObject('PaymentRetryRuleSet')) return results;
             policies = SchemaUtil.hasObject('BillingPolicy')
-                ? safeQ(ctx, 'SELECT Id, Name, Status, BillingTreatmentSelection, DefaultBillingTreatmentId, DefaultBillingTreatment.Status FROM BillingPolicy LIMIT 5000')
+                ? OrgQueryService.queryWithFallback(ctx, 'SELECT Id, Name, Status, BillingTreatmentSelection, DefaultBillingTreatmentId, DefaultBillingTreatment.Status FROM BillingPolicy LIMIT 5000', null)
                 : new List<Map<String, Object>>();
             arrs = SchemaUtil.hasObject('BillingArrangement')
-                ? safeQ(ctx, 'SELECT Id, Name, Status FROM BillingArrangement LIMIT 5000')
+                ? OrgQueryService.queryWithFallback(ctx, 'SELECT Id, Name, Status FROM BillingArrangement LIMIT 5000', null)
                 : new List<Map<String, Object>>();
             lines = SchemaUtil.hasObject('BillingArrangementLine')
-                ? safeQ(ctx, 'SELECT Id, BillingArrangementId FROM BillingArrangementLine LIMIT 10000')
+                ? OrgQueryService.queryWithFallback(ctx, 'SELECT Id, BillingArrangementId FROM BillingArrangementLine LIMIT 10000', null)
                 : new List<Map<String, Object>>();
             retries = SchemaUtil.hasObject('PaymentRetryRuleSet')
-                ? safeQ(ctx, 'SELECT Id, Name, Status, IsOrgDefault FROM PaymentRetryRuleSet LIMIT 5000')
+                ? OrgQueryService.queryWithFallback(ctx, 'SELECT Id, Name, Status, IsOrgDefault FROM PaymentRetryRuleSet LIMIT 5000', null)
                 : new List<Map<String, Object>>();
             plans = SchemaUtil.hasObject('BillingMilestonePlan')
-                ? safeQ(ctx, 'SELECT Id, Name, Status, DefaultBillingTreatmentId, DefaultBillingTreatment.Status FROM BillingMilestonePlan LIMIT 5000')
+                ? OrgQueryService.queryWithFallback(ctx, 'SELECT Id, Name, Status, DefaultBillingTreatmentId, DefaultBillingTreatment.Status FROM BillingMilestonePlan LIMIT 5000', null)
                 : new List<Map<String, Object>>();
             planItems = SchemaUtil.hasObject('BillingMilestonePlanItem')
-                ? safeQ(ctx, 'SELECT Id, BillingMilestonePlanId FROM BillingMilestonePlanItem LIMIT 10000')
+                ? OrgQueryService.queryWithFallback(ctx, 'SELECT Id, BillingMilestonePlanId FROM BillingMilestonePlanItem LIMIT 10000', null)
                 : new List<Map<String, Object>>();
         }
         if (DetectorCatalogController.isActive('ARM-190')) results.addAll(evaluateARM190(policies));
@@ -86,10 +86,6 @@ public with sharing class ArmBillingPolicyChecksBundle implements IDetector {
         return new List<DetectorResult>{ dr };
     }
 
-    @TestVisible static List<Map<String, Object>> safeQ(DetectorContext ctx, String soql) {
-        try { return OrgQueryService.query(ctx, soql); }
-        catch (Exception e) { return new List<Map<String, Object>>(); }
-    }
 
     @TestVisible
     static List<DetectorResult> evaluateARM190(List<Map<String, Object>> policies) {

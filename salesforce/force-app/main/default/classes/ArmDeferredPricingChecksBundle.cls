@@ -44,18 +44,18 @@ public with sharing class ArmDeferredPricingChecksBundle implements IDetector {
                 && SchemaUtil.hasField('PriceAdjustmentTier', 'EffectiveEndDate')
                 && SchemaUtil.hasObject('PriceAdjustmentSchedule')
                 && SchemaUtil.hasField('PriceAdjustmentSchedule', 'EffectiveStartDate')) {
-                tiers = safeQ(ctx,
-                    'SELECT Id, PriceAdjustmentScheduleId, EffectiveStartDate, EffectiveEndDate FROM PriceAdjustmentTier LIMIT 10000');
-                schedules = safeQ(ctx,
-                    'SELECT Id, Name, EffectiveStartDate, EffectiveEndDate FROM PriceAdjustmentSchedule LIMIT 5000');
+                tiers = OrgQueryService.queryWithFallback(ctx,
+                    'SELECT Id, PriceAdjustmentScheduleId, EffectiveStartDate, EffectiveEndDate FROM PriceAdjustmentTier LIMIT 10000', null);
+                schedules = OrgQueryService.queryWithFallback(ctx,
+                    'SELECT Id, Name, EffectiveStartDate, EffectiveEndDate FROM PriceAdjustmentSchedule LIMIT 5000', null);
             }
             // ARM-132: only if RC-only field is present
             pbes = new List<Map<String, Object>>();
             psmos = new List<Map<String, Object>>();
             if (SchemaUtil.hasField('PricebookEntry', 'ProductSellingModelId')
                 && SchemaUtil.hasObject('ProductSellingModelOption')) {
-                pbes = safeQ(ctx,
-                    'SELECT Id, Product2Id, ProductSellingModelId, IsActive FROM PricebookEntry WHERE ProductSellingModelId != null LIMIT 10000');
+                pbes = OrgQueryService.queryWithFallback(ctx,
+                    'SELECT Id, Product2Id, ProductSellingModelId, IsActive FROM PricebookEntry WHERE ProductSellingModelId != null LIMIT 10000', null);
                 // Phase 22i — PSMO.IsActive missing on older RC releases.
                 // queryWithFallback drops the WHERE filter; downstream loop
                 // applies it in-memory only when IsActive is actually returned.
@@ -71,9 +71,9 @@ public with sharing class ArmDeferredPricingChecksBundle implements IDetector {
                 && SchemaUtil.hasField('AttributeBasedAdjRule', 'PriceAdjustmentScheduleId')
                 && SchemaUtil.hasField('AttributeBasedAdjRule', 'EffectiveStartDate')
                 && SchemaUtil.hasField('AttributeBasedAdjRule', 'EffectiveEndDate')) {
-                adjRules = safeQ(ctx,
+                adjRules = OrgQueryService.queryWithFallback(ctx,
                     'SELECT Id, Name, IsActive, PriceAdjustmentScheduleId, EffectiveStartDate, EffectiveEndDate ' +
-                    'FROM AttributeBasedAdjRule WHERE PriceAdjustmentScheduleId != null LIMIT 5000');
+                    'FROM AttributeBasedAdjRule WHERE PriceAdjustmentScheduleId != null LIMIT 5000', null);
             }
         }
         if (DetectorCatalogController.isActive('ARM-130')) results.addAll(evaluateARM130(tiers, schedules));
@@ -112,10 +112,6 @@ public with sharing class ArmDeferredPricingChecksBundle implements IDetector {
         return new List<DetectorResult>{ dr };
     }
 
-    @TestVisible static List<Map<String, Object>> safeQ(DetectorContext ctx, String soql) {
-        try { return OrgQueryService.query(ctx, soql); }
-        catch (Exception e) { return new List<Map<String, Object>>(); }
-    }
     static Date parseD(Object o) {
         if (o == null) return null;
         if (o instanceof Date) return (Date) o;

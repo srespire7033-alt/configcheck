@@ -268,4 +268,146 @@ private class ForensicScanServiceTest {
         List<Object> result = ForensicScanService.supportingRecordsAsList(supporting);
         System.assertEquals(2, result.size());
     }
+
+    // ───────────────────────────────────────────────────────────────
+    // Phase 22L — chunked remote-scan path
+    // ───────────────────────────────────────────────────────────────
+
+    /** Detector stub that emits one canned result. Lets us hit
+     *  runDetectorChunk's persist path without depending on real
+     *  CPQ/ARM packages being installed. */
+    public class StubDetector implements IDetector {
+        private final String id;
+        private final List<DetectorResult> results;
+        public StubDetector(String id, List<DetectorResult> results) {
+            this.id = id; this.results = results;
+        }
+        public String getDetectorId() { return id; }
+        public String getLabel() { return id; }
+        public Set<String> getAppliesTo() { return new Set<String>{ 'CPQ' }; }
+        public List<DetectorResult> run(DetectorContext ctx) { return results; }
+    }
+
+    /** Detector stub that throws — verifies per-detector try/catch +
+     *  ErrorMessage__c accumulation across a chunk. */
+    public class ThrowingDetector implements IDetector {
+        public String getDetectorId() { return 'STUB-THROW'; }
+        public String getLabel() { return 'throws'; }
+        public Set<String> getAppliesTo() { return new Set<String>{ 'CPQ' }; }
+        public List<DetectorResult> run(DetectorContext ctx) {
+            throw new System.NullPointerException();
+        }
+    }
+
+    @isTest
+    static void runDetectorChunk_emptyList_emitsNothing() {
+        ForensicScan__c scan = new ForensicScan__c(
+            Status__c = 'Running', StartedAt__c = System.now()
+        );
+        insert scan;
+        DetectorContext ctx = new DetectorContext(scan.Id, 'USD', 'CPQ');
+
+        Test.startTest();
+        ForensicScanService.runDetectorChunk(scan.Id, ctx, new List<IDetector>());
+        Test.stopTest();
+
+        Integer findings = [SELECT COUNT() FROM ForensicFinding__c WHERE ForensicScan__c = :scan.Id];
+        System.assertEquals(0, findings);
+    }
+
+    @isTest
+    static void runDetectorChunk_persistsEmittedFinding() {
+        ForensicScan__c scan = new ForensicScan__c(
+            Status__c = 'Running', StartedAt__c = System.now()
+        );
+        insert scan;
+
+        DetectorResult dr = new DetectorResult();
+        dr.detectorId = 'STUB-001';
+        dr.severity = 'Warning';
+        dr.gapUsd = 100;
+        dr.title = 'stub';
+        dr.description = 'stub-finding';
+
+        DetectorContext ctx = new DetectorContext(scan.Id, 'USD', 'CPQ');
+        Test.startTest();
+        ForensicScanService.runDetectorChunk(scan.Id, ctx,
+            new List<IDetector>{ new StubDetector('STUB-001', new List<DetectorResult>{ dr }) });
+        Test.stopTest();
+
+        List<ForensicFinding__c> findings = [
+            SELECT DetectorId__c FROM ForensicFinding__c
+            WHERE ForensicScan__c = :scan.Id
+        ];
+        System.assertEquals(1, findings.size());
+        System.assertEquals('STUB-001', findings[0].DetectorId__c);
+    }
+
+    @isTest
+    static void runDetectorChunk_swallowsDetectorErrorIntoScanField() {
+        ForensicScan__c scan = new ForensicScan__c(
+            Status__c = 'Running', StartedAt__c = System.now()
+        );
+        insert scan;
+        DetectorContext ctx = new DetectorContext(scan.Id, 'USD', 'CPQ');
+
+        Test.startTest();
+        ForensicScanService.runDetectorChunk(scan.Id, ctx,
+            new List<IDetector>{ new ThrowingDetector() });
+        Test.stopTest();
+
+        ForensicScan__c after2 = [
+            SELECT ErrorMessage__c FROM ForensicScan__c WHERE Id = :scan.Id
+        ];
+        System.assertNotEquals(null, after2.ErrorMessage__c,
+            'Detector exception should land in ErrorMessage__c');
+        System.assert(after2.ErrorMessage__c.contains('STUB-THROW'),
+            'Error message should include detector id');
+    }
+
+    @isTest
+    static void finalizeRemoteScan_marksCompletedAndTotals() {
+        ForensicScan__c scan = new ForensicScan__c(
+            Status__c = 'Running', StartedAt__c = System.now()
+        );
+        insert scan;
+        // Pre-insert a finding so totals are non-zero.
+        insert new ForensicFinding__c(
+            ForensicScan__c = scan.Id,
+            DetectorId__c = 'STUB-001', Severity__c = 'Warning',
+            GapUsd__c = 250, Title__c = 't', Description__c = 'd',
+            Status__c = 'Open', DetectedAt__c = System.now()
+        );
+
+        Test.startTest();
+        ForensicScanService.finalizeRemoteScan(scan.Id, 'CPQ', null, null);
+        Test.stopTest();
+
+        ForensicScan__c result = [
+            SELECT Status__c, FindingCount__c, TotalLeakageUsd__c, CompletedAt__c
+            FROM ForensicScan__c WHERE Id = :scan.Id
+        ];
+        System.assertEquals('Completed', result.Status__c);
+        System.assertEquals(1, result.FindingCount__c);
+        System.assertEquals(250, result.TotalLeakageUsd__c);
+        System.assertNotEquals(null, result.CompletedAt__c);
+    }
+
+    @isTest
+    static void finalizeRemoteScan_marksPartialWhenErrorMessageSet() {
+        ForensicScan__c scan = new ForensicScan__c(
+            Status__c = 'Running', StartedAt__c = System.now(),
+            ErrorMessage__c = 'STUB-001: simulated detector error'
+        );
+        insert scan;
+
+        Test.startTest();
+        ForensicScanService.finalizeRemoteScan(scan.Id, 'CPQ', null, null);
+        Test.stopTest();
+
+        ForensicScan__c result = [
+            SELECT Status__c FROM ForensicScan__c WHERE Id = :scan.Id
+        ];
+        System.assertEquals('Partial', result.Status__c);
+    }
 }

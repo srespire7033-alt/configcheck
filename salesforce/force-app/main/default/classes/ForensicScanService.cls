@@ -15,6 +15,12 @@
  */
 public with sharing class ForensicScanService {
 
+    /** Phase 22L — bundles per remote-scan chunk. Most bundles do 1-2
+     *  callouts; a few (IA, ARM composite ones) do 4-6. 10 leaves
+     *  comfortable headroom below the 100-callout per-tx hard limit
+     *  even on worst-case mixes. @TestVisible so tests can shrink it. */
+    @TestVisible private static Integer BUNDLES_PER_CHUNK = 10;
+
     /** Registry of detectors. Keep in sync as new detectors are added. */
     private static List<IDetector> getDetectorsFor(String productType, Boolean isRemote) {
         List<IDetector> all = new List<IDetector> {
@@ -217,15 +223,97 @@ public with sharing class ForensicScanService {
      * Phase 21 Step 2 — Queueable wrapper for remote scans. Runs the
      * detector pass in a fresh transaction so HTTP callouts via the
      * Named Credential are allowed (uncommitted-work constraint).
+     *
+     * Phase 22L — chunked. A single Apex transaction is capped at 100
+     * HTTP callouts. With ~30+ remote bundles each making 1-6 callouts,
+     * a non-chunked run blew the limit silently ("Too many callouts:
+     * 101"), failing every scan past a certain bundle count and leaving
+     * ForensicScan__c stuck on Status='Running' because nothing
+     * propagated the failure back. The chunked design processes
+     * BUNDLES_PER_CHUNK bundles per tx and chains to the next. The
+     * last detector chunk enqueues RemoteScanFinalizer to do Tier 2
+     * + attribution + totals + health in its own clean tx.
+     *
+     * Each link attaches a ScanFailFinalizer so an uncaught exception
+     * (governor limit, callout timeout, anything else) marks the scan
+     * Status='Failed' instead of leaving it orphaned at 'Running'.
      */
     public class RemoteScanRunner implements Queueable, Database.AllowsCallouts {
         private final Id scanId;
         private final String productType;
         private final Id connectedOrgId;
         private final String namedCredentialName;
+        private final Integer startIndex;
 
         public RemoteScanRunner(Id scanId, String productType,
                                  Id connectedOrgId, String namedCredentialName) {
+            this(scanId, productType, connectedOrgId, namedCredentialName, 0);
+        }
+
+        public RemoteScanRunner(Id scanId, String productType,
+                                 Id connectedOrgId, String namedCredentialName,
+                                 Integer startIndex) {
+            this.scanId = scanId;
+            this.productType = productType;
+            this.connectedOrgId = connectedOrgId;
+            this.namedCredentialName = namedCredentialName;
+            this.startIndex = (startIndex == null) ? 0 : startIndex;
+        }
+
+        public void execute(QueueableContext qc) {
+            System.attachFinalizer(new ScanFailFinalizer(scanId, 'chunk@' + startIndex));
+
+            DetectorContext ctx = new DetectorContext(
+                scanId, UserInfo.getDefaultCurrency(), productType,
+                connectedOrgId, namedCredentialName);
+            List<IDetector> all = getDetectorsFor(productType, true);
+
+            if (Test.isRunningTest()) {
+                // Test.startTest/stopTest only allows one Queueable level, so
+                // run the whole chunked flow inline. Callouts are mocked.
+                Integer idx = startIndex;
+                while (idx < all.size()) {
+                    Integer endIdx = Math.min(idx + BUNDLES_PER_CHUNK, all.size());
+                    List<IDetector> chunk = new List<IDetector>();
+                    for (Integer i = idx; i < endIdx; i++) chunk.add(all.get(i));
+                    runDetectorChunk(scanId, ctx, chunk);
+                    idx = endIdx;
+                }
+                finalizeRemoteScan(scanId, productType, connectedOrgId, namedCredentialName);
+                return;
+            }
+
+            // Production path — one chunk per tx, chain or fan out to finalizer.
+            Integer endIndex = Math.min(startIndex + BUNDLES_PER_CHUNK, all.size());
+            List<IDetector> chunk = new List<IDetector>();
+            for (Integer i = startIndex; i < endIndex; i++) chunk.add(all.get(i));
+            runDetectorChunk(scanId, ctx, chunk);
+
+            if (endIndex < all.size()) {
+                System.enqueueJob(new RemoteScanRunner(
+                    scanId, productType, connectedOrgId, namedCredentialName, endIndex));
+            } else {
+                System.enqueueJob(new RemoteScanFinalizer(
+                    scanId, productType, connectedOrgId, namedCredentialName));
+            }
+        }
+    }
+
+    /**
+     * Phase 22L — final-stage queueable for remote scans. Runs Tier 2
+     * (CustomDetector__mdt — may make remote callouts too) + attribution
+     * + trust + totals + health in its own tx so the callout budget is
+     * fresh. Tier 3 Flow detectors are skipped on remote (cannot route
+     * via Named Credential).
+     */
+    public class RemoteScanFinalizer implements Queueable, Database.AllowsCallouts {
+        private final Id scanId;
+        private final String productType;
+        private final Id connectedOrgId;
+        private final String namedCredentialName;
+
+        public RemoteScanFinalizer(Id scanId, String productType,
+                                    Id connectedOrgId, String namedCredentialName) {
             this.scanId = scanId;
             this.productType = productType;
             this.connectedOrgId = connectedOrgId;
@@ -233,7 +321,49 @@ public with sharing class ForensicScanService {
         }
 
         public void execute(QueueableContext qc) {
-            runDetectorsAndFinalize(scanId, productType, connectedOrgId, namedCredentialName);
+            System.attachFinalizer(new ScanFailFinalizer(scanId, 'finalize'));
+            finalizeRemoteScan(scanId, productType, connectedOrgId, namedCredentialName);
+        }
+    }
+
+    /**
+     * Phase 22L — Finalizer that propagates queueable failures to the
+     * ForensicScan__c record. Without this, governor-limit crashes
+     * (Too many callouts: 101, CPU time exceeded, etc.) leave the scan
+     * stuck at Status='Running' forever and the UI lies to the user.
+     *
+     * Finalizers run after the queueable transaction ends regardless of
+     * outcome; we only act on UNHANDLED_EXCEPTION. Finalizers cannot
+     * make callouts but DML is allowed, which is all we need.
+     */
+    public class ScanFailFinalizer implements System.Finalizer {
+        private final Id scanId;
+        private final String stage;
+        public ScanFailFinalizer(Id scanId, String stage) {
+            this.scanId = scanId;
+            this.stage = stage;
+        }
+        public void execute(FinalizerContext fc) {
+            if (fc == null || fc.getResult() != ParentJobResult.UNHANDLED_EXCEPTION) return;
+            try {
+                Exception ex = fc.getException();
+                String msg = (ex != null)
+                    ? ex.getTypeName() + ': ' + ex.getMessage()
+                    : 'unknown failure';
+                String body = '[' + stage + '] ' + msg;
+                if (body.length() > 30000) body = body.substring(0, 30000);
+                update new ForensicScan__c(
+                    Id = scanId,
+                    Status__c = 'Failed',
+                    ErrorMessage__c = body,
+                    CompletedAt__c = System.now()
+                );
+            } catch (Exception ignore) {
+                // Last-resort: if the scan-update DML itself fails, there
+                // is nothing left to do. The orphan scan stays Running.
+                System.debug(LoggingLevel.ERROR,
+                    'ScanFailFinalizer DML failed: ' + ignore.getMessage());
+            }
         }
     }
 
@@ -351,6 +481,121 @@ public with sharing class ForensicScanService {
             HealthScoreCalculator.computeAndStore(scan.Id);
         } catch (Exception e) {
             System.debug(LoggingLevel.ERROR, 'Health score calc failed: ' + e.getMessage());
+        }
+    }
+
+    /**
+     * Phase 22L — runs one chunk of detectors (called from RemoteScanRunner).
+     * Each chunk is its own queueable transaction with a fresh callout
+     * budget. Findings persist immediately so the final-stage aggregation
+     * sees them via SOQL.
+     *
+     * Per-detector try/catch keeps a single bundle failure from tanking
+     * the whole chunk; the error is appended to scan.ErrorMessage__c so
+     * the finalize step can flip status to 'Partial'.
+     */
+    @TestVisible
+    private static void runDetectorChunk(Id scanId, DetectorContext ctx,
+                                          List<IDetector> chunk) {
+        Set<String> suppressed = loadSuppressionKeys();
+        List<ForensicFinding__c> findings = new List<ForensicFinding__c>();
+        String chunkErr = null;
+        for (IDetector d : chunk) {
+            try {
+                for (DetectorResult r : d.run(ctx)) {
+                    if (isSuppressed(suppressed, r)) continue;
+                    findings.add(toFindingRecord(scanId, r));
+                }
+            } catch (Exception e) {
+                chunkErr = (chunkErr == null ? '' : chunkErr + '\n')
+                    + d.getDetectorId() + ': ' + e.getMessage();
+                System.debug(LoggingLevel.ERROR,
+                    'Detector ' + d.getDetectorId() + ' failed: ' + e.getMessage());
+            }
+        }
+        if (!findings.isEmpty()) insert findings;
+        if (chunkErr != null) {
+            // Append to whatever earlier chunks already accumulated.
+            ForensicScan__c cur = [
+                SELECT ErrorMessage__c FROM ForensicScan__c
+                WHERE Id = :scanId LIMIT 1
+            ];
+            String combined = (cur.ErrorMessage__c == null ? '' : cur.ErrorMessage__c + '\n')
+                + chunkErr;
+            if (combined.length() > 30000) combined = combined.substring(0, 30000);
+            update new ForensicScan__c(Id = scanId, ErrorMessage__c = combined);
+        }
+    }
+
+    /**
+     * Phase 22L — final-stage work for a remote scan (called from
+     * RemoteScanFinalizer). Tier 2 CustomDetector__mdt may itself make
+     * callouts, hence the dedicated transaction.
+     *
+     * Totals are computed by SOQL on the persisted findings each chunk
+     * already inserted, not by accumulating in memory across queueables.
+     */
+    @TestVisible
+    private static void finalizeRemoteScan(Id scanId, String productType,
+                                            Id connectedOrgId,
+                                            String namedCredentialName) {
+        DetectorContext ctx = new DetectorContext(
+            scanId, UserInfo.getDefaultCurrency(), productType,
+            connectedOrgId, namedCredentialName);
+        Set<String> suppressed = loadSuppressionKeys();
+        List<ForensicFinding__c> findings = new List<ForensicFinding__c>();
+
+        // Tier 2 — self-service detectors. May make callouts.
+        try {
+            for (DetectorResult r : CustomDetectorService.runAll(ctx)) {
+                if (isSuppressed(suppressed, r)) continue;
+                findings.add(toFindingRecord(scanId, r));
+            }
+        } catch (Exception e) {
+            System.debug(LoggingLevel.ERROR,
+                'CustomDetectorService.runAll failed: ' + e.getMessage());
+        }
+
+        // Tier 3 Flow detectors are intentionally skipped on remote — Flows
+        // don't route through Named Credentials.
+
+        if (!findings.isEmpty()) insert findings;
+
+        try { AttributionService.traceScan(scanId, ctx); }
+        catch (Exception e) {
+            System.debug(LoggingLevel.ERROR,
+                'AttributionService.traceScan failed: ' + e.getMessage());
+        }
+        try { TrustScoreService.recompute(); }
+        catch (Exception e) {
+            System.debug(LoggingLevel.WARN,
+                'TrustScoreService.recompute failed: ' + e.getMessage());
+        }
+
+        AggregateResult[] agg = [
+            SELECT COUNT(Id) ct, SUM(GapUsd__c) totalGap
+            FROM ForensicFinding__c WHERE ForensicScan__c = :scanId
+        ];
+        Integer findingCount = (Integer) agg[0].get('ct');
+        Decimal totalLeakage = (Decimal) agg[0].get('totalGap');
+        if (totalLeakage == null) totalLeakage = 0;
+
+        ForensicScan__c scan = [
+            SELECT ErrorMessage__c FROM ForensicScan__c
+            WHERE Id = :scanId LIMIT 1
+        ];
+        update new ForensicScan__c(
+            Id = scanId,
+            Status__c = (scan.ErrorMessage__c != null) ? 'Partial' : 'Completed',
+            CompletedAt__c = System.now(),
+            TotalLeakageUsd__c = totalLeakage,
+            FindingCount__c = findingCount
+        );
+
+        try { HealthScoreCalculator.computeAndStore(scanId); }
+        catch (Exception e) {
+            System.debug(LoggingLevel.ERROR,
+                'Health score calc failed: ' + e.getMessage());
         }
     }
 
