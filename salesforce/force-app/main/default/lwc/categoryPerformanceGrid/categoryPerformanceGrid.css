@@ -46,6 +46,10 @@
 }
 .op-cp__dot--cpq     { background: #3b82f6; }
 .op-cp__dot--billing { background: #10b981; }
+/* Phase 22v — ARM dot. Violet matches the product-type badge in the
+   hero card so the user can connect "this is the ARM dashboard" at a
+   glance. */
+.op-cp__dot--arm     { background: #a855f7; }
 .op-cp__sec-label {
   font-size: 11px;
   font-weight: 700;

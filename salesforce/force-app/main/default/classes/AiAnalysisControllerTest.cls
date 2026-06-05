@@ -4,7 +4,7 @@ private class AiAnalysisControllerTest {
     @isTest
     static void emptyOrgReturnsPlaceholder() {
         Test.startTest();
-        AiAnalysisController.AnalysisDto dto = AiAnalysisController.getAnalysis();
+        AiAnalysisController.AnalysisDto dto = AiAnalysisController.getAnalysis(null);
         Test.stopTest();
         System.assertNotEquals(null, dto);
         System.assert(dto.headline.contains('Run a forensic scan'),
@@ -63,7 +63,7 @@ private class AiAnalysisControllerTest {
         insert findings;
 
         Test.startTest();
-        AiAnalysisController.AnalysisDto dto = AiAnalysisController.getAnalysis();
+        AiAnalysisController.AnalysisDto dto = AiAnalysisController.getAnalysis(null);
         Test.stopTest();
 
         System.assertEquals(7, dto.totalCritical, 'Total critical across all detectors');

@@ -1,5 +1,5 @@
 import { LightningElement, wire, track } from 'lwc';
-import { NavigationMixin } from 'lightning/navigation';
+import { NavigationMixin, CurrentPageReference } from 'lightning/navigation';
 import { refreshApex } from '@salesforce/apex';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import getRecoveryQueue from '@salesforce/apex/DashboardController.getRecoveryQueue';
@@ -39,8 +39,17 @@ export default class RecoveryQueue extends NavigationMixin(LightningElement) {
   // Set<string> of selected action ids. Use a plain object for
   // reactivity (Sets don't trigger LWC re-render on add/delete).
   @track selectedIds = {};
+  /** Phase 22w — scope recovery queue to the active Connected Org. */
+  @track connectedOrgId = null;
 
-  @wire(getRecoveryQueue)
+  @wire(CurrentPageReference)
+  wirePageRef(pageRef) {
+    if (!pageRef) return;
+    this.connectedOrgId = pageRef.state?.c__connectedOrgId
+      || pageRef.state?.connectedOrgId || null;
+  }
+
+  @wire(getRecoveryQueue, { connectedOrgId: '$connectedOrgId' })
   wireData(result) {
     this.wiredResult = result;
     this.loading = false;

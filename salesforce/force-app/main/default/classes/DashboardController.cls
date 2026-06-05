@@ -623,22 +623,38 @@ public with sharing class DashboardController {
         @AuraEnabled public String actualValue;
     }
 
+    /** Phase 22w — scope recovery queue to the Connected Org by chasing
+     *  RecoveryAction → ForensicFinding → ForensicScan.ConnectedOrg. */
     @AuraEnabled(cacheable=true)
-    public static RecoveryQueueDto getRecoveryQueue() {
+    public static RecoveryQueueDto getRecoveryQueue(Id connectedOrgId) {
         RecoveryQueueDto dto = new RecoveryQueueDto();
         dto.groups = new List<RecoveryGroup>();
         dto.totalCount = 0;
         dto.totalProjectedUsd = 0;
 
-        List<RecoveryAction__c> rows = [
-            SELECT Id, ApprovalStatus__c, ProjectedReclaimUsd__c,
-                   ApprovedAt__c, CommittedAt__c, CommitVerified__c,
-                   VerificationMessage__c, ExpectedValue__c, ActualValue__c,
-                   ForensicFinding__c, ForensicFinding__r.Title__c
-            FROM RecoveryAction__c
-            WITH SECURITY_ENFORCED ORDER BY CreatedDate DESC
-            LIMIT 500
-        ];
+        List<RecoveryAction__c> rows;
+        if (connectedOrgId != null) {
+            rows = [
+                SELECT Id, ApprovalStatus__c, ProjectedReclaimUsd__c,
+                       ApprovedAt__c, CommittedAt__c, CommitVerified__c,
+                       VerificationMessage__c, ExpectedValue__c, ActualValue__c,
+                       ForensicFinding__c, ForensicFinding__r.Title__c
+                FROM RecoveryAction__c
+                WHERE ForensicFinding__r.ForensicScan__r.ConnectedOrg__c = :connectedOrgId
+                WITH SECURITY_ENFORCED ORDER BY CreatedDate DESC
+                LIMIT 500
+            ];
+        } else {
+            rows = [
+                SELECT Id, ApprovalStatus__c, ProjectedReclaimUsd__c,
+                       ApprovedAt__c, CommittedAt__c, CommitVerified__c,
+                       VerificationMessage__c, ExpectedValue__c, ActualValue__c,
+                       ForensicFinding__c, ForensicFinding__r.Title__c
+                FROM RecoveryAction__c
+                WITH SECURITY_ENFORCED ORDER BY CreatedDate DESC
+                LIMIT 500
+            ];
+        }
 
         // Group by status. Iteration order in Map is insertion-based
         // in Apex, so seed the expected statuses up front to control

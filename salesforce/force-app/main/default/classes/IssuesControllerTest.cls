@@ -38,7 +38,7 @@ private class IssuesControllerTest {
                 Status__c='Open', DetectedAt__c=System.now())
         };
         Test.startTest();
-        List<IssuesController.IssueGroup> groups = IssuesController.getTopIssueGroups(5);
+        List<IssuesController.IssueGroup> groups = IssuesController.getTopIssueGroups(5, null);
         Test.stopTest();
         System.assertEquals(1, groups.size());
         System.assertEquals(1, groups[0].relatedCount, '3 unique order titles collapse to 1 normalized member');
@@ -156,7 +156,7 @@ private class IssuesControllerTest {
         insert fs;
 
         Test.startTest();
-        List<IssuesController.IssueGroup> groups = IssuesController.getTopIssueGroups(5);
+        List<IssuesController.IssueGroup> groups = IssuesController.getTopIssueGroups(5, null);
         Test.stopTest();
 
         System.assertEquals(2, groups.size(), 'Two distinct categories');
@@ -184,13 +184,13 @@ private class IssuesControllerTest {
         };
 
         Test.startTest();
-        List<IssuesController.IssueRow> all = IssuesController.getAllIssues(null, null, null);
+        List<IssuesController.IssueRow> all = IssuesController.getAllIssues(null, null, null, null);
         List<IssuesController.IssueRow> critsOnly = IssuesController.getAllIssues(
-            new List<String>{'Critical'}, null, null);
+            new List<String>{'Critical'}, null, null, null);
         List<IssuesController.IssueRow> openOnly = IssuesController.getAllIssues(
-            null, new List<String>{'Open'}, null);
+            null, new List<String>{'Open'}, null, null);
         List<IssuesController.IssueRow> searched = IssuesController.getAllIssues(
-            null, null, 'Renewal');
+            null, null, 'Renewal', null);
         Test.stopTest();
 
         System.assertEquals(2, all.size());

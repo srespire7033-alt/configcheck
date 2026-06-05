@@ -1,4 +1,5 @@
 import { LightningElement, wire, track } from 'lwc';
+import { CurrentPageReference } from 'lightning/navigation';
 import { refreshApex } from '@salesforce/apex';
 import getTopIssueGroups from '@salesforce/apex/IssuesController.getTopIssueGroups';
 
@@ -15,13 +16,22 @@ export default class IssuesPanel extends LightningElement {
   @track loading = true;
   @track expandedKey = null;
   @track openDetailId = null; // for modal
+  /** Phase 22w — scope top-issues rollup to the active Connected Org. */
+  @track connectedOrgId = null;
   wiredResult;
+
+  @wire(CurrentPageReference)
+  wirePageRef(pageRef) {
+    if (!pageRef) return;
+    this.connectedOrgId = pageRef.state?.c__connectedOrgId
+      || pageRef.state?.connectedOrgId || null;
+  }
 
   connectedCallback() { window.addEventListener('op:scan-completed', this.handleScanCompleted); }
   disconnectedCallback() { window.removeEventListener('op:scan-completed', this.handleScanCompleted); }
   handleScanCompleted = () => { if (this.wiredResult) refreshApex(this.wiredResult); };
 
-  @wire(getTopIssueGroups, { maxGroups: 5 })
+  @wire(getTopIssueGroups, { maxGroups: 5, connectedOrgId: '$connectedOrgId' })
   wireData(result) {
     this.wiredResult = result;
     this.loading = false;

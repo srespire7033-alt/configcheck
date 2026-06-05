@@ -1,4 +1,5 @@
 import { LightningElement, wire, track } from 'lwc';
+import { CurrentPageReference } from 'lightning/navigation';
 import { refreshApex } from '@salesforce/apex';
 import getAnalysis from '@salesforce/apex/AiAnalysisController.getAnalysis';
 
@@ -18,13 +19,22 @@ export default class AiAnalysisCard extends LightningElement {
   loading = true;
   @track showFullAnalysis = false;
   @track openCategory = null;
+  /** Phase 22w — scope analysis to the active Connected Org. */
+  @track connectedOrgId = null;
   wiredResult;
+
+  @wire(CurrentPageReference)
+  wirePageRef(pageRef) {
+    if (!pageRef) return;
+    this.connectedOrgId = pageRef.state?.c__connectedOrgId
+      || pageRef.state?.connectedOrgId || null;
+  }
 
   connectedCallback() { window.addEventListener('op:scan-completed', this.handleScanCompleted); }
   disconnectedCallback() { window.removeEventListener('op:scan-completed', this.handleScanCompleted); }
   handleScanCompleted = () => { if (this.wiredResult) refreshApex(this.wiredResult); };
 
-  @wire(getAnalysis)
+  @wire(getAnalysis, { connectedOrgId: '$connectedOrgId' })
   wireData(result) {
     this.wiredResult = result;
     this.loading = false;

@@ -110,8 +110,10 @@ public with sharing class RevenueLeakageController {
                           new List<String>{ 'CT-FOR-001', 'MDQ-FOR-001' } }
     };
 
+    /** Phase 22w — connectedOrgId param scopes leakage rollup to the
+     *  active Connected Org instead of "latest scan globally." */
     @AuraEnabled(cacheable=true)
-    public static LeakageDto getLeakage() {
+    public static LeakageDto getLeakage(Id connectedOrgId) {
         LeakageDto dto = new LeakageDto();
         dto.totalVerifiedUsd = 0;
         dto.estimatedUsd = 0;
@@ -123,12 +125,21 @@ public with sharing class RevenueLeakageController {
         dto.themes = new List<Theme>();
         dto.biggestLeaks = new List<LeakRow>();
 
-        // Latest completed scan
-        List<ForensicScan__c> scans = [
-            SELECT Id FROM ForensicScan__c
-            WHERE Status__c IN ('Completed','Partial')
-            WITH SECURITY_ENFORCED ORDER BY CompletedAt__c DESC NULLS LAST LIMIT 1
-        ];
+        List<ForensicScan__c> scans;
+        if (connectedOrgId != null) {
+            scans = [
+                SELECT Id FROM ForensicScan__c
+                WHERE Status__c IN ('Completed','Partial')
+                  AND ConnectedOrg__c = :connectedOrgId
+                WITH SECURITY_ENFORCED ORDER BY CompletedAt__c DESC NULLS LAST LIMIT 1
+            ];
+        } else {
+            scans = [
+                SELECT Id FROM ForensicScan__c
+                WHERE Status__c IN ('Completed','Partial')
+                WITH SECURITY_ENFORCED ORDER BY CompletedAt__c DESC NULLS LAST LIMIT 1
+            ];
+        }
         if (scans.isEmpty()) return dto;
         Id scanId = scans[0].Id;
 

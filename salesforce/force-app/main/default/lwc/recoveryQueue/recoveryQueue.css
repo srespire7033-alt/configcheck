@@ -50,12 +50,22 @@
 
 .op-rq__group-header {
   display: grid;
-  grid-template-columns: 1fr auto auto;
+  /* Phase 22v — 4 columns when a checkbox is rendered (selectable
+     group). 3-col grid wrapped the 4th item (group-total) onto a new
+     row, leaving the $0 floating alone below the header. The leading
+     `auto` makes the checkbox take its natural width and keeps the
+     remaining three items on the same row. */
+  grid-template-columns: auto 1fr auto auto;
   gap: 12px;
   align-items: center;
   padding: 10px 14px;
   background: var(--op-color-bg-page, #f9fafb);
   border-bottom: 1px solid var(--op-color-border-subtle, #f3f4f6);
+}
+/* Non-selectable groups (Committed/Expired/Rejected) have only 3
+   children — collapse the leading auto column so layout still aligns. */
+.op-rq__group:not(.op-rq__group--pending):not(.op-rq__group--approved) .op-rq__group-header {
+  grid-template-columns: 1fr auto auto;
 }
 .op-rq__group-status {
   font-weight: 700;

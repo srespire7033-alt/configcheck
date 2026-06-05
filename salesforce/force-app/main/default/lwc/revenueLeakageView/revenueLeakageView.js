@@ -1,5 +1,5 @@
 import { LightningElement, wire, track } from 'lwc';
-import { NavigationMixin } from 'lightning/navigation';
+import { NavigationMixin, CurrentPageReference } from 'lightning/navigation';
 import { refreshApex } from '@salesforce/apex';
 import getLeakage from '@salesforce/apex/RevenueLeakageController.getLeakage';
 import getCategoryByKey from '@salesforce/apex/CategoryDisplayController.getByKey';
@@ -17,7 +17,16 @@ export default class RevenueLeakageView extends NavigationMixin(LightningElement
   @track openLeakId = null;
   @track openIssueDetailId = null;
   @track categoryMeta;  // Phase 20d
+  /** Phase 22w — scope leakage rollup to the active Connected Org. */
+  @track connectedOrgId = null;
   wiredResult;
+
+  @wire(CurrentPageReference)
+  wirePageRef(pageRef) {
+    if (!pageRef) return;
+    this.connectedOrgId = pageRef.state?.c__connectedOrgId
+      || pageRef.state?.connectedOrgId || null;
+  }
 
   @wire(getCategoryByKey, { categoryKey: 'revenue_leakage' })
   wireCategoryMeta({ data }) {
@@ -32,7 +41,7 @@ export default class RevenueLeakageView extends NavigationMixin(LightningElement
   disconnectedCallback() { window.removeEventListener('op:scan-completed', this.handleScanCompleted); }
   handleScanCompleted = () => { if (this.wiredResult) refreshApex(this.wiredResult); };
 
-  @wire(getLeakage)
+  @wire(getLeakage, { connectedOrgId: '$connectedOrgId' })
   wireData(result) {
     this.wiredResult = result;
     this.loading = false;

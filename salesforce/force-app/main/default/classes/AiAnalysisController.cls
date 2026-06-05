@@ -63,8 +63,14 @@ public with sharing class AiAnalysisController {
         'MDQ-FOR-001' => 'MDQ Pricing'
     };
 
+    /**
+     * Phase 22w — connectedOrgId param. Same scoping bug class as
+     * 22m / 22r / 22s / 22t / 22u: the dashboard's top-categories
+     * analysis was always picking the latest scan globally, so an
+     * ARM-org dashboard showed a CPQ-org's category breakdown.
+     */
     @AuraEnabled(cacheable=true)
-    public static AnalysisDto getAnalysis() {
+    public static AnalysisDto getAnalysis(Id connectedOrgId) {
         AnalysisDto dto = new AnalysisDto();
         dto.topCategories = new List<CategoryRow>();
         dto.residualCritical = 0;
@@ -74,13 +80,25 @@ public with sharing class AiAnalysisController {
         dto.totalWarning = 0;
         dto.totalInfo = 0;
 
-        // Latest completed scan
-        List<ForensicScan__c> scans = [
-            SELECT Id FROM ForensicScan__c
-            WHERE Status__c IN ('Completed','Partial')
-            WITH SECURITY_ENFORCED ORDER BY CompletedAt__c DESC NULLS LAST
-            LIMIT 1
-        ];
+        // Latest completed scan — scoped to the active Connected Org
+        // when present so multi-org dashboards don't cross-contaminate.
+        List<ForensicScan__c> scans;
+        if (connectedOrgId != null) {
+            scans = [
+                SELECT Id FROM ForensicScan__c
+                WHERE Status__c IN ('Completed','Partial')
+                  AND ConnectedOrg__c = :connectedOrgId
+                WITH SECURITY_ENFORCED ORDER BY CompletedAt__c DESC NULLS LAST
+                LIMIT 1
+            ];
+        } else {
+            scans = [
+                SELECT Id FROM ForensicScan__c
+                WHERE Status__c IN ('Completed','Partial')
+                WITH SECURITY_ENFORCED ORDER BY CompletedAt__c DESC NULLS LAST
+                LIMIT 1
+            ];
+        }
         if (scans.isEmpty()) {
             dto.headline = 'Run a forensic scan to see your org analysis.';
             return dto;

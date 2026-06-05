@@ -88,15 +88,33 @@ public with sharing class IssuesController {
      */
     @AuraEnabled(cacheable=true)
     public static List<IssueRow> getTopIssues(Integer maxResults) {
+        return getTopIssuesScoped(maxResults, null);
+    }
+
+    /** Phase 22w — scoped variant. The original signature stays so any
+     *  unforeseen caller keeps the global behavior; new callers use this. */
+    @AuraEnabled(cacheable=true)
+    public static List<IssueRow> getTopIssuesScoped(Integer maxResults, Id connectedOrgId) {
         Integer limitN = (maxResults == null || maxResults <= 0) ? 25 : maxResults;
         List<IssueRow> out = new List<IssueRow>();
 
-        List<ForensicScan__c> scans = [
-            SELECT Id FROM ForensicScan__c
-            WHERE Status__c IN ('Completed','Partial')
-            WITH SECURITY_ENFORCED ORDER BY CompletedAt__c DESC NULLS LAST
-            LIMIT 1
-        ];
+        List<ForensicScan__c> scans;
+        if (connectedOrgId != null) {
+            scans = [
+                SELECT Id FROM ForensicScan__c
+                WHERE Status__c IN ('Completed','Partial')
+                  AND ConnectedOrg__c = :connectedOrgId
+                WITH SECURITY_ENFORCED ORDER BY CompletedAt__c DESC NULLS LAST
+                LIMIT 1
+            ];
+        } else {
+            scans = [
+                SELECT Id FROM ForensicScan__c
+                WHERE Status__c IN ('Completed','Partial')
+                WITH SECURITY_ENFORCED ORDER BY CompletedAt__c DESC NULLS LAST
+                LIMIT 1
+            ];
+        }
         if (scans.isEmpty()) return out;
         Id scanId = scans[0].Id;
 
@@ -213,10 +231,12 @@ public with sharing class IssuesController {
     /** Top N issue GROUPS for the dashboard "Top Issues to Address" card.
      *  Groups by categoryLabel, picks the largest-volume title as the headline,
      *  rolls up distinct sub-titles as 'related' members with counts. */
+    /** Phase 22w — connectedOrgId param scopes the rollup to the active
+     *  Connected Org. */
     @AuraEnabled(cacheable=true)
-    public static List<IssueGroup> getTopIssueGroups(Integer maxGroups) {
+    public static List<IssueGroup> getTopIssueGroups(Integer maxGroups, Id connectedOrgId) {
         Integer n = (maxGroups == null || maxGroups <= 0) ? 5 : maxGroups;
-        List<IssueRow> flat = getTopIssues(500);
+        List<IssueRow> flat = getTopIssuesScoped(500, connectedOrgId);
         if (flat.isEmpty()) return new List<IssueGroup>();
 
         // Bucket by categoryLabel
@@ -291,15 +311,28 @@ public with sharing class IssuesController {
 
     /** All issues with optional severity/status filters + text search.
      *  severityFilters / statusFilters are inclusive — empty / null = no filter. */
+    /** Phase 22w — connectedOrgId param scopes the issues list to the
+     *  active Connected Org instead of "latest scan globally." */
     @AuraEnabled(cacheable=true)
-    public static List<IssueRow> getAllIssues(List<String> severityFilters, List<String> statusFilters, String search) {
+    public static List<IssueRow> getAllIssues(List<String> severityFilters, List<String> statusFilters, String search, Id connectedOrgId) {
         List<IssueRow> out = new List<IssueRow>();
-        List<ForensicScan__c> scans = [
-            SELECT Id FROM ForensicScan__c
-            WHERE Status__c IN ('Completed','Partial')
-            WITH SECURITY_ENFORCED ORDER BY CompletedAt__c DESC NULLS LAST
-            LIMIT 1
-        ];
+        List<ForensicScan__c> scans;
+        if (connectedOrgId != null) {
+            scans = [
+                SELECT Id FROM ForensicScan__c
+                WHERE Status__c IN ('Completed','Partial')
+                  AND ConnectedOrg__c = :connectedOrgId
+                WITH SECURITY_ENFORCED ORDER BY CompletedAt__c DESC NULLS LAST
+                LIMIT 1
+            ];
+        } else {
+            scans = [
+                SELECT Id FROM ForensicScan__c
+                WHERE Status__c IN ('Completed','Partial')
+                WITH SECURITY_ENFORCED ORDER BY CompletedAt__c DESC NULLS LAST
+                LIMIT 1
+            ];
+        }
         if (scans.isEmpty()) return out;
         Id scanId = scans[0].Id;
 

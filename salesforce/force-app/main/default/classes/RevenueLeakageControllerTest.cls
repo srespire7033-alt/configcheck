@@ -4,7 +4,7 @@ private class RevenueLeakageControllerTest {
     @isTest
     static void emptyOrgReturnsZeros() {
         Test.startTest();
-        RevenueLeakageController.LeakageDto dto = RevenueLeakageController.getLeakage();
+        RevenueLeakageController.LeakageDto dto = RevenueLeakageController.getLeakage(null);
         Test.stopTest();
         System.assertEquals(0, dto.totalVerifiedUsd);
         System.assertEquals(0, dto.findingCount);
@@ -41,7 +41,7 @@ private class RevenueLeakageControllerTest {
         insert fs;
 
         Test.startTest();
-        RevenueLeakageController.LeakageDto dto = RevenueLeakageController.getLeakage();
+        RevenueLeakageController.LeakageDto dto = RevenueLeakageController.getLeakage(null);
         Test.stopTest();
 
         System.assertEquals(7, dto.findingCount);
@@ -84,7 +84,7 @@ private class RevenueLeakageControllerTest {
         };
 
         Test.startTest();
-        RevenueLeakageController.LeakageDto dto = RevenueLeakageController.getLeakage();
+        RevenueLeakageController.LeakageDto dto = RevenueLeakageController.getLeakage(null);
         Test.stopTest();
 
         System.assertEquals(1000, dto.totalVerifiedUsd);
@@ -107,7 +107,7 @@ private class RevenueLeakageControllerTest {
         }
         insert fs;
         Test.startTest();
-        RevenueLeakageController.LeakageDto dto = RevenueLeakageController.getLeakage();
+        RevenueLeakageController.LeakageDto dto = RevenueLeakageController.getLeakage(null);
         Test.stopTest();
         System.assertEquals('medium', dto.confidence, '15 findings → medium');
     }

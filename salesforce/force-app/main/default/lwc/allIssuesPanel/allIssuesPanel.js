@@ -1,5 +1,5 @@
 import { LightningElement, wire, track } from 'lwc';
-import { NavigationMixin } from 'lightning/navigation';
+import { NavigationMixin, CurrentPageReference } from 'lightning/navigation';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import { refreshApex } from '@salesforce/apex';
 import getAllIssues from '@salesforce/apex/IssuesController.getAllIssues';
@@ -21,7 +21,16 @@ export default class AllIssuesPanel extends NavigationMixin(LightningElement) {
   @track openDetailId = null;
   @track saving = false;
   @track showAll = false;
+  /** Phase 22w — scope all-issues list to the active Connected Org. */
+  @track connectedOrgId = null;
   wiredResult;
+
+  @wire(CurrentPageReference)
+  wirePageRef(pageRef) {
+    if (!pageRef) return;
+    this.connectedOrgId = pageRef.state?.c__connectedOrgId
+      || pageRef.state?.connectedOrgId || null;
+  }
 
   connectedCallback() { window.addEventListener('op:scan-completed', this.handleScanCompleted); }
   disconnectedCallback() { window.removeEventListener('op:scan-completed', this.handleScanCompleted); }
@@ -31,6 +40,7 @@ export default class AllIssuesPanel extends NavigationMixin(LightningElement) {
     severityFilters: '$severityFilters',
     statusFilters: '$statusFilters',
     search: '$searchTerm',
+    connectedOrgId: '$connectedOrgId',
   })
   wireData(result) {
     this.wiredResult = result;

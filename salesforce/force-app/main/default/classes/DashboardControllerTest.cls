@@ -321,7 +321,7 @@ private class DashboardControllerTest {
 
     @isTest
     static void getRecoveryQueue_emptyWhenNoActions() {
-        DashboardController.RecoveryQueueDto dto = DashboardController.getRecoveryQueue();
+        DashboardController.RecoveryQueueDto dto = DashboardController.getRecoveryQueue(null);
         System.assertEquals(0, dto.totalCount);
         System.assertEquals(0, dto.groups.size());
     }
@@ -374,7 +374,7 @@ private class DashboardControllerTest {
         a3.CommittedAt__c = System.now();
         update a3;
 
-        DashboardController.RecoveryQueueDto dto = DashboardController.getRecoveryQueue();
+        DashboardController.RecoveryQueueDto dto = DashboardController.getRecoveryQueue(null);
         System.assertEquals(3, dto.totalCount);
         System.assertEquals(25000, dto.totalProjectedUsd);
         System.assertEquals(3, dto.groups.size(), 'Pending + Approved + Committed groups');
