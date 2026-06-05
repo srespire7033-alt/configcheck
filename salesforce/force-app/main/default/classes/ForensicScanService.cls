@@ -46,11 +46,11 @@ public with sharing class ForensicScanService {
             new ORD002QuoteOrderVarianceDetector(),
             new ORD003AmendmentVarianceDetector(),
             // Phase 22a-1 — Products + PricebookEntry hygiene checks
-            new PB001ProductNoPricebookDetector(),
-            new PB002ProductNoDescDetector(),
-            new PB003ProductNoCodeDetector(),
-            new PB004ProductNoFamilyDetector(),
-            new UA001ProductUnusedDetector(),
+            // Phase 22h — consolidated bundle replaces 5 per-record detectors
+            // (PB-001/002/003/004 + UA-001). Emits one DetectorResult per
+            // check with up to 25 supporting records, matching Vercel's
+            // "1 issue per check_id firing" convention.
+            new ProductHygieneChecksBundle(),
             // Phase 22a-2 — Bundles: 17 PR/SV/LQ/UA-003 checks across 3 bundles
             new PriceRuleChecksBundle(),
             new SummaryVariableChecksBundle(),
