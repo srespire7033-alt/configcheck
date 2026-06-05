@@ -58,11 +58,6 @@ public with sharing class ArmOrchestrationChecksBundle implements IDetector {
         return results;
     }
 
-    @TestVisible static List<Map<String, Object>> safeQ(DetectorContext ctx, String soql) {
-        try { return OrgQueryService.query(ctx, soql); }
-        catch (Exception e) { return new List<Map<String, Object>>(); }
-    }
-
     @TestVisible
     static List<DetectorResult> evaluateARM045(List<Map<String, Object>> steps) {
         List<SourceRecord> bad = new List<SourceRecord>();

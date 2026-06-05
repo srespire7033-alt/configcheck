@@ -42,26 +42,28 @@ public with sharing class ArmCatalogChecksBundle implements IDetector {
                 System.debug(LoggingLevel.INFO, '[OrgPrism Skip] ARM-CATALOG-BUNDLE: ARM not installed.');
                 return results;
             }
-            try {
-                products = OrgQueryService.query(ctx,
-                    'SELECT Id, Name, Family FROM Product2 WHERE IsActive = true LIMIT 10000');
-                // Phase 22i — PSMO.IsActive is missing on older RC Advanced
-                // releases. Try with the field; on schema variance fall back to
-                // selecting without it. evaluateARM001 below treats missing
-                // IsActive as active (the Vercel reference behavior).
-                psmos = OrgQueryService.queryWithFallback(ctx,
-                    'SELECT Id, Product2Id, ProductSellingModelId, IsActive FROM ProductSellingModelOption LIMIT 10000',
-                    'SELECT Id, Product2Id, ProductSellingModelId FROM ProductSellingModelOption LIMIT 10000');
-                pbes = OrgQueryService.query(ctx,
-                    'SELECT Id, Product2Id, IsActive FROM PricebookEntry LIMIT 10000');
-                categories = OrgQueryService.query(ctx,
-                    'SELECT Id, Name, IsActive FROM ProductCategory LIMIT 5000');
-                catProducts = OrgQueryService.query(ctx,
-                    'SELECT Id, ProductId, ProductCategoryId FROM ProductCategoryProduct LIMIT 10000');
-            } catch (Exception e) {
-                System.debug(LoggingLevel.WARN, '[OrgPrism Skip] ARM-CATALOG-BUNDLE: ' + e.getMessage());
-                return results;
-            }
+            // Phase 22j — per-query isolation. Older RC orgs may have
+            // ProductSellingModelOption fully absent AND ProductCategory.IsActive
+            // missing. A single try/catch around all five queries used to nuke
+            // the whole bundle when any one failed. Each query now degrades
+            // independently via queryWithFallback so the others still produce
+            // findings.
+            products = OrgQueryService.queryWithFallback(ctx,
+                'SELECT Id, Name, Family FROM Product2 WHERE IsActive = true LIMIT 10000', null);
+            psmos = OrgQueryService.queryWithFallback(ctx,
+                'SELECT Id, Product2Id, ProductSellingModelId, IsActive FROM ProductSellingModelOption LIMIT 10000',
+                'SELECT Id, Product2Id, ProductSellingModelId FROM ProductSellingModelOption LIMIT 10000');
+            pbes = OrgQueryService.queryWithFallback(ctx,
+                'SELECT Id, Product2Id, IsActive FROM PricebookEntry LIMIT 10000', null);
+            // ProductCategory.IsActive only exists on newer RC releases. Loose
+            // query drops it; evaluateARM010 below treats missing IsActive as
+            // active (cannot detect "active product in inactive category" when
+            // we can't see category activity).
+            categories = OrgQueryService.queryWithFallback(ctx,
+                'SELECT Id, Name, IsActive FROM ProductCategory LIMIT 5000',
+                'SELECT Id, Name FROM ProductCategory LIMIT 5000');
+            catProducts = OrgQueryService.queryWithFallback(ctx,
+                'SELECT Id, ProductId, ProductCategoryId FROM ProductCategoryProduct LIMIT 10000', null);
         }
 
         if (DetectorCatalogController.isActive('ARM-001'))  results.addAll(evaluateARM001(products, psmos));
@@ -133,7 +135,12 @@ public with sharing class ArmCatalogChecksBundle implements IDetector {
         Map<Id, String> catNames = new Map<Id, String>();
         for (Map<String, Object> c : categories) {
             catNames.put((Id) c.get('Id'), (String) c.get('Name'));
-            if (!Boolean.valueOf(c.get('IsActive'))) inactiveCats.add((Id) c.get('Id'));
+            // Phase 22j — only mark inactive when IsActive is explicitly false.
+            // Loose-query fallback drops the field on older RC releases; treat
+            // missing as active rather than inactive (avoids false positives).
+            if (c.containsKey('IsActive') && !Boolean.valueOf(c.get('IsActive'))) {
+                inactiveCats.add((Id) c.get('Id'));
+            }
         }
         Set<Id> activeProds = new Set<Id>();
         Map<Id, String> prodNames = new Map<Id, String>();

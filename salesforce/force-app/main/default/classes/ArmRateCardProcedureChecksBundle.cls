@@ -76,10 +76,6 @@ public with sharing class ArmRateCardProcedureChecksBundle implements IDetector 
         return results;
     }
 
-    @TestVisible static List<Map<String, Object>> safeQuery(DetectorContext ctx, String soql) {
-        try { return OrgQueryService.query(ctx, soql); }
-        catch (Exception e) { return new List<Map<String, Object>>(); }
-    }
     static Date parseD(Object o) {
         if (o == null) return null;
         if (o instanceof Date) return (Date) o;
