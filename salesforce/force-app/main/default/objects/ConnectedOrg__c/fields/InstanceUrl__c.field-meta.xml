@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>InstanceUrl__c</fullName>
+    <label>Instance URL</label>
+    <description>e.g. https://acme.my.salesforce.com</description>
+    <required>true</required>
+    <type>Url</type>
+</CustomField>

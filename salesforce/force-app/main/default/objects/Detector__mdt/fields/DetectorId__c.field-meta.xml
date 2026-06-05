@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>DetectorId__c</fullName>
+    <label>Detector Id</label>
+    <description>Stable identifier (e.g. REN-001) — matches DetectorId__c on ForensicFinding__c.</description>
+    <type>Text</type>
+    <length>40</length>
+    <required>true</required>
+    <unique>true</unique>
+    <externalId>true</externalId>
+    <fieldManageability>DeveloperControlled</fieldManageability>
+</CustomField>

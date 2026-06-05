@@ -1,56 +1,85 @@
 <template>
-  <c-dashboard-card title="Forensic Complexity" subtitle="What this scan touched and how confident the findings are">
+  <article class="op-cx">
+    <header class="op-cx__header">
+      <div class="op-cx__title-block">
+        <div class="op-cx__icon-wrap">
+          <lightning-icon icon-name="utility:layers" size="small" class="op-cx__icon"></lightning-icon>
+        </div>
+        <div>
+          <h2 class="op-cx__title">Org Complexity Score</h2>
+          <p class="op-cx__subtitle">Compared to healthy Salesforce orgs of similar size</p>
+        </div>
+      </div>
+      <template if:true={hasData}>
+        <span class={chipClass}>{rating}</span>
+      </template>
+    </header>
+
     <template if:true={isLoading}>
-      <div class="op-cmp__loading">
+      <div class="op-cx__loading">
         <lightning-spinner alternative-text="Loading" size="small"></lightning-spinner>
       </div>
     </template>
 
     <template if:true={hasError}>
-      <p class="op-cmp__error">{error}</p>
-    </template>
-
-    <template if:true={isEmpty}>
-      <p class="op-cmp__empty">No findings yet — complexity metrics light up after a scan emits findings.</p>
+      <p class="op-cx__error">{error}</p>
     </template>
 
     <template if:true={hasData}>
-      <!-- Detector coverage -->
-      <div class="op-cmp__row">
-        <div class="op-cmp__label-row">
-          <span class="op-cmp__label">Detector coverage</span>
-          <span class="op-cmp__value">{detectorCoverage.triggered} / {detectorCoverage.total} detectors fired</span>
+      <!-- Score + gauge -->
+      <div class="op-cx__score-block">
+        <p class={scoreClass}>
+          <span class="op-cx__score-num">{totalScore}</span>
+          <span class="op-cx__score-unit">points</span>
+        </p>
+        <div class="op-cx__gauge">
+          <div class="op-cx__gauge-fill" style={gaugeWidth}></div>
         </div>
-        <div class="op-cmp__bar-track">
-          <div class="op-cmp__bar op-cmp__bar--coverage" style={coverageBarStyle}></div>
-        </div>
-      </div>
-
-      <!-- Severity mix — stacked bar -->
-      <div class="op-cmp__row">
-        <div class="op-cmp__label-row">
-          <span class="op-cmp__label">Severity mix</span>
-          <span class="op-cmp__value">
-            {severityMix.critical} crit · {severityMix.warning} warn · {severityMix.info} info
-          </span>
-        </div>
-        <div class="op-cmp__bar-track op-cmp__bar-track--stacked">
-          <div class="op-cmp__seg op-cmp__seg--critical" style={criticalBarStyle}></div>
-          <div class="op-cmp__seg op-cmp__seg--warning" style={warningBarStyle}></div>
-          <div class="op-cmp__seg op-cmp__seg--info" style={infoBarStyle}></div>
+        <div class="op-cx__gauge-labels">
+          <span>0 (Simple)</span>
+          <span>150+ (Very Complex)</span>
         </div>
       </div>
 
-      <!-- Avg recoverability -->
-      <div class="op-cmp__row">
-        <div class="op-cmp__label-row">
-          <span class="op-cmp__label">Avg recoverability</span>
-          <span class="op-cmp__value">{avgRecoverability.pct}% · {avgRecoverability.label}</span>
-        </div>
-        <div class="op-cmp__bar-track">
-          <div class="op-cmp__bar op-cmp__bar--recovery" style={recoverabilityBarStyle}></div>
-        </div>
-      </div>
+      <p class="op-cx__description">{description}</p>
+
+      <!-- Toggle breakdown -->
+      <button type="button" class="op-cx__toggle" onclick={toggleBreakdown}>
+        <lightning-icon icon-name={toggleIconName} size="xx-small" class="op-cx__toggle-icon"></lightning-icon>
+        {toggleLabel}
+      </button>
+
+      <template if:true={isExpanded}>
+        <template if:true={hasFactors}>
+          <div class="op-cx__factors">
+            <template for:each={visibleFactors} for:item="f">
+              <div key={f.label} class="op-cx__factor">
+                <span class="op-cx__factor-label" title={f.label}>{f.label}</span>
+                <span class="op-cx__factor-count">{f.count}</span>
+                <div class="op-cx__factor-bar">
+                  <div class="op-cx__factor-bar-fill" style={f.userBarStyle}></div>
+                  <template if:true={f.hasBenchmark}>
+                    <div class="op-cx__factor-bench" style={f.benchmarkStyle}></div>
+                  </template>
+                </div>
+                <span class={f.contributionClass}>{f.contributionLabel}</span>
+              </div>
+            </template>
+
+            <!-- Legend -->
+            <div class="op-cx__legend">
+              <div class="op-cx__legend-item">
+                <span class="op-cx__legend-bar"></span>
+                <span>Your count</span>
+              </div>
+              <div class="op-cx__legend-item">
+                <span class="op-cx__legend-tick"></span>
+                <span>Industry benchmark</span>
+              </div>
+            </div>
+          </div>
+        </template>
+      </template>
     </template>
-  </c-dashboard-card>
+  </article>
 </template>

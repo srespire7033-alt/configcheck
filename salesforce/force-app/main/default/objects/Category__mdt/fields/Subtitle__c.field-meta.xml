@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Subtitle__c</fullName>
+    <label>Subtitle</label>
+    <description>Sub-heading shown below the title; explains what the category captures.</description>
+    <type>LongTextArea</type><length>500</length><visibleLines>2</visibleLines>
+    <fieldManageability>SubscriberControlled</fieldManageability>
+</CustomField>

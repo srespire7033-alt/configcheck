@@ -1,5 +1,5 @@
-import { LightningElement, wire } from 'lwc';
-import { NavigationMixin } from 'lightning/navigation';
+import { LightningElement, wire, track } from 'lwc';
+import { NavigationMixin, CurrentPageReference } from 'lightning/navigation';
 import getScanTrend from '@salesforce/apex/DashboardController.getScanTrend';
 
 /**
@@ -16,8 +16,15 @@ export default class DollarTrendCard extends NavigationMixin(LightningElement) {
   points;
   error;
   loading = true;
+  @track connectedOrgId = null;
 
-  @wire(getScanTrend, { maxPoints: 10 })
+  @wire(CurrentPageReference)
+  wirePageRef(pageRef) {
+    if (!pageRef) return;
+    this.connectedOrgId = pageRef.state?.c__connectedOrgId || pageRef.state?.connectedOrgId || null;
+  }
+
+  @wire(getScanTrend, { maxPoints: 10, connectedOrgId: '$connectedOrgId' })
   wireData(result) {
     this.loading = false;
     if (result.data) {

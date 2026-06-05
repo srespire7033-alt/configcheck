@@ -16,46 +16,259 @@
 public with sharing class ForensicScanService {
 
     /** Registry of detectors. Keep in sync as new detectors are added. */
-    private static List<IDetector> getDetectorsFor(String productType) {
+    private static List<IDetector> getDetectorsFor(String productType, Boolean isRemote) {
         List<IDetector> all = new List<IDetector> {
-            // v1.0 — the 5 ported detectors
+            // v1.0 — the 5 originally-ported detectors
             new REN001RenewalUpliftDetector(),
             new REN002RenewalBelowListDetector(),
             new DSC001PromoRolloffDetector(),
             new ORD001OrderNoBillingDetector(),
-            new QL001BundleZeroPriceDetector()
+            new QL001BundleZeroPriceDetector(),
+            // Phase 10 batch A — governance gaps
+            new AMD001NoEffectiveDateDetector(),
+            new OPP001ClosedWonNoQuoteDetector(),
+            new CON001NoActiveSubsDetector(),
+            // Phase 10 batch B — renewal pipeline
+            new REN003ExpiredQuoteNoRenewalDetector(),
+            new REN004StuckDraftRenewalDetector(),
+            // Phase 10 batch C — provisioning / asset gaps
+            new PROV001ProvisionedNotBilledDetector(),
+            new PROV002SubNoAssetDetector(),
+            new SUB001QuantityDriftDetector(),
+            // Phase 10 batch D — pricing integrity
+            new DSC002StackedDiscountsDetector(),
+            new CT001ExpiredContractedPriceDetector(),
+            new MDQ001SegmentPricingDetector(),
+            // Phase 10 batch E — asset termination + approval
+            new AST001TerminatedNoCreditDetector(),
+            new QL002ApprovalSkippedDetector(),
+            // Phase 10 batch F — Quote ↔ Order variance
+            new ORD002QuoteOrderVarianceDetector(),
+            new ORD003AmendmentVarianceDetector(),
+            // Phase 22a-1 — Products + PricebookEntry hygiene checks
+            new PB001ProductNoPricebookDetector(),
+            new PB002ProductNoDescDetector(),
+            new PB003ProductNoCodeDetector(),
+            new PB004ProductNoFamilyDetector(),
+            new UA001ProductUnusedDetector(),
+            // Phase 22a-2 — Bundles: 17 PR/SV/LQ/UA-003 checks across 3 bundles
+            new PriceRuleChecksBundle(),
+            new SummaryVariableChecksBundle(),
+            new ProductRuleChecksBundle(),
+            // Phase 22a-3 — Bundles + Config Attributes (BN/CA + extended PRD)
+            new BundleIntegrityChecksBundle(),
+            new ConfigurationAttributeChecksBundle(),
+            // Phase 22b-1 — Billing (BR + PBC + INV). Both bundles
+            // self-gate on blng__ surface and skip cleanly on CPQ-only orgs.
+            new BillingRuleBundle(),
+            new InvoicingChecksBundle(),
+            // Phase 22b-2 — Finance books + GL + Legal entity + Rev rec + Tax (24 checks)
+            new FinanceBookChecksBundle(),
+            new GlRuleChecksBundle(),
+            new LegalEntityChecksBundle(),
+            new RevRecRuleChecksBundle(),
+            new TaxRuleChecksBundle(),
+            // Phase 22c-1 — ARM catalog + selling models + bundles + attrs + qual + ramp (23 checks)
+            new ArmCatalogChecksBundle(),
+            new ArmSellingModelChecksBundle(),
+            new ArmBundleChecksBundle(),
+            new ArmAttributeChecksBundle(),
+            new ArmQualificationChecksBundle(),
+            new ArmRampChecksBundle(),
+            // Phase 22c-2 — ARM pricing: adjustments + rate cards + procedures + DTs + books (13 checks)
+            new ArmPriceAdjustmentChecksBundle(),
+            new ArmRateCardProcedureChecksBundle(),
+            new ArmPriceBookChecksBundle(),
+            // Phase 22c-3 — ARM advanced: context + assets + contracts + usage + orchestration
+            // + cost books + billing policies + clauses + deferred pricing (32 checks)
+            new ArmContextDefinitionChecksBundle(),
+            new ArmAssetChecksBundle(),
+            new ArmContractChecksBundle(),
+            new ArmUsageManagementChecksBundle(),
+            new ArmOrchestrationChecksBundle(),
+            new ArmCostBookChecksBundle(),
+            new ArmBillingPolicyChecksBundle(),
+            new ArmClauseChecksBundle(),
+            new ArmDeferredPricingChecksBundle(),
+            // Phase 22a-4 — Discount Schedules + Contracted Prices + Advanced Pricing
+            new DiscountScheduleChecksBundle(),
+            new ContractedPriceChecksBundle(),
+            new AdvancedPricingChecksBundle(),
+            // Phase 22a-5 — Approvals + QCP + Settings + Templates + Guided Selling
+            new ApprovalRuleChecksBundle(),
+            new CustomScriptChecksBundle(),
+            new CpqSettingsChecksBundle(),
+            new QuoteTemplateChecksBundle(),
+            new GuidedSellingChecksBundle(),
+            // Phase 22a-6 — QuoteLines + Subscriptions + Performance + Impact Analysis
+            new QuoteLineChecksBundle(),
+            new SubscriptionChecksBundle(),
+            new PerformanceChecksBundle(),
+            new ImpactAnalysisChecksBundle()
         };
 
+        // Phase 19a — filter through Detector__mdt:
+        //   1. Detector__mdt.IsActive__c=false → skip (lets customers
+        //      disable a detector without uninstalling).
+        //   2. Detector__mdt.AppliesTo__c → controls which product types
+        //      this detector runs for, overriding the hardcoded
+        //      getAppliesTo() Set when an mdt record exists.
+        //   3. When no Detector__mdt record exists for a coded detector,
+        //      fall back to its getAppliesTo() so the system degrades
+        //      gracefully if mdt isn't seeded.
+        // Phase 22a-0 — remote scans bypass host-schema surface gating
+        // (the host doesn't have the target org's managed packages installed).
         List<IDetector> applicable = new List<IDetector>();
         for (IDetector d : all) {
-            if (d.getAppliesTo().contains(productType)) applicable.add(d);
+            String did = d.getDetectorId();
+            Detector__mdt cat = DetectorCatalogController.getRecord(did);
+            if (cat != null) {
+                if (cat.IsActive__c == false) continue;
+                if (!DetectorCatalogController.appliesTo(did, productType)) continue;
+                // Phase 22a-0 — skip when required surface absent in host org.
+                if (!DetectorCatalogController.surfaceAvailable(did, isRemote)) {
+                    System.debug(LoggingLevel.INFO,
+                        '[OrgPrism] Skip ' + did + ' — required surface not in host org schema.');
+                    continue;
+                }
+                applicable.add(d);
+            } else {
+                // No catalog entry → fall back to coded getAppliesTo().
+                // Null/blank productType means "no filter" (matches the
+                // appliesTo() semantics on the mdt path above), so include
+                // the detector unconditionally in that case. Without this,
+                // bundle-style detectors (id like 'XXX-BUNDLE' that has no
+                // mdt record) silently skip when callers pass null.
+                if (String.isBlank(productType)
+                    || d.getAppliesTo().contains(productType)) {
+                    applicable.add(d);
+                }
+            }
         }
         return applicable;
     }
 
     /**
-     * Kick off a new scan. Returns the ForensicScan__c Id immediately;
-     * findings are persisted as each detector completes.
+     * Kick off a new scan against the LOCAL org.
+     * Returns the ForensicScan__c Id immediately; findings are
+     * persisted as each detector completes.
      */
     @AuraEnabled
     public static Id startScan(String productType) {
+        return startScanInternal(productType, null);
+    }
+
+    /**
+     * Phase 7 — kick off a scan against a REMOTE org via a
+     * Named Credential. Looks up the ConnectedOrg__c row,
+     * extracts its NamedCredentialName, and threads it through
+     * DetectorContext so OrgQueryService routes SOQL via REST.
+     *
+     * Findings still write to LOCAL ForensicFinding__c rows — the
+     * consulting firm owns the findings, not the target org.
+     */
+    @AuraEnabled
+    public static Id startRemoteScan(String productType, Id connectedOrgId) {
+        if (connectedOrgId == null) {
+            throw new AuraHandledException('connectedOrgId is required for remote scan');
+        }
+        return startScanInternal(productType, connectedOrgId);
+    }
+
+    private static Id startScanInternal(String productType, Id connectedOrgId) {
+        String namedCredentialName = null;
+        if (connectedOrgId != null) {
+            List<ConnectedOrg__c> cos = [
+                SELECT Id, NamedCredentialName__c, Status__c
+                FROM ConnectedOrg__c WHERE Id = :connectedOrgId WITH SECURITY_ENFORCED LIMIT 1
+            ];
+            if (cos.isEmpty()) {
+                throw new AuraHandledException('Connected Org not found: ' + connectedOrgId);
+            }
+            namedCredentialName = cos[0].NamedCredentialName__c;
+            if (String.isBlank(namedCredentialName)) {
+                throw new AuraHandledException('Connected Org has no Named Credential configured');
+            }
+        }
+
         ForensicScan__c scan = new ForensicScan__c(
             Status__c = 'Running',
             ProductType__c = productType,
-            StartedAt__c = System.now()
+            StartedAt__c = System.now(),
+            ConnectedOrg__c = connectedOrgId
         );
         insert scan;
 
-        DetectorContext ctx = new DetectorContext(scan.Id, UserInfo.getDefaultCurrency(), productType);
+        // Phase 21 Step 2 fix — Apex forbids HTTP callouts after DML
+        // in the same transaction. Remote scans MUST defer to a
+        // Queueable so the detector callouts run in a clean tx.
+        // Local scans stay inline (no callouts, no constraint).
+        if (connectedOrgId != null) {
+            System.enqueueJob(new RemoteScanRunner(
+                scan.Id, productType, connectedOrgId, namedCredentialName));
+            return scan.Id;
+        }
+
+        runDetectorsAndFinalize(scan.Id, productType, connectedOrgId, namedCredentialName);
+        return scan.Id;
+    }
+
+    /**
+     * Phase 21 Step 2 — Queueable wrapper for remote scans. Runs the
+     * detector pass in a fresh transaction so HTTP callouts via the
+     * Named Credential are allowed (uncommitted-work constraint).
+     */
+    public class RemoteScanRunner implements Queueable, Database.AllowsCallouts {
+        private final Id scanId;
+        private final String productType;
+        private final Id connectedOrgId;
+        private final String namedCredentialName;
+
+        public RemoteScanRunner(Id scanId, String productType,
+                                 Id connectedOrgId, String namedCredentialName) {
+            this.scanId = scanId;
+            this.productType = productType;
+            this.connectedOrgId = connectedOrgId;
+            this.namedCredentialName = namedCredentialName;
+        }
+
+        public void execute(QueueableContext qc) {
+            runDetectorsAndFinalize(scanId, productType, connectedOrgId, namedCredentialName);
+        }
+    }
+
+    /**
+     * Shared detector loop + finalize step. Re-loads the scan from Id
+     * so it works whether called inline (local) or from the Queueable
+     * (remote, fresh tx).
+     */
+    @TestVisible
+    private static void runDetectorsAndFinalize(Id scanId, String productType,
+                                                 Id connectedOrgId, String namedCredentialName) {
+        ForensicScan__c scan = [
+            SELECT Id, Status__c, ErrorMessage__c, ConnectedOrg__c
+            FROM ForensicScan__c WHERE Id = :scanId LIMIT 1
+        ];
+
+        DetectorContext ctx = new DetectorContext(
+            scan.Id, UserInfo.getDefaultCurrency(), productType,
+            connectedOrgId, namedCredentialName
+        );
 
         Decimal totalLeakage = 0;
         Integer findingCount = 0;
         List<ForensicFinding__c> findings = new List<ForensicFinding__c>();
 
-        for (IDetector d : getDetectorsFor(productType)) {
+        // Suppression set: (detectorId, primaryRecordId) pairs the user has
+        // flagged as False Positive / Not Relevant / Ignored. Loaded once
+        // per scan so the per-finding lookup is O(1).
+        Set<String> suppressed = loadSuppressionKeys();
+
+        for (IDetector d : getDetectorsFor(productType, ctx.isRemote())) {
             try {
                 List<DetectorResult> results = d.run(ctx);
                 for (DetectorResult r : results) {
+                    if (isSuppressed(suppressed, r)) continue;
                     findings.add(toFindingRecord(scan.Id, r));
                     totalLeakage += (r.gapUsd != null) ? r.gapUsd : 0;
                     findingCount += 1;
@@ -71,7 +284,58 @@ public with sharing class ForensicScanService {
             }
         }
 
+        // Phase 19b — Tier 2 self-service detectors. CustomDetector__mdt
+        // records contributed by customer admins run alongside the
+        // coded detectors. The service is internally try/catch'd per
+        // detector so one bad SOQL never tanks the scan.
+        try {
+            for (DetectorResult r : CustomDetectorService.runAll(ctx)) {
+                if (isSuppressed(suppressed, r)) continue;
+                findings.add(toFindingRecord(scan.Id, r));
+                totalLeakage += (r.gapUsd != null) ? r.gapUsd : 0;
+                findingCount += 1;
+            }
+        } catch (Exception e) {
+            System.debug(LoggingLevel.ERROR,
+                'CustomDetectorService.runAll failed: ' + e.getMessage());
+        }
+
+        // Phase 19c — Tier 3 Flow-driven detectors. Skipped on remote
+        // scans (Flows don't route through Named Credentials). Each
+        // Flow runs in its own try/catch internally.
+        try {
+            for (DetectorResult r : FlowDetectorService.runAll(ctx)) {
+                if (isSuppressed(suppressed, r)) continue;
+                findings.add(toFindingRecord(scan.Id, r));
+                totalLeakage += (r.gapUsd != null) ? r.gapUsd : 0;
+                findingCount += 1;
+            }
+        } catch (Exception e) {
+            System.debug(LoggingLevel.ERROR,
+                'FlowDetectorService.runAll failed: ' + e.getMessage());
+        }
+
         if (!findings.isEmpty()) insert findings;
+
+        // Phase 11 — run the 5 attribution tracers across every
+        // finding and persist their candidates. Wrapped in a
+        // try/catch so a tracer failure can never tank the scan.
+        try {
+            AttributionService.traceScan(scan.Id, ctx);
+        } catch (Exception e) {
+            System.debug(LoggingLevel.ERROR,
+                'AttributionService.traceScan failed: ' + e.getMessage());
+        }
+
+        // Phase 15c — recompute trust scores so the org's per-detector
+        // confidence reflects the latest scan + downstream outcomes.
+        // Best-effort: a trust-score failure must not affect the scan.
+        try {
+            TrustScoreService.recompute();
+        } catch (Exception e) {
+            System.debug(LoggingLevel.WARN,
+                'TrustScoreService.recompute failed: ' + e.getMessage());
+        }
 
         // Finalize the scan.
         scan.Status__c = (scan.ErrorMessage__c != null) ? 'Partial' : 'Completed';
@@ -80,7 +344,50 @@ public with sharing class ForensicScanService {
         scan.FindingCount__c = findingCount;
         update scan;
 
-        return scan.Id;
+        // Compute + persist the health score AFTER findings are
+        // inserted so the aggregation sees them. Runs in its own
+        // try/catch so a score-calc failure doesn't fail the scan.
+        try {
+            HealthScoreCalculator.computeAndStore(scan.Id);
+        } catch (Exception e) {
+            System.debug(LoggingLevel.ERROR, 'Health score calc failed: ' + e.getMessage());
+        }
+    }
+
+    /**
+     * Loads the active suppression set: "detectorId|primaryRecordId" keys.
+     * Suppressions are a user-convenience filter, not security-sensitive
+     * data — relies on standard object/sharing access (this class is
+     * `with sharing`) rather than WITH SECURITY_ENFORCED, which would
+     * reject the query whenever any field FLS gap exists for the
+     * running user.
+     */
+    @TestVisible
+    private static Set<String> loadSuppressionKeys() {
+        Set<String> out = new Set<String>();
+        try {
+            for (ForensicSuppression__c s : [
+                SELECT DetectorId__c, PrimaryRecordId__c
+                FROM ForensicSuppression__c]) {
+                out.add(suppressionKey(s.DetectorId__c, s.PrimaryRecordId__c));
+            }
+        } catch (Exception e) {
+            System.debug(LoggingLevel.WARN,
+                'loadSuppressionKeys failed, treating as no suppressions: ' + e.getMessage());
+        }
+        return out;
+    }
+
+    @TestVisible
+    private static Boolean isSuppressed(Set<String> suppressed, DetectorResult r) {
+        if (suppressed == null || suppressed.isEmpty()) return false;
+        String pid = (r.primaryRecord == null) ? null : r.primaryRecord.recordId;
+        return suppressed.contains(suppressionKey(r.detectorId, pid));
+    }
+
+    private static String suppressionKey(String detectorId, String primaryRecordId) {
+        return (detectorId == null ? '' : detectorId)
+            + '|' + (String.isBlank(primaryRecordId) ? '' : primaryRecordId);
     }
 
     /** DetectorResult DTO → ForensicFinding__c sObject. */
@@ -115,6 +422,31 @@ public with sharing class ForensicScanService {
         };
         f.SourceRecordRefs__c = JSON.serialize(sourceRefs);
         f.Metadata__c = JSON.serialize(r.metadata);
+
+        // Phase 12 — polish the title/description into business prose
+        // using the parsed metadata. Detectors keep their drafts simple;
+        // FindingRenderer rewrites the engineer-y ones in one place.
+        try {
+            FindingRenderer.polish(f, r.metadata);
+        } catch (Exception e) {
+            // Polish must never block a finding from being persisted.
+            System.debug(LoggingLevel.WARN,
+                'FindingRenderer.polish failed: ' + e.getMessage());
+        }
+
+        // Phase 16b — render the per-detector remediation recipe so
+        // every finding ships with its own fix recipe. Read by the
+        // issueDetailPage LWC and the executive PDF.
+        try {
+            String recipe = RemediationRecipeService.render(f);
+            if (String.isNotBlank(recipe)) {
+                if (recipe.length() > 32768) recipe = recipe.substring(0, 32768);
+                f.RemediationRecipe__c = recipe;
+            }
+        } catch (Exception e) {
+            System.debug(LoggingLevel.WARN,
+                'RemediationRecipeService.render failed: ' + e.getMessage());
+        }
 
         return f;
     }

@@ -90,6 +90,43 @@ private class ForensicScanServiceTest {
     }
 
     @isTest
+    static void suppressionFilter_skipsMatchingPair() {
+        // SourceRecord needs a valid Id — use the running user's Id as a stand-in.
+        Id matchId = UserInfo.getUserId();
+        Id otherId = UserInfo.getOrganizationId();
+        insert new ForensicSuppression__c(
+            DetectorId__c = 'REN-001',
+            PrimaryRecordId__c = (String) matchId,
+            Reason__c = 'False Positive'
+        );
+
+        Test.startTest();
+        Set<String> keys = ForensicScanService.loadSuppressionKeys();
+
+        DetectorResult matching = new DetectorResult();
+        matching.detectorId = 'REN-001';
+        matching.primaryRecord = new SourceRecord('User', matchId, 'matching user');
+
+        DetectorResult different = new DetectorResult();
+        different.detectorId = 'REN-001';
+        different.primaryRecord = new SourceRecord('Organization', otherId, 'other');
+
+        DetectorResult nullRec = new DetectorResult();
+        nullRec.detectorId = 'REN-001';
+
+        Boolean a = ForensicScanService.isSuppressed(keys, matching);
+        Boolean b = ForensicScanService.isSuppressed(keys, different);
+        Boolean c = ForensicScanService.isSuppressed(keys, nullRec);
+        Boolean d = ForensicScanService.isSuppressed(new Set<String>(), matching);
+        Test.stopTest();
+
+        System.assertEquals(true, a, 'Matching pair should be suppressed');
+        System.assertEquals(false, b, 'Same detector, different record → not suppressed');
+        System.assertEquals(false, c, 'Null primary record → not suppressed');
+        System.assertEquals(false, d, 'Empty suppression set short-circuits to false');
+    }
+
+    @isTest
     static void sourceRecord_buildsWithFinancials() {
         SourceRecord sr = new SourceRecord('Order', UserInfo.getUserId(), 'O-001')
             .withFinancial('total', 50000)

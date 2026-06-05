@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomMetadata xmlns="http://soap.sforce.com/2006/04/metadata" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" fqn="FlowDetector__mdt.FLOW_DEMO_001">
+    <label>FLOW-DEMO-001</label>
+    <protected>false</protected>
+    <values><field>DetectorId__c</field><value xsi:type="xsd:string">FLOW-DEMO-001</value></values>
+    <values><field>Label__c</field><value xsi:type="xsd:string">Demo: Flow Detector Scaffold</value></values>
+    <values><field>FlowApiName__c</field><value xsi:type="xsd:string">OrgPrism_FlowDetectorDemo</value></values>
+    <values><field>AppliesTo__c</field><value xsi:type="xsd:string">CPQ;CPQ+Billing;ARM</value></values>
+    <values><field>Description__c</field><value xsi:type="xsd:string">Reference scaffold. Clone the OrgPrism_FlowDetectorDemo Flow, add your detection logic (queries, assignments), and append ForensicFinding records to the Findings collection variable. The Flow runs against the host org only — for remote-org detection use CustomDetector__mdt (SOQL).</value></values>
+    <values><field>IsActive__c</field><value xsi:type="xsd:boolean">false</value></values>
+    <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
+</CustomMetadata>

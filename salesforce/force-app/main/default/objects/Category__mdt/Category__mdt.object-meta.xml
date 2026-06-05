@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomObject xmlns="http://soap.sforce.com/2006/04/metadata">
+    <description>Phase 20b — Display metadata for the four parent category cards on the dashboard (Revenue Leakage, Governance Risk, Pipeline Risk, Pricing Discipline). One record per category carries Title, Subtitle, Icon, Accent color, and SummaryMode. Replaces the hardcoded CATEGORY_META map in riskCategoryCard.js.</description>
+    <label>Category</label>
+    <pluralLabel>Categories</pluralLabel>
+    <visibility>Public</visibility>
+</CustomObject>

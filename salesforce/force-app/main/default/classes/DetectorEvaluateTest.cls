@@ -312,66 +312,75 @@ private class DetectorEvaluateTest {
     }
 
     // ─────────────────────────────────────────────────────────────
-    // evaluateSObject + testStubSObjects path coverage — exercises
-    // the SObject-unwrap code in run()'s for-loop body without CPQ
-    // installed. Pass `new Account()` through the loop; the safe
-    // getPopulatedFieldsAsMap() accessors return empty maps so the
-    // unwrap completes cleanly and evaluateRow returns null.
+    // Phase 9: SObject-stub paths removed. Detectors are now Map-only
+    // (host org doesn't need CPQ installed). The unwrap() helpers
+    // handle null/empty/non-Map relationship values gracefully —
+    // these tests exercise that defensive path with empty input.
     // ─────────────────────────────────────────────────────────────
 
-    @isTest static void ren001_evaluateSObject_handlesEmptySObject() {
-        System.assertEquals(null, REN001RenewalUpliftDetector.evaluateSObject(new Account()));
+    @isTest static void ren001_unwrap_handlesEmptyMap() {
+        Map<String, Object> out = REN001RenewalUpliftDetector.unwrap(new Map<String, Object>());
+        System.assertEquals(null, REN001RenewalUpliftDetector.evaluateRow(out),
+            'Empty raw row should produce no finding');
     }
-    @isTest static void ren001_runWithStubSObjects_iteratesLoop() {
-        REN001RenewalUpliftDetector.testStubSObjects = new List<SObject>{ new Account(), new Account() };
-        REN001RenewalUpliftDetector d = new REN001RenewalUpliftDetector();
-        List<DetectorResult> r = d.run(new DetectorContext(null, 'USD', 'CPQ'));
-        System.assertEquals(0, r.size(), 'Empty accounts produce no findings');
-        REN001RenewalUpliftDetector.testStubSObjects = null;
-    }
-
-    @isTest static void ren002_evaluateSObject_handlesEmptySObject() {
-        System.assertEquals(null, REN002RenewalBelowListDetector.evaluateSObject(new Account()));
-    }
-    @isTest static void ren002_runWithStubSObjects_iteratesLoop() {
-        REN002RenewalBelowListDetector.testStubSObjects = new List<SObject>{ new Account() };
-        REN002RenewalBelowListDetector d = new REN002RenewalBelowListDetector();
-        System.assertEquals(0, d.run(new DetectorContext(null, 'USD', 'CPQ')).size());
-        REN002RenewalBelowListDetector.testStubSObjects = null;
+    @isTest static void ren001_unwrap_handlesNullInput() {
+        Map<String, Object> out = REN001RenewalUpliftDetector.unwrap(null);
+        System.assertNotEquals(null, out, 'Null input → empty map, not null');
     }
 
-    @isTest static void dsc001_evaluateSObject_handlesEmptySObject() {
-        System.assertEquals(null, DSC001PromoRolloffDetector.evaluateSObject(new Account()));
-    }
-    @isTest static void dsc001_runWithStubSObjects_iteratesLoop() {
-        DSC001PromoRolloffDetector.testStubSObjects = new List<SObject>{ new Account() };
-        DSC001PromoRolloffDetector d = new DSC001PromoRolloffDetector();
-        System.assertEquals(0, d.run(new DetectorContext(null, 'USD', 'CPQ')).size());
-        DSC001PromoRolloffDetector.testStubSObjects = null;
+    @isTest static void ren002_unwrap_handlesEmptyMap() {
+        Map<String, Object> out = REN002RenewalBelowListDetector.unwrap(new Map<String, Object>());
+        System.assertEquals(null, REN002RenewalBelowListDetector.evaluateRow(out));
     }
 
-    @isTest static void ql001_evaluateSObject_handlesEmptySObject() {
-        System.assertEquals(null, QL001BundleZeroPriceDetector.evaluateSObject(new Account()));
-    }
-    @isTest static void ql001_runWithStubSObjects_iteratesLoop() {
-        QL001BundleZeroPriceDetector.testStubSObjects = new List<SObject>{ new Account() };
-        QL001BundleZeroPriceDetector d = new QL001BundleZeroPriceDetector();
-        System.assertEquals(0, d.run(new DetectorContext(null, 'USD', 'CPQ')).size());
-        QL001BundleZeroPriceDetector.testStubSObjects = null;
+    @isTest static void dsc001_unwrap_handlesEmptyMap() {
+        Map<String, Object> out = DSC001PromoRolloffDetector.unwrap(new Map<String, Object>());
+        System.assertEquals(null, DSC001PromoRolloffDetector.evaluateRow(out));
     }
 
-    @isTest static void ord001_evaluateSObject_handlesEmptySObject() {
-        // Empty Set<Id> means no order has billing → evaluateRow runs
-        // with null totalAmount → returns null.
-        System.assertEquals(null, ORD001OrderNoBillingDetector.evaluateSObject(new Account(), new Set<Id>()));
+    @isTest static void ql001_unwrap_handlesEmptyMap() {
+        Map<String, Object> out = QL001BundleZeroPriceDetector.unwrap(new Map<String, Object>());
+        System.assertEquals(null, QL001BundleZeroPriceDetector.evaluateRow(out));
     }
-    @isTest static void ord001_runWithStubSObjects_iteratesLoop() {
-        ORD001OrderNoBillingDetector.testStubSObjects = new List<SObject>{ new Account() };
+
+    @isTest static void ord001_evaluateRow_handlesNullAmount() {
+        // ORD001 has no unwrap helper — the map is built inline in run().
+        // Pass a row without totalAmount; evaluateRow returns null.
+        Map<String, Object> row = new Map<String, Object>{ 'orderId' => null, 'orderNumber' => 'X' };
+        System.assertEquals(null, ORD001OrderNoBillingDetector.evaluateRow(row));
+    }
+
+    /**
+     * Drive ORD001's full order-iteration path via testStubOrders.
+     * Bypasses the SOQL but exercises the orderIds extraction, billing
+     * lookup (try/catch handles missing SBCF__ namespace), and the
+     * per-order evaluateRow loop. Without this test the coverage drops
+     * below 75% because testStubRows short-circuits at the top.
+     */
+    @isTest static void ord001_runWithStubOrders_drivesFullLoop() {
+        Id syntheticId = '801000000000001AAA';
+        Map<String, Object> ord1 = new Map<String, Object>{
+            'Id' => syntheticId,
+            'OrderNumber' => 'O-001',
+            'TotalAmount' => 100000
+        };
+        CurrencyContext.addToTestMap(ord1, 'USD');
+        Map<String, Object> ord2 = new Map<String, Object>{
+            // No Id → loop should skip the billing-lookup short-circuit
+            'OrderNumber' => 'O-002',
+            'TotalAmount' => 5000
+        };
+        CurrencyContext.addToTestMap(ord2, 'USD');
+        ORD001OrderNoBillingDetector.testStubOrders = new List<Map<String, Object>>{ ord1, ord2 };
         ORD001OrderNoBillingDetector d = new ORD001OrderNoBillingDetector();
-        // Stub Account has no totalAmount; loop runs, every order is
-        // skipped because evaluateRow returns null for null amount.
-        System.assertEquals(0, d.run(new DetectorContext(null, 'USD', 'CPQ+Billing')).size());
-        ORD001OrderNoBillingDetector.testStubSObjects = null;
+        Test.startTest();
+        List<DetectorResult> r = d.run(new DetectorContext(null, 'USD', 'CPQ+Billing'));
+        Test.stopTest();
+        ORD001OrderNoBillingDetector.testStubOrders = null;
+        // Both stub orders have totalAmount > 0 and aren't in the billing
+        // set (the lookup runs but SBCF__ namespace isn't installed →
+        // empty result). Both produce findings.
+        System.assertEquals(2, r.size(), 'Both stub orders should emit findings');
     }
 
     // OrgPrismTestDataFactory coverage

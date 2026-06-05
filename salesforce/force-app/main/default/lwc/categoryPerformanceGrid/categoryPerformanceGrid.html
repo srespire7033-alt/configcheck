@@ -1,0 +1,68 @@
+<template>
+  <article class="op-cp">
+    <header class="op-cp__topbar">
+      <span class="op-cp__hint">
+        <lightning-icon icon-name="utility:drag_and_drop" size="xx-small" class="op-cp__hint-icon"></lightning-icon>
+        Drag cards to reorder
+      </span>
+      <a href="javascript:void(0)" class="op-cp__reset" onclick={handleReset}>Reset order</a>
+    </header>
+
+    <template if:true={isLoading}>
+      <div class="op-cp__loading"><lightning-spinner alternative-text="Loading" size="small"></lightning-spinner></div>
+    </template>
+
+    <template if:true={hasError}>
+      <p class="op-cp__error">{error}</p>
+    </template>
+
+    <template if:true={hasData}>
+      <template for:each={viewSections} for:item="s">
+        <section key={s.key} class="op-cp__section">
+          <header class="op-cp__sec-header">
+            <span class={s.dotClass}></span>
+            <span class="op-cp__sec-label">{s.label}</span>
+          </header>
+          <div class="op-cp__grid">
+            <template for:each={s.cards} for:item="c">
+              <article
+                key={c.key}
+                data-key={c.key}
+                data-section={s.key}
+                data-label={c.label}
+                data-detector-ids={c.detectorIdsStr}
+                class={c.cardClass}
+                draggable="true"
+                ondragstart={handleDragStart}
+                ondragover={handleDragOver}
+                ondrop={handleDrop}
+                onclick={handleCardClick}
+              >
+                <header class="op-cp__card-head">
+                  <lightning-icon icon-name={c.iconName} size="x-small" class="op-cp__card-icon"></lightning-icon>
+                  <span class="op-cp__card-label">{c.label}</span>
+                  <span class={c.scoreClass}>{c.score}%</span>
+                </header>
+                <div class="op-cp__bar">
+                  <div class={c.barClass} style={c.barStyle}></div>
+                </div>
+                <footer class="op-cp__card-foot">
+                  <span class={c.issueClass}>{c.issueLabel}</span>
+                  <lightning-icon icon-name="utility:chevronright" size="xx-small" class="op-cp__chev"></lightning-icon>
+                </footer>
+              </article>
+            </template>
+          </div>
+        </section>
+      </template>
+    </template>
+
+    <template if:true={isModalOpen}>
+      <c-category-issues-modal
+        category-label={openCategoryLabel}
+        detector-ids={openDetectorIds}
+        oncloseissuesmodal={handleModalClose}
+      ></c-category-issues-modal>
+    </template>
+  </article>
+</template>

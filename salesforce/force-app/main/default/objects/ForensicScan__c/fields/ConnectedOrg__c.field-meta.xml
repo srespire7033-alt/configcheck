@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>ConnectedOrg__c</fullName>
+    <label>Connected Org</label>
+    <description>Set when this scan targeted a remote org via Named Credential. Null = scanned the home org locally.</description>
+    <referenceTo>ConnectedOrg__c</referenceTo>
+    <relationshipLabel>Forensic Scans</relationshipLabel>
+    <relationshipName>ForensicScans</relationshipName>
+    <type>Lookup</type>
+    <deleteConstraint>SetNull</deleteConstraint>
+</CustomField>

@@ -1,8 +1,10 @@
-import { LightningElement, wire } from 'lwc';
-import { NavigationMixin } from 'lightning/navigation';
+import { LightningElement, wire, track } from 'lwc';
+import { NavigationMixin, CurrentPageReference } from 'lightning/navigation';
 import getFindingsByCategory from '@salesforce/apex/DashboardController.getFindingsByCategory';
+import getCatalog from '@salesforce/apex/DetectorCatalogController.getCatalog';
 
-const DETECTOR_LABELS = {
+/** Phase 20d — fallback; Detector__mdt.Label__c wins when seeded. */
+const FALLBACK_DETECTOR_LABELS = {
   'REN-002':     'Renewal below current list',
   'DSC-FOR-001': 'Expired promo discount',
   'DSC-FOR-002': 'Stacked discounts past cap',
@@ -19,8 +21,29 @@ export default class PricingDisciplineView extends NavigationMixin(LightningElem
   data;
   error;
   loading = true;
+  @track connectedOrgId = null;
+  @track catalogEntries = [];
 
-  @wire(getFindingsByCategory, { category: 'pricing' })
+  @wire(getCatalog)
+  wireCatalog({ data }) {
+    if (data) this.catalogEntries = data;
+  }
+
+  get detectorLabelMap() {
+    const out = { ...FALLBACK_DETECTOR_LABELS };
+    for (const e of this.catalogEntries || []) {
+      if (e.label) out[e.detectorId] = e.label;
+    }
+    return out;
+  }
+
+  @wire(CurrentPageReference)
+  wirePageRef(pageRef) {
+    if (!pageRef) return;
+    this.connectedOrgId = pageRef.state?.c__connectedOrgId || pageRef.state?.connectedOrgId || null;
+  }
+
+  @wire(getFindingsByCategory, { category: 'pricing', connectedOrgId: '$connectedOrgId' })
   wireData(result) {
     this.loading = false;
     if (result.data) {
@@ -49,7 +72,7 @@ export default class PricingDisciplineView extends NavigationMixin(LightningElem
     if (!this.data?.byDetector) return [];
     return this.data.byDetector.map((g) => ({
       detectorId: g.detectorId,
-      label: DETECTOR_LABELS[g.detectorId] || g.detectorId,
+      label: this.detectorLabelMap[g.detectorId] || g.detectorId,
       count: g.count,
       totalFmt: this.formatMoney(g.totalUsd),
     }));

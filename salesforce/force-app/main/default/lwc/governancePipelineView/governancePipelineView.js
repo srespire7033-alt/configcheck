@@ -1,8 +1,13 @@
-import { LightningElement, wire } from 'lwc';
-import { NavigationMixin } from 'lightning/navigation';
+import { LightningElement, wire, track } from 'lwc';
+import { NavigationMixin, CurrentPageReference } from 'lightning/navigation';
 import getFindingsByCategory from '@salesforce/apex/DashboardController.getFindingsByCategory';
+import getCatalog from '@salesforce/apex/DetectorCatalogController.getCatalog';
 
-const DETECTOR_LABELS = {
+/**
+ * Phase 20d — labels are fallbacks; Detector__mdt.Label__c wins
+ * once the catalog @wire resolves.
+ */
+const FALLBACK_DETECTOR_LABELS = {
   'QL-FOR-002':  'Quote line approval skipped',
   'ORD-FOR-002': 'Q↔O variance (new business)',
   'ORD-FOR-003': 'Q↔O variance (amendment)',
@@ -29,8 +34,29 @@ export default class GovernancePipelineView extends NavigationMixin(LightningEle
   loadingPipe = true;
   errorGov;
   errorPipe;
+  @track connectedOrgId = null;
+  @track catalogEntries = [];
 
-  @wire(getFindingsByCategory, { category: 'governance' })
+  @wire(getCatalog)
+  wireCatalog({ data }) {
+    if (data) this.catalogEntries = data;
+  }
+
+  get detectorLabelMap() {
+    const out = { ...FALLBACK_DETECTOR_LABELS };
+    for (const e of this.catalogEntries || []) {
+      if (e.label) out[e.detectorId] = e.label;
+    }
+    return out;
+  }
+
+  @wire(CurrentPageReference)
+  wirePageRef(pageRef) {
+    if (!pageRef) return;
+    this.connectedOrgId = pageRef.state?.c__connectedOrgId || pageRef.state?.connectedOrgId || null;
+  }
+
+  @wire(getFindingsByCategory, { category: 'governance', connectedOrgId: '$connectedOrgId' })
   wireGovernance(result) {
     this.loadingGov = false;
     if (result.data) {
@@ -41,7 +67,7 @@ export default class GovernancePipelineView extends NavigationMixin(LightningEle
     }
   }
 
-  @wire(getFindingsByCategory, { category: 'pipeline' })
+  @wire(getFindingsByCategory, { category: 'pipeline', connectedOrgId: '$connectedOrgId' })
   wirePipeline(result) {
     this.loadingPipe = false;
     if (result.data) {
@@ -63,7 +89,7 @@ export default class GovernancePipelineView extends NavigationMixin(LightningEle
     if (!dto?.byDetector) return [];
     return dto.byDetector.map((g) => ({
       detectorId: g.detectorId,
-      label: DETECTOR_LABELS[g.detectorId] || g.detectorId,
+      label: this.detectorLabelMap[g.detectorId] || g.detectorId,
       count: g.count,
       totalFmt: this.formatMoney(g.totalUsd),
     }));

@@ -42,6 +42,57 @@ private class DetectorContractTest {
     @isTest
     static void ql001_contract() { assertContract(new QL001BundleZeroPriceDetector()); }
 
+    // Phase 10 batch A — governance detectors
+    @isTest
+    static void amd001_contract() { assertContract(new AMD001NoEffectiveDateDetector()); }
+
+    @isTest
+    static void opp001_contract() { assertContract(new OPP001ClosedWonNoQuoteDetector()); }
+
+    @isTest
+    static void con001_contract() { assertContract(new CON001NoActiveSubsDetector()); }
+
+    // Phase 10 batch B — renewal pipeline
+    @isTest
+    static void ren003_contract() { assertContract(new REN003ExpiredQuoteNoRenewalDetector()); }
+
+    @isTest
+    static void ren004_contract() { assertContract(new REN004StuckDraftRenewalDetector()); }
+
+    // Phase 10 batch C — provisioning / asset gaps
+    @isTest
+    static void prov001_contract() { assertContract(new PROV001ProvisionedNotBilledDetector()); }
+
+    @isTest
+    static void prov002_contract() { assertContract(new PROV002SubNoAssetDetector()); }
+
+    @isTest
+    static void sub001_contract() { assertContract(new SUB001QuantityDriftDetector()); }
+
+    // Phase 10 batch D — pricing integrity
+    @isTest
+    static void dsc002_contract() { assertContract(new DSC002StackedDiscountsDetector()); }
+
+    @isTest
+    static void ct001_contract() { assertContract(new CT001ExpiredContractedPriceDetector()); }
+
+    @isTest
+    static void mdq001_contract() { assertContract(new MDQ001SegmentPricingDetector()); }
+
+    // Phase 10 batch E
+    @isTest
+    static void ast001_contract() { assertContract(new AST001TerminatedNoCreditDetector()); }
+
+    @isTest
+    static void ql002_contract() { assertContract(new QL002ApprovalSkippedDetector()); }
+
+    // Phase 10 batch F
+    @isTest
+    static void ord002_contract() { assertContract(new ORD002QuoteOrderVarianceDetector()); }
+
+    @isTest
+    static void ord003_contract() { assertContract(new ORD003AmendmentVarianceDetector()); }
+
     @isTest
     static void detectorIds_areUnique() {
         Set<String> ids = new Set<String>{
@@ -49,8 +100,23 @@ private class DetectorContractTest {
             new REN002RenewalBelowListDetector().getDetectorId(),
             new DSC001PromoRolloffDetector().getDetectorId(),
             new ORD001OrderNoBillingDetector().getDetectorId(),
-            new QL001BundleZeroPriceDetector().getDetectorId()
+            new QL001BundleZeroPriceDetector().getDetectorId(),
+            new AMD001NoEffectiveDateDetector().getDetectorId(),
+            new OPP001ClosedWonNoQuoteDetector().getDetectorId(),
+            new CON001NoActiveSubsDetector().getDetectorId(),
+            new REN003ExpiredQuoteNoRenewalDetector().getDetectorId(),
+            new REN004StuckDraftRenewalDetector().getDetectorId(),
+            new PROV001ProvisionedNotBilledDetector().getDetectorId(),
+            new PROV002SubNoAssetDetector().getDetectorId(),
+            new SUB001QuantityDriftDetector().getDetectorId(),
+            new DSC002StackedDiscountsDetector().getDetectorId(),
+            new CT001ExpiredContractedPriceDetector().getDetectorId(),
+            new MDQ001SegmentPricingDetector().getDetectorId(),
+            new AST001TerminatedNoCreditDetector().getDetectorId(),
+            new QL002ApprovalSkippedDetector().getDetectorId(),
+            new ORD002QuoteOrderVarianceDetector().getDetectorId(),
+            new ORD003AmendmentVarianceDetector().getDetectorId()
         };
-        System.assertEquals(5, ids.size(), 'All 5 detector IDs must be unique');
+        System.assertEquals(20, ids.size(), 'All 20 detector IDs must be unique');
     }
 }

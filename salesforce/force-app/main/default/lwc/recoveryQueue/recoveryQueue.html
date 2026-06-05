@@ -26,10 +26,48 @@
         </div>
       </div>
 
+      <!-- Bulk action toolbar — only renders when at least one selection
+           or a Committed group exists that can be re-verified en masse. -->
+      <div class="op-rq__toolbar">
+        <template if:true={hasPendingSelection}>
+          <button
+            type="button"
+            class="op-rq__bulk-btn op-rq__bulk-btn--approve"
+            onclick={handleApproveSelected}
+            disabled={approving}
+          >{approveButtonLabel}</button>
+        </template>
+        <template if:true={hasApprovedSelection}>
+          <button
+            type="button"
+            class="op-rq__bulk-btn op-rq__bulk-btn--commit"
+            onclick={handleCommitSelected}
+            disabled={committing}
+          >{commitButtonLabel}</button>
+        </template>
+        <template if:true={hasCommittedActions}>
+          <button
+            type="button"
+            class="op-rq__bulk-btn op-rq__reverify-btn"
+            onclick={handleReverifyAll}
+            disabled={reverifying}
+          >{reverifyButtonLabel}</button>
+        </template>
+      </div>
+
       <div class="op-rq__groups">
         <template for:each={groups} for:item="g">
           <div key={g.status} class={g.groupClass}>
             <div class="op-rq__group-header">
+              <template if:true={g.selectable}>
+                <input
+                  type="checkbox"
+                  class="op-rq__group-check"
+                  data-status={g.status}
+                  onchange={handleSelectGroup}
+                  title="Select all in this group"
+                />
+              </template>
               <span class="op-rq__group-status">{g.status}</span>
               <span class="op-rq__group-count">{g.countLabel}</span>
               <span class="op-rq__group-total">{g.projectedFmt}</span>
@@ -39,14 +77,34 @@
                 <li
                   key={a.id}
                   data-id={a.findingId}
-                  class="op-rq__action"
-                  onclick={handleActionClick}
+                  class="op-rq__action-row"
                 >
-                  <span class="op-rq__action-title">{a.findingTitle}</span>
-                  <template if:true={a.verifiedBadge}>
-                    <span class="op-rq__action-badge">{a.verifiedBadge}</span>
+                  <div class="op-rq__action" onclick={handleActionClick} data-id={a.findingId}>
+                    <template if:true={g.selectable}>
+                      <input
+                        type="checkbox"
+                        class="op-rq__action-check"
+                        data-id={a.id}
+                        checked={a.selected}
+                        onchange={handleSelectAction}
+                        onclick={handleActionClick}
+                      />
+                    </template>
+                    <span class="op-rq__action-title">{a.findingTitle}</span>
+                    <template if:true={a.verifiedBadge}>
+                      <span class="op-rq__action-badge">{a.verifiedBadge}</span>
+                    </template>
+                    <span class="op-rq__action-gap">{a.projectedFmt}</span>
+                  </div>
+                  <!-- Phase 15a — inline expand for failed-verify rows -->
+                  <template if:true={a.showVerifyDetail}>
+                    <div class="op-rq__verify-detail">
+                      <div class="op-rq__verify-msg">{a.verificationMessage}</div>
+                      <template if:true={a.verifyExpectedLine}>
+                        <div class="op-rq__verify-vs">{a.verifyExpectedLine}</div>
+                      </template>
+                    </div>
                   </template>
-                  <span class="op-rq__action-gap">{a.projectedFmt}</span>
                 </li>
               </template>
             </ul>

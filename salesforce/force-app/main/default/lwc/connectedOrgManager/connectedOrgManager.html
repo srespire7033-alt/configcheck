@@ -1,0 +1,178 @@
+<template>
+  <article class="op-co">
+    <!-- ─── Header row: title + Sort/View toolbar + Scan all / Compare / Add ─── -->
+    <header class="op-co__header">
+      <div class="op-co__head-left">
+        <h1 class="op-co__title">Your Organizations</h1>
+        <p class="op-co__subtitle">Connect Salesforce orgs to scan their Revenue Cloud configuration</p>
+      </div>
+      <div class="op-co__head-right">
+        <select class="op-co__sort" value={sortKey} onchange={handleSortChange} title="Sort">
+          <option value="name">Sort: name (A→Z)</option>
+          <option value="score">Sort: score (high→low)</option>
+          <option value="scanned">Sort: last scan (recent first)</option>
+        </select>
+        <div class="op-co__view-toggle" role="group" aria-label="Layout toggle">
+          <button class={gridBtnClass} title="Grid view" data-view="grid" onclick={handleViewChange}>
+            <lightning-icon icon-name="utility:apps" size="xx-small"></lightning-icon>
+          </button>
+          <button class={listBtnClass} title="List view" data-view="list" onclick={handleViewChange}>
+            <lightning-icon icon-name="utility:rows" size="xx-small"></lightning-icon>
+          </button>
+        </div>
+        <button class="op-co__btn op-co__btn--primary" onclick={handleScanAll} disabled={isAnyScanning}>
+          <lightning-icon icon-name="utility:refresh" size="xx-small" class="op-co__btn-icon"></lightning-icon>
+          Scan all
+        </button>
+        <button class="op-co__btn op-co__btn--ghost" onclick={handleCompare} disabled={cannotCompare} title="Coming soon">
+          <lightning-icon icon-name="utility:merge" size="xx-small" class="op-co__btn-icon"></lightning-icon>
+          Compare two orgs
+        </button>
+        <button class="op-co__btn op-co__btn--primary" onclick={handleAddNew}>
+          <lightning-icon icon-name="utility:add" size="xx-small" class="op-co__btn-icon"></lightning-icon>
+          Add Connected Org
+        </button>
+      </div>
+    </header>
+
+    <!-- ─── KPI strip ─── -->
+    <template if:true={hasRows}>
+      <div class="op-co__kpis">
+        <div class="op-co__kpi">
+          <span class="op-co__kpi-num">{kpiOrgs}</span>
+          <span class="op-co__kpi-label">ORGS</span>
+        </div>
+        <div class="op-co__kpi">
+          <span class={kpiAvgScoreClass}>{kpiAvgScore}</span>
+          <span class="op-co__kpi-label">AVG SCORE</span>
+        </div>
+        <div class="op-co__kpi">
+          <span class="op-co__kpi-num op-co__kpi-num--critical">{kpiOrgsWithCritical}</span>
+          <span class="op-co__kpi-label">ORGS WITH CRITICAL</span>
+        </div>
+        <div class="op-co__kpi">
+          <span class="op-co__kpi-num op-co__kpi-num--critical">{kpiCriticalFindings}</span>
+          <span class="op-co__kpi-label">CRITICAL FINDINGS</span>
+        </div>
+      </div>
+    </template>
+
+    <template if:true={isLoading}>
+      <div class="op-co__loading"><lightning-spinner alternative-text="Loading" size="small"></lightning-spinner></div>
+    </template>
+
+    <template if:true={hasError}>
+      <p class="op-co__error">{error}</p>
+    </template>
+
+    <!-- ─── Empty state (no orgs yet) ─── -->
+    <template if:true={isEmpty}>
+      <div class="op-co__empty">
+        <lightning-icon icon-name="utility:salesforce1" size="medium" class="op-co__empty-icon"></lightning-icon>
+        <h2 class="op-co__empty-title">No remote orgs configured yet</h2>
+        <p class="op-co__empty-sub">
+          To scan another Salesforce org from this OrgPrism install:<br/>
+          1. Create a Named Credential pointing to that org (Setup → Named Credentials)<br/>
+          2. Click "Add Connected Org" above and reference the Named Credential by name<br/>
+          3. Click "Run Scan" on the new card to start your first remote scan
+        </p>
+        <button class="op-co__btn op-co__btn--primary" onclick={handleAddNew}>
+          Add Your First Connected Org
+        </button>
+      </div>
+    </template>
+
+    <!-- ─── Org card grid ─── -->
+    <template if:true={hasRows}>
+      <div class={gridClass}>
+        <template for:each={viewRows} for:item="r">
+          <article key={r.id} class="op-co__card" data-status={r.status}>
+            <!-- color stripe -->
+            <div class="op-co__card-stripe" style={r.stripeStyle}></div>
+
+            <header class="op-co__card-head">
+              <div class="op-co__card-head-left">
+                <div class="op-co__card-icon-wrap">
+                  <lightning-icon icon-name="utility:salesforce1" size="small" class="op-co__card-icon"></lightning-icon>
+                </div>
+                <div>
+                  <h3 class="op-co__card-name" data-id={r.id} onclick={handleOpenRecord}>{r.name}</h3>
+                  <div class="op-co__card-chips">
+                    <span class="op-co__chip op-co__chip--type">
+                      <span class="op-co__chip-dot"></span>{r.orgType}
+                    </span>
+                    <template for:each={r.productChips} for:item="p">
+                      <span key={p} class="op-co__chip op-co__chip--prod">{p}</span>
+                    </template>
+                  </div>
+                </div>
+              </div>
+              <div class="op-co__card-head-right">
+                <span class={r.scoreClass}>{r.scoreDisplay}</span>
+                <span class={r.deltaClass}>{r.deltaDisplay}</span>
+              </div>
+            </header>
+
+            <div class="op-co__card-meta">
+              <template if:true={r.hasLastScan}>
+                <span>Last scan: {r.lastScanAgo}</span>
+                <template if:true={r.criticalCount}>
+                  <span class="op-co__card-sep">·</span>
+                  <span class="op-co__card-meta-critical">⚠ {r.criticalCount} critical</span>
+                </template>
+              </template>
+              <template if:false={r.hasLastScan}>
+                <span class="op-co__card-meta-muted">No scans yet — click Run Scan to start</span>
+              </template>
+            </div>
+
+            <div class="op-co__card-actions">
+              <button
+                class="op-co__btn op-co__btn--primary op-co__card-scan"
+                data-id={r.id}
+                onclick={handleScan}
+                disabled={r.cannotScan}
+                title={r.scanTooltip}
+              >
+                <lightning-icon icon-name="utility:refresh" size="xx-small" class="op-co__btn-icon"></lightning-icon>
+                {r.scanBtnLabel}
+              </button>
+              <button
+                class="op-co__btn op-co__btn--ghost op-co__card-open"
+                data-id={r.id}
+                data-scan-id={r.latestScanId}
+                onclick={handleOpen}
+                disabled={r.cannotOpen}
+              >
+                Open →
+              </button>
+            </div>
+
+            <!-- secondary actions -->
+            <div class="op-co__card-foot">
+              <button
+                class="op-co__link-btn"
+                data-id={r.id}
+                onclick={handleTest}
+                disabled={r.isTesting}
+              >
+                <lightning-icon icon-name="utility:connected_apps" size="xx-small" class="op-co__link-icon"></lightning-icon>
+                {r.testBtnLabel}
+              </button>
+              <template if:true={r.showError}>
+                <span class="op-co__card-foot-error" title={r.lastError}>⚠ {r.statusShort}</span>
+              </template>
+            </div>
+          </article>
+        </template>
+
+        <!-- "Connect another sandbox" placeholder card -->
+        <button class="op-co__card op-co__card--add" onclick={handleAddNew}>
+          <div class="op-co__add-icon"><lightning-icon icon-name="utility:add" size="medium"></lightning-icon></div>
+          <h3 class="op-co__add-title">Connect another sandbox</h3>
+          <p class="op-co__add-sub"><lightning-icon icon-name="utility:lock" size="xx-small"></lightning-icon> OAuth login required</p>
+        </button>
+      </div>
+    </template>
+  </article>
+</template>

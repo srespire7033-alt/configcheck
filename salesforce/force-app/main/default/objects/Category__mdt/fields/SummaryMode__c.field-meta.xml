@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>SummaryMode__c</fullName>
+    <label>Summary Mode</label>
+    <description>How to render the headline KPI on this card: "count" (number of findings) or "arr" ($ at risk).</description>
+    <type>Text</type><length>20</length>
+    <fieldManageability>SubscriberControlled</fieldManageability>
+</CustomField>

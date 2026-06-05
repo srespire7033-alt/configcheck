@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomMetadata xmlns="http://soap.sforce.com/2006/04/metadata" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" fqn="AttributionClass__mdt.D">
+    <label>Class D</label>
+    <protected>false</protected>
+    <values><field>Letter__c</field><value xsi:type="xsd:string">D</value></values>
+    <values><field>Label__c</field><value xsi:type="xsd:string">Missing Governance</value></values>
+    <values><field>Description__c</field><value xsi:type="xsd:string">A guardrail that should exist on the configuration is absent (no validation rule, no approval, no end-date check). The leak occurred because nothing stopped it.</value></values>
+</CustomMetadata>

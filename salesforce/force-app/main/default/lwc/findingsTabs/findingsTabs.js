@@ -1,4 +1,11 @@
-import { LightningElement } from 'lwc';
+import { LightningElement, wire, track } from 'lwc';
+import getAll from '@salesforce/apex/CategoryDisplayController.getAll';
+
+const FALLBACK_PILL_LABELS = {
+  revenue_leakage: 'Revenue Leakage',
+  governance: 'Governance & Pipeline',
+  pricing: 'Pricing Discipline',
+};
 
 /**
  * Findings tab container — sub-pill switcher above the three category
@@ -11,12 +18,30 @@ import { LightningElement } from 'lwc';
  */
 export default class FindingsTabs extends LightningElement {
   activeSub = 'leakage';
+  @track catalogEntries = [];
 
+  @wire(getAll)
+  wireCategories({ data }) {
+    if (data) this.catalogEntries = data;
+  }
+
+  /**
+   * Phase 20d — pill labels resolve from Category__mdt. The pill ID
+   * stays stable (leakage/governance/pricing) because it routes the
+   * sub-view; only the human-readable label is mdt-driven.
+   */
   get pills() {
+    const byKey = {};
+    for (const c of this.catalogEntries || []) {
+      if (c.categoryKey) byKey[c.categoryKey] = c.title;
+    }
+    const labelOf = (mdtKey, fallback) =>
+      byKey[mdtKey] || FALLBACK_PILL_LABELS[mdtKey] || fallback;
+
     return [
-      { id: 'leakage', label: 'Revenue Leakage' },
-      { id: 'governance', label: 'Governance & Pipeline' },
-      { id: 'pricing', label: 'Pricing Discipline' },
+      { id: 'leakage',    label: labelOf('revenue_leakage', 'Revenue Leakage') },
+      { id: 'governance', label: 'Governance & Pipeline' /* spans 2 mdt cats; keep static */ },
+      { id: 'pricing',    label: labelOf('pricing', 'Pricing Discipline') },
     ].map((p) => ({
       ...p,
       cls: p.id === this.activeSub ? 'op-pill op-pill--active' : 'op-pill',

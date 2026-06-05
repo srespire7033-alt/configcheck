@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomMetadata xmlns="http://soap.sforce.com/2006/04/metadata" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" fqn="RemediationRecipe__mdt.DSC_FOR_002">
+    <label>DSC-FOR-002</label>
+    <protected>false</protected>
+    <values><field>DetectorId__c</field><value xsi:type="xsd:string">DSC-FOR-002</value></values>
+    <values><field>Title__c</field><value xsi:type="xsd:string">Reduce stacked discounts on {productName} (Quote {quoteId})</value></values>
+    <values><field>EstimatedEffort__c</field><value xsi:type="xsd:string">20-30 min</value></values>
+    <values><field>Skill__c</field><value xsi:type="xsd:string">CPQ Admin</value></values>
+    <values><field>Steps__c</field><value xsi:type="xsd:string">1. Open Quote Line {primaryRecordId} on Quote {quoteId} for {accountName}.
+2. Effective discount {effectiveDiscountPct}% exceeds the approved cap {capPct}%.
+3. Identify which discounts are stacking (Volume + Partner + Term ladder, etc.) and decide which is intentional.
+4. Either reduce the discount to the cap OR route an approval that authorises the over-cap rate.
+5. Add an Approval Rule on SBQQ__QuoteLine__c requiring sign-off whenever Effective Discount > cap so this gets caught in-flight next time.</value></values>
+    <values><field>Version__c</field><value xsi:type="xsd:double">1.0</value></values>
+    <values>
+        <field>NoteSuggestion1__c</field>
+        <value xsi:type="xsd:string">Approval routed and captured for the over-cap discount.</value>
+    </values>
+    <values>
+        <field>NoteSuggestion2__c</field>
+        <value xsi:type="xsd:string">Reduced discount to cap on the affected quote line.</value>
+    </values>
+    <values>
+        <field>NoteSuggestion3__c</field>
+        <value xsi:type="xsd:string">Stacked discount is intentional bundle pricing; suppressing.</value>
+    </values>
+</CustomMetadata>

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>EstimatedEffort__c</fullName>
+    <label>Estimated Effort</label>
+    <description>Human-readable effort estimate, e.g. "30 min" or "1-2 hours".</description>
+    <type>Text</type>
+    <length>40</length>
+    <fieldManageability>SubscriberControlled</fieldManageability>
+</CustomField>

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>TitleTemplate__c</fullName>
+    <label>Title Template</label>
+    <description>One-line finding title. Use {ColumnName} tokens for any column returned by the SOQL query.</description>
+    <type>Text</type><length>255</length>
+    <fieldManageability>SubscriberControlled</fieldManageability>
+</CustomField>

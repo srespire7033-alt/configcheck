@@ -1,115 +1,81 @@
 <template>
-  <c-dashboard-card title="All Findings" subtitle="Filter, sort, and bulk-act across every finding in the latest scan">
-    <template if:true={loading}>
-      <div class="op-ip__loading">
-        <lightning-spinner alternative-text="Loading" size="small"></lightning-spinner>
-      </div>
-    </template>
-
-    <template if:true={error}>
-      <p class="op-ip__error">{error}</p>
-    </template>
-
-    <template if:false={loading}>
-      <!-- Filter bar -->
-      <div class="op-ip__filter-row">
-        <lightning-input
-          type="search"
-          label="Search"
-          variant="label-hidden"
-          placeholder="Search title or detector…"
-          value={filter.search}
-          onchange={handleSearch}
-          class="op-ip__search"
-        ></lightning-input>
-        <lightning-combobox
-          label="Severity"
-          variant="label-hidden"
-          value={filter.severity}
-          options={severityOptions}
-          onchange={handleSeverity}
-          class="op-ip__sev-select"
-        ></lightning-combobox>
-        <lightning-combobox
-          label="Sort by"
-          variant="label-hidden"
-          value={sortBy}
-          options={sortOptions}
-          onchange={handleSort}
-          class="op-ip__sort-select"
-        ></lightning-combobox>
-        <lightning-button-icon
-          icon-name="utility:arrowdown"
-          variant="border-filled"
-          alternative-text="Toggle sort direction"
-          onclick={toggleSortDir}
-        ></lightning-button-icon>
-      </div>
-
-      <!-- Selection bar (only when something is selected) -->
-      <template if:true={hasSelection}>
-        <div class="op-ip__selection-bar">
-          <span class="op-ip__selection-count">
-            {selectionCount} selected
-          </span>
-          <div class="op-ip__selection-actions">
-            <lightning-button
-              variant="brand"
-              label="Stage for recovery"
-              icon-name="utility:flow"
-              onclick={handleBulkStage}
-              disabled={busy}
-            ></lightning-button>
-            <lightning-button
-              variant="neutral"
-              label="Hide"
-              icon-name="utility:hide"
-              onclick={handleBulkHide}
-              disabled={busy}
-            ></lightning-button>
-            <lightning-button
-              variant="base"
-              label="Clear"
-              onclick={handleClearSelection}
-            ></lightning-button>
-          </div>
+  <article class="op-tip">
+    <header class="op-tip__header">
+      <div class="op-tip__head-left">
+        <div class="op-tip__head-icon-wrap">
+          <lightning-icon icon-name="utility:error" size="small" class="op-tip__head-icon"></lightning-icon>
         </div>
-      </template>
+        <div>
+          <h2 class="op-tip__title">Top Issues to Address</h2>
+          <p class="op-tip__subtitle">Highest priority issues affecting your configuration</p>
+        </div>
+      </div>
+    </header>
 
-      <!-- Result meta -->
-      <p class="op-ip__meta">
-        Showing {filteredCount} of {totalCount}
-      </p>
-
-      <!-- Findings list -->
-      <template if:false={hasFindings}>
-        <p class="op-ip__empty">No findings in the latest scan.</p>
-      </template>
-
-      <ul class="op-ip__list">
-        <template for:each={filteredFindings} for:item="f">
-          <li
-            key={f.id}
-            data-id={f.id}
-            class={f.rowClass}
-            onclick={handleRowClick}
-          >
-            <input
-              type="checkbox"
-              checked={f.selected}
-              data-id={f.id}
-              data-role="checkbox"
-              onclick={handleRowToggle}
-              class="op-ip__checkbox"
-              aria-label={f.title}
-            />
-            <c-severity-badge severity={f.severity}></c-severity-badge>
-            <span class="op-ip__title">{f.title}</span>
-            <span class="op-ip__detector">{f.detectorId}</span>
-            <span class="op-ip__gap">{f.gapFmt}</span>
-          </li>
-        </template>
-      </ul>
+    <template if:true={isLoading}>
+      <div class="op-tip__loading"><lightning-spinner alternative-text="Loading" size="small"></lightning-spinner></div>
     </template>
-  </c-dashboard-card>
+
+    <template if:true={hasError}>
+      <p class="op-tip__error">{error}</p>
+    </template>
+
+    <template if:true={isEmpty}>
+      <p class="op-tip__empty">No issues to display.</p>
+    </template>
+
+    <template if:true={hasGroups}>
+      <div class="op-tip__list">
+        <template for:each={rows} for:item="r">
+          <article
+            key={r.groupKey}
+            data-key={r.groupKey}
+            class={r.borderClass}
+            onclick={toggleExpand}
+          >
+            <div class="op-tip__row-num">{r.rowNumber}</div>
+            <div class="op-tip__row-body">
+              <div class="op-tip__row-chips">
+                <span class={r.severityChipClass}>{r.severity}</span>
+                <span class="op-tip__row-cat">{r.categoryLabel}</span>
+                <template if:true={r.isMulti}>
+                  <span class="op-tip__related-chip">{r.relatedLabel}</span>
+                </template>
+              </div>
+              <h3 class="op-tip__row-title" data-id={r.primaryFindingId} onclick={handleHeadlineClick}>
+                {r.headlineWithCount}
+              </h3>
+              <p class="op-tip__row-desc">{r.headlineDescription}</p>
+
+              <template if:true={r.isExpanded}>
+                <div class="op-tip__members">
+                  <template for:each={r.members} for:item="m">
+                    <div key={m.id} class="op-tip__member" data-id={m.id} onclick={handleMemberClick}>
+                      <div class="op-tip__member-body">
+                        <p class="op-tip__member-title">{m.title}</p>
+                        <p class="op-tip__member-desc">{m.description}</p>
+                      </div>
+                      <span class="op-tip__member-count">{m.affectedCount}</span>
+                    </div>
+                  </template>
+                </div>
+              </template>
+            </div>
+            <div class="op-tip__row-affected">
+              <span class="op-tip__row-affected-val">{r.affectedLabel}</span>
+              <lightning-icon icon-name={r.chevronIcon} size="x-small" class="op-tip__row-chev"></lightning-icon>
+            </div>
+          </article>
+        </template>
+      </div>
+    </template>
+
+    <template if:true={isModalOpen}>
+      <c-issue-detail-modal
+        issue-id={openDetailId}
+        oncloseissuemodal={handleCloseModal}
+        onstatuschanged={handleStatusChanged}
+      ></c-issue-detail-modal>
+    </template>
+  </article>
 </template>

@@ -1,76 +1,219 @@
 <template>
+  <!-- Inline scan-complete banner. Mirrors the SaaS pattern: stays
+       on the dashboard, surfaces the headline ($ + finding count) in
+       emerald, dismissible with an X. No redirect. -->
+  <template if:true={scanCompleteBanner}>
+    <div class={bannerClass} role="status" aria-live="polite" aria-atomic="true">
+      <div class="op-hero__banner-icon">
+        <lightning-icon icon-name={bannerIcon} size="small"></lightning-icon>
+      </div>
+      <div class="op-hero__banner-body">
+        <p class="op-hero__banner-title">{scanCompleteBanner.title}</p>
+        <p class="op-hero__banner-sub">{scanCompleteBanner.subtitle}</p>
+      </div>
+      <button
+        type="button"
+        class="op-hero__banner-close"
+        onclick={dismissBanner}
+        aria-label="Dismiss"
+      >×</button>
+    </div>
+  </template>
+
   <c-dashboard-card>
-    <!-- LOADING -->
     <template if:true={isLoading}>
       <div class="op-hero op-hero--loading">
         <lightning-spinner alternative-text="Loading dashboard" size="small"></lightning-spinner>
       </div>
     </template>
 
-    <!-- ERROR -->
     <template if:true={hasError}>
-      <div class="op-hero op-hero--error">
-        <p class="op-hero__error-msg">Couldn&rsquo;t load dashboard data: {error}</p>
-      </div>
+      <p class="op-hero__error-msg">Couldn&rsquo;t load dashboard data: {error}</p>
     </template>
 
-    <!-- EMPTY: no scans -->
-    <template if:true={isEmpty}>
-      <div class="op-hero op-hero--empty">
-        <div class="op-hero__empty-body">
-          <h2 class="op-hero__empty-title">No forensic scans yet</h2>
-          <p class="op-hero__empty-caption">
-            Run your first scan to surface verified revenue leakage in this org.
-          </p>
-        </div>
-        <lightning-button
-          variant="brand"
-          label="View Forensic Scans"
-          onclick={handleViewScans}
-        ></lightning-button>
-      </div>
-    </template>
+    <template if:false={isLoading}>
+      <template if:false={hasError}>
+        <div class="op-hero">
+          <!-- ─── LEFT: Score ring with number + label INSIDE ─── -->
+          <div class="op-hero__score">
+            <svg viewBox="0 0 100 100" class="op-hero__svg" aria-label="Health score" role="img">
+              <circle cx="50" cy="50" r="36" class="op-hero__ring-bg"></circle>
+              <circle
+                cx="50" cy="50" r="36"
+                class="op-hero__ring-fg"
+                stroke={scoreColor}
+                stroke-dasharray="226"
+                stroke-dashoffset={scoreStrokeOffset}
+              ></circle>
+              <text x="50" y="50" class="op-hero__score-num">{score}</text>
+              <text x="50" y="64" class="op-hero__score-cap">out of 100</text>
+            </svg>
+          </div>
 
-    <!-- NO FINDINGS: scan exists but came back clean (or empty CPQ) -->
-    <template if:true={hasNoFindings}>
-      <div class="op-hero op-hero--clean">
-        <div class="op-hero__clean-body">
-          <h2 class="op-hero__clean-title">No revenue leakage detected</h2>
-          <p class="op-hero__caption">{caption}</p>
-        </div>
-        <lightning-button
-          variant="neutral"
-          label="View scan"
-          onclick={handleViewScan}
-        ></lightning-button>
-      </div>
-    </template>
-
-    <!-- ACTIVE: findings exist -->
-    <template if:true={hasFindings}>
-      <div class="op-hero">
-        <div class="op-hero__main">
-          <div class="op-hero__money">
-            <c-money-display value={totalVerifiedUsd} size="hero" accent></c-money-display>
-            <p class="op-hero__label">VERIFIED LEAKAGE</p>
+          <!-- ─── MIDDLE: Title + caption + clickable tiles + progress ─── -->
+          <div class="op-hero__main">
+            <h2 class="op-hero__title">{productTitle}</h2>
             <p class="op-hero__caption">{caption}</p>
+
+            <div class="op-hero__tiles">
+              <button
+                type="button"
+                class="op-hero__tile op-hero__tile--critical"
+                data-severity="critical"
+                onclick={handleTileClick}
+                title="View Critical findings"
+              >
+                <div class="op-hero__tile-row">
+                  <span class="op-hero__tile-dot"></span>
+                  <span class="op-hero__tile-num">{criticalCount}</span>
+                </div>
+                <p class="op-hero__tile-label">Critical</p>
+              </button>
+              <button
+                type="button"
+                class="op-hero__tile op-hero__tile--warning"
+                data-severity="warning"
+                onclick={handleTileClick}
+                title="View Warning findings"
+              >
+                <div class="op-hero__tile-row">
+                  <span class="op-hero__tile-dot"></span>
+                  <span class="op-hero__tile-num">{warningCount}</span>
+                </div>
+                <p class="op-hero__tile-label">Warnings</p>
+              </button>
+              <button
+                type="button"
+                class="op-hero__tile op-hero__tile--info"
+                data-severity="info"
+                onclick={handleTileClick}
+                title="View Best Practice findings"
+              >
+                <div class="op-hero__tile-row">
+                  <span class="op-hero__tile-dot"></span>
+                  <span class="op-hero__tile-num">{bestPracticeCount}</span>
+                </div>
+                <p class="op-hero__tile-label">Best Practices</p>
+              </button>
+            </div>
+
+            <template if:true={totalIssues}>
+              <div class="op-hero__progress">
+                <div class="op-hero__progress-row">
+                  <span class="op-hero__progress-label">Resolution Progress</span>
+                  <span class="op-hero__progress-count">{resolutionLabel}</span>
+                </div>
+                <div class="op-hero__progress-track">
+                  <div class="op-hero__progress-bar" style={progressBarStyle}></div>
+                </div>
+              </div>
+            </template>
           </div>
-          <div class="op-hero__tiles">
-            <c-severity-badge severity="Critical" count={criticalCount} variant="tile"></c-severity-badge>
-            <c-severity-badge severity="Warning" count={warningCount} variant="tile"></c-severity-badge>
-            <c-severity-badge severity="Info" count={infoCount} variant="tile"></c-severity-badge>
+
+          <!-- ─── RIGHT: Pills + Refresh + Report + Split + Schedule ─── -->
+          <div class="op-hero__actions">
+            <!-- Product pills + refresh icon -->
+            <div class="op-hero__pill-row">
+              <template if:true={showProductPills}>
+                <div class="op-hero__pills">
+                  <template for:each={productPills} for:item="p">
+                    <button
+                      key={p.id}
+                      type="button"
+                      class={p.cls}
+                      data-id={p.id}
+                      onclick={handleProductPick}
+                      disabled={running}
+                    >{p.label}</button>
+                  </template>
+                </div>
+              </template>
+              <button
+                type="button"
+                class="op-hero__refresh"
+                onclick={handleRefresh}
+                disabled={running}
+                title="Refresh data"
+                aria-label="Refresh"
+              >
+                <lightning-icon icon-name="utility:refresh" size="x-small"></lightning-icon>
+              </button>
+            </div>
+
+            <!-- Report dropdown -->
+            <div class="op-hero__report-wrap">
+              <button
+                type="button"
+                class="op-hero__btn op-hero__btn--brand op-hero__btn--full op-hero__btn--with-chev"
+                onclick={toggleReportMenu}
+              >
+                <span class="op-hero__btn-center">
+                  <lightning-icon icon-name="utility:download" size="x-small" class="op-hero__btn-icon"></lightning-icon>
+                  <span>Report</span>
+                </span>
+                <lightning-icon icon-name="utility:chevrondown" size="x-small" class="op-hero__btn-chev"></lightning-icon>
+              </button>
+              <template if:true={showReportMenu}>
+                <div class="op-hero__menu">
+                  <button type="button" class="op-hero__menu-item" onclick={handlePdf}>
+                    <lightning-icon icon-name="utility:file" size="x-small" class="op-hero__menu-icon"></lightning-icon>
+                    <div>
+                      <div class="op-hero__menu-title">Executive PDF</div>
+                      <div class="op-hero__menu-sub">Branded client deliverable</div>
+                    </div>
+                  </button>
+                  <button type="button" class="op-hero__menu-item" onclick={handleFindingsCsv}>
+                    <lightning-icon icon-name="utility:filter" size="x-small" class="op-hero__menu-icon"></lightning-icon>
+                    <div>
+                      <div class="op-hero__menu-title">Findings CSV</div>
+                      <div class="op-hero__menu-sub">All findings, latest scan</div>
+                    </div>
+                  </button>
+                  <button type="button" class="op-hero__menu-item" onclick={handleRecoveryCsv}>
+                    <lightning-icon icon-name="utility:flow" size="x-small" class="op-hero__menu-icon"></lightning-icon>
+                    <div>
+                      <div class="op-hero__menu-title">Recovery CSV</div>
+                      <div class="op-hero__menu-sub">Pending / Approved / Committed</div>
+                    </div>
+                  </button>
+                </div>
+              </template>
+            </div>
+
+            <!-- New Scan + Forensics split -->
+            <div class="op-hero__split">
+              <button
+                type="button"
+                class="op-hero__btn op-hero__btn--brand op-hero__btn--split-left"
+                onclick={handleNewScan}
+                disabled={running}
+              >
+                <lightning-icon icon-name="utility:refresh" size="x-small" class="op-hero__btn-icon"></lightning-icon>
+                <span>{scanButtonLabel}</span>
+              </button>
+              <button
+                type="button"
+                class="op-hero__btn op-hero__btn--brand-dark op-hero__btn--split-right"
+                onclick={handleForensics}
+                disabled={running}
+              >
+                <lightning-icon icon-name="utility:chevrondown" size="x-small" class="op-hero__btn-icon"></lightning-icon>
+                <span>+ Forensics</span>
+              </button>
+            </div>
+
+            <!-- Schedule -->
+            <button
+              type="button"
+              class="op-hero__btn op-hero__btn--neutral op-hero__btn--full"
+              onclick={handleSchedule}
+            >
+              <lightning-icon icon-name="utility:event" size="x-small" class="op-hero__btn-icon"></lightning-icon>
+              <span>Schedule</span>
+            </button>
           </div>
         </div>
-        <div class="op-hero__footer">
-          <lightning-button
-            variant="neutral"
-            label="View scan detail"
-            icon-name="utility:open"
-            icon-position="right"
-            onclick={handleViewScan}
-          ></lightning-button>
-        </div>
-      </div>
+      </template>
     </template>
   </c-dashboard-card>
 </template>

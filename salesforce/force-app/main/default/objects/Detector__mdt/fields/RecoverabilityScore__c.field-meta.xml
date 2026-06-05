@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>RecoverabilityScore__c</fullName>
+    <label>Recoverability Score</label>
+    <description>0.00-1.00 — proportion of the gap this detector typically recovers when staged + committed. Used by Trust Score, Impact x Effort, and ROI.</description>
+    <type>Number</type>
+    <precision>3</precision>
+    <scale>2</scale>
+    <fieldManageability>SubscriberControlled</fieldManageability>
+</CustomField>

@@ -25,8 +25,19 @@ public with sharing class DashboardController {
         @AuraEnabled public Integer criticalCount;
         @AuraEnabled public Integer warningCount;
         @AuraEnabled public Integer infoCount;
+        @AuraEnabled public Integer resolvedCount;
+        @AuraEnabled public Integer healthScore;          // 0-100 from ScoreFormula__mdt
+        // Phase 22e — Per-category bucket sub-scores. Categories absent
+        // from the map have no findings → treat as 100 in the UI. Keys
+        // are detector Category__c values (e.g. "leakage", "governance",
+        // "arm_billing_policies"). Read from ForensicScan__c.CategoryScoresJson__c
+        // (live-computed for legacy scans without the persisted JSON).
+        @AuraEnabled public Map<String, Integer> categoryScores;
         @AuraEnabled public List<TopFinding> topFindings;
         @AuraEnabled public Boolean hasForensicData;
+        @AuraEnabled public PackageDetector.PackageInfo packages;
+        @AuraEnabled public String orgName;                // org display name for caption
+        @AuraEnabled public Boolean isSandbox;
     }
 
     /** Lightweight finding shape for matrix/list rendering. */
@@ -47,7 +58,7 @@ public with sharing class DashboardController {
      * a new scan completes.
      */
     @AuraEnabled(cacheable=true)
-    public static SummaryDto getDashboardSummary() {
+    public static SummaryDto getDashboardSummary(Id connectedOrgId) {
         SummaryDto dto = new SummaryDto();
         dto.scanCount = 0;
         dto.totalVerifiedUsd = 0;
@@ -57,27 +68,75 @@ public with sharing class DashboardController {
         dto.infoCount = 0;
         dto.topFindings = new List<TopFinding>();
         dto.hasForensicData = false;
+        dto.resolvedCount = 0;
+        dto.healthScore = 100; // Empty org = perfect score by definition.
+        dto.packages = PackageDetector.detect();
+
+        // Org context for the hero caption — "CPQ Ks (Production)".
+        Organization orgInfo = [SELECT Name, IsSandbox FROM Organization WITH SECURITY_ENFORCED LIMIT 1];
+        dto.orgName = orgInfo.Name;
+        dto.isSandbox = orgInfo.IsSandbox;
 
         // Latest completed scan (most recent terminal state).
-        List<ForensicScan__c> scans = [
-            SELECT Id, Name, Status__c, ProductType__c, StartedAt__c,
-                   CompletedAt__c, TotalLeakageUsd__c, FindingCount__c,
-                   ErrorMessage__c, CurrencyIsoCode
-            FROM ForensicScan__c
-            WHERE Status__c IN ('Completed', 'Partial')
-            ORDER BY StartedAt__c DESC
-            LIMIT 1
-        ];
+        // Phase 8c: when connectedOrgId is provided, scope the latest
+        // scan to that target org. When null (no filter), behaves as
+        // before — returns the most recent global scan.
+        List<ForensicScan__c> scans;
+        if (connectedOrgId != null) {
+            String scansSoql =
+                'SELECT Id, Name, Status__c, ProductType__c, StartedAt__c, ' +
+                '       CompletedAt__c, TotalLeakageUsd__c, FindingCount__c, ' +
+                '       ErrorMessage__c' + CurrencyContext.soqlSelect() + ', ' +
+                '       HealthScore__c, CategoryScoresJson__c, ResolvedCount__c, ConnectedOrg__c ' +
+                'FROM ForensicScan__c ' +
+                'WHERE Status__c IN (\'Completed\', \'Partial\') ' +
+                '  AND ConnectedOrg__c = :connectedOrgId ' +
+                'WITH SECURITY_ENFORCED ORDER BY StartedAt__c DESC ' +
+                'LIMIT 1';
+            scans = Database.query(scansSoql);
+        } else {
+            String scansSoql =
+                'SELECT Id, Name, Status__c, ProductType__c, StartedAt__c, ' +
+                '       CompletedAt__c, TotalLeakageUsd__c, FindingCount__c, ' +
+                '       ErrorMessage__c' + CurrencyContext.soqlSelect() + ', ' +
+                '       HealthScore__c, CategoryScoresJson__c, ResolvedCount__c, ConnectedOrg__c ' +
+                'FROM ForensicScan__c ' +
+                'WHERE Status__c IN (\'Completed\', \'Partial\') ' +
+                'WITH SECURITY_ENFORCED ORDER BY StartedAt__c DESC ' +
+                'LIMIT 1';
+            scans = Database.query(scansSoql);
+        }
         if (scans.isEmpty()) {
             return dto;
         }
 
         ForensicScan__c latest = scans[0];
         dto.latestScan = latest;
-        dto.scanCount = [SELECT COUNT() FROM ForensicScan__c WHERE Status__c IN ('Completed', 'Partial')];
+        // Scan count: when filtered by connectedOrgId, count only that org's scans.
+        if (connectedOrgId != null) {
+            dto.scanCount = [
+                SELECT COUNT() FROM ForensicScan__c
+                WHERE Status__c IN ('Completed', 'Partial')
+                  AND ConnectedOrg__c = :connectedOrgId
+                WITH SECURITY_ENFORCED
+            ];
+        } else {
+            dto.scanCount = [
+                SELECT COUNT() FROM ForensicScan__c
+                WHERE Status__c IN ('Completed', 'Partial')
+                WITH SECURITY_ENFORCED
+            ];
+        }
         dto.totalVerifiedUsd = latest.TotalLeakageUsd__c != null ? latest.TotalLeakageUsd__c : 0;
         dto.findingCount = (Integer) (latest.FindingCount__c != null ? latest.FindingCount__c : 0);
         dto.hasForensicData = dto.findingCount > 0;
+        // Stored score takes priority, but fall back to live compute
+        // so scans created before HealthScoreCalculator existed still
+        // show a meaningful number instead of a misleading 100.
+        if (latest.HealthScore__c != null) {
+            dto.healthScore = latest.HealthScore__c.intValue();
+        }
+        dto.resolvedCount = latest.ResolvedCount__c != null ? latest.ResolvedCount__c.intValue() : 0;
 
         // Severity counts derived from the actual ForensicFinding__c
         // records (rather than denormalized on the scan) so they stay
@@ -87,7 +146,7 @@ public with sharing class DashboardController {
             FROM ForensicFinding__c
             WHERE ForensicScan__c = :latest.Id
               AND HiddenAt__c = null
-            GROUP BY Severity__c
+            WITH SECURITY_ENFORCED GROUP BY Severity__c
         ];
         for (AggregateResult ag : sevAgg) {
             String s = (String) ag.get('sev');
@@ -96,20 +155,51 @@ public with sharing class DashboardController {
             else if (s == 'Warning') dto.warningCount = c;
             else if (s == 'Info') dto.infoCount = c;
         }
+        // Live-compute score when the stored field is missing (legacy
+        // scans inserted before the calculator shipped).
+        if (latest.HealthScore__c == null) {
+            dto.healthScore = HealthScoreCalculator.compute(
+                dto.criticalCount, dto.warningCount, dto.infoCount
+            );
+        }
+
+        // Phase 22e — Per-category sub-scores. Use the persisted JSON
+        // when present; otherwise live-compute for legacy scans so the
+        // UI never sees a null map. The empty-map case (no findings)
+        // is fine — the UI treats absent categories as 100.
+        dto.categoryScores = new Map<String, Integer>();
+        if (String.isNotBlank(latest.CategoryScoresJson__c)) {
+            try {
+                Map<String, Object> raw = (Map<String, Object>)
+                    JSON.deserializeUntyped(latest.CategoryScoresJson__c);
+                for (String k : raw.keySet()) {
+                    Object v = raw.get(k);
+                    if (v != null) dto.categoryScores.put(k, ((Decimal) v).intValue());
+                }
+            } catch (Exception e) {
+                // Malformed JSON shouldn't break the dashboard — recompute live.
+                dto.categoryScores = HealthScoreCalculator.computeCategoryScores(latest.Id);
+            }
+        } else {
+            dto.categoryScores = HealthScoreCalculator.computeCategoryScores(latest.Id);
+        }
 
         // Top findings by $ gap — drives the Impact × Effort matrix
         // and the "headline finding" callout. Cap at 50 so the payload
         // stays small even for orgs with thousands of findings.
-        List<ForensicFinding__c> topRaw = [
-            SELECT Id, DetectorId__c, Title__c, GapUsd__c, Severity__c,
-                   RecoverabilityScore__c, CurrencyIsoCode
-            FROM ForensicFinding__c
-            WHERE ForensicScan__c = :latest.Id
-              AND HiddenAt__c = null
-              AND GapUsd__c != null
-            ORDER BY GapUsd__c DESC
-            LIMIT 50
-        ];
+        // Dynamic SOQL binds only accept simple identifiers, so we
+        // extract latest.Id to a local first.
+        Id latestId = latest.Id;
+        String topRawSoql =
+            'SELECT Id, DetectorId__c, Title__c, GapUsd__c, Severity__c, ' +
+            '       RecoverabilityScore__c' + CurrencyContext.soqlSelect() + ' ' +
+            'FROM ForensicFinding__c ' +
+            'WHERE ForensicScan__c = :latestId ' +
+            '  AND HiddenAt__c = null ' +
+            '  AND GapUsd__c != null ' +
+            'WITH SECURITY_ENFORCED ORDER BY GapUsd__c DESC ' +
+            'LIMIT 50';
+        List<ForensicFinding__c> topRaw = Database.query(topRawSoql);
         for (ForensicFinding__c f : topRaw) {
             TopFinding tf = new TopFinding();
             tf.id = f.Id;
@@ -118,7 +208,7 @@ public with sharing class DashboardController {
             tf.gapUsd = f.GapUsd__c;
             tf.severity = f.Severity__c;
             tf.recoverabilityScore = f.RecoverabilityScore__c;
-            tf.currencyIsoCode = f.CurrencyIsoCode;
+            tf.currencyIsoCode = CurrencyContext.read(f);
             dto.topFindings.add(tf);
         }
 
@@ -136,7 +226,37 @@ public with sharing class DashboardController {
     //   pipeline        — opportunity / renewal pipeline risk
     //   pricing         — pricing discipline detectors
     // ─────────────────────────────────────────────────────────────
-    private static final Map<String, String> DETECTOR_CATEGORY = new Map<String, String>{
+    /**
+     * Phase 20a — single source of truth = Detector__mdt.Category__c.
+     * This map is built lazily from the catalog on first access so the
+     * dashboard reflects mdt edits immediately. The hardcoded fallback
+     * map keeps the system working in deploy states where mdt records
+     * may not be seeded (e.g. during a fresh org provisioning).
+     */
+    @TestVisible
+    private static Map<String, String> DETECTOR_CATEGORY {
+        get {
+            if (DETECTOR_CATEGORY == null) {
+                DETECTOR_CATEGORY = new Map<String, String>();
+                for (DetectorCatalogController.CatalogEntry e : DetectorCatalogController.getCatalog()) {
+                    if (String.isNotBlank(e.category)) {
+                        DETECTOR_CATEGORY.put(e.detectorId, e.category);
+                    }
+                }
+                // Safety net — if Detector__mdt isn't seeded yet, fall back
+                // to the original hardcoded mapping so the dashboard still
+                // groups correctly.
+                if (DETECTOR_CATEGORY.isEmpty()) {
+                    DETECTOR_CATEGORY = FALLBACK_DETECTOR_CATEGORY;
+                }
+            }
+            return DETECTOR_CATEGORY;
+        }
+        set;
+    }
+
+    /** Original hardcoded map — used as a fallback only. */
+    private static final Map<String, String> FALLBACK_DETECTOR_CATEGORY = new Map<String, String>{
         'REN-001'     => 'revenue_leakage',
         'REN-002'     => 'pricing',
         'REN-003'     => 'pipeline',
@@ -175,6 +295,51 @@ public with sharing class DashboardController {
     }
 
     /**
+     * Returns ALL findings (un-hidden) for the latest completed scan.
+     * Used by the "What to fix first" 3x3 matrix LWC.
+     */
+    @AuraEnabled(cacheable=true)
+    public static List<TopFinding> getMatrixFindings(Id connectedOrgId) {
+        List<TopFinding> out = new List<TopFinding>();
+        List<ForensicScan__c> scans;
+        if (connectedOrgId != null) {
+            scans = [
+                SELECT Id FROM ForensicScan__c
+                WHERE Status__c IN ('Completed', 'Partial')
+                  AND ConnectedOrg__c = :connectedOrgId
+                WITH SECURITY_ENFORCED ORDER BY CompletedAt__c DESC NULLS LAST
+                LIMIT 1
+            ];
+        } else {
+            scans = [
+                SELECT Id FROM ForensicScan__c
+                WHERE Status__c IN ('Completed', 'Partial')
+                WITH SECURITY_ENFORCED ORDER BY CompletedAt__c DESC NULLS LAST
+                LIMIT 1
+            ];
+        }
+        if (scans.isEmpty()) return out;
+        Id scanId = scans[0].Id;
+        for (ForensicFinding__c f : [
+            SELECT Id, DetectorId__c, Title__c, GapUsd__c, Severity__c, RecoverabilityScore__c
+            FROM ForensicFinding__c
+            WHERE ForensicScan__c = :scanId AND HiddenAt__c = null
+            WITH SECURITY_ENFORCED ORDER BY GapUsd__c DESC NULLS LAST
+            LIMIT 5000
+        ]) {
+            TopFinding t = new TopFinding();
+            t.id = f.Id;
+            t.detectorId = f.DetectorId__c;
+            t.title = f.Title__c;
+            t.gapUsd = f.GapUsd__c == null ? 0 : f.GapUsd__c;
+            t.severity = f.Severity__c;
+            t.recoverabilityScore = f.RecoverabilityScore__c;
+            out.add(t);
+        }
+        return out;
+    }
+
+    /**
      * Returns findings for the latest scan filtered to one category,
      * plus a per-detector grouping for the "Revenue Leakage" style
      * accordion view. Cacheable — feeds the Findings sub-views.
@@ -182,7 +347,7 @@ public with sharing class DashboardController {
      * @param category one of: revenue_leakage | governance | pipeline | pricing
      */
     @AuraEnabled(cacheable=true)
-    public static CategoryFindingsDto getFindingsByCategory(String category) {
+    public static CategoryFindingsDto getFindingsByCategory(String category, Id connectedOrgId) {
         CategoryFindingsDto out = new CategoryFindingsDto();
         out.category = category;
         out.findingCount = 0;
@@ -190,12 +355,22 @@ public with sharing class DashboardController {
         out.findings = new List<TopFinding>();
         out.byDetector = new List<DetectorGroup>();
 
-        // Latest completed scan.
-        List<ForensicScan__c> scans = [
-            SELECT Id FROM ForensicScan__c
-            WHERE Status__c IN ('Completed', 'Partial')
-            ORDER BY StartedAt__c DESC LIMIT 1
-        ];
+        // Latest completed scan (scoped to connectedOrgId when provided).
+        List<ForensicScan__c> scans;
+        if (connectedOrgId != null) {
+            scans = [
+                SELECT Id FROM ForensicScan__c
+                WHERE Status__c IN ('Completed', 'Partial')
+                  AND ConnectedOrg__c = :connectedOrgId
+                WITH SECURITY_ENFORCED ORDER BY StartedAt__c DESC LIMIT 1
+            ];
+        } else {
+            scans = [
+                SELECT Id FROM ForensicScan__c
+                WHERE Status__c IN ('Completed', 'Partial')
+                WITH SECURITY_ENFORCED ORDER BY StartedAt__c DESC LIMIT 1
+            ];
+        }
         if (scans.isEmpty()) return out;
         Id scanId = scans[0].Id;
 
@@ -203,15 +378,15 @@ public with sharing class DashboardController {
         // memory by category. SOQL can't filter on a static map, so
         // we accept the slight overhead — caps at 500 per scan
         // (matches FindingsListController.getFindings).
-        List<ForensicFinding__c> allFindings = [
-            SELECT Id, DetectorId__c, Title__c, GapUsd__c, Severity__c,
-                   RecoverabilityScore__c, CurrencyIsoCode
-            FROM ForensicFinding__c
-            WHERE ForensicScan__c = :scanId
-              AND HiddenAt__c = null
-            ORDER BY GapUsd__c DESC
-            LIMIT 500
-        ];
+        String allFindingsSoql =
+            'SELECT Id, DetectorId__c, Title__c, GapUsd__c, Severity__c, ' +
+            '       RecoverabilityScore__c' + CurrencyContext.soqlSelect() + ' ' +
+            'FROM ForensicFinding__c ' +
+            'WHERE ForensicScan__c = :scanId ' +
+            '  AND HiddenAt__c = null ' +
+            'WITH SECURITY_ENFORCED ORDER BY GapUsd__c DESC ' +
+            'LIMIT 500';
+        List<ForensicFinding__c> allFindings = Database.query(allFindingsSoql);
 
         Map<String, DetectorGroup> groups = new Map<String, DetectorGroup>();
         for (ForensicFinding__c f : allFindings) {
@@ -225,7 +400,7 @@ public with sharing class DashboardController {
             tf.gapUsd = f.GapUsd__c;
             tf.severity = f.Severity__c;
             tf.recoverabilityScore = f.RecoverabilityScore__c;
-            tf.currencyIsoCode = f.CurrencyIsoCode;
+            tf.currencyIsoCode = CurrencyContext.read(f);
             out.findings.add(tf);
             out.findingCount += 1;
             out.totalUsd += (f.GapUsd__c != null ? f.GapUsd__c : 0);
@@ -285,7 +460,7 @@ public with sharing class DashboardController {
     }
 
     @AuraEnabled(cacheable=true)
-    public static SinceLastScanDto getSinceLastScan() {
+    public static SinceLastScanDto getSinceLastScan(Id connectedOrgId) {
         SinceLastScanDto dto = new SinceLastScanDto();
         dto.hasPrior = false;
         dto.latestTotal = 0;
@@ -298,13 +473,25 @@ public with sharing class DashboardController {
         dto.newFindings = new List<TopFinding>();
         dto.resolvedTitles = new List<String>();
 
-        List<ForensicScan__c> scans = [
-            SELECT Id, TotalLeakageUsd__c, FindingCount__c
-            FROM ForensicScan__c
-            WHERE Status__c IN ('Completed', 'Partial')
-            ORDER BY StartedAt__c DESC
-            LIMIT 2
-        ];
+        List<ForensicScan__c> scans;
+        if (connectedOrgId != null) {
+            scans = [
+                SELECT Id, TotalLeakageUsd__c, FindingCount__c
+                FROM ForensicScan__c
+                WHERE Status__c IN ('Completed', 'Partial')
+                  AND ConnectedOrg__c = :connectedOrgId
+                WITH SECURITY_ENFORCED ORDER BY StartedAt__c DESC
+                LIMIT 2
+            ];
+        } else {
+            scans = [
+                SELECT Id, TotalLeakageUsd__c, FindingCount__c
+                FROM ForensicScan__c
+                WHERE Status__c IN ('Completed', 'Partial')
+                WITH SECURITY_ENFORCED ORDER BY StartedAt__c DESC
+                LIMIT 2
+            ];
+        }
         if (scans.isEmpty()) return dto;
 
         ForensicScan__c latest = scans[0];
@@ -322,14 +509,16 @@ public with sharing class DashboardController {
         // (detector + title). Anything in latest but not prior =
         // newly added. Anything in prior but not latest = resolved.
         Map<String, ForensicFinding__c> latestMap = new Map<String, ForensicFinding__c>();
-        for (ForensicFinding__c f : [
-            SELECT Id, DetectorId__c, Title__c, GapUsd__c, Severity__c,
-                   RecoverabilityScore__c, CurrencyIsoCode
-            FROM ForensicFinding__c
-            WHERE ForensicScan__c = :latest.Id
-              AND HiddenAt__c = null
-            LIMIT 500
-        ]) {
+        // Dynamic SOQL binds only accept simple identifiers.
+        Id latestScanId = latest.Id;
+        String latestSoql =
+            'SELECT Id, DetectorId__c, Title__c, GapUsd__c, Severity__c, ' +
+            '       RecoverabilityScore__c' + CurrencyContext.soqlSelect() + ' ' +
+            'FROM ForensicFinding__c ' +
+            'WHERE ForensicScan__c = :latestScanId ' +
+            '  AND HiddenAt__c = null ' +
+            'WITH SECURITY_ENFORCED LIMIT 500';
+        for (ForensicFinding__c f : (List<ForensicFinding__c>) Database.query(latestSoql)) {
             latestMap.put(f.DetectorId__c + '|' + f.Title__c, f);
         }
         Set<String> priorSignatures = new Set<String>();
@@ -339,7 +528,7 @@ public with sharing class DashboardController {
             FROM ForensicFinding__c
             WHERE ForensicScan__c = :prior.Id
               AND HiddenAt__c = null
-            LIMIT 500
+            WITH SECURITY_ENFORCED LIMIT 500
         ]) {
             String sig = f.DetectorId__c + '|' + f.Title__c;
             priorSignatures.add(sig);
@@ -380,7 +569,7 @@ public with sharing class DashboardController {
             tf.gapUsd = f.GapUsd__c;
             tf.severity = f.Severity__c;
             tf.recoverabilityScore = f.RecoverabilityScore__c;
-            tf.currencyIsoCode = f.CurrencyIsoCode;
+            tf.currencyIsoCode = CurrencyContext.read(f);
             dto.newFindings.add(tf);
         }
 
@@ -426,6 +615,12 @@ public with sharing class DashboardController {
         @AuraEnabled public Datetime approvedAt;
         @AuraEnabled public Datetime committedAt;
         @AuraEnabled public Boolean commitVerified;
+        // Phase 15a — surface the verification verdict so the recovery
+        // queue can expand the failed-verify rows inline without a
+        // navigation away from the Plan tab.
+        @AuraEnabled public String verificationMessage;
+        @AuraEnabled public String expectedValue;
+        @AuraEnabled public String actualValue;
     }
 
     @AuraEnabled(cacheable=true)
@@ -438,9 +633,10 @@ public with sharing class DashboardController {
         List<RecoveryAction__c> rows = [
             SELECT Id, ApprovalStatus__c, ProjectedReclaimUsd__c,
                    ApprovedAt__c, CommittedAt__c, CommitVerified__c,
+                   VerificationMessage__c, ExpectedValue__c, ActualValue__c,
                    ForensicFinding__c, ForensicFinding__r.Title__c
             FROM RecoveryAction__c
-            ORDER BY CreatedDate DESC
+            WITH SECURITY_ENFORCED ORDER BY CreatedDate DESC
             LIMIT 500
         ];
 
@@ -473,6 +669,9 @@ public with sharing class DashboardController {
             a.approvedAt = r.ApprovedAt__c;
             a.committedAt = r.CommittedAt__c;
             a.commitVerified = r.CommitVerified__c;
+            a.verificationMessage = r.VerificationMessage__c;
+            a.expectedValue = r.ExpectedValue__c;
+            a.actualValue = r.ActualValue__c;
             g.actions.add(a);
             g.count += 1;
             g.projectedUsd += a.projectedUsd;
@@ -500,6 +699,124 @@ public with sharing class DashboardController {
         @AuraEnabled public Datetime completedAt;
     }
 
+    /** Full per-scan history point — drives the Score Trend chart +
+     *  the All Scans table on the history page. */
+    public class ScoreHistoryPoint {
+        @AuraEnabled public Id id;
+        @AuraEnabled public String name;
+        @AuraEnabled public Integer healthScore;
+        @AuraEnabled public Integer findingCount;
+        @AuraEnabled public Integer criticalCount;
+        @AuraEnabled public Integer warningCount;
+        @AuraEnabled public Integer infoCount;
+        @AuraEnabled public Decimal totalUsd;
+        @AuraEnabled public String productType;
+        @AuraEnabled public String status;
+        @AuraEnabled public Datetime completedAt;
+        @AuraEnabled public Datetime startedAt;
+        @AuraEnabled public Long durationMs;
+        // Phase 22g — Per-category bucket scores (Phase 22e) carried
+        // through so the Score Trend card can show "what's broken" for
+        // the latest scan, not just the headline. Keys: detector
+        // Category__c values. Absent categories implicitly score 100.
+        @AuraEnabled public Map<String, Integer> categoryScores;
+    }
+
+    /**
+     * Returns the last N scans with full per-scan detail — score,
+     * severity counts, duration, product type. Powers Score Trend
+     * card on dashboard + the All Scans table on the history page.
+     * Sorted ASC by completedAt for chart consumption (LWC reverses
+     * for the table view).
+     */
+    @AuraEnabled(cacheable=true)
+    public static List<ScoreHistoryPoint> getScoreHistory(Integer maxPoints, Id connectedOrgId) {
+        Integer effective = (maxPoints != null && maxPoints > 0 && maxPoints <= 100) ? maxPoints : 20;
+        List<ForensicScan__c> scans;
+        if (connectedOrgId != null) {
+            scans = [
+                SELECT Id, Name, ProductType__c, Status__c, HealthScore__c,
+                       CategoryScoresJson__c, FindingCount__c, TotalLeakageUsd__c,
+                       StartedAt__c, CompletedAt__c
+                FROM ForensicScan__c
+                WHERE Status__c IN ('Completed', 'Partial')
+                  AND CompletedAt__c != null
+                  AND ConnectedOrg__c = :connectedOrgId
+                WITH SECURITY_ENFORCED ORDER BY CompletedAt__c DESC
+                LIMIT :effective
+            ];
+        } else {
+            scans = [
+                SELECT Id, Name, ProductType__c, Status__c, HealthScore__c,
+                       CategoryScoresJson__c, FindingCount__c, TotalLeakageUsd__c,
+                       StartedAt__c, CompletedAt__c
+                FROM ForensicScan__c
+                WHERE Status__c IN ('Completed', 'Partial')
+                  AND CompletedAt__c != null
+                WITH SECURITY_ENFORCED ORDER BY CompletedAt__c DESC
+                LIMIT :effective
+            ];
+        }
+        // Per-scan severity counts via aggregate query.
+        Set<Id> scanIds = new Set<Id>();
+        for (ForensicScan__c s : scans) scanIds.add(s.Id);
+        Map<Id, Map<String, Integer>> sevByScan = new Map<Id, Map<String, Integer>>();
+        if (!scanIds.isEmpty()) {
+            for (AggregateResult ag : [
+                SELECT ForensicScan__c sid, Severity__c sev, COUNT(Id) cnt
+                FROM ForensicFinding__c
+                WHERE ForensicScan__c IN :scanIds AND HiddenAt__c = null
+                WITH SECURITY_ENFORCED GROUP BY ForensicScan__c, Severity__c
+            ]) {
+                Id sid = (Id) ag.get('sid');
+                Map<String, Integer> m = sevByScan.get(sid);
+                if (m == null) { m = new Map<String, Integer>(); sevByScan.put(sid, m); }
+                m.put((String) ag.get('sev'), (Integer) ag.get('cnt'));
+            }
+        }
+
+        List<ScoreHistoryPoint> out = new List<ScoreHistoryPoint>();
+        // Reverse so oldest is first (chart left→right).
+        for (Integer i = scans.size() - 1; i >= 0; i--) {
+            ForensicScan__c s = scans[i];
+            Map<String, Integer> sev = sevByScan.get(s.Id);
+            ScoreHistoryPoint p = new ScoreHistoryPoint();
+            p.id = s.Id;
+            p.name = s.Name;
+            p.productType = s.ProductType__c;
+            p.status = s.Status__c;
+            p.healthScore = s.HealthScore__c != null ? s.HealthScore__c.intValue() : 100;
+            p.findingCount = (Integer) (s.FindingCount__c != null ? s.FindingCount__c : 0);
+            p.totalUsd = s.TotalLeakageUsd__c != null ? s.TotalLeakageUsd__c : 0;
+            p.criticalCount = sev != null && sev.containsKey('Critical') ? sev.get('Critical') : 0;
+            p.warningCount = sev != null && sev.containsKey('Warning') ? sev.get('Warning') : 0;
+            p.infoCount = sev != null && sev.containsKey('Info') ? sev.get('Info') : 0;
+            p.completedAt = s.CompletedAt__c;
+            p.startedAt = s.StartedAt__c;
+            if (s.StartedAt__c != null && s.CompletedAt__c != null) {
+                p.durationMs = s.CompletedAt__c.getTime() - s.StartedAt__c.getTime();
+            } else {
+                p.durationMs = null;
+            }
+            // Phase 22g — parse persisted category JSON into a Map for
+            // the latest scan; older points keep an empty map (UI only
+            // surfaces the breakdown for the latest point anyway).
+            p.categoryScores = new Map<String, Integer>();
+            if (String.isNotBlank(s.CategoryScoresJson__c)) {
+                try {
+                    Map<String, Object> raw = (Map<String, Object>)
+                        JSON.deserializeUntyped(s.CategoryScoresJson__c);
+                    for (String k : raw.keySet()) {
+                        Object v = raw.get(k);
+                        if (v != null) p.categoryScores.put(k, ((Decimal) v).intValue());
+                    }
+                } catch (Exception e) { /* legacy/malformed → empty map, UI tolerates */ }
+            }
+            out.add(p);
+        }
+        return out;
+    }
+
     /**
      * Returns the last `limit` completed scans for trend visualization.
      * Default limit 10 — enough for a meaningful sparkline without
@@ -507,16 +824,29 @@ public with sharing class DashboardController {
      * the LWC can render left→right.
      */
     @AuraEnabled(cacheable=true)
-    public static List<ScanPoint> getScanTrend(Integer maxPoints) {
+    public static List<ScanPoint> getScanTrend(Integer maxPoints, Id connectedOrgId) {
         Integer effective = (maxPoints != null && maxPoints > 0 && maxPoints <= 50) ? maxPoints : 10;
-        List<ForensicScan__c> scans = [
-            SELECT Id, Name, TotalLeakageUsd__c, FindingCount__c, CompletedAt__c
-            FROM ForensicScan__c
-            WHERE Status__c IN ('Completed', 'Partial')
-              AND CompletedAt__c != null
-            ORDER BY CompletedAt__c DESC
-            LIMIT :effective
-        ];
+        List<ForensicScan__c> scans;
+        if (connectedOrgId != null) {
+            scans = [
+                SELECT Id, Name, TotalLeakageUsd__c, FindingCount__c, CompletedAt__c
+                FROM ForensicScan__c
+                WHERE Status__c IN ('Completed', 'Partial')
+                  AND CompletedAt__c != null
+                  AND ConnectedOrg__c = :connectedOrgId
+                WITH SECURITY_ENFORCED ORDER BY CompletedAt__c DESC
+                LIMIT :effective
+            ];
+        } else {
+            scans = [
+                SELECT Id, Name, TotalLeakageUsd__c, FindingCount__c, CompletedAt__c
+                FROM ForensicScan__c
+                WHERE Status__c IN ('Completed', 'Partial')
+                  AND CompletedAt__c != null
+                WITH SECURITY_ENFORCED ORDER BY CompletedAt__c DESC
+                LIMIT :effective
+            ];
+        }
         // Reverse so the oldest point is first (chart reads left→right).
         List<ScanPoint> out = new List<ScanPoint>();
         for (Integer i = scans.size() - 1; i >= 0; i--) {

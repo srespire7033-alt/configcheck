@@ -1,73 +1,132 @@
 <template>
-  <c-dashboard-card title="Impact × Effort" subtitle="Where to start — bubbles sized by $ recoverable, placed by effort">
+  <article class="op-wtf">
+    <!-- Header -->
+    <header class="op-wtf__header">
+      <div class="op-wtf__title-block">
+        <div class="op-wtf__title-icon">
+          <lightning-icon icon-name="utility:sparkle" size="small"></lightning-icon>
+        </div>
+        <div>
+          <h2 class="op-wtf__title">What to fix first</h2>
+          <p class="op-wtf__subtitle">
+            Findings by dollar impact &times; effort to fix.
+            <span class="op-wtf__quick-text">Quick Wins</span> in the top-left are the pitch slide.
+          </p>
+        </div>
+      </div>
+      <template if:true={hasQuickWins}>
+        <div class="op-wtf__quick-pill">
+          <p class="op-wtf__quick-pill-label">QUICK WINS</p>
+          <p class="op-wtf__quick-pill-val">{quickWins.label}</p>
+        </div>
+      </template>
+    </header>
+
     <template if:true={isLoading}>
-      <div class="op-matrix__loading">
-        <lightning-spinner alternative-text="Loading matrix" size="small"></lightning-spinner>
+      <div class="op-wtf__loading">
+        <lightning-spinner alternative-text="Loading" size="small"></lightning-spinner>
       </div>
     </template>
 
     <template if:true={hasError}>
-      <p class="op-matrix__error">Couldn&rsquo;t load matrix data: {error}</p>
+      <p class="op-wtf__error">{error}</p>
     </template>
 
     <template if:true={isEmpty}>
-      <div class="op-matrix__empty">
-        <p>No findings to plot yet — run a forensic scan to populate the matrix.</p>
-      </div>
+      <p class="op-wtf__empty">No findings to plot yet. Run a forensic scan.</p>
     </template>
 
-    <template if:true={hasFindings}>
-      <!-- Quadrant summary chips -->
-      <div class="op-matrix__quadrants">
-        <template for:each={quadrants} for:item="q">
-          <div key={q.key} class={q.cls}>
-            <p class="op-quad__label">{q.label}</p>
-            <p class="op-quad__count">{q.count}</p>
-            <p class="op-quad__total">{q.total}</p>
-          </div>
-        </template>
-      </div>
-
-      <!-- The plot -->
-      <div class="op-matrix__plot">
-        <!-- Y-axis label -->
-        <div class="op-matrix__y-label">High $ →</div>
-
-        <!-- The plotting area -->
-        <div class="op-matrix__area">
-          <!-- Quadrant separator lines -->
-          <div class="op-matrix__hline"></div>
-          <div class="op-matrix__vline"></div>
-
-          <!-- Quadrant labels (faint) -->
-          <span class="op-matrix__quad-label op-matrix__quad-label--tl">Quick wins</span>
-          <span class="op-matrix__quad-label op-matrix__quad-label--tr">Big bets</span>
-          <span class="op-matrix__quad-label op-matrix__quad-label--bl">Tidy-ups</span>
-          <span class="op-matrix__quad-label op-matrix__quad-label--br">Defer</span>
-
-          <!-- The bubbles -->
-          <template for:each={bubbles} for:item="b">
-            <button
-              key={b.id}
-              data-id={b.id}
-              type="button"
-              class="op-matrix__bubble"
-              style={b.style}
-              title={b.tooltip}
-              aria-label={b.tooltip}
-              onclick={handleBubbleClick}
-            >
-              <span class="slds-assistive-text">{b.title}</span>
-            </button>
+    <template if:true={hasData}>
+      <div class="op-wtf__grid-wrap">
+        <!-- Y-axis labels -->
+        <div class="op-wtf__y-axis">
+          <template for:each={yLabels} for:item="y">
+            <div key={y.key} class="op-wtf__y-label">
+              <p class="op-wtf__y-label-main">{y.label}</p>
+              <p class="op-wtf__y-label-sub">{y.sub}</p>
+            </div>
           </template>
         </div>
 
-        <!-- X-axis label -->
-        <div class="op-matrix__x-label">
-          <span>← Low effort</span>
-          <span>High effort →</span>
+        <!-- Cells + X-axis labels -->
+        <div class="op-wtf__grid-col">
+          <div class="op-wtf__grid">
+            <template for:each={cells} for:item="c">
+              <button
+                key={c.key}
+                data-key={c.key}
+                type="button"
+                class={c.themeClass}
+                onclick={handleCellClick}
+                disabled={c.isEmpty}
+              >
+                <div class="op-wtf__cell-top">
+                  <p class="op-wtf__cell-label">{c.label}</p>
+                  <template if:true={c.highlight}>
+                    <lightning-icon icon-name="utility:sparkle" size="xx-small" class="op-wtf__cell-spark"></lightning-icon>
+                  </template>
+                </div>
+                <p class="op-wtf__cell-count">{c.count}</p>
+                <p class="op-wtf__cell-total">{c.totalFmt}</p>
+                <p class="op-wtf__cell-hours">{c.hoursFmt}</p>
+              </button>
+            </template>
+          </div>
+          <div class="op-wtf__x-axis">
+            <p class="op-wtf__x-label">Low Effort</p>
+            <p class="op-wtf__x-label">Medium Effort</p>
+            <p class="op-wtf__x-label">High Effort</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <footer class="op-wtf__footer">
+        <lightning-icon icon-name="utility:info" size="xx-small" class="op-wtf__footer-icon"></lightning-icon>
+        <span>Click any cell to drill in. {footerLabel}</span>
+      </footer>
+    </template>
+
+    <!-- Drill-down modal -->
+    <template if:true={isModalOpen}>
+      <div class="op-wtf__modal-backdrop" onclick={handleModalBackdrop} onkeydown={handleModalKeydown} role="dialog" aria-modal="true" aria-label="Findings drill-down" tabindex="-1">
+        <div class="op-wtf__modal">
+          <div class={modalData.themeClass}>
+            <div class="op-wtf__modal-title-block">
+              <p class="op-wtf__modal-eyebrow">{modalData.label}</p>
+              <p class="op-wtf__modal-summary">{modalData.summary}</p>
+              <p class="op-wtf__modal-hours">{modalData.hoursLine}</p>
+            </div>
+            <button class="op-wtf__modal-close" onclick={handleCloseModal} aria-label="Close">
+              <lightning-icon icon-name="utility:close" size="small"></lightning-icon>
+            </button>
+          </div>
+          <div class="op-wtf__modal-body">
+            <template for:each={modalData.rows} for:item="r">
+              <a
+                key={r.id}
+                data-id={r.id}
+                href="javascript:void(0)"
+                class="op-wtf__modal-row"
+                onclick={handleRowClick}
+              >
+                <div class="op-wtf__modal-row-main">
+                  <p class="op-wtf__modal-row-detector">{r.detectorId}</p>
+                  <p class="op-wtf__modal-row-title">{r.title}</p>
+                </div>
+                <div class="op-wtf__modal-row-vals">
+                  <span class="op-wtf__modal-row-gap">{r.gapFmt}</span>
+                  <lightning-icon icon-name="utility:chevronright" size="xx-small" class="op-wtf__modal-row-chev"></lightning-icon>
+                </div>
+              </a>
+            </template>
+          </div>
+          <div class="op-wtf__modal-footer">
+            <span>Click a finding to open its detail page.</span>
+            <button class="op-wtf__modal-close-btn" onclick={handleCloseModal}>Close</button>
+          </div>
         </div>
       </div>
     </template>
-  </c-dashboard-card>
+  </article>
 </template>

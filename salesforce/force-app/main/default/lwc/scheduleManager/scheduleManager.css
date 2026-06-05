@@ -4,14 +4,12 @@
   margin: 0; padding: 16px 0;
 }
 
+/* ─── Schedule list table ─── */
 .op-sm__table {
   width: 100%;
   border-collapse: collapse;
   font-size: 13px;
 }
-/* Wrap in horizontal scroll on narrow screens — preserves the table
-   format without truncating columns. Better than collapsing to cards
-   for an admin-facing surface where consultants want to scan rows. */
 @media (max-width: 720px) {
   .op-sm__table {
     display: block;
@@ -58,7 +56,7 @@
 .op-sm__status--paused  { background: rgba(156, 163, 175, 0.18); color: #4b5563; }
 .op-sm__status--failed  { background: rgba(239, 68, 68, 0.12); color: #b91c1c; }
 
-/* Modal overlay + dialog */
+/* ─── Modal overlay + dialog ─── */
 .op-sm__overlay {
   position: fixed;
   inset: 0;
@@ -84,19 +82,19 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 16px 20px;
+  padding: 18px 22px;
   border-bottom: 1px solid var(--op-color-border-subtle, #f3f4f6);
 }
-.op-sm__modal-header h2 { margin: 0; font-size: 17px; font-weight: 600; }
+.op-sm__modal-header h2 { margin: 0; font-size: 18px; font-weight: 600; }
 
 .op-sm__modal-body {
-  padding: 18px 20px;
+  padding: 20px 22px;
   overflow-y: auto;
   flex: 1;
 }
 
 .op-sm__modal-footer {
-  padding: 14px 20px;
+  padding: 14px 22px;
   border-top: 1px solid var(--op-color-border-subtle, #f3f4f6);
   display: flex;
   justify-content: flex-end;
@@ -104,130 +102,167 @@
   background: var(--op-color-bg-page, #f9fafb);
 }
 
-.op-sm__field {
-  margin-bottom: 16px;
-}
-.op-sm__field label {
+.op-sm__field { margin-bottom: 18px; }
+.op-sm__field-label {
   display: block;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
-  color: var(--op-color-text-body, #374151);
-  margin-bottom: 6px;
+  color: var(--op-color-text-strong, #111827);
+  margin-bottom: 8px;
 }
 
-.op-sm__pills {
-  display: inline-flex;
-  background: var(--op-color-bg-muted, #f3f4f6);
-  border-radius: 10px;
-  padding: 3px;
-  gap: 2px;
-}
-.op-sm__pill {
-  background: transparent; border: none;
-  padding: 6px 12px;
-  border-radius: 7px;
-  font-size: 13px; font-weight: 500;
-  color: var(--op-color-text-muted, #6b7280);
-  cursor: pointer;
-}
-.op-sm__pill--active {
-  background: white;
-  color: var(--op-color-brand-primary, #2563eb);
-  box-shadow: var(--op-shadow-sm, 0 1px 2px rgba(0,0,0,0.05));
-}
-
-.op-sm__presets {
+/* ─── Frequency pills (replaces preset picker) ─── */
+.op-sm__freq-row {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 8px;
 }
-@media (min-width: 560px) {
-  .op-sm__presets { grid-template-columns: repeat(3, 1fr); }
+@media (min-width: 480px) {
+  .op-sm__freq-row { grid-template-columns: repeat(4, 1fr); }
 }
-.op-sm__preset {
+.op-sm__freq {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 14px 8px;
   background: white;
   border: 1.5px solid var(--op-color-border-default, #e5e7eb);
   border-radius: 10px;
-  padding: 10px 12px;
   font-size: 13px;
-  font-weight: 500;
+  font-weight: 600;
   color: var(--op-color-text-body, #374151);
-  text-align: left;
   cursor: pointer;
-  transition: border-color 0.15s ease, background 0.15s ease, transform 0.05s ease;
+  transition: all 0.15s ease;
 }
-.op-sm__preset:hover:not([disabled]) {
+.op-sm__freq:hover:not([disabled]) {
   border-color: var(--op-color-brand-primary, #2563eb);
   background: rgba(37, 99, 235, 0.02);
 }
-.op-sm__preset:active:not([disabled]) {
-  transform: scale(0.99);
-}
-.op-sm__preset--active {
+.op-sm__freq--active {
+  background: var(--op-color-brand-primary, #2563eb);
   border-color: var(--op-color-brand-primary, #2563eb);
-  background: rgba(37, 99, 235, 0.06);
-  color: var(--op-color-brand-primary, #2563eb);
-  font-weight: 600;
+  color: white;
+}
+/* Without this, the generic .op-sm__freq:hover rule wins over
+   .op-sm__freq--active because :hover has higher specificity,
+   making the active pill turn near-white on hover with invisible
+   white text. Explicit hover state for active = darker blue. */
+.op-sm__freq--active:hover:not([disabled]) {
+  background: var(--op-color-brand-primary-hover, #1d4ed8);
+  border-color: var(--op-color-brand-primary-hover, #1d4ed8);
+  color: white;
+}
+.op-sm__freq-icon {
+  --sds-c-icon-color-foreground: currentColor;
+  --sds-c-icon-color-foreground-default: currentColor;
+}
+.op-sm__freq-label {
+  font-size: 13px;
+  line-height: 1;
 }
 
-/* Advanced cron expander */
-.op-sm__advanced {
-  margin: 14px 0;
-  border-top: 1px solid var(--op-color-border-subtle, #f3f4f6);
-  padding-top: 12px;
+/* ─── Day-of-week pills (Weekly frequency) ─── */
+.op-sm__dow-row {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
 }
-.op-sm__advanced-summary {
+.op-sm__dow {
+  background: white;
+  border: 1.5px solid var(--op-color-border-default, #e5e7eb);
+  border-radius: 8px;
+  padding: 10px 0;
   font-size: 12px;
   font-weight: 600;
-  color: var(--op-color-text-muted, #6b7280);
+  color: var(--op-color-text-body, #374151);
   cursor: pointer;
-  list-style: none;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 4px 0;
-  user-select: none;
+  transition: all 0.15s ease;
 }
-.op-sm__advanced-summary::before {
-  content: '▸';
-  font-size: 10px;
-  transition: transform 0.15s ease;
+.op-sm__dow:hover:not([disabled]) {
+  border-color: var(--op-color-brand-primary, #2563eb);
 }
-.op-sm__advanced[open] .op-sm__advanced-summary::before {
-  transform: rotate(90deg);
+.op-sm__dow--active {
+  background: var(--op-color-brand-primary, #2563eb);
+  border-color: var(--op-color-brand-primary, #2563eb);
+  color: white;
 }
-.op-sm__advanced-summary:hover {
-  color: var(--op-color-brand-primary, #2563eb);
-}
-.op-sm__advanced-body {
-  margin-top: 8px;
-}
-.op-sm__cron-hint {
-  font-size: 11px;
-  color: var(--op-color-text-muted, #6b7280);
-  margin: 6px 0 0;
-  line-height: 1.4;
-}
-.op-sm__cron-hint code {
-  background: var(--op-color-bg-muted, #f3f4f6);
-  padding: 1px 5px;
-  border-radius: 3px;
-  font-size: 10.5px;
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+.op-sm__dow--active:hover:not([disabled]) {
+  background: var(--op-color-brand-primary-hover, #1d4ed8);
+  border-color: var(--op-color-brand-primary-hover, #1d4ed8);
+  color: white;
 }
 
-/* Detected product type info line */
+/* ─── Time input ─── */
+.op-sm__time-input {
+  width: 100%;
+  padding: 10px 12px;
+  font-size: 14px;
+  border: 1px solid var(--op-color-border-default, #e5e7eb);
+  border-radius: 8px;
+  background: white;
+  color: var(--op-color-text-strong, #111827);
+  font-family: inherit;
+}
+.op-sm__time-input:focus {
+  outline: none;
+  border-color: var(--op-color-brand-primary, #2563eb);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+/* ─── Timezone display ─── */
+.op-sm__tz-display {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  font-size: 14px;
+  border: 1px solid var(--op-color-border-default, #e5e7eb);
+  border-radius: 8px;
+  background: var(--op-color-bg-page, #f9fafb);
+  color: var(--op-color-text-body, #374151);
+}
+.op-sm__tz-icon {
+  --sds-c-icon-color-foreground: var(--op-color-text-muted, #6b7280);
+}
+
+/* ─── Detected product type info ─── */
 .op-sm__detected {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 8px 12px;
+  padding: 10px 12px;
   background: rgba(59, 130, 246, 0.06);
   border-radius: 8px;
   font-size: 12px;
   color: #1d4ed8;
-  margin: 12px 0 0;
+  margin: 14px 0 0;
 }
 .op-sm__detected-icon {
   --sds-c-icon-color-foreground: #3b82f6;
+}
+
+/* ─── WCAG 2.1 AA accessibility ────────────────────────────────────── */
+/* Visible keyboard focus indicators on all interactives */
+button:focus-visible,
+a:focus-visible,
+[role="button"]:focus-visible,
+[role="dialog"]:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.2);
+}
+/* Honor user's reduced-motion preference */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    transform: none !important;
+  }
 }

@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomMetadata xmlns="http://soap.sforce.com/2006/04/metadata" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" fqn="RemediationRecipe__mdt.QL_FOR_001">
+    <label>QL-FOR-001</label>
+    <protected>false</protected>
+    <values><field>DetectorId__c</field><value xsi:type="xsd:string">QL-FOR-001</value></values>
+    <values><field>Title__c</field><value xsi:type="xsd:string">Restore price on required bundle option (Quote Line {primaryRecordId})</value></values>
+    <values><field>EstimatedEffort__c</field><value xsi:type="xsd:string">15-20 min</value></values>
+    <values><field>Skill__c</field><value xsi:type="xsd:string">CPQ Admin</value></values>
+    <values><field>Steps__c</field><value xsi:type="xsd:string">1. Open Quote Line {primaryRecordId}. The required option is priced at $0 but the product carries a non-zero list price.
+2. Confirm whether the option is intentionally free (verify with the deal owner).
+3. If not intentional: restore SBQQ__NetPrice from the PricebookEntry list, or re-trigger the Price Rule path.
+4. If intentional: add a finding suppression with note &quot;option intentionally bundled at $0 for this segment.&quot;
+5. Verify the PricebookEntry actually exists for this product+pricebook — missing PBE is a common root cause.</value></values>
+    <values><field>Version__c</field><value xsi:type="xsd:double">1.0</value></values>
+    <values>
+        <field>NoteSuggestion1__c</field>
+        <value xsi:type="xsd:string">Confirmed intentional bundling at $0 for this segment.</value>
+    </values>
+    <values>
+        <field>NoteSuggestion2__c</field>
+        <value xsi:type="xsd:string">Price restored from PricebookEntry list; line repriced.</value>
+    </values>
+    <values>
+        <field>NoteSuggestion3__c</field>
+        <value xsi:type="xsd:string">Missing Pricebook Entry created and quote recalculated.</value>
+    </values>
+</CustomMetadata>

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>ResolvedCount__c</fullName>
+    <label>Resolved Count</label>
+    <description>How many findings from this scan have been marked Resolved. Drives the Resolution Progress bar.</description>
+    <type>Number</type>
+    <precision>5</precision>
+    <scale>0</scale>
+    <required>false</required>
+</CustomField>

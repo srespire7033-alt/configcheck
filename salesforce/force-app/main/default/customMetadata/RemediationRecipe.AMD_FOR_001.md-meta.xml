@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomMetadata xmlns="http://soap.sforce.com/2006/04/metadata" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" fqn="RemediationRecipe__mdt.AMD_FOR_001">
+    <label>AMD-FOR-001</label>
+    <protected>false</protected>
+    <values><field>DetectorId__c</field><value xsi:type="xsd:string">AMD-FOR-001</value></values>
+    <values><field>Title__c</field><value xsi:type="xsd:string">Set effective date on amendment Quote {primaryRecordId} (account {accountName})</value></values>
+    <values><field>EstimatedEffort__c</field><value xsi:type="xsd:string">10-15 min</value></values>
+    <values><field>Skill__c</field><value xsi:type="xsd:string">CPQ Admin</value></values>
+    <values><field>Steps__c</field><value xsi:type="xsd:string">1. Open amendment Quote {primaryRecordId} — Status {status}, EndDate {endDate}, but SBQQ__StartDate__c is missing.
+2. Set the start date to the contractually-agreed effective date (typically the customer-signed amendment date).
+3. Re-calculate to confirm proration math now produces a coherent delta.
+4. Audit any already-activated Orders from this Quote — proration is likely wrong since there was no anchor.
+5. Add a Validation Rule on SBQQ__Quote__c blocking activation when amendment quotes have null SBQQ__StartDate__c.</value></values>
+    <values><field>Version__c</field><value xsi:type="xsd:double">1.0</value></values>
+    <values>
+        <field>NoteSuggestion1__c</field>
+        <value xsi:type="xsd:string">Effective date set; quote recalculated and re-activated.</value>
+    </values>
+    <values>
+        <field>NoteSuggestion2__c</field>
+        <value xsi:type="xsd:string">Validation Rule added blocking null SBQQ__StartDate__c on activation.</value>
+    </values>
+    <values>
+        <field>NoteSuggestion3__c</field>
+        <value xsi:type="xsd:string">Amendment is administrative-only; no proration needed.</value>
+    </values>
+</CustomMetadata>

@@ -1,0 +1,61 @@
+<template>
+  <c-dashboard-card
+    title="Detector Reliability"
+    subtitle="Trust scores from historical outcomes — recovery success vs. false-positive rate"
+  >
+    <template if:true={isLoading}>
+      <lightning-spinner alternative-text="Loading" size="small"></lightning-spinner>
+    </template>
+
+    <template if:true={hasError}>
+      <p class="op-ts__error">{error}</p>
+    </template>
+
+    <template if:true={isEmpty}>
+      <p class="op-ts__empty">
+        No trust scores yet. Run a forensic scan to start building detector reliability history.
+      </p>
+    </template>
+
+    <template if:true={hasData}>
+      <div class="op-ts__summary">
+        <div class="op-ts__summary-block">
+          <p class="op-ts__summary-label">Tracked detectors</p>
+          <p class="op-ts__summary-value">{totalDetectors}</p>
+        </div>
+        <div class="op-ts__summary-block">
+          <p class="op-ts__summary-label">Average trust</p>
+          <p class="op-ts__summary-value op-ts__summary-value--accent">{averageScoreFmt}</p>
+        </div>
+        <template if:true={insufficientLabel}>
+          <div class="op-ts__summary-block op-ts__summary-block--note">
+            <p class="op-ts__summary-note">{insufficientLabel}</p>
+          </div>
+        </template>
+      </div>
+
+      <ul class="op-ts__rows">
+        <template for:each={rows} for:item="r">
+          <li
+            key={r.id}
+            class={r.rowClass}
+            data-detector={r.detectorId}
+            onclick={handleRowClick}
+          >
+            <span class={r.scoreBadgeClass}>{r.scoreLabel}</span>
+            <div class="op-ts__row-body">
+              <div class="op-ts__row-title">
+                <span class="op-ts__row-label">{r.label}</span>
+                <span class="op-ts__row-code">{r.detectorId}</span>
+                <template if:true={r.hasRegressions}>
+                  <span class="op-ts__chip op-ts__chip--bad">needs review</span>
+                </template>
+              </div>
+              <p class="op-ts__row-stats">{r.statsLine}</p>
+            </div>
+          </li>
+        </template>
+      </ul>
+    </template>
+  </c-dashboard-card>
+</template>

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>IsActive__c</fullName>
+    <label>Active</label>
+    <description>When false, this detector is skipped at scan time. Lets customers disable a detector without uninstalling.</description>
+    <type>Checkbox</type>
+    <defaultValue>true</defaultValue>
+    <fieldManageability>SubscriberControlled</fieldManageability>
+</CustomField>

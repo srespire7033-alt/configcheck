@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomMetadata xmlns="http://soap.sforce.com/2006/04/metadata" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" fqn="Category__mdt.Pipeline">
+    <label>Pipeline Risk</label>
+    <protected>false</protected>
+    <values><field>CategoryKey__c</field><value xsi:type="xsd:string">pipeline</value></values>
+    <values><field>Title__c</field><value xsi:type="xsd:string">Pipeline Risk</value></values>
+    <values><field>Subtitle__c</field><value xsi:type="xsd:string">Revenue actively walking out the door — not lost yet, but it will be without action.</value></values>
+    <values><field>IconName__c</field><value xsi:type="xsd:string">utility:trending</value></values>
+    <values><field>Accent__c</field><value xsi:type="xsd:string">sky</value></values>
+    <values><field>SummaryMode__c</field><value xsi:type="xsd:string">arr</value></values>
+    <values><field>Sequence__c</field><value xsi:type="xsd:double">3</value></values>
+    <values><field>IsActive__c</field><value xsi:type="xsd:boolean">true</value></values>
+</CustomMetadata>

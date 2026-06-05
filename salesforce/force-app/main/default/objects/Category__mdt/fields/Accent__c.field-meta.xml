@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Accent__c</fullName>
+    <label>Accent</label>
+    <description>Color theme key consumed by the LWC CSS (amber | sky | emerald | rose | violet). Maps to op-rc__*--amber etc.</description>
+    <type>Text</type><length>20</length>
+    <fieldManageability>SubscriberControlled</fieldManageability>
+</CustomField>

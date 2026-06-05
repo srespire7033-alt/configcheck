@@ -1,10 +1,12 @@
 /**
  * QL-FOR-001 — Bundle Required Option at $0
+ *
+ * Pure-map evaluator. See REN001 header for the architecture
+ * rationale — no compile-time CPQ namespace dependency.
  */
 public with sharing class QL001BundleZeroPriceDetector implements IDetector {
 
     @TestVisible static List<Map<String, Object>> testStubRows;
-    @TestVisible static List<SObject> testStubSObjects;
 
     public String getDetectorId() { return 'QL-FOR-001'; }
     public String getLabel() { return 'Bundle Required Option at $0'; }
@@ -14,6 +16,8 @@ public with sharing class QL001BundleZeroPriceDetector implements IDetector {
 
     public List<DetectorResult> run(DetectorContext ctx) {
         List<DetectorResult> results = new List<DetectorResult>();
+
+        // Pre-flattened test stubs bypass unwrap().
         if (testStubRows != null) {
             for (Map<String, Object> row : testStubRows) {
                 DetectorResult r = evaluateRow(row);
@@ -22,16 +26,24 @@ public with sharing class QL001BundleZeroPriceDetector implements IDetector {
             return results;
         }
 
-        List<SObject> lines;
-        if (testStubSObjects != null) {
-            lines = testStubSObjects;
-        } else {
+        // Schema-presence guard for LOCAL scans only.
+        if (!ctx.isRemote()) {
+            if (!SchemaUtil.hasField('SBQQ__QuoteLine__c', 'SBQQ__Required__c') ||
+                !SchemaUtil.hasField('SBQQ__QuoteLine__c', 'SBQQ__Bundled__c')) {
+                System.debug(LoggingLevel.WARN,
+                    '[OrgPrism Skip] QL-FOR-001: SBQQ__QuoteLine__c.SBQQ__Required__c / SBQQ__Bundled__c not present in this org\'s CPQ version.');
+                return results;
+            }
+        }
+
+        List<Map<String, Object>> rows;
+        {
             String soql =
                 'SELECT Id, Name, SBQQ__NetPrice__c, SBQQ__ListPrice__c, SBQQ__Quantity__c, ' +
                 '  SBQQ__Required__c, SBQQ__Bundled__c, SBQQ__Quote__c, ' +
                 '  SBQQ__Quote__r.Name, SBQQ__Quote__r.SBQQ__NetAmount__c, ' +
-                '  SBQQ__Product__c, SBQQ__Product__r.Name, ' +
-                '  CurrencyIsoCode ' +
+                '  SBQQ__Product__c, SBQQ__Product__r.Name ' +
+                CurrencyContext.soqlSelect() + ' ' +
                 'FROM SBQQ__QuoteLine__c ' +
                 'WHERE SBQQ__Required__c = true ' +
                 '  AND SBQQ__Bundled__c = false ' +
@@ -39,32 +51,38 @@ public with sharing class QL001BundleZeroPriceDetector implements IDetector {
                 '  AND SBQQ__ListPrice__c > 0 ' +
                 '  AND CreatedDate >= LAST_N_MONTHS:24 ' +
                 'LIMIT 5000';
-            try { lines = Database.query(soql); } catch (Exception e) { return results; }
+            try { rows = OrgQueryService.query(ctx, soql); }
+            catch (Exception e) {
+                System.debug(LoggingLevel.WARN, '[OrgPrism Skip] QL-FOR-001: ' + e.getMessage());
+                return results;
+            }
         }
 
-        for (SObject line : lines) {
-            DetectorResult r = evaluateSObject(line);
+        for (Map<String, Object> row : rows) {
+            DetectorResult r = evaluateRow(unwrap(row));  // raw rows need unwrap
             if (r != null) results.add(r);
         }
         return results;
     }
 
     @TestVisible
-    static DetectorResult evaluateSObject(SObject line) {
-        Map<String, Object> raw = line.getPopulatedFieldsAsMap();
-        SObject quote = (SObject) raw.get('SBQQ__Quote__r');
-        Map<String, Object> quoteRaw = quote != null ? quote.getPopulatedFieldsAsMap() : new Map<String, Object>();
-        SObject product = (SObject) raw.get('SBQQ__Product__r');
-        Map<String, Object> productRaw = product != null ? product.getPopulatedFieldsAsMap() : new Map<String, Object>();
-        return evaluateRow(new Map<String, Object>{
+    static Map<String, Object> unwrap(Map<String, Object> raw) {
+        if (raw == null) return new Map<String, Object>();
+        Object qObj = raw.get('SBQQ__Quote__r');
+        Map<String, Object> quote = (qObj instanceof Map<String, Object>)
+            ? (Map<String, Object>) qObj : new Map<String, Object>();
+        Object pObj = raw.get('SBQQ__Product__r');
+        Map<String, Object> product = (pObj instanceof Map<String, Object>)
+            ? (Map<String, Object>) pObj : new Map<String, Object>();
+        return new Map<String, Object>{
             'lineId' => raw.get('Id'),
             'lineName' => raw.get('Name'),
             'listPrice' => raw.get('SBQQ__ListPrice__c'),
             'qty' => raw.get('SBQQ__Quantity__c'),
-            'quoteName' => quoteRaw.get('Name'),
-            'productName' => productRaw.get('Name'),
-            'currencyIsoCode' => raw.get('CurrencyIsoCode')
-        });
+            'quoteName' => quote.get('Name'),
+            'productName' => product.get('Name'),
+            'currencyIsoCode' => CurrencyContext.readFromMap(raw)
+        };
     }
 
     @TestVisible

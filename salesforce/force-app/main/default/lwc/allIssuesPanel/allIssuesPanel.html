@@ -1,0 +1,105 @@
+<template>
+  <article class="op-aip">
+    <header class="op-aip__header">
+      <div class="op-aip__head-left">
+        <div class="op-aip__head-icon-wrap">
+          <lightning-icon icon-name="utility:multi_select_checkbox" size="small" class="op-aip__head-icon"></lightning-icon>
+        </div>
+        <div>
+          <h2 class="op-aip__title">All issues</h2>
+          <p class="op-aip__subtitle">Select multiple to acknowledge, resolve, or mark not relevant in one click.</p>
+        </div>
+      </div>
+    </header>
+
+    <!-- Toolbar -->
+    <div class="op-aip__toolbar">
+      <lightning-input
+        type="search"
+        variant="label-hidden"
+        placeholder="Search issues by title or description..."
+        value={searchTerm}
+        oninput={handleSearch}
+        class="op-aip__search"
+      ></lightning-input>
+      <div class="op-aip__filter-group">
+        <span class="op-aip__filter-label">Severity</span>
+        <template for:each={sevPills} for:item="p">
+          <button key={p.value} type="button" data-value={p.value}
+                  class={p.pillClass} onclick={toggleSev}>{p.label}</button>
+        </template>
+      </div>
+      <div class="op-aip__filter-group">
+        <span class="op-aip__filter-label">Status</span>
+        <template for:each={statusPills} for:item="p">
+          <button key={p.value} type="button" data-value={p.value}
+                  class={p.pillClass} onclick={toggleStatus}>{p.label}</button>
+        </template>
+      </div>
+      <span class="op-aip__count">{countLabel}</span>
+    </div>
+
+    <!-- Bulk action bar (shown only when selection > 0) -->
+    <template if:true={hasSelection}>
+      <div class="op-aip__bulk">
+        <span class="op-aip__bulk-count">{selectedLabel}</span>
+        <button class="op-aip__bulk-btn op-aip__bulk-btn--ack" onclick={handleBulkAck} disabled={saving}>
+          <lightning-icon icon-name="utility:eye" size="xx-small"></lightning-icon> Acknowledge
+        </button>
+        <button class="op-aip__bulk-btn op-aip__bulk-btn--resolve" onclick={handleBulkResolve} disabled={saving}>
+          <lightning-icon icon-name="utility:success" size="xx-small"></lightning-icon> Resolve
+        </button>
+        <button class="op-aip__bulk-btn op-aip__bulk-btn--nr" onclick={handleBulkNotRelevant} disabled={saving}>
+          <lightning-icon icon-name="utility:hide" size="xx-small"></lightning-icon> Not Relevant
+        </button>
+      </div>
+    </template>
+
+    <template if:true={isLoading}>
+      <div class="op-aip__loading"><lightning-spinner alternative-text="Loading" size="small"></lightning-spinner></div>
+    </template>
+
+    <template if:true={hasError}>
+      <p class="op-aip__error">{error}</p>
+    </template>
+
+    <template if:true={isEmpty}>
+      <p class="op-aip__empty">No issues match your filters.</p>
+    </template>
+
+    <template if:true={hasIssues}>
+      <!-- Header row with select-all -->
+      <div class="op-aip__listhead">
+        <input type="checkbox" class="op-aip__cb" checked={allChecked} onchange={handleCheckAll} aria-label="Select all"/>
+        <span class="op-aip__listhead-label">Title</span>
+      </div>
+
+      <div class="op-aip__list">
+        <template for:each={rows} for:item="r">
+          <article key={r.id} class="op-aip__row">
+            <input
+              type="checkbox"
+              class="op-aip__cb"
+              data-id={r.id}
+              checked={r.checked}
+              onchange={handleCheckRow}
+              aria-label="Select"
+            />
+            <span class={r.sevChipClass}>{r.severity}</span>
+            <span class={r.statusChipClass}>{r.statusLabel}</span>
+            <span class="op-aip__row-title" data-id={r.id} onclick={handleRowTitle}>{r.title}</span>
+            <a href="javascript:void(0)" data-id={r.id} class="op-aip__view" onclick={handleView}>View →</a>
+          </article>
+        </template>
+      </div>
+    </template>
+
+    <template if:true={isModalOpen}>
+      <c-issue-detail-modal
+        issue-id={openDetailId}
+        oncloseissuemodal={handleCloseModal}
+        onstatuschanged={handleStatusChanged}
+      ></c-issue-detail-modal>
+    </template>
+  </article>
+</template>

@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomMetadata xmlns="http://soap.sforce.com/2006/04/metadata" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" fqn="RemediationRecipe__mdt.REN_003">
+    <label>REN-003</label>
+    <protected>false</protected>
+    <values>
+        <field>DetectorId__c</field>
+        <value xsi:type="xsd:string">REN-003</value>
+    </values>
+    <values>
+        <field>Title__c</field>
+        <value xsi:type="xsd:string">Re-engage on expired renewal quote for {accountName}</value>
+    </values>
+    <values>
+        <field>EstimatedEffort__c</field>
+        <value xsi:type="xsd:string">30 min</value>
+    </values>
+    <values>
+        <field>Skill__c</field>
+        <value xsi:type="xsd:string">Sales / CPQ</value>
+    </values>
+    <values>
+        <field>Steps__c</field>
+        <value xsi:type="xsd:string">1. Open the expired Quote (Id {primaryRecordId}) for account {accountName} ({accountId}).
+2. Quote expired {daysExpired} days ago on {expirationDate}; ARR at risk: {arrAtRisk}.
+3. Decide: clone + re-quote with current pricing, or close the opportunity if the customer churned.
+4. If churned, mark the related Opportunity as Closed Lost and route to retention.
+5. Verify a follow-up Task exists on the Account so the renewal motion doesn't slip again.</value>
+    </values>
+    <values>
+        <field>Version__c</field>
+        <value xsi:type="xsd:double">1.0</value>
+    </values>
+    <values>
+        <field>NoteSuggestion1__c</field>
+        <value xsi:type="xsd:string">Customer churned; closing related Opportunity as Closed Lost.</value>
+    </values>
+    <values>
+        <field>NoteSuggestion2__c</field>
+        <value xsi:type="xsd:string">CSM has re-engaged; renewal motion restarted.</value>
+    </values>
+    <values>
+        <field>NoteSuggestion3__c</field>
+        <value xsi:type="xsd:string">Forecasted to close next quarter; tracking on account plan.</value>
+    </values>
+</CustomMetadata>

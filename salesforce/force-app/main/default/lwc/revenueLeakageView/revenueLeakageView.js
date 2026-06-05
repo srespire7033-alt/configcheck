@@ -1,108 +1,212 @@
-import { LightningElement, wire } from 'lwc';
+import { LightningElement, wire, track } from 'lwc';
 import { NavigationMixin } from 'lightning/navigation';
-import getFindingsByCategory from '@salesforce/apex/DashboardController.getFindingsByCategory';
+import { refreshApex } from '@salesforce/apex';
+import getLeakage from '@salesforce/apex/RevenueLeakageController.getLeakage';
+import getCategoryByKey from '@salesforce/apex/CategoryDisplayController.getByKey';
 
-const DETECTOR_LABELS = {
-  'REN-001':     'Renewal uplift suppressed',
-  'REN-002':     'Renewal below current list',
-  'QL-FOR-001':  'Bundle option at $0',
-  'ORD-FOR-001': 'Order activated, no billing',
-  'SUB-FOR-001': 'Subscription pricing miss',
-  'PROV-FOR-001':'Provisioning mismatch',
-  'AST-FOR-001': 'Asset terminated mid-contract',
-};
+const SEVERITY_OPTIONS = ['Critical', 'Warning', 'Info'];
+const EFFORT_OPTIONS   = ['low', 'medium', 'high'];
 
-/**
- * Revenue Leakage view — accordion grouped by detector. Each row
- * collapses by default and expands to show the underlying findings.
- * Mirrors the SaaS RevenueLeakageCard pattern of grouping ~50+
- * findings into ~5-10 detector rows so the list doesn't overwhelm.
- */
 export default class RevenueLeakageView extends NavigationMixin(LightningElement) {
-  data;
-  error;
-  loading = true;
-  expanded = new Set();
+  @track data;
+  @track error;
+  @track loading = true;
+  @track searchTerm = '';
+  @track severityFilters = [];
+  @track effortFilters = [];
+  @track openLeakId = null;
+  @track openIssueDetailId = null;
+  @track categoryMeta;  // Phase 20d
+  wiredResult;
 
-  @wire(getFindingsByCategory, { category: 'revenue_leakage' })
+  @wire(getCategoryByKey, { categoryKey: 'revenue_leakage' })
+  wireCategoryMeta({ data }) {
+    if (data) this.categoryMeta = data;
+  }
+
+  get cardTitle() {
+    return this.categoryMeta?.title || 'Revenue Leakage';
+  }
+
+  connectedCallback() { window.addEventListener('op:scan-completed', this.handleScanCompleted); }
+  disconnectedCallback() { window.removeEventListener('op:scan-completed', this.handleScanCompleted); }
+  handleScanCompleted = () => { if (this.wiredResult) refreshApex(this.wiredResult); };
+
+  @wire(getLeakage)
   wireData(result) {
+    this.wiredResult = result;
     this.loading = false;
     if (result.data) {
       this.data = result.data;
       this.error = undefined;
     } else if (result.error) {
-      this.error = result.error.body?.message || result.error.message || 'Failed to load findings';
+      this.error = result.error.body?.message || result.error.message;
     }
   }
 
   get isLoading() { return this.loading; }
-  get hasError() { return Boolean(this.error); }
-  get hasData() {
-    return !this.loading && !this.error && this.data?.findingCount > 0;
+  get hasError() { return !this.loading && Boolean(this.error); }
+  get hasData() { return !this.loading && !this.error && this.data; }
+
+  // ── Header ──
+  get confidenceLabel() {
+    const c = this.data?.confidence || 'low';
+    return c.charAt(0).toUpperCase() + c.slice(1) + ' confidence';
   }
-  get isEmpty() {
-    return !this.loading && !this.error && !this.data?.findingCount;
+  get confidenceChipClass() {
+    return `op-rl__conf op-rl__conf--${this.data?.confidence || 'low'}`;
   }
 
+  // ── Totals card ──
   get totalLabel() {
-    const n = Number(this.data?.totalUsd) || 0;
-    if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(2)}M`;
-    if (n >= 1_000) return `$${(n / 1_000).toFixed(0)}K`;
-    return `$${Math.round(n)}`;
+    return this.formatMoney(this.data?.totalUsd) + ' / year';
+  }
+  get verifiedLabel() {
+    return this.formatMoney(this.data?.totalVerifiedUsd);
+  }
+  get estimatedLabel() {
+    return this.formatMoney(this.data?.estimatedUsd || 0);
+  }
+  get pctOfRevenueLabel() {
+    const pct = this.data?.percentOfRevenue || 0;
+    if (!pct) return 'Opportunity baseline unavailable.';
+    return `${pct.toFixed(1)}% of your annual revenue from Opportunity records`;
   }
 
-  get findingCount() { return this.data?.findingCount || 0; }
+  // ── Toolbar pills ──
+  get severityPills() {
+    return SEVERITY_OPTIONS.map((s) => ({
+      label: s, value: s,
+      pillClass: this.severityFilters.includes(s)
+        ? `op-rl__pill op-rl__pill--active op-rl__pill--${s.toLowerCase()}`
+        : 'op-rl__pill',
+    }));
+  }
+  get effortPills() {
+    return EFFORT_OPTIONS.map((s) => ({
+      label: s === 'low' ? 'Low' : s === 'medium' ? 'Med' : 'High',
+      value: s,
+      pillClass: this.effortFilters.includes(s)
+        ? 'op-rl__pill op-rl__pill--active op-rl__pill--effort'
+        : 'op-rl__pill',
+    }));
+  }
+  get findingCountLabel() {
+    return `${this.filteredCount} findings`;
+  }
+  get headerFindingCount() {
+    return `(${this.data?.findingCount || 0})`;
+  }
+  get filteredCount() {
+    let n = 0;
+    for (const t of this.viewThemes) n += t.filteredCount;
+    return n;
+  }
 
-  get detectorRows() {
-    if (!this.data?.byDetector) return [];
-    return this.data.byDetector.map((g) => {
-      const isOpen = this.expanded.has(g.detectorId);
+  toggleSev(event) {
+    const v = event.currentTarget.dataset.value;
+    const next = new Set(this.severityFilters);
+    next.has(v) ? next.delete(v) : next.add(v);
+    this.severityFilters = Array.from(next);
+  }
+  toggleEffort(event) {
+    const v = event.currentTarget.dataset.value;
+    const next = new Set(this.effortFilters);
+    next.has(v) ? next.delete(v) : next.add(v);
+    this.effortFilters = Array.from(next);
+  }
+  handleSearch(event) { this.searchTerm = event.target.value; }
+
+  // ── Theme grid ──
+  passesFilters(row) {
+    if (this.severityFilters.length > 0 && !this.severityFilters.includes(row.severity)) return false;
+    if (this.effortFilters.length > 0 && !this.effortFilters.includes(row.effort)) return false;
+    if (this.searchTerm) {
+      const q = this.searchTerm.toLowerCase();
+      const hit = (row.title || '').toLowerCase().includes(q)
+               || (row.detectorId || '').toLowerCase().includes(q);
+      if (!hit) return false;
+    }
+    return true;
+  }
+
+  get viewThemes() {
+    if (!this.data?.themes) return [];
+    return this.data.themes.map((t) => {
+      const filtered = (t.topThree || []).filter((r) => this.passesFilters(r))
+        .map((r) => this.decorateRow(r));
       return {
-        detectorId: g.detectorId,
-        label: DETECTOR_LABELS[g.detectorId] || g.detectorId,
-        count: g.count,
-        totalFmt: this.formatMoney(g.totalUsd),
-        findings: g.findings.map((f) => ({
-          ...f,
-          gapFmt: this.formatMoney(f.gapUsd),
-          sevClass: this.severityClass(f.severity),
-        })),
-        rowClass: isOpen ? 'op-rl__row op-rl__row--open' : 'op-rl__row',
-        chevronClass: isOpen ? 'op-rl__chevron op-rl__chevron--open' : 'op-rl__chevron',
-        isOpen,
+        ...t,
+        cardClass: `op-rl__theme op-rl__theme--${t.accent}`,
+        accentLabelClass: `op-rl__theme-total op-rl__theme-total--${t.accent}`,
+        rows: filtered,
+        filteredCount: filtered.length,
+        totalLabel: this.formatMoney(t.totalUsd),
+        countLabel: t.count.toString(),
+        showMore: t.moreCount > 0,
+        moreLabel: `+ ${t.moreCount} more →`,
       };
     });
   }
 
+  decorateRow(r) {
+    const sev = (r.severity || '').toLowerCase();
+    return {
+      ...r,
+      sevChipClass: `op-rl__row-sev op-rl__row-sev--${sev}`,
+      effortChipClass: `op-rl__row-effort op-rl__row-effort--${r.effort}`,
+      gapLabel: this.formatMoney(r.gapUsd),
+      effortLabel: r.effort === 'low' ? 'LOW' : r.effort === 'medium' ? 'MEDIUM' : 'HIGH',
+      truncatedTitle: (r.title || '').length > 32 ? (r.title || '').substring(0, 32) + '…' : r.title,
+    };
+  }
+
+  // ── Biggest leaks ──
+  get viewBiggestLeaks() {
+    if (!this.data?.biggestLeaks) return [];
+    return this.data.biggestLeaks.map((r) => ({
+      ...r,
+      isOpen: this.openLeakId === r.id,
+      chevronIcon: this.openLeakId === r.id ? 'utility:chevrondown' : 'utility:chevrondown', // rotate via CSS
+      chevronClass: this.openLeakId === r.id ? 'op-rl__leak-chev op-rl__leak-chev--open' : 'op-rl__leak-chev',
+      gapLabel: this.formatMoney(r.gapUsd),
+    }));
+  }
+
+  handleLeakToggle(event) {
+    const id = event.currentTarget.dataset.id;
+    this.openLeakId = this.openLeakId === id ? null : id;
+  }
+  handleRowClick(event) {
+    const id = event.currentTarget.dataset.id;
+    this.openIssueDetailId = id;
+  }
+  handleIssueModalClose() { this.openIssueDetailId = null; }
+  get isIssueModalOpen() { return Boolean(this.openIssueDetailId); }
+
+  // ── Action banners ──
+  handleAttributionMap() {
+    this[NavigationMixin.Navigate]({
+      type: 'standard__navItemPage',
+      attributes: { apiName: 'OrgPrism_AttributionMap' },
+    });
+  }
+  handleRecoveryQueue() {
+    this[NavigationMixin.Navigate]({
+      type: 'standard__navItemPage',
+      attributes: { apiName: 'OrgPrism_RecoveryQueue' },
+    });
+  }
+  handleDownloadReport() {
+    window.open('/apex/ExecutiveReport', '_blank');
+  }
+
+  // ── Utilities ──
   formatMoney(n) {
     const v = Number(n) || 0;
-    if (v >= 1_000_000) return `$${(v / 1_000_000).toFixed(2)}M`;
-    if (v >= 1_000) return `$${(v / 1_000).toFixed(0)}K`;
-    return `$${Math.round(v)}`;
-  }
-
-  severityClass(sev) {
-    const k = (sev || '').toLowerCase();
-    if (k === 'critical') return 'op-rl__sev op-rl__sev--critical';
-    if (k === 'warning') return 'op-rl__sev op-rl__sev--warning';
-    return 'op-rl__sev op-rl__sev--info';
-  }
-
-  handleToggle(event) {
-    const id = event.currentTarget.dataset.id;
-    if (!id) return;
-    if (this.expanded.has(id)) this.expanded.delete(id);
-    else this.expanded.add(id);
-    // Re-trigger reactivity by creating a new Set reference.
-    this.expanded = new Set(this.expanded);
-  }
-
-  handleFindingClick(event) {
-    const id = event.currentTarget.dataset.id;
-    if (!id) return;
-    this[NavigationMixin.Navigate]({
-      type: 'standard__recordPage',
-      attributes: { recordId: id, objectApiName: 'ForensicFinding__c', actionName: 'view' },
-    });
+    if (v >= 1_000_000) return `USD ${(v / 1_000_000).toFixed(2)}M`;
+    if (v >= 1_000) return `USD ${(v / 1_000).toFixed(0)}K`;
+    if (v < 1) return 'USD 0';
+    return `USD ${Math.round(v).toLocaleString()}`;
   }
 }

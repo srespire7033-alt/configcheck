@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomMetadata xmlns="http://soap.sforce.com/2006/04/metadata" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" fqn="RemediationRecipe__mdt.OPP_FOR_001">
+    <label>OPP-FOR-001</label>
+    <protected>false</protected>
+    <values><field>DetectorId__c</field><value xsi:type="xsd:string">OPP-FOR-001</value></values>
+    <values><field>Title__c</field><value xsi:type="xsd:string">Backfill missing CPQ Quote on closed-won Opportunity (account {accountName})</value></values>
+    <values><field>EstimatedEffort__c</field><value xsi:type="xsd:string">30-45 min</value></values>
+    <values><field>Skill__c</field><value xsi:type="xsd:string">Sales Ops</value></values>
+    <values><field>Steps__c</field><value xsi:type="xsd:string">1. Open Opportunity {primaryRecordId} for {accountName} — closed-won {daysSinceClose} days ago with no Primary Quote.
+2. Identify what was actually sold (look at custom Opportunity Products, attachments, or recent CRM activity).
+3. Either build the matching CPQ Quote retroactively and activate it, or document why this opp bypassed CPQ.
+4. Add a Validation Rule on Opportunity that blocks StageName=Closed Won when no SBQQ__PrimaryQuote__c is linked.
+5. Audit other recent closed-won opps for the same gap — likely a process flaw, not a one-off.</value></values>
+    <values><field>Version__c</field><value xsi:type="xsd:double">1.0</value></values>
+    <values>
+        <field>NoteSuggestion1__c</field>
+        <value xsi:type="xsd:string">CPQ Quote built retroactively and attached to Opportunity.</value>
+    </values>
+    <values>
+        <field>NoteSuggestion2__c</field>
+        <value xsi:type="xsd:string">Validation Rule added blocking Closed Won without primary Quote.</value>
+    </values>
+    <values>
+        <field>NoteSuggestion3__c</field>
+        <value xsi:type="xsd:string">Opportunity is a renewal handled outside CPQ; suppressing.</value>
+    </values>
+</CustomMetadata>

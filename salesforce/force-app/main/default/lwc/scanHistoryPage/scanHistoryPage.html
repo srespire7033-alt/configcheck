@@ -1,0 +1,159 @@
+<template>
+  <div class="op-sh">
+    <!-- Header -->
+    <header class="op-sh__header">
+      <div>
+        <h1 class="op-sh__title">Scan History &amp; Trends</h1>
+        <p class="op-sh__subtitle">All forensic scans on this org</p>
+      </div>
+    </header>
+
+    <template if:true={isLoading}>
+      <c-dashboard-card>
+        <div class="op-sh__loading">
+          <lightning-spinner alternative-text="Loading" size="small"></lightning-spinner>
+        </div>
+      </c-dashboard-card>
+    </template>
+
+    <template if:true={isEmpty}>
+      <c-dashboard-card>
+        <p class="op-sh__empty">No scans yet. Run a scan from the OrgPrism dashboard to populate this view.</p>
+      </c-dashboard-card>
+    </template>
+
+    <template if:true={hasData}>
+      <!-- Score Trend chart card -->
+      <c-dashboard-card title="Score Trend" subtitle={scanCountLabel}>
+        <div class="op-sh__chart-wrap">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 1200 300"
+            class="op-sh__svg"
+            preserveAspectRatio="xMidYMid meet"
+            role="img"
+            aria-label="Score trend over all scans"
+          >
+            <line x1="40" y1="30"  x2="1160" y2="30"  class="op-sh__grid"></line>
+            <line x1="40" y1="105" x2="1160" y2="105" class="op-sh__grid"></line>
+            <line x1="40" y1="180" x2="1160" y2="180" class="op-sh__grid"></line>
+            <line x1="40" y1="255" x2="1160" y2="255" class="op-sh__grid"></line>
+            <line x1="40" y1="270" x2="1160" y2="270" class="op-sh__grid"></line>
+            <text x="30" y="34"  class="op-sh__ytick" text-anchor="end">100</text>
+            <text x="30" y="184" class="op-sh__ytick" text-anchor="end">50</text>
+            <text x="30" y="274" class="op-sh__ytick" text-anchor="end">0</text>
+
+            <polyline points={chart.polyline} class="op-sh__line"></polyline>
+
+            <template for:each={chart.dots} for:item="d">
+              <circle
+                key={d.scanId}
+                cx={d.cx}
+                cy={d.cy}
+                r="5"
+                class="op-sh__dot"
+                data-id={d.scanId}
+                onclick={handleRowClick}
+              >
+                <title>{d.title}</title>
+              </circle>
+            </template>
+
+            <template for:each={chart.xLabels} for:item="l">
+              <text
+                key={l.x}
+                x={l.x}
+                y="295"
+                class="op-sh__xtick"
+                text-anchor="middle"
+              >{l.label}</text>
+            </template>
+          </svg>
+        </div>
+      </c-dashboard-card>
+
+      <!-- Summary tiles -->
+      <div class="op-sh__summary">
+        <c-dashboard-card>
+          <div class="op-sh__tile">
+            <div class="op-sh__tile-row">
+              <p class="op-sh__tile-label">Score Trend</p>
+              <span class="op-sh__chip">{scoreTrendChip}</span>
+            </div>
+            <p class="op-sh__tile-value op-sh__tile-value--warn">{latestScore}<span class="op-sh__tile-denom">/100</span></p>
+            <p class="op-sh__tile-meta">Latest scan score</p>
+          </div>
+        </c-dashboard-card>
+
+        <c-dashboard-card>
+          <div class="op-sh__tile">
+            <div class="op-sh__tile-row">
+              <p class="op-sh__tile-label">Issue Trend</p>
+              <span class="op-sh__chip">{issueTrendChip}</span>
+            </div>
+            <p class="op-sh__tile-value">{totalIssues} <span class="op-sh__tile-denom">issues</span></p>
+            <div class="op-sh__sev-chips">
+              <span class="op-sh__sev-chip op-sh__sev-chip--critical">{criticalCount} critical</span>
+              <span class="op-sh__sev-chip op-sh__sev-chip--warning">{warningCount} warning</span>
+              <span class="op-sh__sev-chip op-sh__sev-chip--info">{infoCount} info</span>
+            </div>
+          </div>
+        </c-dashboard-card>
+
+        <c-dashboard-card>
+          <div class="op-sh__tile">
+            <div class="op-sh__tile-row">
+              <p class="op-sh__tile-label">Best Score</p>
+              <lightning-icon icon-name="utility:trophy" size="small" class="op-sh__trophy"></lightning-icon>
+            </div>
+            <p class="op-sh__tile-value op-sh__tile-value--good">{bestScore}<span class="op-sh__tile-denom">/100</span></p>
+            <p class="op-sh__tile-meta">Achieved on {bestScoreDate}</p>
+          </div>
+        </c-dashboard-card>
+      </div>
+
+      <!-- All Scans table -->
+      <c-dashboard-card title="All Scans" subtitle={scanCountLabel}>
+        <div class="op-sh__table-wrap">
+          <table class="op-sh__table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th class="op-sh__th-num">Score</th>
+                <th class="op-sh__th-num">Critical</th>
+                <th class="op-sh__th-num">Warning</th>
+                <th class="op-sh__th-num">Info</th>
+                <th class="op-sh__th-num">Duration</th>
+                <th>Type</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <template for:each={tableRows} for:item="r">
+                <tr key={r.id} data-id={r.id} onclick={handleRowClick} class="op-sh__tr">
+                  <td>
+                    <div class="op-sh__date">{r.dateLabel}</div>
+                    <div class="op-sh__time-ago">{r.timeAgo}</div>
+                  </td>
+                  <td class="op-sh__td-num"><span class={r.scoreBadgeClass}>{r.score}</span></td>
+                  <td class="op-sh__td-num">
+                    <span class="op-sh__sev-pill op-sh__sev-pill--critical">{r.critical}</span>
+                  </td>
+                  <td class="op-sh__td-num">
+                    <span class="op-sh__sev-pill op-sh__sev-pill--warning">{r.warning}</span>
+                  </td>
+                  <td class="op-sh__td-num">
+                    <span class="op-sh__sev-pill op-sh__sev-pill--info">{r.info}</span>
+                  </td>
+                  <td class="op-sh__td-num">{r.duration}</td>
+                  <td>{r.productType}</td>
+                  <td><span class={r.statusBadgeClass}>{r.status}</span></td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
+      </c-dashboard-card>
+    </template>
+  </div>
+</template>

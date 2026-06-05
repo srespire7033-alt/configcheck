@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Critical_Weight__c</fullName>
+    <label>Critical Weight</label>
+    <description>Points deducted from 100 per Critical finding. Default 2.</description>
+    <type>Number</type>
+    <precision>5</precision>
+    <scale>2</scale>
+    <required>true</required>
+</CustomField>

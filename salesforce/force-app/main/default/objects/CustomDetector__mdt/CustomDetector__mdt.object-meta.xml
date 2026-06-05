@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomObject xmlns="http://soap.sforce.com/2006/04/metadata">
+    <description>Phase 19b — admin-defined detectors. Each record carries a SOQL query plus templates that turn each returned row into a ForensicFinding. No Apex required to add a new detector — write SOQL in Setup, get findings on next scan.</description>
+    <label>Custom Detector</label>
+    <pluralLabel>Custom Detectors</pluralLabel>
+    <visibility>Public</visibility>
+</CustomObject>

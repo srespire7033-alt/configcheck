@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>NoteSuggestion3__c</fullName>
+    <label>Note Suggestion 3</label>
+    <description>Suggested consultant note shown as a clickable chip above the Finding Notes textarea. Empty means no chip rendered.</description>
+    <type>Text</type>
+    <length>255</length>
+    <fieldManageability>SubscriberControlled</fieldManageability>
+</CustomField>

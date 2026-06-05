@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>PrimaryRecordType__c</fullName>
+    <label>Primary Record Type (sObject)</label>
+    <description>sObject API name of the affected record (e.g. SBQQ__QuoteLine__c, Account). Lands on ForensicFinding__c.PrimaryRecordType__c.</description>
+    <type>Text</type><length>80</length>
+    <fieldManageability>SubscriberControlled</fieldManageability>
+</CustomField>

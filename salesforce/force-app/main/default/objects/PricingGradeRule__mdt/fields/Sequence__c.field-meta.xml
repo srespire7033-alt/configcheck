@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Sequence__c</fullName>
+    <label>Sequence</label>
+    <description>Evaluation order, lowest first. A=1, B=2, C=3, D=4, F=5.</description>
+    <type>Number</type><precision>3</precision><scale>0</scale>
+    <fieldManageability>DeveloperControlled</fieldManageability>
+</CustomField>

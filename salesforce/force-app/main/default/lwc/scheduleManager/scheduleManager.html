@@ -1,5 +1,5 @@
 <template>
-  <c-dashboard-card title="Scheduled scans" subtitle="Set up recurring forensic scans on a cron schedule">
+  <c-dashboard-card title="Scheduled scans" subtitle="Set up recurring forensic scans">
     <lightning-button
       slot="actions"
       variant="brand"
@@ -83,7 +83,7 @@
       <div class="op-sm__overlay" onclick={handleClose}></div>
       <section class="op-sm__modal" role="dialog" aria-labelledby="modal-heading">
         <header class="op-sm__modal-header">
-          <h2 id="modal-heading">New scheduled scan</h2>
+          <h2 id="modal-heading">Schedule a Scan</h2>
           <lightning-button-icon
             icon-name="utility:close"
             variant="bare"
@@ -94,47 +94,93 @@
         </header>
 
         <div class="op-sm__modal-body">
+          <!-- Frequency -->
           <div class="op-sm__field">
-            <label>Label (optional)</label>
-            <lightning-input
-              type="text"
-              variant="label-hidden"
-              placeholder="e.g. Weekly CPQ audit"
-              value={newLabel}
-              onchange={handleLabelChange}
-            ></lightning-input>
-          </div>
-
-          <div class="op-sm__field">
-            <label>When should it run?</label>
-            <div class="op-sm__presets">
-              <template for:each={presetOptions} for:item="p">
+            <label class="op-sm__field-label">Frequency</label>
+            <div class="op-sm__freq-row">
+              <template for:each={frequencyOptions} for:item="o">
                 <button
-                  key={p.id}
+                  key={o.id}
                   type="button"
-                  class={p.cls}
-                  data-id={p.id}
-                  onclick={handlePresetPick}
+                  class={o.cls}
+                  data-id={o.id}
+                  onclick={handleFrequencyPick}
                   disabled={busy}
-                >{p.label}</button>
+                >
+                  <lightning-icon icon-name={o.icon} size="x-small" class="op-sm__freq-icon"></lightning-icon>
+                  <span class="op-sm__freq-label">{o.label}</span>
+                </button>
               </template>
             </div>
           </div>
 
-          <details class="op-sm__advanced">
-            <summary class="op-sm__advanced-summary">Advanced — edit cron expression</summary>
-            <div class="op-sm__advanced-body">
+          <!-- Time (always shown) -->
+          <div class="op-sm__field">
+            <label class="op-sm__field-label">Time</label>
+            <input
+              type="time"
+              class="op-sm__time-input"
+              value={newTime}
+              onchange={handleTimeChange}
+              disabled={busy}
+            />
+          </div>
+
+          <!-- One-time: Date picker -->
+          <template if:true={isOneTime}>
+            <div class="op-sm__field">
+              <label class="op-sm__field-label">Date</label>
               <lightning-input
-                type="text"
-                label="Cron expression"
-                value={newCron}
-                onchange={handleCronChange}
+                type="date"
+                variant="label-hidden"
+                value={defaultOneTimeDate}
+                onchange={handleDateChange}
+                disabled={busy}
               ></lightning-input>
-              <p class="op-sm__cron-hint">
-                Format: <code>Seconds Minutes Hours Day Month Day-of-week</code>. Minimum frequency: hourly.
-              </p>
             </div>
-          </details>
+          </template>
+
+          <!-- Weekly: Day-of-week picker -->
+          <template if:true={isWeekly}>
+            <div class="op-sm__field">
+              <label class="op-sm__field-label">Day of week</label>
+              <div class="op-sm__dow-row">
+                <template for:each={dayOfWeekOptions} for:item="d">
+                  <button
+                    key={d.id}
+                    type="button"
+                    class={d.cls}
+                    data-id={d.id}
+                    onclick={handleDayOfWeekPick}
+                    disabled={busy}
+                  >{d.label}</button>
+                </template>
+              </div>
+            </div>
+          </template>
+
+          <!-- Monthly: Day-of-month dropdown -->
+          <template if:true={isMonthly}>
+            <div class="op-sm__field">
+              <label class="op-sm__field-label">Day of month</label>
+              <lightning-combobox
+                variant="label-hidden"
+                value={newDayOfMonth}
+                options={dayOfMonthOptions}
+                onchange={handleDayOfMonthChange}
+                disabled={busy}
+              ></lightning-combobox>
+            </div>
+          </template>
+
+          <!-- Timezone (read-only display) -->
+          <div class="op-sm__field">
+            <label class="op-sm__field-label">Timezone</label>
+            <div class="op-sm__tz-display">
+              <lightning-icon icon-name="utility:world" size="x-small" class="op-sm__tz-icon"></lightning-icon>
+              {timezoneDisplay}
+            </div>
+          </div>
 
           <p class="op-sm__detected">
             <lightning-icon icon-name="utility:info_alt" size="xx-small" class="op-sm__detected-icon"></lightning-icon>
@@ -151,8 +197,8 @@
           ></lightning-button>
           <lightning-button
             variant="brand"
-            label="Create schedule"
-            onclick={handleCreate}
+            label={saveButtonLabel}
+            onclick={handleSave}
             disabled={busy}
           ></lightning-button>
         </footer>

@@ -1,98 +1,81 @@
-import { LightningElement, wire } from 'lwc';
-import getDashboardSummary from '@salesforce/apex/DashboardController.getDashboardSummary';
+import { LightningElement, wire, track } from 'lwc';
+import getComplexity from '@salesforce/apex/OrgComplexityController.getComplexity';
 
-/**
- * Complexity / coverage breakdown derived from current scan findings.
- *
- * Unlike the SaaS version (which shows config-system complexity
- * across price rules / product rules / approval rules), the Salesforce
- * side measures FORENSIC complexity:
- *   - Detector coverage   — how many of v1.0's 5 detectors fired
- *   - Severity mix        — distribution of Critical / Warning / Info
- *   - Avg recoverability  — how confident we are recoverable $ is real
- *
- * This is honest to what the data actually is in Salesforce. When
- * we later sync the config-scan complexity from the SaaS into a
- * field on ForensicScan__c, we can render those metrics too.
- */
-const TOTAL_DETECTORS_V1 = 5;
+const RATING_THEME = {
+  Low:        { dotClass: 'op-cx__chip op-cx__chip--low',   scoreClass: 'op-cx__score op-cx__score--low' },
+  Moderate:   { dotClass: 'op-cx__chip op-cx__chip--mod',   scoreClass: 'op-cx__score op-cx__score--mod' },
+  High:       { dotClass: 'op-cx__chip op-cx__chip--high',  scoreClass: 'op-cx__score op-cx__score--high' },
+  'Very High':{ dotClass: 'op-cx__chip op-cx__chip--vhigh', scoreClass: 'op-cx__score op-cx__score--vhigh' },
+};
 
 export default class ComplexityCard extends LightningElement {
   data;
   error;
   loading = true;
+  @track expanded = true;
 
-  @wire(getDashboardSummary)
+  @wire(getComplexity)
   wireData(result) {
     this.loading = false;
     if (result.data) {
       this.data = result.data;
       this.error = undefined;
     } else if (result.error) {
-      this.error = result.error.body?.message || result.error.message || 'Failed to load complexity data';
+      this.error = result.error.body?.message || result.error.message;
     }
   }
 
   get isLoading() { return this.loading; }
-  get hasError() { return Boolean(this.error); }
-  get hasData() {
-    return !this.loading && !this.error && this.data?.hasForensicData;
-  }
-  get isEmpty() {
-    return !this.loading && !this.error && !this.data?.hasForensicData;
+  get hasError() { return !this.loading && Boolean(this.error); }
+  get hasData() { return !this.loading && !this.error && this.data; }
+
+  get totalScore() { return this.data?.totalScore ?? 0; }
+  get rating() { return this.data?.rating ?? 'Low'; }
+  get description() { return this.data?.description ?? ''; }
+
+  get theme() { return RATING_THEME[this.rating] || RATING_THEME.Low; }
+  get chipClass() { return this.theme.dotClass; }
+  get scoreClass() { return this.theme.scoreClass; }
+
+  /** Gauge percentage — cap at 150 for visual fill. */
+  get gaugeWidth() {
+    return `width: ${Math.min((this.totalScore / 150) * 100, 100)}%;`;
   }
 
-  // ─── Derived metrics ───
-
-  get detectorCoverage() {
-    if (!this.data?.topFindings) return { triggered: 0, total: TOTAL_DETECTORS_V1, pct: 0 };
-    const unique = new Set(this.data.topFindings.map((f) => f.detectorId));
-    const triggered = unique.size;
-    const pct = Math.round((triggered / TOTAL_DETECTORS_V1) * 100);
-    return { triggered, total: TOTAL_DETECTORS_V1, pct };
+  /**
+   * Visible factors with computed bar geometry.
+   * userBarPct = min(contribution / 20, 1) × 100
+   * benchmarkPct = min((benchmark / count) × userBarPct, 100) when benchmark exists & count > 0
+   */
+  get visibleFactors() {
+    if (!this.data?.factors) return [];
+    const factors = this.data.factors.filter((f) => f.count > 0)
+                                     .slice()
+                                     .sort((a, b) => b.contribution - a.contribution);
+    return factors.map((f) => {
+      const userBarPct = Math.min((f.contribution / 20) * 100, 100);
+      let benchmarkPct = null;
+      if (f.benchmark > 0 && f.count > 0) {
+        benchmarkPct = Math.min((f.benchmark / f.count) * userBarPct, 100);
+      }
+      const aboveBenchmark = f.benchmark != null && f.count > f.benchmark;
+      return {
+        ...f,
+        userBarStyle: `width: ${userBarPct}%;`,
+        benchmarkStyle: benchmarkPct !== null ? `left: ${benchmarkPct}%;` : '',
+        hasBenchmark: benchmarkPct !== null,
+        contributionClass: aboveBenchmark
+          ? 'op-cx__factor-delta op-cx__factor-delta--above'
+          : 'op-cx__factor-delta',
+        contributionLabel: `+${f.contribution}`,
+      };
+    });
   }
 
-  get severityMix() {
-    const c = this.data?.criticalCount || 0;
-    const w = this.data?.warningCount || 0;
-    const i = this.data?.infoCount || 0;
-    const total = Math.max(1, c + w + i);
-    return {
-      critical: c,
-      warning: w,
-      info: i,
-      criticalPct: Math.round((c / total) * 100),
-      warningPct: Math.round((w / total) * 100),
-      infoPct: Math.round((i / total) * 100),
-    };
-  }
+  get hasFactors() { return this.visibleFactors.length > 0; }
+  get isExpanded() { return this.expanded; }
+  get toggleLabel() { return this.expanded ? 'Hide breakdown' : 'Show breakdown'; }
+  get toggleIconName() { return this.expanded ? 'utility:chevronup' : 'utility:chevrondown'; }
 
-  get avgRecoverability() {
-    if (!this.data?.topFindings?.length) return { pct: 0, label: '—' };
-    const scores = this.data.topFindings
-      .map((f) => Number(f.recoverabilityScore))
-      .filter((n) => Number.isFinite(n));
-    if (!scores.length) return { pct: 0, label: '—' };
-    const avg = scores.reduce((s, n) => s + n, 0) / scores.length;
-    const pct = Math.round(avg * 100);
-    const label = avg > 0.75 ? 'High confidence' : avg > 0.5 ? 'Moderate' : 'Lower confidence';
-    return { pct, label };
-  }
-
-  // ─── Bar widths as CSS percent strings ───
-  get coverageBarStyle() {
-    return `width: ${this.detectorCoverage.pct}%;`;
-  }
-  get criticalBarStyle() {
-    return `width: ${this.severityMix.criticalPct}%;`;
-  }
-  get warningBarStyle() {
-    return `width: ${this.severityMix.warningPct}%;`;
-  }
-  get infoBarStyle() {
-    return `width: ${this.severityMix.infoPct}%;`;
-  }
-  get recoverabilityBarStyle() {
-    return `width: ${this.avgRecoverability.pct}%;`;
-  }
+  toggleBreakdown() { this.expanded = !this.expanded; }
 }

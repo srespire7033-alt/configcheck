@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomMetadata xmlns="http://soap.sforce.com/2006/04/metadata" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" fqn="RemediationRecipe__mdt.PROV_FOR_002">
+    <label>PROV-FOR-002</label>
+    <protected>false</protected>
+    <values><field>DetectorId__c</field><value xsi:type="xsd:string">PROV-FOR-002</value></values>
+    <values><field>Title__c</field><value xsi:type="xsd:string">Create missing Asset for active Subscription (account {accountName})</value></values>
+    <values><field>EstimatedEffort__c</field><value xsi:type="xsd:string">20-30 min</value></values>
+    <values><field>Skill__c</field><value xsi:type="xsd:string">CPQ Admin</value></values>
+    <values><field>Steps__c</field><value xsi:type="xsd:string">1. Open the active Subscription {primaryRecordId} on {accountName} — bills {quantity} of {productName} at {unitPrice}.
+2. No Asset record exists; downstream entitlement and asset-tracking automation will silently skip this customer.
+3. Create the Asset record manually with the correct quantity, install date, and account linkage.
+4. Inspect the contract-activation Flow / Apex that should auto-generate Assets from Subscriptions — it's failing or not installed.
+5. Run a one-off backfill query: subscriptions without matching Assets; fix as a batch if multiple.</value></values>
+    <values><field>Version__c</field><value xsi:type="xsd:double">1.0</value></values>
+    <values>
+        <field>NoteSuggestion1__c</field>
+        <value xsi:type="xsd:string">Asset record created and linked to the Subscription.</value>
+    </values>
+    <values>
+        <field>NoteSuggestion2__c</field>
+        <value xsi:type="xsd:string">Bulk asset backfill scheduled for end of quarter.</value>
+    </values>
+    <values>
+        <field>NoteSuggestion3__c</field>
+        <value xsi:type="xsd:string">Subscription is intentionally not asset-tracked; suppressing.</value>
+    </values>
+</CustomMetadata>

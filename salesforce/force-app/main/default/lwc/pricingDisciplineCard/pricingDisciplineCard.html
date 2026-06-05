@@ -1,0 +1,104 @@
+<template>
+  <article class="op-pd">
+    <header class="op-pd__header">
+      <div class="op-pd__head-left">
+        <div class="op-pd__head-icon-wrap">
+          <lightning-icon icon-name="utility:balance" size="small" class="op-pd__head-icon"></lightning-icon>
+        </div>
+        <div>
+          <h2 class="op-pd__title">{cardTitle}</h2>
+          <p class="op-pd__subtitle">{subtitleLabel}</p>
+        </div>
+      </div>
+      <template if:true={hasData}>
+        <div class={gradeChipClass}>
+          <p class="op-pd__grade-letter">{gradeLetter}</p>
+          <p class="op-pd__grade-label">GRADE</p>
+        </div>
+      </template>
+    </header>
+
+    <template if:true={isLoading}>
+      <div class="op-pd__loading"><lightning-spinner alternative-text="Loading" size="small"></lightning-spinner></div>
+    </template>
+
+    <template if:true={hasError}>
+      <p class="op-pd__error">{error}</p>
+    </template>
+
+    <template if:true={isNoCpq}>
+      <p class="op-pd__empty">CPQ is not installed in this org. Install Salesforce CPQ to enable pricing-health signals.</p>
+    </template>
+
+    <template if:true={isNoLines}>
+      <p class="op-pd__empty">No quote lines in the last 12 months — pricing signals will populate as quotes are created.</p>
+    </template>
+
+    <template if:true={hasMetrics}>
+      <div class="op-pd__metrics">
+        <!-- AVG DISCOUNT APPLIED -->
+        <section class="op-pd__metric">
+          <p class="op-pd__metric-label">AVG DISCOUNT APPLIED</p>
+          <p class="op-pd__metric-big">{avgDiscountFmt}</p>
+          <p class="op-pd__metric-sub">{medianDiscountFmt}</p>
+          <p class="op-pd__metric-sub op-pd__metric-sub--icon">
+            {maxAllowedFmt}
+            <lightning-icon icon-name="utility:info" size="xx-small" class="op-pd__info-icon"
+              title="Default 25% — falls back when no DiscountSchedule attached"></lightning-icon>
+          </p>
+          <p class="op-pd__metric-foot">{beyondLimitLabel}</p>
+        </section>
+
+        <!-- MANUAL PRICE OVERRIDES -->
+        <section class="op-pd__metric">
+          <p class="op-pd__metric-label">MANUAL PRICE OVERRIDES</p>
+          <p class="op-pd__metric-big">{overrideFmt}</p>
+          <p class="op-pd__metric-sub">{overrideLineLabel}</p>
+          <p class={overrideRiskClass}>{overrideRiskLabel}</p>
+        </section>
+      </div>
+
+      <p class="op-pd__narrative">{data.narrative}</p>
+
+      <template if:true={hasOffenders}>
+        <button type="button" class="op-pd__toggle" onclick={toggleExpand}>
+          <lightning-icon icon-name={expandIcon} size="xx-small" class="op-pd__toggle-icon"></lightning-icon>
+          {expandLabel}
+        </button>
+      </template>
+
+      <template if:true={expanded}>
+        <div class="op-pd__offenders">
+          <template if:true={hasDiscountOffenders}>
+            <section>
+              <p class="op-pd__off-title">Top discounted products</p>
+              <ul class="op-pd__off-list">
+                <template for:each={discountOffenders} for:item="o">
+                  <li key={o.productId} class="op-pd__off-row">
+                    <span class="op-pd__off-name">{o.productName}</span>
+                    <span class="op-pd__off-meta">{o.lineLabel}</span>
+                    <span class="op-pd__off-val">{o.avgFmt}</span>
+                  </li>
+                </template>
+              </ul>
+            </section>
+          </template>
+          <template if:true={hasOverrideOffenders}>
+            <section>
+              <p class="op-pd__off-title">Top overridden products</p>
+              <ul class="op-pd__off-list">
+                <template for:each={overrideOffenders} for:item="o">
+                  <li key={o.productId} class="op-pd__off-row">
+                    <span class="op-pd__off-name">{o.productName}</span>
+                    <span class="op-pd__off-meta">{o.lineLabel}</span>
+                    <span class="op-pd__off-val">{o.countLabel}</span>
+                  </li>
+                </template>
+              </ul>
+            </section>
+          </template>
+        </div>
+      </template>
+    </template>
+  </article>
+</template>

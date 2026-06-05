@@ -123,3 +123,61 @@
   padding: 12px 0;
   line-height: 1.5;
 }
+
+/* Phase 13 — bulk re-verify toolbar */
+.op-rq__toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin: 0 0 12px;
+}
+.op-rq__reverify-btn {
+  background: var(--op-accent, #0b5cff);
+  color: #fff;
+  border: 0;
+  border-radius: 6px;
+  padding: 6px 14px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+.op-rq__reverify-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Phase 14c — bulk action toolbar + checkboxes */
+.op-rq__toolbar {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 0 0 12px;
+}
+.op-rq__bulk-btn {
+  background: var(--op-accent, #0b5cff);
+  color: #fff;
+  border: 0;
+  border-radius: 6px;
+  padding: 6px 14px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+.op-rq__bulk-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.op-rq__bulk-btn--approve { background: #16a34a; }
+.op-rq__bulk-btn--commit { background: #2563eb; }
+
+.op-rq__group-check, .op-rq__action-check {
+  margin-right: 8px;
+  cursor: pointer;
+}
+
+/* Phase 15a — inline failed-verify detail */
+.op-rq__action-row { list-style: none; }
+.op-rq__verify-detail {
+  margin: 4px 0 8px 28px;
+  padding: 8px 12px;
+  background: #fef2f2;
+  border-left: 3px solid #dc2626;
+  border-radius: 4px;
+  font-size: 0.85rem;
+}
+.op-rq__verify-msg { color: #7f1d1d; }
+.op-rq__verify-vs { color: #991b1b; font-size: 0.8rem; margin-top: 4px; font-family: ui-monospace, monospace; }

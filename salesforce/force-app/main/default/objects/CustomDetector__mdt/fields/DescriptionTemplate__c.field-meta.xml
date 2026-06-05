@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>DescriptionTemplate__c</fullName>
+    <label>Description Template</label>
+    <description>Multi-line finding description. Supports {ColumnName} tokens.</description>
+    <type>LongTextArea</type><length>3000</length><visibleLines>3</visibleLines>
+    <fieldManageability>SubscriberControlled</fieldManageability>
+</CustomField>

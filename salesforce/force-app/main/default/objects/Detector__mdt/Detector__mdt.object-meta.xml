@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomObject xmlns="http://soap.sforce.com/2006/04/metadata">
+    <description>Phase 19a — one record per OrgPrism detector. Carries display/config metadata (labels, categories, severity thresholds, recoverability, effort) that used to live as hardcoded constants in 8+ files. The Apex detector class still owns the SOQL + evaluator logic; this mdt owns everything else.</description>
+    <label>Detector</label>
+    <pluralLabel>Detectors</pluralLabel>
+    <visibility>Public</visibility>
+</CustomObject>

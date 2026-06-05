@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomMetadata xmlns="http://soap.sforce.com/2006/04/metadata" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" fqn="RemediationRecipe__mdt.AST_FOR_001">
+    <label>AST-FOR-001</label>
+    <protected>false</protected>
+    <values><field>DetectorId__c</field><value xsi:type="xsd:string">AST-FOR-001</value></values>
+    <values><field>Title__c</field><value xsi:type="xsd:string">Issue credit for terminated Asset {primaryRecordId}</value></values>
+    <values><field>EstimatedEffort__c</field><value xsi:type="xsd:string">30-45 min</value></values>
+    <values><field>Skill__c</field><value xsi:type="xsd:string">Billing Admin</value></values>
+    <values><field>Steps__c</field><value xsi:type="xsd:string">1. Open Asset {primaryRecordId} ({productName}, Status {assetStatus}, terminated {terminatedDate}).
+2. Annual exposure: {annualExposure}. The customer is owed a pro-rated credit for the un-elapsed term.
+3. Calculate the credit amount with finance (days remaining × daily rate) and create the credit memo / refund record.
+4. Inspect the termination-flow Apex / Flow — it updates the Asset but doesn't trigger the billing-side credit. That's the systemic fix.
+5. Run a backfill query for other terminated Assets without matching credits — likely several to clean up.</value></values>
+    <values><field>Version__c</field><value xsi:type="xsd:double">1.0</value></values>
+    <values>
+        <field>NoteSuggestion1__c</field>
+        <value xsi:type="xsd:string">Credit memo issued; account balance reconciled.</value>
+    </values>
+    <values>
+        <field>NoteSuggestion2__c</field>
+        <value xsi:type="xsd:string">Termination flow updated to auto-generate credit records.</value>
+    </values>
+    <values>
+        <field>NoteSuggestion3__c</field>
+        <value xsi:type="xsd:string">Termination is internal-only (no customer obligation); suppressing.</value>
+    </values>
+</CustomMetadata>

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomObject xmlns="http://soap.sforce.com/2006/04/metadata">
+    <description>Phase 19d — Trust Score formula weights. Single record (Default) carries the recovery/suppression weights + minimum sample size. TrustScoreService reads on every recompute.</description>
+    <label>Trust Score Formula</label>
+    <pluralLabel>Trust Score Formulas</pluralLabel>
+    <visibility>Public</visibility>
+</CustomObject>

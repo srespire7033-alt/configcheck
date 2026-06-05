@@ -1,11 +1,11 @@
 <template>
-  <c-dashboard-card title="AI-Powered Analysis" subtitle="What this scan tells us — top recovery themes">
-    <lightning-button-icon
-      slot="actions"
-      icon-name="utility:einstein"
-      alternative-text="AI"
-      variant="bare"
-    ></lightning-button-icon>
+  <article class="op-ai">
+    <header class="op-ai__header">
+      <div class="op-ai__icon-wrap">
+        <lightning-icon icon-name="utility:einstein" size="small" class="op-ai__icon"></lightning-icon>
+      </div>
+      <h2 class="op-ai__title">AI-Powered Analysis</h2>
+    </header>
 
     <template if:true={isLoading}>
       <div class="op-ai__loading">
@@ -17,28 +17,48 @@
       <p class="op-ai__error">{error}</p>
     </template>
 
-    <template if:true={isEmpty}>
-      <p class="op-ai__empty">Run a scan with findings to see the analysis light up.</p>
-    </template>
-
     <template if:true={hasData}>
       <p class="op-ai__headline">{headline}</p>
 
-      <ul class="op-ai__bullets">
-        <template for:each={topDetectors} for:item="d">
-          <li key={d.detectorId} class="op-ai__bullet">
-            <span class="op-ai__bullet-marker">•</span>
-            <span class="op-ai__bullet-text">
-              <strong>{d.label}</strong>
-              <span class="op-ai__bullet-meta"> — {d.count} {d.findingLabel} · {d.totalFmt}</span>
-            </span>
+      <ul class="op-ai__list">
+        <template for:each={topCategories} for:item="c">
+          <li key={c.label} class="op-ai__item">
+            <span class="op-ai__bullet">•</span>
+            <span class="op-ai__cat-label">{c.label}</span>
+            <span class="op-ai__cat-sep">—</span>
+            <span class="op-ai__cat-counts">{c.countLabel}</span>
+            <a
+              href="javascript:void(0)"
+              class="op-ai__view"
+              data-label={c.label}
+              onclick={handleViewCategory}
+            >
+              → View
+            </a>
           </li>
         </template>
       </ul>
 
-      <button class="op-ai__link" onclick={handleViewAll}>
-        View all findings →
-      </button>
+      <template if:true={hasResidual}>
+        <p class="op-ai__residual">{residualLabel}</p>
+      </template>
+
+      <template if:true={hasFullAnalysis}>
+        <button type="button" class="op-ai__expand" onclick={toggleFull}>
+          <lightning-icon icon-name={expandIcon} size="xx-small" class="op-ai__expand-icon"></lightning-icon>
+          {expandLabel}
+        </button>
+        <template if:true={isExpanded}>
+          <p class="op-ai__full">{fullAnalysis}</p>
+        </template>
+      </template>
     </template>
-  </c-dashboard-card>
+
+    <template if:true={isModalOpen}>
+      <c-category-issues-modal
+        category-label={openCategory}
+        oncloseissuesmodal={handleModalClose}
+      ></c-category-issues-modal>
+    </template>
+  </article>
 </template>

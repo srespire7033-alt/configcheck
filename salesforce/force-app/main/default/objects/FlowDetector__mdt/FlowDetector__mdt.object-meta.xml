@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomObject xmlns="http://soap.sforce.com/2006/04/metadata">
+    <description>Phase 19c — Flow-driven detectors. Each record points at an autolaunched Flow that outputs a collection of ForensicFinding__c records. OrgPrism invokes registered Flows during local-org scans. Flow detectors do NOT run on remote-org scans (Named Credential routing is Apex-only).</description>
+    <label>Flow Detector</label>
+    <pluralLabel>Flow Detectors</pluralLabel>
+    <visibility>Public</visibility>
+</CustomObject>

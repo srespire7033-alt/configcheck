@@ -47,7 +47,7 @@ public with sharing class FindingsListController {
                    TotalLeakageUsd__c, FindingCount__c, ErrorMessage__c
             FROM ForensicScan__c
             WHERE Status__c IN ('Completed', 'Partial')
-            ORDER BY StartedAt__c DESC
+            WITH SECURITY_ENFORCED ORDER BY StartedAt__c DESC
             LIMIT 1
         ];
         return rows.isEmpty() ? null : rows[0];
@@ -60,7 +60,7 @@ public with sharing class FindingsListController {
         Boolean withHidden = (includeHidden == true);
 
         String soql =
-            'SELECT Id, DetectorId__c, Title__c, Severity__c, GapUsd__c, CurrencyIsoCode, ' +
+            'SELECT Id, DetectorId__c, Title__c, Severity__c, GapUsd__c' + CurrencyContext.soqlSelect() + ', ' +
             '       DetectedAt__c, HiddenAt__c, ConsultantNote__c, ' +
             '       PrimaryRecordType__c, PrimaryRecordId__c ' +
             'FROM ForensicFinding__c ' +
@@ -78,7 +78,7 @@ public with sharing class FindingsListController {
             r.title = f.Title__c;
             r.severity = f.Severity__c;
             r.gapUsd = f.GapUsd__c;
-            r.currencyIsoCode = f.CurrencyIsoCode;
+            r.currencyIsoCode = CurrencyContext.read(f);
             r.detectedAt = f.DetectedAt__c;
             r.hiddenAt = f.HiddenAt__c;
             r.consultantNote = f.ConsultantNote__c;
@@ -96,16 +96,16 @@ public with sharing class FindingsListController {
             throw new AuraHandledException('findingId is required');
         }
 
-        List<ForensicFinding__c> findings = [
-            SELECT Id, DetectorId__c, Title__c, Description__c, Severity__c,
-                   EntitledUsd__c, RealizedUsd__c, GapUsd__c, RecoverabilityScore__c,
-                   CurrencyIsoCode, DetectedAt__c, HiddenAt__c, ConsultantNote__c,
-                   ConsultantNoteUpdatedAt__c, PrimaryRecordType__c, PrimaryRecordId__c,
-                   SourceRecordRefs__c, Metadata__c, Status__c
-            FROM ForensicFinding__c
-            WHERE Id = :findingId
-            LIMIT 1
-        ];
+        String findingSoql =
+            'SELECT Id, DetectorId__c, Title__c, Description__c, Severity__c, ' +
+            '       EntitledUsd__c, RealizedUsd__c, GapUsd__c, RecoverabilityScore__c' +
+            CurrencyContext.soqlSelect() + ', DetectedAt__c, HiddenAt__c, ConsultantNote__c, ' +
+            '       ConsultantNoteUpdatedAt__c, PrimaryRecordType__c, PrimaryRecordId__c, ' +
+            '       SourceRecordRefs__c, Metadata__c, Status__c ' +
+            'FROM ForensicFinding__c ' +
+            'WHERE Id = :findingId ' +
+            'WITH SECURITY_ENFORCED LIMIT 1';
+        List<ForensicFinding__c> findings = Database.query(findingSoql);
         if (findings.isEmpty()) {
             throw new AuraHandledException('Finding not found');
         }
@@ -117,7 +117,7 @@ public with sharing class FindingsListController {
                    AiExplanation__c, AiSuggestedFix__c, AiModel__c
             FROM AttributionTrace__c
             WHERE ForensicFinding__c = :findingId
-            ORDER BY Confidence__c DESC
+            WITH SECURITY_ENFORCED ORDER BY Confidence__c DESC
         ];
 
         List<RecoveryAction__c> actions = [
@@ -126,7 +126,7 @@ public with sharing class FindingsListController {
                    VerificationMessage__c, ExpectedValue__c, ActualValue__c
             FROM RecoveryAction__c
             WHERE ForensicFinding__c = :findingId
-            ORDER BY CreatedDate DESC
+            WITH SECURITY_ENFORCED ORDER BY CreatedDate DESC
             LIMIT 1
         ];
 
@@ -143,7 +143,7 @@ public with sharing class FindingsListController {
     public static Boolean hideFinding(Id findingId) {
         ForensicFinding__c f = [
             SELECT Id, HiddenAt__c FROM ForensicFinding__c
-            WHERE Id = :findingId LIMIT 1
+            WHERE Id = :findingId WITH SECURITY_ENFORCED LIMIT 1
         ];
         f.HiddenAt__c = (f.HiddenAt__c == null) ? System.now() : null;
         update f;
@@ -159,8 +159,7 @@ public with sharing class FindingsListController {
         }
         List<ForensicFinding__c> rows = [
             SELECT Id, HiddenAt__c FROM ForensicFinding__c
-            WHERE Id IN :findingIds AND HiddenAt__c = null
-        ];
+            WHERE Id IN :findingIds AND HiddenAt__c = null WITH SECURITY_ENFORCED ];
         Datetime now = System.now();
         for (ForensicFinding__c f : rows) f.HiddenAt__c = now;
         update rows;
@@ -173,7 +172,7 @@ public with sharing class FindingsListController {
         ForensicFinding__c f = [
             SELECT Id, ConsultantNote__c, ConsultantNoteUpdatedAt__c
             FROM ForensicFinding__c
-            WHERE Id = :findingId LIMIT 1
+            WHERE Id = :findingId WITH SECURITY_ENFORCED LIMIT 1
         ];
         String cleaned = (note == null || note.trim() == '') ? null : note.left(4000);
         f.ConsultantNote__c = cleaned;
@@ -188,7 +187,7 @@ public with sharing class FindingsListController {
         r.title = f.Title__c;
         r.severity = f.Severity__c;
         r.gapUsd = f.GapUsd__c;
-        r.currencyIsoCode = f.CurrencyIsoCode;
+        r.currencyIsoCode = CurrencyContext.read(f);
         r.detectedAt = f.DetectedAt__c;
         r.hiddenAt = f.HiddenAt__c;
         r.consultantNote = f.ConsultantNote__c;

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomObject xmlns="http://soap.sforce.com/2006/04/metadata">
+    <deploymentStatus>Deployed</deploymentStatus>
+    <description>Records that future scans should skip. Created when a user marks a finding as False Positive or Not Relevant.</description>
+    <enableActivities>false</enableActivities>
+    <enableBulkApi>true</enableBulkApi>
+    <enableFeeds>false</enableFeeds>
+    <enableHistory>false</enableHistory>
+    <enableReports>true</enableReports>
+    <enableSearch>false</enableSearch>
+    <enableSharing>true</enableSharing>
+    <enableStreamingApi>true</enableStreamingApi>
+    <label>Forensic Suppression</label>
+    <nameField>
+        <displayFormat>SUP-{0000}</displayFormat>
+        <label>Suppression #</label>
+        <type>AutoNumber</type>
+    </nameField>
+    <pluralLabel>Forensic Suppressions</pluralLabel>
+    <sharingModel>ReadWrite</sharingModel>
+</CustomObject>

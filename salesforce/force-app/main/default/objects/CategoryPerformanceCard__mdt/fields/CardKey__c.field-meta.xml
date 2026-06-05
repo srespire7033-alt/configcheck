@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>CardKey__c</fullName>
+    <label>Card Key</label>
+    <description>Stable identifier (e.g. products, price_rules). Used by the LWC for keying.</description>
+    <type>Text</type><length>60</length><required>true</required><unique>true</unique><externalId>true</externalId>
+    <fieldManageability>SubscriberControlled</fieldManageability>
+</CustomField>

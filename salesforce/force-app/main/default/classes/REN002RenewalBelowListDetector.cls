@@ -1,10 +1,12 @@
 /**
  * REN-002 — Renewal Below Current List Price
+ *
+ * Pure-map evaluator. See REN001 header for the architecture
+ * rationale — no compile-time CPQ namespace dependency.
  */
 public with sharing class REN002RenewalBelowListDetector implements IDetector {
 
     @TestVisible static List<Map<String, Object>> testStubRows;
-    @TestVisible static List<SObject> testStubSObjects;
 
     public String getDetectorId() { return 'REN-002'; }
     public String getLabel() { return 'Renewal Below Current List Price'; }
@@ -14,6 +16,8 @@ public with sharing class REN002RenewalBelowListDetector implements IDetector {
 
     public List<DetectorResult> run(DetectorContext ctx) {
         List<DetectorResult> results = new List<DetectorResult>();
+
+        // Pre-flattened test stubs bypass unwrap().
         if (testStubRows != null) {
             for (Map<String, Object> row : testStubRows) {
                 DetectorResult r = evaluateRow(row);
@@ -22,45 +26,62 @@ public with sharing class REN002RenewalBelowListDetector implements IDetector {
             return results;
         }
 
-        List<SObject> lines;
-        if (testStubSObjects != null) {
-            lines = testStubSObjects;
-        } else {
+        // Schema-presence guard for LOCAL scans only. Remote scans hit a
+        // different org; SchemaUtil would describe the host (irrelevant)
+        // so we skip the guard and let try/catch handle missing schema.
+        if (!ctx.isRemote()) {
+            if (!SchemaUtil.hasField('SBQQ__QuoteLine__c', 'SBQQ__ListPrice__c') ||
+                !SchemaUtil.hasField('SBQQ__QuoteLine__c', 'SBQQ__NetPrice__c')) {
+                System.debug(LoggingLevel.WARN,
+                    '[OrgPrism Skip] REN-002: SBQQ__QuoteLine__c.SBQQ__ListPrice__c / SBQQ__NetPrice__c not present in this org\'s CPQ version.');
+                return results;
+            }
+        }
+
+        List<Map<String, Object>> rows;
+        {
             String soql =
                 'SELECT Id, Name, SBQQ__NetPrice__c, SBQQ__ListPrice__c, ' +
                 '  SBQQ__Quote__c, SBQQ__Quote__r.Name, SBQQ__Quote__r.SBQQ__Type__c, ' +
-                '  SBQQ__Product__c, SBQQ__Product__r.Name, ' +
-                '  CurrencyIsoCode ' +
+                '  SBQQ__Product__c, SBQQ__Product__r.Name ' +
+                CurrencyContext.soqlSelect() + ' ' +
                 'FROM SBQQ__QuoteLine__c ' +
                 'WHERE SBQQ__Quote__r.SBQQ__Type__c = \'Renewal\' ' +
-                '  AND SBQQ__NetPrice__c < SBQQ__ListPrice__c ' +
+                // SOQL doesn't support field-to-field comparison
+                // (NetPrice < ListPrice). Filter in Apex via evaluateRow.
                 '  AND SBQQ__NetPrice__c != null ' +
                 '  AND SBQQ__ListPrice__c != null ' +
                 '  AND CreatedDate >= LAST_N_MONTHS:24 ' +
                 'LIMIT 5000';
-            try { lines = Database.query(soql); } catch (Exception e) { return results; }
+            try { rows = OrgQueryService.query(ctx, soql); }
+            catch (Exception e) {
+                System.debug(LoggingLevel.WARN, '[OrgPrism Skip] REN-FOR-002: ' + e.getMessage());
+                return results;
+            }
         }
 
-        for (SObject line : lines) {
-            DetectorResult r = evaluateSObject(line);
+        for (Map<String, Object> row : rows) {
+            DetectorResult r = evaluateRow(unwrap(row));  // raw rows need unwrap
+
             if (r != null) results.add(r);
         }
         return results;
     }
 
     @TestVisible
-    static DetectorResult evaluateSObject(SObject line) {
-        Map<String, Object> raw = line.getPopulatedFieldsAsMap();
-        SObject quote = (SObject) raw.get('SBQQ__Quote__r');
-        Map<String, Object> quoteRaw = quote != null ? quote.getPopulatedFieldsAsMap() : new Map<String, Object>();
-        return evaluateRow(new Map<String, Object>{
+    static Map<String, Object> unwrap(Map<String, Object> raw) {
+        if (raw == null) return new Map<String, Object>();
+        Object qObj = raw.get('SBQQ__Quote__r');
+        Map<String, Object> quote = (qObj instanceof Map<String, Object>)
+            ? (Map<String, Object>) qObj : new Map<String, Object>();
+        return new Map<String, Object>{
             'lineId' => raw.get('Id'),
             'lineName' => raw.get('Name'),
             'netPrice' => raw.get('SBQQ__NetPrice__c'),
             'listPrice' => raw.get('SBQQ__ListPrice__c'),
-            'quoteName' => quoteRaw.get('Name'),
-            'currencyIsoCode' => raw.get('CurrencyIsoCode')
-        });
+            'quoteName' => quote.get('Name'),
+            'currencyIsoCode' => CurrencyContext.readFromMap(raw)
+        };
     }
 
     @TestVisible

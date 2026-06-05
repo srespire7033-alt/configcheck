@@ -1,0 +1,189 @@
+/**
+ * Phase 19a — Detector Catalog.
+ *
+ * Single source of truth for everything that describes the 20 detectors
+ * EXCEPT their SOQL + evaluator logic (which stays in the Apex classes).
+ *
+ * Used by:
+ *   - Apex detector classes — read severity thresholds, recoverability,
+ *     and AppliesTo product types from their Detector__mdt record
+ *     instead of hardcoding constants.
+ *   - LWCs (riskCategoryCard, impactEffortMatrix, pricingDisciplineView,
+ *     governancePipelineView, trustScoresCard) — read labels + effort
+ *     from a single getCatalog() call instead of 5 copies of
+ *     DETECTOR_LABELS / DETECTOR_EFFORT maps.
+ *   - Server-side controllers (ExecutiveReportController,
+ *     RemediationPlanController, RevenueLeakageController) — read
+ *     labels via getLabel(detectorId).
+ *
+ * The cache is per-transaction. Custom Metadata is immutable mid-txn,
+ * so this is always safe.
+ */
+public with sharing class DetectorCatalogController {
+
+    /** In-memory cache. Loaded lazily on first call; valid for the txn. */
+    private static Map<String, Detector__mdt> cache;
+
+    /**
+     * @AuraEnabled cacheable entry for LWCs. Returns the full catalog
+     * as a List ordered by category then label.
+     */
+    @AuraEnabled(cacheable=true)
+    public static List<CatalogEntry> getCatalog() {
+        List<CatalogEntry> out = new List<CatalogEntry>();
+        for (Detector__mdt m : loadAll().values()) {
+            out.add(toEntry(m));
+        }
+        out.sort(new CatalogEntryComparator());
+        return out;
+    }
+
+    /** Look up by DetectorId — returns null if not in catalog. */
+    public static Detector__mdt getRecord(String detectorId) {
+        if (String.isBlank(detectorId)) return null;
+        return loadAll().get(detectorId);
+    }
+
+    /** Look up just the display label, falling back to the id itself. */
+    public static String getLabel(String detectorId) {
+        Detector__mdt m = getRecord(detectorId);
+        return (m != null && String.isNotBlank(m.Label__c)) ? m.Label__c : detectorId;
+    }
+
+    /**
+     * Severity threshold helpers — replace the hardcoded
+     * `(gap > 10000) ? 'Critical' : (gap > 1000 ? 'Warning' : 'Info')`
+     * pattern in each detector.
+     */
+    public static String resolveSeverity(String detectorId, Decimal gapUsd) {
+        if (gapUsd == null) gapUsd = 0;
+        Detector__mdt m = getRecord(detectorId);
+        Decimal crit = (m != null && m.CriticalThresholdUsd__c != null) ? m.CriticalThresholdUsd__c : 10000;
+        Decimal warn = (m != null && m.WarningThresholdUsd__c != null) ? m.WarningThresholdUsd__c : 1000;
+        if (gapUsd > crit) return 'Critical';
+        if (gapUsd > warn) return 'Warning';
+        return 'Info';
+    }
+
+    public static Decimal getRecoverability(String detectorId, Decimal defaultScore) {
+        Detector__mdt m = getRecord(detectorId);
+        return (m != null && m.RecoverabilityScore__c != null) ? m.RecoverabilityScore__c : defaultScore;
+    }
+
+    /** Product-type membership check. Replaces hardcoded getAppliesTo() Sets. */
+    public static Boolean appliesTo(String detectorId, String productType) {
+        if (String.isBlank(productType)) return true;
+        Detector__mdt m = getRecord(detectorId);
+        if (m == null || String.isBlank(m.AppliesTo__c)) return true;
+        for (String pt : m.AppliesTo__c.split(';')) {
+            if (pt.trim() == productType) return true;
+        }
+        return false;
+    }
+
+    public static Boolean isActive(String detectorId) {
+        Detector__mdt m = getRecord(detectorId);
+        return m == null ? true : (m.IsActive__c == true);
+    }
+
+    /**
+     * Phase 22a-0 — Surface gating.
+     *
+     * Returns the RequiredSurface__c string (e.g. "SBQQ", "blng",
+     * "SBQQ;blng", or null). When non-blank, the detector should
+     * only run if at least one listed object/namespace token is
+     * present in the running org's schema. See surfaceAvailable().
+     */
+    public static String getRequiredSurface(String detectorId) {
+        Detector__mdt m = getRecord(detectorId);
+        return (m == null) ? null : m.RequiredSurface__c;
+    }
+
+    /**
+     * Phase 22a-0 — True if the detector's required surface is present
+     * in the host org's schema (or no surface is required).
+     *
+     * Surface tokens are SObject API names (e.g. "SBQQ__Quote__c",
+     * "blng__BillingSchedule__c", "ProductSellingModel"). A token can
+     * also be a namespace probe — to keep it simple we treat the
+     * value as an SObject name and let SchemaUtil.hasObject decide.
+     *
+     * Local scans only — for remote scans the host org's schema is
+     * irrelevant so this always returns true.
+     */
+    public static Boolean surfaceAvailable(String detectorId, Boolean isRemote) {
+        if (isRemote == true) return true;
+        String raw = getRequiredSurface(detectorId);
+        if (String.isBlank(raw)) return true;
+        for (String tok : raw.split(';')) {
+            String t = tok.trim();
+            if (String.isNotBlank(t) && SchemaUtil.hasObject(t)) return true;
+        }
+        return false;
+    }
+
+    // ── DTO for LWC consumption ─────────────────────────────────────
+
+    public class CatalogEntry {
+        @AuraEnabled public String detectorId;
+        @AuraEnabled public String label;
+        @AuraEnabled public String category;
+        @AuraEnabled public String appliesTo;
+        @AuraEnabled public Decimal criticalThresholdUsd;
+        @AuraEnabled public Decimal warningThresholdUsd;
+        @AuraEnabled public Decimal recoverabilityScore;
+        @AuraEnabled public String effort;
+        @AuraEnabled public Boolean isActive;
+    }
+
+    private static CatalogEntry toEntry(Detector__mdt m) {
+        CatalogEntry e = new CatalogEntry();
+        e.detectorId = m.DetectorId__c;
+        e.label = m.Label__c;
+        e.category = m.Category__c;
+        e.appliesTo = m.AppliesTo__c;
+        e.criticalThresholdUsd = m.CriticalThresholdUsd__c;
+        e.warningThresholdUsd = m.WarningThresholdUsd__c;
+        e.recoverabilityScore = m.RecoverabilityScore__c;
+        e.effort = m.Effort__c;
+        e.isActive = m.IsActive__c;
+        return e;
+    }
+
+    public class CatalogEntryComparator implements Comparator<CatalogEntry> {
+        public Integer compare(CatalogEntry a, CatalogEntry b) {
+            String ac = a.category == null ? 'zzz' : a.category;
+            String bc = b.category == null ? 'zzz' : b.category;
+            if (ac < bc) return -1;
+            if (ac > bc) return 1;
+            String al = a.label == null ? a.detectorId : a.label;
+            String bl = b.label == null ? b.detectorId : b.label;
+            if (al < bl) return -1;
+            if (al > bl) return 1;
+            return 0;
+        }
+    }
+
+    // ── internals ────────────────────────────────────────────────────
+
+    @TestVisible
+    private static Map<String, Detector__mdt> loadAll() {
+        if (cache != null) return cache;
+        cache = new Map<String, Detector__mdt>();
+        for (Detector__mdt m : [
+            SELECT DeveloperName, DetectorId__c, Label__c, Category__c, AppliesTo__c,
+                   CriticalThresholdUsd__c, WarningThresholdUsd__c,
+                   RecoverabilityScore__c, Effort__c, IsActive__c, Version__c,
+                   RequiredSurface__c
+            FROM Detector__mdt
+        ]) {
+            if (String.isNotBlank(m.DetectorId__c)) cache.put(m.DetectorId__c, m);
+        }
+        return cache;
+    }
+
+    @TestVisible
+    private static void primeCacheForTest(Map<String, Detector__mdt> primed) {
+        cache = primed;
+    }
+}

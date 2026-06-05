@@ -1,54 +1,163 @@
 <template>
-  <c-dashboard-card title="Revenue Leakage" subtitle="Findings grouped by detector — click a row to expand">
-    <template if:true={isLoading}>
-      <div class="op-rl__loading">
-        <lightning-spinner alternative-text="Loading" size="small"></lightning-spinner>
+  <article class="op-rl">
+    <!-- Header card -->
+    <header class="op-rl__header">
+      <div class="op-rl__head-left">
+        <div class="op-rl__head-icon-wrap">
+          <lightning-icon icon-name="utility:trending" size="small" class="op-rl__head-icon"></lightning-icon>
+        </div>
+        <div>
+          <h2 class="op-rl__title">{cardTitle}</h2>
+          <p class="op-rl__subtitle">Verified findings from real records + estimated impact from config heuristics</p>
+        </div>
       </div>
+      <template if:true={hasData}>
+        <span class={confidenceChipClass}>{confidenceLabel}</span>
+      </template>
+    </header>
+
+    <template if:true={isLoading}>
+      <div class="op-rl__loading"><lightning-spinner alternative-text="Loading" size="small"></lightning-spinner></div>
     </template>
 
     <template if:true={hasError}>
       <p class="op-rl__error">{error}</p>
     </template>
 
-    <template if:true={isEmpty}>
-      <p class="op-rl__empty">No revenue-leakage findings in the latest scan.</p>
-    </template>
-
     <template if:true={hasData}>
-      <div class="op-rl__header">
-        <span class="op-rl__total">{totalLabel}</span>
-        <span class="op-rl__meta">{findingCount} findings across detector groups</span>
+      <!-- Totals -->
+      <section class="op-rl__totals">
+        <p class="op-rl__totals-label">TOTAL REVENUE LEAKAGE</p>
+        <p class="op-rl__totals-amount">{totalLabel}</p>
+        <div class="op-rl__totals-chips">
+          <span class="op-rl__chip op-rl__chip--verified">
+            <lightning-icon icon-name="utility:check" size="xx-small" class="op-rl__chip-icon"></lightning-icon>
+            Verified <strong>{verifiedLabel}</strong>
+          </span>
+          <span class="op-rl__chip-plus">+</span>
+          <span class="op-rl__chip op-rl__chip--estimated">~ Estimated <strong>{estimatedLabel}</strong></span>
+        </div>
+        <p class="op-rl__totals-note">{pctOfRevenueLabel}</p>
+      </section>
+
+      <!-- Verified findings header -->
+      <header class="op-rl__sec-header">
+        <h3 class="op-rl__sec-title">
+          <lightning-icon icon-name="utility:check" size="x-small" class="op-rl__sec-icon"></lightning-icon>
+          VERIFIED FINDINGS <span class="op-rl__sec-count">{headerFindingCount}</span>
+        </h3>
+        <span class="op-rl__sec-total">{verifiedLabel} total</span>
+      </header>
+
+      <!-- Toolbar -->
+      <div class="op-rl__toolbar">
+        <lightning-input
+          type="search"
+          variant="label-hidden"
+          placeholder="Search by record name, detector, or title…"
+          value={searchTerm}
+          oninput={handleSearch}
+          class="op-rl__search"
+        ></lightning-input>
+        <div class="op-rl__pill-group">
+          <span class="op-rl__pill-label">Effort</span>
+          <template for:each={effortPills} for:item="p">
+            <button key={p.value} type="button" data-value={p.value}
+                    class={p.pillClass} onclick={toggleEffort}>{p.label}</button>
+          </template>
+        </div>
+        <div class="op-rl__pill-group">
+          <span class="op-rl__pill-label">Severity</span>
+          <template for:each={severityPills} for:item="p">
+            <button key={p.value} type="button" data-value={p.value}
+                    class={p.pillClass} onclick={toggleSev}>{p.label}</button>
+          </template>
+        </div>
+        <span class="op-rl__find-count">{findingCountLabel}</span>
       </div>
 
-      <ul class="op-rl__list">
-        <template for:each={detectorRows} for:item="row">
-          <li key={row.detectorId} class={row.rowClass}>
-            <button
-              type="button"
-              class="op-rl__row-header"
-              data-id={row.detectorId}
-              onclick={handleToggle}
-            >
-              <span class={row.chevronClass}>▸</span>
-              <span class="op-rl__row-label">{row.label}</span>
-              <span class="op-rl__row-count">{row.count}</span>
-              <span class="op-rl__row-total">{row.totalFmt}</span>
-            </button>
-
-            <template if:true={row.isOpen}>
-              <ul class="op-rl__findings">
-                <template for:each={row.findings} for:item="f">
-                  <li key={f.id} class="op-rl__finding" data-id={f.id} onclick={handleFindingClick}>
-                    <span class={f.sevClass}></span>
-                    <span class="op-rl__finding-title">{f.title}</span>
-                    <span class="op-rl__finding-gap">{f.gapFmt}</span>
-                  </li>
-                </template>
-              </ul>
+      <!-- Theme grid -->
+      <div class="op-rl__grid">
+        <template for:each={viewThemes} for:item="t">
+          <article key={t.key} class={t.cardClass}>
+            <header class="op-rl__theme-head">
+              <lightning-icon icon-name={t.iconName} size="x-small" class="op-rl__theme-icon"></lightning-icon>
+              <h4 class="op-rl__theme-label">{t.label}</h4>
+              <span class="op-rl__theme-count">{t.countLabel}</span>
+              <span class={t.accentLabelClass}>{t.totalLabel}</span>
+            </header>
+            <ul class="op-rl__theme-list">
+              <template for:each={t.rows} for:item="r">
+                <li key={r.id} data-id={r.id} class="op-rl__row" onclick={handleRowClick}>
+                  <input type="checkbox" class="op-rl__row-cb" aria-label="Select"/>
+                  <span class="op-rl__row-title">{r.truncatedTitle}</span>
+                  <span class={r.effortChipClass}>{r.effortLabel}</span>
+                  <span class="op-rl__row-gap">{r.gapLabel}</span>
+                </li>
+              </template>
+            </ul>
+            <template if:true={t.showMore}>
+              <p class="op-rl__more">{t.moreLabel}</p>
             </template>
-          </li>
+          </article>
         </template>
-      </ul>
+      </div>
+
+      <!-- Action banners -->
+      <div class="op-rl__banners">
+        <button class="op-rl__banner op-rl__banner--attribution" onclick={handleAttributionMap}>
+          <lightning-icon icon-name="utility:hierarchy" size="small" class="op-rl__banner-icon"></lightning-icon>
+          <div class="op-rl__banner-body">
+            <p class="op-rl__banner-title">Attribution Map</p>
+            <p class="op-rl__banner-sub">Root configs ranked by $ at risk</p>
+          </div>
+          <lightning-icon icon-name="utility:chevronright" size="x-small" class="op-rl__banner-chev"></lightning-icon>
+        </button>
+        <button class="op-rl__banner op-rl__banner--recovery" onclick={handleRecoveryQueue}>
+          <lightning-icon icon-name="utility:shield" size="small" class="op-rl__banner-icon"></lightning-icon>
+          <div class="op-rl__banner-body">
+            <p class="op-rl__banner-title">Recovery Queue</p>
+            <p class="op-rl__banner-sub">Stage → approve → download CSV</p>
+          </div>
+          <lightning-icon icon-name="utility:chevronright" size="x-small" class="op-rl__banner-chev"></lightning-icon>
+        </button>
+        <button class="op-rl__banner op-rl__banner--report" onclick={handleDownloadReport}>
+          <lightning-icon icon-name="utility:download" size="small" class="op-rl__banner-icon"></lightning-icon>
+          <div class="op-rl__banner-body">
+            <p class="op-rl__banner-title">Download Client Report</p>
+            <p class="op-rl__banner-sub">5-page executive PDF · the deliverable</p>
+          </div>
+          <lightning-icon icon-name="utility:chevronright" size="x-small" class="op-rl__banner-chev"></lightning-icon>
+        </button>
+      </div>
+
+      <!-- Biggest revenue leaks -->
+      <section class="op-rl__leaks">
+        <header class="op-rl__leaks-head">
+          <h3 class="op-rl__leaks-title">BIGGEST REVENUE LEAKS</h3>
+          <span class="op-rl__leaks-sub">Top 5 by $ impact</span>
+        </header>
+        <div class="op-rl__leaks-list">
+          <template for:each={viewBiggestLeaks} for:item="r">
+            <article key={r.id} data-id={r.id} class="op-rl__leak" onclick={handleLeakToggle}>
+              <span class="op-rl__leak-code">{r.detectorId}</span>
+              <span class="op-rl__leak-title">{r.title}</span>
+              <span class="op-rl__leak-amount">{r.gapLabel}</span>
+              <lightning-icon icon-name="utility:chevrondown" size="xx-small" class={r.chevronClass}></lightning-icon>
+              <template if:true={r.isOpen}>
+                <p class="op-rl__leak-desc">{r.description}</p>
+              </template>
+            </article>
+          </template>
+        </div>
+      </section>
     </template>
-  </c-dashboard-card>
+
+    <template if:true={isIssueModalOpen}>
+      <c-issue-detail-modal
+        issue-id={openIssueDetailId}
+        oncloseissuemodal={handleIssueModalClose}
+      ></c-issue-detail-modal>
+    </template>
+  </article>
 </template>

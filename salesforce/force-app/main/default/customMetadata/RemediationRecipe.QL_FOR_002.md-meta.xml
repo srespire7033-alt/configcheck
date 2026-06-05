@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomMetadata xmlns="http://soap.sforce.com/2006/04/metadata" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" fqn="RemediationRecipe__mdt.QL_FOR_002">
+    <label>QL-FOR-002</label>
+    <protected>false</protected>
+    <values><field>DetectorId__c</field><value xsi:type="xsd:string">QL-FOR-002</value></values>
+    <values><field>Title__c</field><value xsi:type="xsd:string">Backfill approval on Quote Line {primaryRecordId}</value></values>
+    <values><field>EstimatedEffort__c</field><value xsi:type="xsd:string">20-30 min</value></values>
+    <values><field>Skill__c</field><value xsi:type="xsd:string">CPQ Admin / Sales Ops</value></values>
+    <values><field>Steps__c</field><value xsi:type="xsd:string">1. Open Quote Line {primaryRecordId} — discount {discountPct}% exceeds threshold {thresholdPct}% with no approval on file.
+2. Confirm whether the line is on an activated Order (then it's a retroactive cleanup, not a block).
+3. Route the discount for sign-off via your standard approval channel and attach evidence on the Quote.
+4. Inspect the SBQQ__ApprovalRule__c that should have fired — is it Active, what's its condition set, was it bypassed?
+5. Either correct the rule or add a missing one. Add a validation that blocks Order activation when an approval is required but missing.</value></values>
+    <values><field>Version__c</field><value xsi:type="xsd:double">1.0</value></values>
+    <values>
+        <field>NoteSuggestion1__c</field>
+        <value xsi:type="xsd:string">Approval backfilled with deal-desk sign-off attached.</value>
+    </values>
+    <values>
+        <field>NoteSuggestion2__c</field>
+        <value xsi:type="xsd:string">Approval Rule activated and tested on a sandbox quote.</value>
+    </values>
+    <values>
+        <field>NoteSuggestion3__c</field>
+        <value xsi:type="xsd:string">Confirmed manual override is intentional; closing as accepted.</value>
+    </values>
+</CustomMetadata>

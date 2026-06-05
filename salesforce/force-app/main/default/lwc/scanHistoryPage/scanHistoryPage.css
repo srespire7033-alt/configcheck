@@ -1,0 +1,258 @@
+.op-sh {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px;
+}
+
+.op-sh__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.op-sh__title {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--op-color-text-strong, #111827);
+  margin: 0;
+}
+.op-sh__subtitle {
+  font-size: 13px;
+  color: var(--op-color-text-muted, #6b7280);
+  margin: 4px 0 0;
+}
+
+.op-sh__loading {
+  height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.op-sh__empty {
+  font-size: 13px;
+  color: var(--op-color-text-muted, #6b7280);
+  margin: 0;
+  padding: 12px 0;
+}
+
+/* ─── Chart ─── */
+.op-sh__chart-wrap {
+  background: linear-gradient(to bottom, rgba(59, 130, 246, 0.06), rgba(59, 130, 246, 0));
+  border-radius: 12px;
+  padding: 8px;
+}
+.op-sh__svg {
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  aspect-ratio: 1200 / 300;
+  display: block;
+  margin: 0 auto;
+}
+.op-sh__grid {
+  stroke: rgba(17, 24, 39, 0.18);
+  stroke-dasharray: 3 4;
+  stroke-width: 1;
+}
+.op-sh__line {
+  fill: none;
+  stroke: #3b82f6;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.op-sh__dot {
+  fill: #3b82f6;
+  stroke: white;
+  stroke-width: 2;
+  cursor: pointer;
+}
+.op-sh__dot:hover { r: 7; }
+.op-sh__ytick, .op-sh__xtick {
+  font-size: 10px;
+  fill: var(--op-color-text-muted, #6b7280);
+}
+
+/* ─── Summary tiles row ─── */
+.op-sh__summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+}
+.op-sh__tile {
+  padding: 4px;
+}
+.op-sh__tile-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.op-sh__tile-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--op-color-text-strong, #111827);
+  margin: 0;
+}
+.op-sh__tile-value {
+  font-size: 36px;
+  font-weight: 700;
+  color: var(--op-color-text-strong, #111827);
+  margin: 0;
+  line-height: 1;
+  font-feature-settings: 'tnum';
+}
+.op-sh__tile-value--warn { color: var(--op-color-sev-warning-fg, #b45309); }
+.op-sh__tile-value--good { color: var(--op-color-money-fg, #047857); }
+.op-sh__tile-denom {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--op-color-text-muted, #6b7280);
+  margin-left: 4px;
+}
+.op-sh__tile-meta {
+  font-size: 12px;
+  color: var(--op-color-text-muted, #6b7280);
+  margin: 8px 0 0;
+}
+.op-sh__chip {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--op-color-bg-muted, #f3f4f6);
+  color: var(--op-color-text-muted, #6b7280);
+}
+
+.op-sh__sev-chips {
+  display: flex;
+  gap: 6px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+.op-sh__sev-chip {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 999px;
+}
+.op-sh__sev-chip--critical {
+  background: var(--op-color-sev-critical-bg, #fef2f2);
+  color: var(--op-color-sev-critical-fg, #b91c1c);
+}
+.op-sh__sev-chip--warning {
+  background: var(--op-color-sev-warning-bg, #fffbeb);
+  color: var(--op-color-sev-warning-fg, #b45309);
+}
+.op-sh__sev-chip--info {
+  background: rgba(59, 130, 246, 0.10);
+  color: #1d4ed8;
+}
+
+.op-sh__trophy { --sds-c-icon-color-foreground-default: #d97706; }
+
+/* ─── Table ─── */
+.op-sh__table-wrap { overflow-x: auto; }
+.op-sh__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.op-sh__table th {
+  text-align: left;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--op-color-text-muted, #6b7280);
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--op-color-border-default, #e5e7eb);
+}
+.op-sh__th-num { text-align: center; }
+.op-sh__table td {
+  padding: 12px;
+  border-bottom: 1px solid var(--op-color-border-subtle, #f3f4f6);
+  vertical-align: middle;
+}
+.op-sh__td-num { text-align: center; }
+.op-sh__tr {
+  cursor: pointer;
+  transition: background 0.1s ease;
+}
+.op-sh__tr:hover { background: var(--op-color-bg-hover, rgba(0,0,0,0.03)); }
+.op-sh__date { font-weight: 600; color: var(--op-color-text-strong, #111827); }
+.op-sh__time-ago { font-size: 11px; color: var(--op-color-text-muted, #6b7280); }
+
+.op-sh__score-badge {
+  display: inline-block;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 4px 12px;
+  border-radius: 8px;
+  font-feature-settings: 'tnum';
+}
+.op-sh__score-badge--good { background: rgba(16, 185, 129, 0.15); color: #047857; }
+.op-sh__score-badge--warn { background: rgba(245, 158, 11, 0.15); color: #b45309; }
+.op-sh__score-badge--bad  { background: rgba(239, 68, 68, 0.15); color: #b91c1c; }
+
+.op-sh__sev-pill {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-feature-settings: 'tnum';
+  min-width: 28px;
+}
+.op-sh__sev-pill--critical {
+  background: var(--op-color-sev-critical-bg, #fef2f2);
+  color: var(--op-color-sev-critical-fg, #b91c1c);
+}
+.op-sh__sev-pill--warning {
+  background: var(--op-color-sev-warning-bg, #fffbeb);
+  color: var(--op-color-sev-warning-fg, #b45309);
+}
+.op-sh__sev-pill--info {
+  background: rgba(59, 130, 246, 0.10);
+  color: #1d4ed8;
+}
+
+.op-sh__status {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 999px;
+}
+.op-sh__status--ok {
+  background: rgba(16, 185, 129, 0.12);
+  color: #047857;
+}
+.op-sh__status--warn {
+  background: rgba(245, 158, 11, 0.15);
+  color: #b45309;
+}
+
+/* ─── WCAG 2.1 AA accessibility ────────────────────────────────────── */
+/* Visible keyboard focus indicators on all interactives */
+button:focus-visible,
+a:focus-visible,
+[role="button"]:focus-visible,
+[role="dialog"]:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.2);
+}
+/* Honor user's reduced-motion preference */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    transform: none !important;
+  }
+}

@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomMetadata xmlns="http://soap.sforce.com/2006/04/metadata" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" fqn="RemediationRecipe__mdt.CON_FOR_001">
+    <label>CON-FOR-001</label>
+    <protected>false</protected>
+    <values><field>DetectorId__c</field><value xsi:type="xsd:string">CON-FOR-001</value></values>
+    <values><field>Title__c</field><value xsi:type="xsd:string">Route Contract {primaryRecordId} to renewal team (account {accountName})</value></values>
+    <values><field>EstimatedEffort__c</field><value xsi:type="xsd:string">20-30 min</value></values>
+    <values><field>Skill__c</field><value xsi:type="xsd:string">CSM / Sales Ops</value></values>
+    <values><field>Steps__c</field><value xsi:type="xsd:string">1. Open Contract {primaryRecordId} for {accountName} — Activated with {subscriptionCount} subscriptions, latest ended {latestSubscriptionEnd}.
+2. Trigger the renewal motion: assign to a CSM, create a renewal Opportunity + Quote with current pricing.
+3. If customer churned, mark Contract Status appropriately and notify finance / accounting.
+4. Inspect the renewal-forecast automation (SBQQ__RenewalForecast__c) — was it active, did it fire, did it create the renewal quote?
+5. Add a scheduled job that nudges Contracts ending in the next 90 days into the renewal motion automatically.</value></values>
+    <values><field>Version__c</field><value xsi:type="xsd:double">1.0</value></values>
+    <values>
+        <field>NoteSuggestion1__c</field>
+        <value xsi:type="xsd:string">Renewal Opportunity and Quote created; assigned to CSM.</value>
+    </values>
+    <values>
+        <field>NoteSuggestion2__c</field>
+        <value xsi:type="xsd:string">Customer churned; updating Contract Status accordingly.</value>
+    </values>
+    <values>
+        <field>NoteSuggestion3__c</field>
+        <value xsi:type="xsd:string">Renewal already in flight on a different Contract record.</value>
+    </values>
+</CustomMetadata>

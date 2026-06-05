@@ -3,18 +3,6 @@
     <flexiPageRegions>
         <itemInstances>
             <componentInstance>
-                <componentName>c:scanLauncherV2</componentName>
-                <identifier>scanLauncherV21</identifier>
-            </componentInstance>
-        </itemInstances>
-        <itemInstances>
-            <componentInstance>
-                <componentName>c:exportMenu</componentName>
-                <identifier>exportMenu1</identifier>
-            </componentInstance>
-        </itemInstances>
-        <itemInstances>
-            <componentInstance>
                 <componentName>c:heroBlock</componentName>
                 <identifier>heroBlock1</identifier>
             </componentInstance>
@@ -33,6 +21,18 @@
         </itemInstances>
         <itemInstances>
             <componentInstance>
+                <componentName>c:scoreTrendCard</componentName>
+                <identifier>scoreTrendCard1</identifier>
+            </componentInstance>
+        </itemInstances>
+        <itemInstances>
+            <componentInstance>
+                <componentName>c:categoryPerformanceGrid</componentName>
+                <identifier>categoryPerformanceGrid1</identifier>
+            </componentInstance>
+        </itemInstances>
+        <itemInstances>
+            <componentInstance>
                 <componentName>c:complexityCard</componentName>
                 <identifier>complexityCard1</identifier>
             </componentInstance>
@@ -45,8 +45,14 @@
         </itemInstances>
         <itemInstances>
             <componentInstance>
-                <componentName>c:dollarTrendCard</componentName>
-                <identifier>dollarTrendCard1</identifier>
+                <componentName>c:aiRemediationPlan</componentName>
+                <identifier>aiRemediationPlan1</identifier>
+            </componentInstance>
+        </itemInstances>
+        <itemInstances>
+            <componentInstance>
+                <componentName>c:trustScoresCard</componentName>
+                <identifier>trustScoresCard1</identifier>
             </componentInstance>
         </itemInstances>
         <itemInstances>
@@ -59,6 +65,12 @@
             <componentInstance>
                 <componentName>c:issuesPanel</componentName>
                 <identifier>issuesPanel1</identifier>
+            </componentInstance>
+        </itemInstances>
+        <itemInstances>
+            <componentInstance>
+                <componentName>c:allIssuesPanel</componentName>
+                <identifier>allIssuesPanel1</identifier>
             </componentInstance>
         </itemInstances>
         <itemInstances>

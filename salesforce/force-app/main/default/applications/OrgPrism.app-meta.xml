@@ -4,6 +4,12 @@
     <label>OrgPrism</label>
     <formFactors>Large</formFactors>
     <navType>Standard</navType>
+    <tabs>OrgPrism_Dashboard</tabs>
     <tabs>ForensicScan__c</tabs>
+    <tabs>OrgPrism_ScanHistory</tabs>
+    <tabs>OrgPrism_ForensicDiff</tabs>
+    <tabs>OrgPrism_AttributionMap</tabs>
+    <tabs>OrgPrism_RecoveryQueue</tabs>
+    <tabs>OrgPrism_ConnectedOrgs</tabs>
     <uiType>Lightning</uiType>
 </CustomApplication>

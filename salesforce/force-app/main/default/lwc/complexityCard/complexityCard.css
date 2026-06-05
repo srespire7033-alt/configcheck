@@ -1,68 +1,175 @@
-.op-cmp__row {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 10px 0;
+.op-cx {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 20px 24px;
+  font-family: var(--op-font-body, 'Salesforce Sans', Arial, sans-serif);
 }
-.op-cmp__row + .op-cmp__row {
-  border-top: 1px solid var(--op-color-border-subtle, #f3f4f6);
-}
+.op-cx__loading { padding: 30px; display: flex; justify-content: center; }
+.op-cx__error { font-size: 13px; color: #6b7280; margin: 0; padding: 8px 0; }
 
-.op-cmp__label-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  font-size: 13px;
+/* ── Header ── */
+.op-cx__header {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  gap: 12px; margin-bottom: 20px;
 }
-.op-cmp__label {
-  color: var(--op-color-text-body, #374151);
-  font-weight: 500;
+.op-cx__title-block { display: flex; gap: 12px; align-items: center; }
+.op-cx__icon-wrap {
+  width: 40px; height: 40px;
+  border-radius: 10px;
+  background: #f3e8ff;
+  display: inline-flex; align-items: center; justify-content: center;
 }
-.op-cmp__value {
-  color: var(--op-color-text-muted, #6b7280);
-  font-size: 12px;
+.op-cx__icon { --sds-c-icon-color-foreground-default: #7e22ce; }
+.op-cx__title { font-size: 18px; font-weight: 700; color: #111827; margin: 0 0 2px; }
+.op-cx__subtitle { font-size: 12px; color: #6b7280; margin: 0; }
+
+/* ── Rating chip ── */
+.op-cx__chip {
+  font-size: 11px; font-weight: 700; padding: 4px 12px; border-radius: 999px;
+}
+.op-cx__chip--low   { background: #d1fae5; color: #047857; }
+.op-cx__chip--mod   { background: #dbeafe; color: #1d4ed8; }
+.op-cx__chip--high  { background: #fef3c7; color: #b45309; }
+.op-cx__chip--vhigh { background: #fee2e2; color: #b91c1c; }
+
+/* ── Score + gauge ── */
+.op-cx__score-block { margin-bottom: 14px; }
+.op-cx__score {
+  display: flex; align-items: baseline; gap: 6px; margin: 0 0 8px;
+}
+.op-cx__score-num {
+  font-size: 32px; font-weight: 800; line-height: 1;
   font-feature-settings: 'tnum';
 }
+.op-cx__score-unit { font-size: 13px; color: #9ca3af; }
+.op-cx__score--low   .op-cx__score-num { color: #059669; }
+.op-cx__score--mod   .op-cx__score-num { color: #2563eb; }
+.op-cx__score--high  .op-cx__score-num { color: #d97706; }
+.op-cx__score--vhigh .op-cx__score-num { color: #dc2626; }
 
-.op-cmp__bar-track {
-  height: 8px;
-  background: var(--op-color-bg-muted, #f3f4f6);
+.op-cx__gauge {
+  height: 10px;
+  background: #f3f4f6;
   border-radius: 999px;
   overflow: hidden;
-  display: flex;
 }
-
-.op-cmp__bar {
+.op-cx__gauge-fill {
   height: 100%;
   border-radius: 999px;
-  transition: width 0.4s ease;
+  background: linear-gradient(to right, #4ade80 0%, #facc15 50%, #ef4444 100%);
+  transition: width 0.3s ease;
 }
-.op-cmp__bar--coverage {
-  background: linear-gradient(to right, #3b82f6, #6366f1);
-}
-.op-cmp__bar--recovery {
-  background: linear-gradient(to right, #10b981, #059669);
+.op-cx__gauge-labels {
+  display: flex; justify-content: space-between; margin-top: 4px;
+  font-size: 10px; color: #9ca3af;
 }
 
-.op-cmp__bar-track--stacked {
-  border-radius: 999px;
-  overflow: hidden;
-}
-.op-cmp__seg { height: 100%; transition: width 0.4s ease; }
-.op-cmp__seg--critical { background: var(--op-color-sev-critical-accent, #ef4444); }
-.op-cmp__seg--warning { background: var(--op-color-sev-warning-accent, #f59e0b); }
-.op-cmp__seg--info { background: var(--op-color-sev-info-accent, #9ca3af); }
+.op-cx__description { font-size: 12px; color: #6b7280; margin: 0 0 12px; }
 
-.op-cmp__loading {
-  height: 80px;
+/* ── Toggle ── */
+.op-cx__toggle {
+  display: inline-flex; align-items: center; gap: 4px;
+  background: transparent; border: none; padding: 4px 0;
+  font: inherit; font-size: 12px; font-weight: 600;
+  color: #7e22ce; cursor: pointer;
+}
+.op-cx__toggle:hover { color: #6b21a8; }
+.op-cx__toggle-icon { --sds-c-icon-color-foreground-default: currentColor; }
+
+/* ── Factors ── */
+.op-cx__factors {
+  margin-top: 10px;
   display: flex;
-  align-items: center;
-  justify-content: center;
+  flex-direction: column;
+  gap: 8px;
 }
-.op-cmp__empty,
-.op-cmp__error {
-  font-size: 13px;
-  color: var(--op-color-text-muted, #6b7280);
-  margin: 0;
-  padding: 12px 0;
+.op-cx__factor {
+  display: grid;
+  grid-template-columns: 180px 40px 1fr 40px;
+  align-items: center;
+  gap: 8px;
+}
+.op-cx__factor-label {
+  font-size: 12px; color: #4b5563;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.op-cx__factor-count {
+  font-size: 12px; font-weight: 600; color: #111827; text-align: right;
+  font-feature-settings: 'tnum';
+}
+.op-cx__factor-bar {
+  position: relative;
+  height: 6px;
+  background: #f3f4f6;
+  border-radius: 999px;
+  overflow: visible;
+}
+.op-cx__factor-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: #c084fc;
+  transition: width 0.2s;
+}
+.op-cx__factor-bench {
+  position: absolute;
+  top: -2px;
+  width: 2px;
+  height: 10px;
+  background: #6b7280;
+  pointer-events: none;
+}
+.op-cx__factor-delta {
+  font-size: 11px; text-align: right;
+  color: #9ca3af;
+  font-feature-settings: 'tnum';
+}
+.op-cx__factor-delta--above { color: #b45309; font-weight: 700; }
+
+/* ── Legend ── */
+.op-cx__legend {
+  display: flex; gap: 16px; align-items: center;
+  padding-top: 10px; margin-top: 4px;
+  border-top: 1px solid #f3f4f6;
+}
+.op-cx__legend-item {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 11px; color: #6b7280;
+}
+.op-cx__legend-bar {
+  width: 16px; height: 4px; background: #c084fc; border-radius: 999px; display: inline-block;
+}
+.op-cx__legend-tick {
+  width: 2px; height: 12px; background: #6b7280; display: inline-block;
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .op-cx__factor {
+    grid-template-columns: 1fr 36px 100px 36px;
+  }
+}
+
+/* ─── WCAG 2.1 AA accessibility ────────────────────────────────────── */
+/* Visible keyboard focus indicators on all interactives */
+button:focus-visible,
+a:focus-visible,
+[role="button"]:focus-visible,
+[role="dialog"]:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.2);
+}
+/* Honor user's reduced-motion preference */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    transform: none !important;
+  }
 }

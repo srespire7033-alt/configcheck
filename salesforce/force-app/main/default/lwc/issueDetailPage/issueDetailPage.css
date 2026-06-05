@@ -1,0 +1,196 @@
+.op-idp {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 24px;
+  font-family: var(--op-font-body, 'Salesforce Sans', Arial, sans-serif);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.op-idp__loading { padding: 40px; display: flex; justify-content: center; }
+.op-idp__error { padding: 30px; color: #6b7280; font-size: 13px; }
+
+/* Header */
+.op-idp__header {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  padding-bottom: 6px;
+}
+.op-idp__back {
+  background: transparent;
+  border: none;
+  padding: 6px;
+  border-radius: 8px;
+  cursor: pointer;
+  --sds-c-icon-color-foreground-default: #4b5563;
+}
+.op-idp__back:hover { background: rgba(0,0,0,0.06); }
+.op-idp__head-body { flex: 1; min-width: 0; }
+.op-idp__head-chips {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 6px;
+}
+.op-idp__sev-chip {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 10px;
+  border-radius: 999px;
+  text-transform: lowercase;
+}
+.op-idp__sev-chip--critical { background: #fee2e2; color: #b91c1c; }
+.op-idp__sev-chip--warning  { background: #fef3c7; color: #b45309; }
+.op-idp__sev-chip--info     { background: #dbeafe; color: #1d4ed8; }
+.op-idp__detector-code {
+  font-family: 'SF Mono', 'Consolas', monospace;
+  font-size: 11px;
+  color: #6b7280;
+}
+.op-idp__title {
+  font-size: 22px;
+  font-weight: 800;
+  color: #111827;
+  margin: 0;
+  line-height: 1.3;
+}
+.op-idp__status { min-width: 160px; flex-shrink: 0; }
+
+/* Cards */
+.op-idp__card {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  overflow: hidden;
+}
+.op-idp__card-head {
+  padding: 14px 18px;
+  border-bottom: 1px solid #f3f4f6;
+  background: #f9fafb;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.op-idp__card-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #111827;
+  margin: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.op-idp__card-body {
+  padding: 16px 18px;
+  font-size: 14px;
+  color: #1f2937;
+  line-height: 1.6;
+}
+.op-idp__card-body p { margin: 0; }
+.op-idp__none {
+  font-style: italic;
+  color: #9ca3af;
+  font-size: 13px;
+}
+
+/* AI Fix Suggestion (purple) */
+.op-idp__card--ai {
+  background: linear-gradient(135deg, #faf5ff 0%, #ede9fe 100%);
+  border-color: #ddd6fe;
+}
+.op-idp__card-head--ai { background: rgba(255,255,255,0.4); }
+.op-idp__card-title--ai { color: #6d28d9; }
+.op-idp__ai-icon { --sds-c-icon-color-foreground-default: #7e22ce; }
+.op-idp__ai-btn {
+  background: #7c3aed;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.op-idp__ai-btn:hover { background: #6d28d9; }
+.op-idp__ai-btn-icon { --sds-c-icon-color-foreground-default: white; }
+.op-idp__card-body--ai { background: transparent; }
+.op-idp__ai-text {
+  font-style: italic;
+  color: #6b7280;
+  font-size: 13px;
+  margin: 0;
+}
+
+/* Affected records */
+.op-idp__affected-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.op-idp__affected-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  background: #f9fafb;
+  border-radius: 8px;
+}
+.op-idp__obj-chip {
+  background: #e5e7eb;
+  color: #374151;
+  font-family: 'SF Mono', 'Consolas', monospace;
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+.op-idp__affected-name {
+  font-size: 13px;
+  color: #1f2937;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.op-idp__affected-open {
+  background: transparent;
+  border: none;
+  padding: 4px;
+  cursor: pointer;
+  border-radius: 4px;
+}
+.op-idp__affected-open:hover { background: rgba(0,0,0,0.08); }
+
+@media (max-width: 720px) {
+  .op-idp__header { flex-wrap: wrap; }
+  .op-idp__status { width: 100%; }
+}
+
+/* ─── WCAG 2.1 AA accessibility ────────────────────────────────────── */
+/* Visible keyboard focus indicators on all interactives */
+button:focus-visible,
+a:focus-visible,
+[role="button"]:focus-visible,
+[role="dialog"]:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.2);
+}
+/* Honor user's reduced-motion preference */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    transform: none !important;
+  }
+}

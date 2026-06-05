@@ -1,0 +1,226 @@
+/* ─── Container ─── */
+.op-co {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 24px;
+  font-family: var(--op-font-body, 'Salesforce Sans', Arial, sans-serif);
+  color: #1f2937;
+}
+
+/* ─── Header ─── */
+.op-co__header {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  gap: 16px; flex-wrap: wrap; margin-bottom: 20px;
+}
+.op-co__head-left { flex: 1 1 auto; min-width: 0; }
+.op-co__title { font-size: 22px; font-weight: 700; margin: 0 0 4px; color: #111827; }
+.op-co__subtitle { font-size: 13px; color: #6b7280; margin: 0; }
+
+.op-co__head-right {
+  display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+}
+
+.op-co__sort {
+  font: inherit; font-size: 13px;
+  padding: 7px 10px; border-radius: 6px; border: 1px solid #d1d5db;
+  background: white; cursor: pointer;
+}
+
+.op-co__view-toggle {
+  display: inline-flex; border: 1px solid #d1d5db; border-radius: 6px; overflow: hidden;
+}
+.op-co__view-btn {
+  background: white; border: none; padding: 7px 10px; cursor: pointer;
+  color: #6b7280;
+}
+.op-co__view-btn:not(:last-child) { border-right: 1px solid #d1d5db; }
+.op-co__view-btn--active { background: #eff6ff; color: #2563eb; }
+
+/* ─── Buttons ─── */
+.op-co__btn {
+  font: inherit; font-size: 13px; font-weight: 600;
+  padding: 7px 14px; border-radius: 6px; cursor: pointer;
+  display: inline-flex; align-items: center; gap: 6px;
+  border: 1px solid transparent;
+}
+.op-co__btn--primary { background: #2563eb; color: white; border-color: #2563eb; }
+.op-co__btn--primary:hover:not([disabled]) { background: #1d4ed8; border-color: #1d4ed8; }
+.op-co__btn--ghost { background: white; color: #2563eb; border-color: #2563eb; }
+.op-co__btn--ghost:hover:not([disabled]) { background: #eff6ff; }
+.op-co__btn[disabled] { opacity: 0.55; cursor: not-allowed; }
+.op-co__btn-icon { --sds-c-icon-color-foreground-default: currentColor; }
+
+/* ─── KPI strip ─── */
+.op-co__kpis {
+  display: flex; gap: 0;
+  background: white; border: 1px solid #e5e7eb; border-radius: 10px;
+  padding: 18px 24px; margin-bottom: 24px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+}
+.op-co__kpi {
+  flex: 1 1 0; display: flex; flex-direction: column; gap: 4px;
+  border-right: 1px solid #f3f4f6; padding-right: 24px;
+}
+.op-co__kpi:last-child { border-right: none; }
+.op-co__kpi:not(:first-child) { padding-left: 24px; }
+.op-co__kpi-num {
+  font-size: 28px; font-weight: 700; line-height: 1; color: #111827;
+}
+.op-co__kpi-num--good { color: #16a34a; }
+.op-co__kpi-num--mid { color: #f59e0b; }
+.op-co__kpi-num--bad { color: #dc2626; }
+.op-co__kpi-num--critical { color: #dc2626; }
+.op-co__kpi-label {
+  font-size: 11px; font-weight: 600; letter-spacing: 0.5px;
+  color: #6b7280; text-transform: uppercase;
+}
+
+/* ─── Loading / error / empty ─── */
+.op-co__loading { display: flex; justify-content: center; padding: 60px; }
+.op-co__error { color: #dc2626; padding: 16px; background: #fef2f2; border-radius: 6px; }
+.op-co__empty {
+  background: white; border: 2px dashed #d1d5db; border-radius: 12px;
+  padding: 60px 24px; text-align: center;
+}
+.op-co__empty-icon { --sds-c-icon-color-foreground-default: #9ca3af; margin-bottom: 12px; }
+.op-co__empty-title { font-size: 18px; font-weight: 600; color: #374151; margin: 0 0 8px; }
+.op-co__empty-sub { font-size: 13px; color: #6b7280; line-height: 1.6; margin: 0 0 16px; }
+
+/* ─── Card grid ─── */
+.op-co__grid {
+  display: grid; gap: 20px;
+  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+}
+.op-co__grid--list { grid-template-columns: 1fr; }
+
+/* ─── Org card ─── */
+.op-co__card {
+  position: relative; background: white; border: 1px solid #e5e7eb;
+  border-radius: 12px; padding: 20px; padding-top: 24px;
+  display: flex; flex-direction: column; gap: 16px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  transition: box-shadow 150ms ease, transform 150ms ease;
+  overflow: hidden;
+}
+.op-co__card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+
+.op-co__card-stripe {
+  position: absolute; top: 0; left: 0; right: 0; height: 5px;
+}
+
+.op-co__card-head {
+  display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;
+}
+.op-co__card-head-left { display: flex; gap: 12px; align-items: flex-start; min-width: 0; flex: 1 1 auto; }
+.op-co__card-icon-wrap {
+  background: #eff6ff; border-radius: 8px; padding: 8px;
+  display: flex; align-items: center; justify-content: center;
+}
+.op-co__card-icon { --sds-c-icon-color-foreground-default: #2563eb; }
+.op-co__card-name {
+  font-size: 16px; font-weight: 700; color: #111827; margin: 0 0 6px;
+  cursor: pointer; line-height: 1.25;
+}
+.op-co__card-name:hover { color: #2563eb; }
+
+.op-co__card-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.op-co__chip {
+  font-size: 11px; font-weight: 500;
+  padding: 2px 8px; border-radius: 999px;
+  background: #f3f4f6; color: #4b5563;
+  display: inline-flex; align-items: center; gap: 4px;
+}
+.op-co__chip--type { background: transparent; padding-left: 0; color: #16a34a; font-weight: 600; }
+.op-co__chip-dot {
+  display: inline-block; width: 6px; height: 6px; border-radius: 50%;
+  background: #16a34a;
+}
+.op-co__chip--prod { background: #eff6ff; color: #1d4ed8; }
+
+/* ─── Score (top-right) ─── */
+.op-co__card-head-right {
+  display: flex; flex-direction: column; align-items: flex-end; gap: 2px;
+}
+.op-co__score {
+  font-size: 32px; font-weight: 700; line-height: 1;
+}
+.op-co__score--good { color: #16a34a; }
+.op-co__score--mid { color: #f59e0b; }
+.op-co__score--bad { color: #dc2626; }
+.op-co__score--none { color: #9ca3af; font-size: 24px; }
+
+.op-co__delta { font-size: 11px; color: #6b7280; }
+.op-co__delta--up { color: #16a34a; font-weight: 600; }
+.op-co__delta--down { color: #dc2626; font-weight: 600; }
+
+/* ─── Card meta ─── */
+.op-co__card-meta {
+  font-size: 13px; color: #6b7280;
+  display: flex; gap: 6px; align-items: center; flex-wrap: wrap;
+}
+.op-co__card-sep { color: #d1d5db; }
+.op-co__card-meta-critical { color: #dc2626; font-weight: 500; }
+.op-co__card-meta-muted { color: #9ca3af; font-style: italic; }
+
+/* ─── Card actions ─── */
+.op-co__card-actions { display: flex; gap: 8px; }
+.op-co__card-scan { flex: 1 1 auto; justify-content: center; }
+.op-co__card-open { flex: 0 0 auto; }
+
+.op-co__card-foot {
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: 12px; padding-top: 10px;
+  border-top: 1px solid #f3f4f6;
+}
+.op-co__link-btn {
+  background: none; border: none; color: #6b7280;
+  font: inherit; font-size: 12px; cursor: pointer;
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 0;
+}
+.op-co__link-btn:hover:not([disabled]) { color: #2563eb; }
+.op-co__link-btn[disabled] { opacity: 0.55; cursor: not-allowed; }
+.op-co__link-icon { --sds-c-icon-color-foreground-default: currentColor; }
+.op-co__card-foot-error { color: #dc2626; font-weight: 500; font-size: 12px; }
+
+/* ─── Add-new placeholder card ─── */
+.op-co__card--add {
+  background: #fafafa; border: 2px dashed #d1d5db;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  text-align: center; cursor: pointer; min-height: 240px;
+  font: inherit;
+}
+.op-co__card--add:hover {
+  background: #f9fafb; border-color: #2563eb;
+}
+.op-co__add-icon {
+  background: #e5e7eb; border-radius: 50%; padding: 12px;
+  display: flex; margin-bottom: 12px;
+}
+.op-co__add-icon lightning-icon { --sds-c-icon-color-foreground-default: #6b7280; }
+.op-co__add-title { font-size: 14px; font-weight: 600; color: #4b5563; margin: 0 0 4px; }
+.op-co__add-sub {
+  font-size: 12px; color: #9ca3af; margin: 0;
+  display: inline-flex; align-items: center; gap: 4px;
+}
+
+/* ─── WCAG 2.1 AA accessibility ─── */
+button:focus-visible,
+a:focus-visible,
+[role="button"]:focus-visible,
+[role="dialog"]:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.2);
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+    transform: none !important;
+  }
+}

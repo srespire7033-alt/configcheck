@@ -1,0 +1,64 @@
+<template>
+  <article class="op-am">
+    <header class="op-am__header">
+      <div class="op-am__head-left">
+        <div class="op-am__head-icon-wrap">
+          <lightning-icon icon-name="utility:hierarchy" size="small" class="op-am__head-icon"></lightning-icon>
+        </div>
+        <div>
+          <h1 class="op-am__title">Attribution Map</h1>
+          <p class="op-am__subtitle">Root configurations ranked by $ at risk</p>
+        </div>
+      </div>
+      <template if:true={hasData}>
+        <div class="op-am__head-right">
+          <p class="op-am__head-total">{totalLabel}</p>
+          <p class="op-am__head-sub">{rootCountLabel}</p>
+        </div>
+      </template>
+    </header>
+
+    <template if:true={isLoading}>
+      <div class="op-am__loading"><lightning-spinner alternative-text="Loading" size="small"></lightning-spinner></div>
+    </template>
+
+    <template if:true={hasError}>
+      <p class="op-am__error">{error}</p>
+    </template>
+
+    <template if:true={isEmpty}>
+      <p class="op-am__empty">No attribution data yet. Run a forensic scan first.</p>
+    </template>
+
+    <template if:true={hasData}>
+      <div class="op-am__list">
+        <template for:each={rows} for:item="r">
+          <article key={r.key} data-key={r.key} class="op-am__row" onclick={handleToggle}>
+            <div class="op-am__row-head">
+              <span class="op-am__type">{r.rootConfigType}</span>
+              <div class="op-am__row-main">
+                <h3 class="op-am__row-name">{r.rootConfigName}</h3>
+                <p class="op-am__row-class">{r.rootCauseClass}</p>
+              </div>
+              <span class="op-am__row-count">{r.findingCount}</span>
+              <span class="op-am__row-total">{r.totalLabel}</span>
+              <lightning-icon icon-name="utility:chevrondown" size="x-small" class={r.chevronClass}></lightning-icon>
+            </div>
+            <template if:true={r.isOpen}>
+              <ul class="op-am__findings">
+                <template for:each={r.findingsView} for:item="f">
+                  <li key={f.id} data-id={f.id} class="op-am__finding" onclick={handleFindingClick}>
+                    <span class={f.sevChipClass}>{f.severity}</span>
+                    <span class="op-am__finding-det">{f.detectorId}</span>
+                    <span class="op-am__finding-title">{f.title}</span>
+                    <span class="op-am__finding-gap">{f.gapLabel}</span>
+                  </li>
+                </template>
+              </ul>
+            </template>
+          </article>
+        </template>
+      </div>
+    </template>
+  </article>
+</template>

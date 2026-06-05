@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomMetadata xmlns="http://soap.sforce.com/2006/04/metadata" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" fqn="RemediationRecipe__mdt.SUB_FOR_001">
+    <label>SUB-FOR-001</label>
+    <protected>false</protected>
+    <values><field>DetectorId__c</field><value xsi:type="xsd:string">SUB-FOR-001</value></values>
+    <values><field>Title__c</field><value xsi:type="xsd:string">Reconcile subscription quantity drift (Subscription {primaryRecordId})</value></values>
+    <values><field>EstimatedEffort__c</field><value xsi:type="xsd:string">30-45 min</value></values>
+    <values><field>Skill__c</field><value xsi:type="xsd:string">CPQ Admin / Billing</value></values>
+    <values><field>Steps__c</field><value xsi:type="xsd:string">1. Open SBQQ__Subscription__c record {primaryRecordId} and the source Quote Line / Asset.
+2. Identify which side is canonical — what was sold (the contract) vs. what's currently provisioned (the asset).
+3. Update the side that drifted to match the source of truth. Billing keys off Subscription, so this directly affects the invoice next cycle.
+4. Inspect the amendment / asset-update flow that should keep these in sync — likely the source of recurring drift.
+5. Add a scheduled audit (Apex Schedulable) that flags subscription/asset quantity mismatches weekly.</value></values>
+    <values><field>Version__c</field><value xsi:type="xsd:double">1.0</value></values>
+    <values>
+        <field>NoteSuggestion1__c</field>
+        <value xsi:type="xsd:string">Subscription quantity corrected to match the source Quote Line.</value>
+    </values>
+    <values>
+        <field>NoteSuggestion2__c</field>
+        <value xsi:type="xsd:string">Asset quantity adjusted; weekly audit job scheduled.</value>
+    </values>
+    <values>
+        <field>NoteSuggestion3__c</field>
+        <value xsi:type="xsd:string">Drift is intentional (mid-cycle expansion); suppressing.</value>
+    </values>
+</CustomMetadata>

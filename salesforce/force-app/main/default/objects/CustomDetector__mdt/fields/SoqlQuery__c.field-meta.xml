@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>SoqlQuery__c</fullName>
+    <label>SOQL Query</label>
+    <description>The SOQL whose rows become findings. Include a LIMIT clause (recommend LIMIT 5000). Include WITH SECURITY_ENFORCED if you want FLS-enforced results. Each returned row becomes one ForensicFinding.</description>
+    <type>LongTextArea</type><length>32000</length><visibleLines>8</visibleLines>
+    <fieldManageability>SubscriberControlled</fieldManageability>
+</CustomField>

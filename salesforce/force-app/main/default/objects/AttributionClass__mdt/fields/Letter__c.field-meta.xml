@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Letter__c</fullName>
+    <label>Letter</label>
+    <description>Single-letter id (A, B, C, D, E).</description>
+    <type>Text</type><length>1</length><required>true</required><unique>true</unique>
+    <fieldManageability>DeveloperControlled</fieldManageability>
+</CustomField>

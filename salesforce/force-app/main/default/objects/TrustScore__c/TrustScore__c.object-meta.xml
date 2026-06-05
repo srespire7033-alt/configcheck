@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomObject xmlns="http://soap.sforce.com/2006/04/metadata">
+    <description>Phase 15c — Per-detector confidence score. One row per DetectorId; updated by TrustScoreService.recompute() after each scan. Surfaces detector reliability so the AI Remediation Plan can downweight low-trust detectors.</description>
+    <label>Trust Score</label>
+    <pluralLabel>Trust Scores</pluralLabel>
+    <nameField>
+        <label>Detector Id</label>
+        <type>Text</type>
+    </nameField>
+    <deploymentStatus>Deployed</deploymentStatus>
+    <sharingModel>ReadWrite</sharingModel>
+    <enableActivities>false</enableActivities>
+    <enableHistory>false</enableHistory>
+    <enableReports>true</enableReports>
+    <enableSearch>false</enableSearch>
+    <enableBulkApi>true</enableBulkApi>
+    <enableSharing>true</enableSharing>
+    <enableStreamingApi>true</enableStreamingApi>
+</CustomObject>

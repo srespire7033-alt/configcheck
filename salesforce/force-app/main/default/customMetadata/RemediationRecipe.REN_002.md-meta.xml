@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomMetadata xmlns="http://soap.sforce.com/2006/04/metadata" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" fqn="RemediationRecipe__mdt.REN_002">
+    <label>REN-002</label>
+    <protected>false</protected>
+    <values>
+        <field>DetectorId__c</field>
+        <value xsi:type="xsd:string">REN-002</value>
+    </values>
+    <values>
+        <field>Title__c</field>
+        <value xsi:type="xsd:string">Re-price renewal line below list on {primaryRecordId}</value>
+    </values>
+    <values>
+        <field>EstimatedEffort__c</field>
+        <value xsi:type="xsd:string">20-30 min</value>
+    </values>
+    <values>
+        <field>Skill__c</field>
+        <value xsi:type="xsd:string">CPQ Admin</value>
+    </values>
+    <values>
+        <field>Steps__c</field>
+        <value xsi:type="xsd:string">1. Open Quote Line {primaryRecordId} — renewal net price {renewalNetPrice} is {percentBelowList}% below current list {currentListPrice}.
+2. Confirm whether SBQQ__PricingMethod__c is set to Manual (consultant override) or the calculated path failed.
+3. If Manual: capture the discount approval per company policy, OR restore to list.
+4. If calculated: investigate why the PricebookEntry path didn't pick the current list price.
+5. Re-calculate the quote and confirm the activated Order will book at the corrected price.</value>
+    </values>
+    <values>
+        <field>Version__c</field>
+        <value xsi:type="xsd:double">1.0</value>
+    </values>
+    <values>
+        <field>NoteSuggestion1__c</field>
+        <value xsi:type="xsd:string">Discount approved by sales leadership; capturing on the quote.</value>
+    </values>
+    <values>
+        <field>NoteSuggestion2__c</field>
+        <value xsi:type="xsd:string">Re-priced to list; customer notified of corrected renewal.</value>
+    </values>
+    <values>
+        <field>NoteSuggestion3__c</field>
+        <value xsi:type="xsd:string">Awaiting customer confirmation before re-quoting.</value>
+    </values>
+</CustomMetadata>

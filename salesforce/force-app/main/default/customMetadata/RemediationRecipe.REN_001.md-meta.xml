@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomMetadata xmlns="http://soap.sforce.com/2006/04/metadata" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" fqn="RemediationRecipe__mdt.REN_001">
+    <label>REN-001</label>
+    <protected>false</protected>
+    <values>
+        <field>DetectorId__c</field>
+        <value xsi:type="xsd:string">REN-001</value>
+    </values>
+    <values>
+        <field>Title__c</field>
+        <value xsi:type="xsd:string">Restore renewal uplift on Quote {primaryRecordId}</value>
+    </values>
+    <values>
+        <field>EstimatedEffort__c</field>
+        <value xsi:type="xsd:string">30-45 min</value>
+    </values>
+    <values>
+        <field>Skill__c</field>
+        <value xsi:type="xsd:string">CPQ Admin</value>
+    </values>
+    <values>
+        <field>Steps__c</field>
+        <value xsi:type="xsd:string">1. Open the affected Quote Line (Id {primaryRecordId}).
+2. Confirm current SBQQ__NetPrice and compare with the entitled price: {entitledPrice} (was {originalPrice}, uplift % {upliftPct}).
+3. Either re-price the line to the entitled value or capture an approval if the lower price is intentional.
+4. Re-calculate the quote and verify the OrderItem will activate at the corrected price.
+5. Audit active SBQQ__PriceRule__c records targeting SBQQ__NetPrice with Type=Renewal conditions (Phase 11 Class C attribution surfaces the suspect rule).</value>
+    </values>
+    <values>
+        <field>Version__c</field>
+        <value xsi:type="xsd:double">1.0</value>
+    </values>
+    <values>
+        <field>NoteSuggestion1__c</field>
+        <value xsi:type="xsd:string">Customer confirmed lower price is intentional; closing as not-pursued.</value>
+    </values>
+    <values>
+        <field>NoteSuggestion2__c</field>
+        <value xsi:type="xsd:string">Scheduling re-quote for next renewal cycle; opened internal ticket.</value>
+    </values>
+    <values>
+        <field>NoteSuggestion3__c</field>
+        <value xsi:type="xsd:string">Escalated to deal desk for retroactive pricing correction.</value>
+    </values>
+</CustomMetadata>

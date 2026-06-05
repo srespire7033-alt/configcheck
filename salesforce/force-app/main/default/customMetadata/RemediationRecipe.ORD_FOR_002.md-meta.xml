@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomMetadata xmlns="http://soap.sforce.com/2006/04/metadata" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" fqn="RemediationRecipe__mdt.ORD_FOR_002">
+    <label>ORD-FOR-002</label>
+    <protected>false</protected>
+    <values><field>DetectorId__c</field><value xsi:type="xsd:string">ORD-FOR-002</value></values>
+    <values><field>Title__c</field><value xsi:type="xsd:string">Reconcile Quote vs Order variance on Quote {primaryRecordId}</value></values>
+    <values><field>EstimatedEffort__c</field><value xsi:type="xsd:string">45-60 min</value></values>
+    <values><field>Skill__c</field><value xsi:type="xsd:string">CPQ Admin</value></values>
+    <values><field>Steps__c</field><value xsi:type="xsd:string">1. Open Quote {primaryRecordId}; Net Amount was {quoteNetAmount} but related Order(s) total {orderTotal} ({direction} by {delta}).
+2. List Order(s): {orderIds}. Inspect each OrderItem and compare with the source Quote Line.
+3. Identify which line(s) drifted — typical causes: Q→O field mapping dropped a custom price field, an Order Apex trigger rewrote pricing, or a manual edit after activation.
+4. Either correct the Order pricing (with finance / billing approval) OR void + re-create from a fresh quote.
+5. Audit your Q→O field map and any Order triggers/Flows. Add tests if you have a CI pipeline.</value></values>
+    <values><field>Version__c</field><value xsi:type="xsd:double">1.0</value></values>
+    <values>
+        <field>NoteSuggestion1__c</field>
+        <value xsi:type="xsd:string">Order pricing corrected with finance approval.</value>
+    </values>
+    <values>
+        <field>NoteSuggestion2__c</field>
+        <value xsi:type="xsd:string">Order voided and re-created from a fresh quote.</value>
+    </values>
+    <values>
+        <field>NoteSuggestion3__c</field>
+        <value xsi:type="xsd:string">Q-to-O field map updated; deploying tested fix this week.</value>
+    </values>
+</CustomMetadata>

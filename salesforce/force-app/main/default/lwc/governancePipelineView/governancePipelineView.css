@@ -1,52 +1,6 @@
 .op-gp {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-  gap: 16px;
-}
-
-.op-gp__total {
-  font-size: 24px;
-  font-weight: 700;
-  color: var(--op-color-money-fg, #047857);
-  font-feature-settings: 'tnum';
-  margin: 0 0 12px;
-}
-.op-gp__count {
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--op-color-text-muted, #6b7280);
-}
-
-.op-gp__list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-.op-gp__row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 8px 0;
-  font-size: 13px;
-}
-.op-gp__row + .op-gp__row {
-  border-top: 1px solid var(--op-color-border-subtle, #f3f4f6);
-}
-
-.op-gp__label {
-  color: var(--op-color-text-body, #374151);
-  font-weight: 500;
-}
-.op-gp__meta {
-  color: var(--op-color-text-muted, #6b7280);
-  font-size: 12px;
-  font-feature-settings: 'tnum';
-}
-
-.op-gp__empty {
-  font-size: 13px;
-  color: var(--op-color-text-muted, #6b7280);
-  margin: 0;
-  line-height: 1.5;
+  grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+  gap: 14px;
+  align-items: start;
 }

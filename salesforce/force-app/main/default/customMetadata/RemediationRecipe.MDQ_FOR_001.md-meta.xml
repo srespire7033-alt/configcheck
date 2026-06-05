@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomMetadata xmlns="http://soap.sforce.com/2006/04/metadata" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" fqn="RemediationRecipe__mdt.MDQ_FOR_001">
+    <label>MDQ-FOR-001</label>
+    <protected>false</protected>
+    <values><field>DetectorId__c</field><value xsi:type="xsd:string">MDQ-FOR-001</value></values>
+    <values><field>Title__c</field><value xsi:type="xsd:string">Reconcile MDQ segment pricing on Quote {quoteId}</value></values>
+    <values><field>EstimatedEffort__c</field><value xsi:type="xsd:string">45-60 min</value></values>
+    <values><field>Skill__c</field><value xsi:type="xsd:string">CPQ Admin</value></values>
+    <values><field>Steps__c</field><value xsi:type="xsd:string">1. Open Quote {quoteId} and inspect MDQ segments for {productName} ({segmentCount} segments, {flaggedSegs} flagged).
+2. Either re-apply a consistent escalator schedule across segments, or capture an approval for the differentiated pricing.
+3. If imported with drift baked in: correct each affected segment line by line.
+4. Inspect the price-escalator schedule (SBQQ__BlockPrice__c or custom) — was it active when this quote was generated?
+5. Add a validation on MDQ-segmented quotes that flags inconsistent per-product pricing pre-activation.</value></values>
+    <values><field>Version__c</field><value xsi:type="xsd:double">1.0</value></values>
+    <values>
+        <field>NoteSuggestion1__c</field>
+        <value xsi:type="xsd:string">Segment pricing reconciled with escalator schedule applied.</value>
+    </values>
+    <values>
+        <field>NoteSuggestion2__c</field>
+        <value xsi:type="xsd:string">Approval captured for differentiated per-segment pricing.</value>
+    </values>
+    <values>
+        <field>NoteSuggestion3__c</field>
+        <value xsi:type="xsd:string">MDQ drift acceptable per customer-signed amendment; suppressing.</value>
+    </values>
+</CustomMetadata>

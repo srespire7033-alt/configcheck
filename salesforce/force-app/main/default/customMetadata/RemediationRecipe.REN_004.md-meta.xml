@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomMetadata xmlns="http://soap.sforce.com/2006/04/metadata" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" fqn="RemediationRecipe__mdt.REN_004">
+    <label>REN-004</label>
+    <protected>false</protected>
+    <values>
+        <field>DetectorId__c</field>
+        <value xsi:type="xsd:string">REN-004</value>
+    </values>
+    <values>
+        <field>Title__c</field>
+        <value xsi:type="xsd:string">Advance stuck Draft renewal Quote {primaryRecordId}</value>
+    </values>
+    <values>
+        <field>EstimatedEffort__c</field>
+        <value xsi:type="xsd:string">30-45 min</value>
+    </values>
+    <values>
+        <field>Skill__c</field>
+        <value xsi:type="xsd:string">CPQ Admin</value>
+    </values>
+    <values>
+        <field>Steps__c</field>
+        <value xsi:type="xsd:string">1. Open the Draft renewal Quote {primaryRecordId}.
+2. Confirm contract end date and current quote status (parent contract end already past).
+3. Either submit for approval and activate, or void the quote and create a fresh one with current pricing.
+4. If voiding: ensure no downstream Orders were already created against this draft.
+5. Inspect the renewal automation (SBQQ__RenewalForecast__c on the contract) — if it's misfiring, log a backlog task.</value>
+    </values>
+    <values>
+        <field>Version__c</field>
+        <value xsi:type="xsd:double">1.0</value>
+    </values>
+    <values>
+        <field>NoteSuggestion1__c</field>
+        <value xsi:type="xsd:string">Quote voided; clean replacement created with current pricing.</value>
+    </values>
+    <values>
+        <field>NoteSuggestion2__c</field>
+        <value xsi:type="xsd:string">Submitted for approval and activated; closing finding.</value>
+    </values>
+    <values>
+        <field>NoteSuggestion3__c</field>
+        <value xsi:type="xsd:string">Customer not renewing; voiding draft quote.</value>
+    </values>
+</CustomMetadata>

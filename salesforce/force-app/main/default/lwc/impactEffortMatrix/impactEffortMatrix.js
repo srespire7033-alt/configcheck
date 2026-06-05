@@ -1,142 +1,258 @@
-import { LightningElement, wire } from 'lwc';
-import { NavigationMixin } from 'lightning/navigation';
-import getDashboardSummary from '@salesforce/apex/DashboardController.getDashboardSummary';
+import { LightningElement, wire, track } from 'lwc';
+import { NavigationMixin, CurrentPageReference } from 'lightning/navigation';
+import { refreshApex } from '@salesforce/apex';
+import getMatrixFindings from '@salesforce/apex/DashboardController.getMatrixFindings';
+import getCatalog from '@salesforce/apex/DetectorCatalogController.getCatalog';
 
 /**
- * The wedge play — Impact × Effort matrix. Plots each finding as a
- * bubble where:
- *   - Y axis: $ impact (gapUsd, log-scaled so big and small fit)
- *   - X axis: effort to recover (low / medium / high, derived from
- *             recoverabilityScore: high score → low effort)
- *   - bubble size: $ (proportional)
- *   - bubble color: severity tint
+ * "What to fix first" — 3x3 $-impact × effort matrix.
  *
- * Quadrants:
- *   - Top-left  (high $, low effort)  → "Quick wins"   ← act now
- *   - Top-right (high $, high effort) → "Big bets"     ← plan
- *   - Bottom-L  (low $, low effort)   → "Tidy-ups"     ← bulk fix
- *   - Bottom-R  (low $, high effort)  → "Defer"        ← skip for now
+ * Rows  (impact $):    High ≥$50K   Medium ≥$10K   Low <$10K
+ * Cols  (effort):      Low          Medium         High
  *
- * Clicking a bubble navigates to that finding's detail page.
+ * Cell labels:
+ *     QUICK WINS    WORTH DOING   STRATEGIC
+ *     EASY          STANDARD      EVALUATE
+ *     HOUSEKEEPING  SKIP?         DEFER
+ *
+ * Each populated cell shows: count + $ total + estimated hours
+ * (count × per-effort hours). Click → modal with finding list,
+ * rows navigate to ForensicFinding__c record.
  */
-const EFFORT_BUCKETS = [
-  { key: 'low',    label: 'Low effort',    xPct: 18 },
-  { key: 'medium', label: 'Medium effort', xPct: 50 },
-  { key: 'high',   label: 'High effort',   xPct: 82 },
-];
+
+const IMPACT_HIGH = 50000;
+const IMPACT_LOW = 10000;
+
+const EFFORT_HOURS_PER_FINDING = { low: 0.5, medium: 2, high: 8 };
+
+/**
+ * Phase 20d — fallback when Detector__mdt.Effort__c isn't seeded yet.
+ * Once mdt is populated, the component's @wire(getCatalog) overlays
+ * live values on top of these defaults.
+ */
+const FALLBACK_DETECTOR_EFFORT = {
+  'REN-001': 'medium', 'REN-002': 'medium', 'REN-003': 'low', 'REN-004': 'low',
+  'DSC-FOR-001': 'medium', 'DSC-FOR-002': 'medium',
+  'QL-FOR-001': 'medium', 'QL-FOR-002': 'low',
+  'ORD-FOR-001': 'high', 'ORD-FOR-002': 'medium', 'ORD-FOR-003': 'medium',
+  'SUB-FOR-001': 'medium', 'PROV-FOR-001': 'high', 'PROV-FOR-002': 'medium',
+  'OPP-FOR-001': 'low', 'CON-FOR-001': 'low', 'AMD-FOR-001': 'low',
+  'AST-FOR-001': 'high', 'CT-FOR-001': 'medium', 'MDQ-FOR-001': 'high',
+};
+
+const CELL_META = {
+  'high-low':       { label: 'Quick wins',   theme: 'emerald', highlight: true },
+  'high-medium':    { label: 'Worth doing',  theme: 'teal' },
+  'high-high':      { label: 'Strategic',    theme: 'blue' },
+  'medium-low':     { label: 'Easy',         theme: 'lime' },
+  'medium-medium':  { label: 'Standard',     theme: 'amber' },
+  'medium-high':    { label: 'Evaluate',     theme: 'orange' },
+  'low-low':        { label: 'Housekeeping', theme: 'gray' },
+  'low-medium':     { label: 'Skip?',        theme: 'gray' },
+  'low-high':       { label: 'Defer',        theme: 'slate' },
+};
+
+const IMPACT_ORDER = ['high', 'medium', 'low'];
+const EFFORT_ORDER = ['low', 'medium', 'high'];
+
+function bucketImpact(g) {
+  if (g >= IMPACT_HIGH) return 'high';
+  if (g >= IMPACT_LOW) return 'medium';
+  return 'low';
+}
+
+function fmtMoney(n) {
+  const v = Number(n) || 0;
+  if (v >= 1_000_000) return `USD ${(v / 1_000_000).toFixed(1)}M`;
+  if (v >= 1_000) return `USD ${(v / 1_000).toFixed(0)}K`;
+  if (v < 1) return '—';
+  return `USD ${Math.round(v).toLocaleString()}`;
+}
+
+function fmtHours(h) {
+  if (h < 1) return `${Math.round(h * 60)} min`;
+  if (h < 10) return `${h.toFixed(1)} hrs`;
+  if (h < 80) return `${Math.round(h)} hrs`;
+  return `${Math.round(h / 8)} days`;
+}
 
 export default class ImpactEffortMatrix extends NavigationMixin(LightningElement) {
-  data;
+  findings = [];
   error;
   loading = true;
+  openCellKey = null;
+  wiredResult;
+  @track connectedOrgId = null;
+  @track catalogEntries = [];
 
-  @wire(getDashboardSummary)
-  wireData(result) {
+  @wire(getCatalog)
+  wireCatalog({ data }) {
+    if (data) this.catalogEntries = data;
+  }
+
+  /** Phase 20d — merge fallback + live Detector__mdt.Effort__c. */
+  get detectorEffortMap() {
+    const out = { ...FALLBACK_DETECTOR_EFFORT };
+    for (const e of this.catalogEntries || []) {
+      if (e.effort) out[e.detectorId] = e.effort;
+    }
+    return out;
+  }
+
+  getEffort(detectorId) {
+    return this.detectorEffortMap[detectorId] || 'medium';
+  }
+
+  connectedCallback() { window.addEventListener('op:scan-completed', this.handleScanCompleted); }
+  disconnectedCallback() { window.removeEventListener('op:scan-completed', this.handleScanCompleted); }
+  handleScanCompleted = () => { if (this.wiredResult) refreshApex(this.wiredResult); };
+
+  @wire(CurrentPageReference)
+  wirePageRef(pageRef) {
+    if (!pageRef) return;
+    this.connectedOrgId = pageRef.state?.c__connectedOrgId || pageRef.state?.connectedOrgId || null;
+  }
+
+  @wire(getMatrixFindings, { connectedOrgId: '$connectedOrgId' })
+  wireFindings(result) {
+    this.wiredResult = result;
     this.loading = false;
     if (result.data) {
-      this.data = result.data;
+      this.findings = result.data;
       this.error = undefined;
     } else if (result.error) {
-      this.error = result.error.body?.message || result.error.message || 'Failed to load matrix data';
-      this.data = undefined;
+      this.error = result.error.body?.message || result.error.message;
     }
   }
 
+  // ── Bucket all findings into the 9 cells ──
+  get matrix() {
+    const buckets = {};
+    let totalFindings = 0;
+    let totalUsd = 0;
+    let totalHours = 0;
+    for (const f of this.findings || []) {
+      const gap = Number(f.gapUsd) || 0;
+      const impact = bucketImpact(gap);
+      const effort = this.getEffort(f.detectorId);
+      const key = `${impact}-${effort}`;
+      if (!buckets[key]) buckets[key] = { count: 0, totalUsd: 0, totalHours: 0, findings: [] };
+      const c = buckets[key];
+      c.count += 1;
+      c.totalUsd += gap;
+      c.totalHours += EFFORT_HOURS_PER_FINDING[effort];
+      c.findings.push(f);
+      totalFindings += 1;
+      totalUsd += gap;
+      totalHours += EFFORT_HOURS_PER_FINDING[effort];
+    }
+    // Sort each cell's findings by $ desc
+    for (const k of Object.keys(buckets)) {
+      buckets[k].findings.sort((a, b) => (Number(b.gapUsd) || 0) - (Number(a.gapUsd) || 0));
+    }
+    return { buckets, totalFindings, totalUsd, totalHours };
+  }
+
+  get hasData() { return !this.loading && !this.error && this.matrix.totalFindings > 0; }
+  get isEmpty() { return !this.loading && !this.error && this.matrix.totalFindings === 0; }
   get isLoading() { return this.loading; }
-  get hasError() { return Boolean(this.error); }
-  get hasFindings() {
-    return !this.loading && !this.error && this.data?.topFindings?.length > 0;
-  }
-  get isEmpty() {
-    return !this.loading && !this.error && (!this.data?.topFindings || this.data.topFindings.length === 0);
-  }
+  get hasError() { return !this.loading && Boolean(this.error); }
 
-  /** Computed bubbles, each ready to render at an absolute position. */
-  get bubbles() {
-    if (!this.hasFindings) return [];
-    const findings = this.data.topFindings;
-    // Find max gap to scale bubble size + Y position.
-    const maxGap = Math.max(...findings.map((f) => Number(f.gapUsd) || 0), 1);
-    return findings.map((f, idx) => {
-      const gap = Number(f.gapUsd) || 0;
-      // Y: log-scaled so a $10K finding and a $1M finding both fit
-      // on the plot. Empty 10% top/bottom margin.
-      const yLog = Math.log10(gap + 1) / Math.log10(maxGap + 1);
-      const yPct = 90 - yLog * 80;
-      // Effort from recoverabilityScore (0..1). Higher score = lower
-      // effort to recover.
-      const rec = Number(f.recoverabilityScore) || 0.5;
-      const effort = rec > 0.75 ? 'low' : rec > 0.45 ? 'medium' : 'high';
-      const bucket = EFFORT_BUCKETS.find((b) => b.key === effort) || EFFORT_BUCKETS[1];
-      // Bubble radius scales 8px..28px by gap proportion.
-      const sizeScale = Math.sqrt(gap / maxGap);
-      const radius = 8 + sizeScale * 20;
-      const sevColor = this.severityColor(f.severity);
-      // Small horizontal jitter so bubbles in the same bucket don't
-      // stack exactly. Deterministic by index so re-renders are
-      // stable.
-      const jitter = ((idx * 37) % 11) - 5;
-      const xPct = Math.max(6, Math.min(94, bucket.xPct + jitter));
-      return {
-        id: f.id,
-        title: f.title,
-        gap: gap,
-        severity: f.severity,
-        effort: bucket.label,
-        style: `left: ${xPct}%; top: ${yPct}%; width: ${radius * 2}px; height: ${radius * 2}px; background: ${sevColor.bg}; border-color: ${sevColor.border};`,
-        tooltip: `${f.title} · ${this.formatMoney(gap)} · ${bucket.label}`,
-      };
-    });
-  }
-
-  severityColor(sev) {
-    const key = (sev || '').toLowerCase();
-    if (key === 'critical') return { bg: 'rgba(239,68,68,0.55)', border: '#ef4444' };
-    if (key === 'warning') return { bg: 'rgba(245,158,11,0.55)', border: '#f59e0b' };
-    return { bg: 'rgba(156,163,175,0.55)', border: '#9ca3af' };
-  }
-
-  formatMoney(n) {
-    if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(2)}M`;
-    if (n >= 1_000) return `$${(n / 1_000).toFixed(0)}K`;
-    return `$${Math.round(n)}`;
-  }
-
-  /** Quadrant summary chips — "X findings worth $YK in Quick Wins". */
-  get quadrants() {
-    if (!this.hasFindings) return [];
-    const buckets = { quickWins: [], bigBets: [], tidyUps: [], defer: [] };
-    const findings = this.data.topFindings;
-    // Use $1K as the high/low impact split.
-    for (const f of findings) {
-      const gap = Number(f.gapUsd) || 0;
-      const rec = Number(f.recoverabilityScore) || 0.5;
-      const highImpact = gap > 1000;
-      const lowEffort = rec > 0.6;
-      if (highImpact && lowEffort) buckets.quickWins.push(f);
-      else if (highImpact && !lowEffort) buckets.bigBets.push(f);
-      else if (!highImpact && lowEffort) buckets.tidyUps.push(f);
-      else buckets.defer.push(f);
+  // ── Cells rendered as a flat list of 9 ──
+  get cells() {
+    const out = [];
+    for (const impact of IMPACT_ORDER) {
+      for (const effort of EFFORT_ORDER) {
+        const key = `${impact}-${effort}`;
+        const meta = CELL_META[key];
+        const c = this.matrix.buckets[key];
+        const count = c?.count || 0;
+        const isEmpty = count === 0;
+        out.push({
+          key,
+          label: meta.label,
+          themeClass: `op-wtf__cell op-wtf__cell--${meta.theme}` + (isEmpty ? ' op-wtf__cell--empty' : ''),
+          isEmpty,
+          highlight: !!meta.highlight && !isEmpty,
+          count,
+          totalFmt: isEmpty ? '—' : fmtMoney(c.totalUsd),
+          hoursFmt: isEmpty ? '' : `~${fmtHours(c.totalHours)}`,
+        });
+      }
     }
-    const sum = (arr) => arr.reduce((s, f) => s + (Number(f.gapUsd) || 0), 0);
+    return out;
+  }
+
+  // ── Row labels for the Y axis ──
+  get yLabels() {
     return [
-      { key: 'quickWins', label: 'Quick wins',    count: buckets.quickWins.length, total: this.formatMoney(sum(buckets.quickWins)), cls: 'op-quad op-quad--quick' },
-      { key: 'bigBets',   label: 'Big bets',      count: buckets.bigBets.length,   total: this.formatMoney(sum(buckets.bigBets)),   cls: 'op-quad op-quad--big' },
-      { key: 'tidyUps',   label: 'Tidy-ups',      count: buckets.tidyUps.length,   total: this.formatMoney(sum(buckets.tidyUps)),   cls: 'op-quad op-quad--tidy' },
-      { key: 'defer',     label: 'Defer',         count: buckets.defer.length,     total: this.formatMoney(sum(buckets.defer)),     cls: 'op-quad op-quad--defer' },
+      { key: 'high',   label: 'High',   sub: `≥USD ${IMPACT_HIGH / 1000}K` },
+      { key: 'medium', label: 'Medium', sub: `≥USD ${IMPACT_LOW / 1000}K` },
+      { key: 'low',    label: 'Low',    sub: `<USD ${IMPACT_LOW / 1000}K` },
     ];
   }
 
-  handleBubbleClick(event) {
+  // ── Footer summary ──
+  get footerLabel() {
+    const m = this.matrix;
+    return `${m.totalFindings} total findings · ${fmtMoney(m.totalUsd)} verified · ~${fmtHours(m.totalHours)} estimated work.`;
+  }
+
+  // ── Quick wins pill (top right of header) ──
+  get quickWins() {
+    const c = this.matrix.buckets['high-low'];
+    if (!c || c.count === 0) return null;
+    return {
+      count: c.count,
+      label: `${c.count} finding${c.count === 1 ? '' : 's'} · ${fmtMoney(c.totalUsd)}`,
+    };
+  }
+  get hasQuickWins() { return Boolean(this.quickWins); }
+
+  // ── Modal ──
+  get isModalOpen() { return Boolean(this.openCellKey); }
+  get modalData() {
+    if (!this.openCellKey) return null;
+    const c = this.matrix.buckets[this.openCellKey];
+    const meta = CELL_META[this.openCellKey];
+    if (!c) return null;
+    return {
+      label: meta.label,
+      themeClass: `op-wtf__modal-header op-wtf__modal-header--${meta.theme}`,
+      summary: `${c.count} finding${c.count === 1 ? '' : 's'} · ${fmtMoney(c.totalUsd)}`,
+      hoursLine: `~${fmtHours(c.totalHours)} estimated work`,
+      rows: c.findings.map((f) => ({
+        id: f.id,
+        detectorId: f.detectorId,
+        title: f.title || f.detectorId,
+        gapFmt: fmtMoney(f.gapUsd),
+      })),
+    };
+  }
+
+  // ── Handlers ──
+  handleCellClick(event) {
+    const key = event.currentTarget.dataset.key;
+    if (!key) return;
+    const cell = this.matrix.buckets[key];
+    if (!cell || cell.count === 0) return; // empty cells aren't clickable
+    this.openCellKey = key;
+  }
+  handleCloseModal() { this.openCellKey = null; }
+  handleModalKeydown(event) {
+    if (event.key === 'Escape') { event.preventDefault(); this.handleCloseModal(); }
+  }
+  handleModalBackdrop(event) {
+    // Close only when the backdrop itself is clicked (not inner content)
+    if (event.target === event.currentTarget) this.openCellKey = null;
+  }
+  handleRowClick(event) {
     const id = event.currentTarget.dataset.id;
     if (!id) return;
     this[NavigationMixin.Navigate]({
       type: 'standard__recordPage',
-      attributes: {
-        recordId: id,
-        objectApiName: 'ForensicFinding__c',
-        actionName: 'view',
-      },
+      attributes: { recordId: id, objectApiName: 'ForensicFinding__c', actionName: 'view' },
     });
+    this.openCellKey = null;
   }
 }

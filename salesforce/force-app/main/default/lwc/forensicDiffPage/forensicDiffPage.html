@@ -1,0 +1,84 @@
+<template>
+  <div class="op-wc">
+    <a href="javascript:void(0)" class="op-wc__back" onclick={handleBack}>
+      <lightning-icon icon-name="utility:back" size="x-small" class="op-wc__back-icon"></lightning-icon>
+      Back to org
+    </a>
+    <h1 class="op-wc__title">What&rsquo;s changed</h1>
+    <p class="op-wc__subtitle">Findings added, resolved, or worsened between the last two scans.</p>
+
+    <template if:true={isLoading}>
+      <div class="op-wc__loading">
+        <lightning-spinner alternative-text="Loading" size="small"></lightning-spinner>
+      </div>
+    </template>
+
+    <template if:true={hasError}>
+      <div class="op-wc__error">
+        <lightning-icon icon-name="utility:warning" size="x-small" class="op-wc__error-icon"></lightning-icon>
+        {error}
+      </div>
+    </template>
+
+    <template if:true={hasData}>
+      <!-- NET CHANGE card -->
+      <article class="op-wc__net">
+        <div class="op-wc__net-main">
+          <p class="op-wc__net-label">NET CHANGE</p>
+          <p class={netDeltaClass}>{netDeltaLabel}</p>
+          <p class="op-wc__net-fromto">{fromToLabel}</p>
+        </div>
+        <div class="op-wc__net-meta">
+          <p>{fromTimestamp}</p>
+          <p class="op-wc__net-arrow">↓</p>
+          <p>{toTimestamp}</p>
+        </div>
+      </article>
+
+      <!-- 4 sections -->
+      <template for:each={sections} for:item="sec">
+        <article key={sec.title} class={sec.borderClass}>
+          <header class="op-wc__sec-header">
+            <div class="op-wc__sec-title-block">
+              <lightning-icon icon-name={sec.iconName} size="small" class={sec.iconClass}></lightning-icon>
+              <div>
+                <h2 class="op-wc__sec-title">
+                  {sec.title} <span class="op-wc__sec-count">({sec.count})</span>
+                </h2>
+                <p class="op-wc__sec-sub">{sec.sub}</p>
+              </div>
+            </div>
+            <p class="op-wc__sec-sum">{sec.sumLabel}</p>
+          </header>
+          <div class="op-wc__sec-body">
+            <template if:true={sec.isEmpty}>
+              <p class="op-wc__none">None.</p>
+            </template>
+            <template if:false={sec.isEmpty}>
+              <template for:each={sec.rows} for:item="r">
+                <a
+                  key={r.id}
+                  data-id={r.id}
+                  href="javascript:void(0)"
+                  class="op-wc__row"
+                  onclick={handleRowClick}
+                >
+                  <div class="op-wc__row-meta">
+                    <p class="op-wc__row-detector">{r.detectorId}</p>
+                    <p class="op-wc__row-title">{r.title}</p>
+                  </div>
+                  <div class="op-wc__row-vals">
+                    <p class={r.primaryClass}>{r.primary}</p>
+                    <template if:true={r.secondary}>
+                      <p class="op-wc__row-secondary">{r.secondary}</p>
+                    </template>
+                  </div>
+                </a>
+              </template>
+            </template>
+          </div>
+        </article>
+      </template>
+    </template>
+  </div>
+</template>

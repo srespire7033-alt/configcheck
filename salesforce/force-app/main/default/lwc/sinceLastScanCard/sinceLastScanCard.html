@@ -1,57 +1,67 @@
 <template>
   <template if:true={shouldRender}>
-    <c-dashboard-card title="Since last scan" subtitle="What changed between your two most recent scans">
-      <div class="op-sls__top">
+    <article class="op-sls">
+      <!-- Header: icon + title + dates + net delta -->
+      <header class="op-sls__header">
+        <div class="op-sls__title-block">
+          <div class={iconWrapClass}>
+            <lightning-icon
+              icon-name={trendIcon}
+              size="small"
+              class={iconColorClass}
+            ></lightning-icon>
+          </div>
+          <div>
+            <h2 class="op-sls__title">Since your last scan</h2>
+            <p class="op-sls__dates">{fromDate} → {toDate}</p>
+          </div>
+        </div>
         <div class="op-sls__delta-block">
-          <p class={deltaClass}>{deltaFmt}</p>
-          <p class="op-sls__delta-meta">{priorFmt} → {latestFmt}</p>
+          <p class={netDeltaClass}>{netDeltaLabel}</p>
+          <p class="op-sls__delta-sub">{netDeltaSubLabel}</p>
         </div>
-        <div class="op-sls__counts">
-          <div class="op-sls__count op-sls__count--new">
-            <p class="op-sls__count-label">NEW</p>
-            <p class="op-sls__count-value">{addedCount}</p>
-          </div>
-          <div class="op-sls__count op-sls__count--resolved">
-            <p class="op-sls__count-label">RESOLVED</p>
-            <p class="op-sls__count-value">{resolvedCount}</p>
-          </div>
+      </header>
+
+      <!-- 4 tiles -->
+      <div class="op-sls__tiles">
+        <div class={newTileClass}>
+          <p class="op-sls__tile-label">
+            <lightning-icon icon-name="utility:sparkle" size="xx-small" class="op-sls__tile-icon"></lightning-icon>
+            NEW
+          </p>
+          <p class="op-sls__tile-count">{summary.newCount}</p>
+          <p class="op-sls__tile-money">{newTotalFmt}</p>
+        </div>
+        <div class={escalatedTileClass}>
+          <p class="op-sls__tile-label">
+            <lightning-icon icon-name="utility:trending" size="xx-small" class="op-sls__tile-icon"></lightning-icon>
+            ESCALATED
+          </p>
+          <p class="op-sls__tile-count">{summary.escalatedCount}</p>
+          <p class="op-sls__tile-money">{escalatedTotalFmt}</p>
+        </div>
+        <div class={resolvedTileClass}>
+          <p class="op-sls__tile-label">
+            <lightning-icon icon-name="utility:check" size="xx-small" class="op-sls__tile-icon"></lightning-icon>
+            RESOLVED
+          </p>
+          <p class="op-sls__tile-count">{summary.resolvedCount}</p>
+          <p class="op-sls__tile-money">{resolvedTotalFmt}</p>
+        </div>
+        <div class={improvedTileClass}>
+          <p class="op-sls__tile-label">
+            <lightning-icon icon-name="utility:trending" size="xx-small" class="op-sls__tile-icon op-sls__tile-icon--down"></lightning-icon>
+            IMPROVED
+          </p>
+          <p class="op-sls__tile-count">{summary.improvedCount}</p>
+          <p class="op-sls__tile-money">{improvedTotalFmt}</p>
         </div>
       </div>
 
-      <div class="op-sls__lists">
-        <template if:true={hasNewFindings}>
-          <div class="op-sls__list-col">
-            <p class="op-sls__list-heading">New findings</p>
-            <ul class="op-sls__list">
-              <template for:each={newFindings} for:item="f">
-                <li
-                  key={f.id}
-                  data-id={f.id}
-                  class="op-sls__item op-sls__item--new"
-                  onclick={handleNewClick}
-                >
-                  <span class="op-sls__item-title">{f.title}</span>
-                  <span class="op-sls__item-gap">{f.gapFmt}</span>
-                </li>
-              </template>
-            </ul>
-          </div>
-        </template>
-
-        <template if:true={hasResolved}>
-          <div class="op-sls__list-col">
-            <p class="op-sls__list-heading">Resolved findings</p>
-            <ul class="op-sls__list">
-              <template for:each={resolvedTitles} for:item="t">
-                <li key={t} class="op-sls__item op-sls__item--resolved">
-                  <span class="op-sls__item-title">{t}</span>
-                  <span class="op-sls__item-check">✓</span>
-                </li>
-              </template>
-            </ul>
-          </div>
-        </template>
-      </div>
-    </c-dashboard-card>
+      <a href="javascript:void(0)" class="op-sls__see-full" onclick={handleSeeFullDiff}>
+        See full diff
+        <lightning-icon icon-name="utility:forward" size="xx-small" class="op-sls__arrow"></lightning-icon>
+      </a>
+    </article>
   </template>
 </template>

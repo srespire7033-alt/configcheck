@@ -8,7 +8,7 @@ private class DashboardControllerTest {
 
     @isTest
     static void getDashboardSummary_emptyWhenNoScans() {
-        DashboardController.SummaryDto dto = DashboardController.getDashboardSummary();
+        DashboardController.SummaryDto dto = DashboardController.getDashboardSummary(null);
         System.assertNotEquals(null, dto);
         System.assertEquals(0, dto.scanCount);
         System.assertEquals(0, dto.findingCount);
@@ -80,7 +80,7 @@ private class DashboardControllerTest {
         insert findings;
 
         Test.startTest();
-        DashboardController.SummaryDto dto = DashboardController.getDashboardSummary();
+        DashboardController.SummaryDto dto = DashboardController.getDashboardSummary(null);
         Test.stopTest();
 
         System.assertNotEquals(null, dto.latestScan);
@@ -96,8 +96,80 @@ private class DashboardControllerTest {
     }
 
     @isTest
+    static void getDashboardSummary_filtersByConnectedOrgId() {
+        // Two ConnectedOrg__c rows, each with their own scan + findings.
+        ConnectedOrg__c orgA = new ConnectedOrg__c(
+            Name = 'Org A', InstanceUrl__c = 'https://a.my.salesforce.com',
+            NamedCredentialName__c = 'NC_A', OrgType__c = 'Production',
+            Status__c = 'Connected'
+        );
+        ConnectedOrg__c orgB = new ConnectedOrg__c(
+            Name = 'Org B', InstanceUrl__c = 'https://b.my.salesforce.com',
+            NamedCredentialName__c = 'NC_B', OrgType__c = 'Sandbox',
+            Status__c = 'Connected'
+        );
+        insert new List<ConnectedOrg__c>{ orgA, orgB };
+
+        ForensicScan__c scanA = new ForensicScan__c(
+            ConnectedOrg__c = orgA.Id, Status__c = 'Completed',
+            ProductType__c = 'CPQ', StartedAt__c = System.now().addDays(-2),
+            CompletedAt__c = System.now().addDays(-2),
+            TotalLeakageUsd__c = 100, FindingCount__c = 1
+        );
+        ForensicScan__c scanB = new ForensicScan__c(
+            ConnectedOrg__c = orgB.Id, Status__c = 'Completed',
+            ProductType__c = 'CPQ', StartedAt__c = System.now().addDays(-1),
+            CompletedAt__c = System.now().addDays(-1),
+            TotalLeakageUsd__c = 999, FindingCount__c = 5
+        );
+        insert new List<ForensicScan__c>{ scanA, scanB };
+
+        // With no filter → returns latest globally (scanB, more recent).
+        DashboardController.SummaryDto unfiltered =
+            DashboardController.getDashboardSummary(null);
+        System.assertEquals(scanB.Id, unfiltered.latestScan.Id, 'Unfiltered → latest global');
+
+        // With orgA filter → returns scanA (older but matches the filter).
+        DashboardController.SummaryDto filteredA =
+            DashboardController.getDashboardSummary(orgA.Id);
+        System.assertEquals(scanA.Id, filteredA.latestScan.Id, 'Filtered to orgA');
+        System.assertEquals(1, filteredA.scanCount, 'Only orgA scans counted');
+
+        // With orgB filter → returns scanB.
+        DashboardController.SummaryDto filteredB =
+            DashboardController.getDashboardSummary(orgB.Id);
+        System.assertEquals(scanB.Id, filteredB.latestScan.Id, 'Filtered to orgB');
+    }
+
+    /**
+     * Smoke tests for the connectedOrgId branch of the OTHER dashboard
+     * methods. Each call just exercises the filtered SOQL path; the
+     * unfiltered branch is covered by the existing tests.
+     */
+    @isTest
+    static void allMethods_acceptConnectedOrgIdParam() {
+        ConnectedOrg__c co = new ConnectedOrg__c(
+            Name = 'Org X', InstanceUrl__c = 'https://x.my.salesforce.com',
+            NamedCredentialName__c = 'NC_X', OrgType__c = 'Production',
+            Status__c = 'Connected'
+        );
+        insert co;
+
+        Test.startTest();
+        // All call paths run with a valid connectedOrgId — these exercise
+        // the connectedOrgId-non-null SOQL branches.
+        System.assertNotEquals(null, DashboardController.getMatrixFindings(co.Id));
+        System.assertNotEquals(null,
+            DashboardController.getFindingsByCategory('revenue_leakage', co.Id));
+        System.assertNotEquals(null, DashboardController.getSinceLastScan(co.Id));
+        System.assertNotEquals(null, DashboardController.getScanTrend(10, co.Id));
+        System.assertNotEquals(null, DashboardController.getScoreHistory(20, co.Id));
+        Test.stopTest();
+    }
+
+    @isTest
     static void getScanTrend_returnsEmptyWhenNoScans() {
-        List<DashboardController.ScanPoint> trend = DashboardController.getScanTrend(10);
+        List<DashboardController.ScanPoint> trend = DashboardController.getScanTrend(10, null);
         System.assertEquals(0, trend.size());
     }
 
@@ -125,7 +197,7 @@ private class DashboardControllerTest {
         );
         insert new List<ForensicScan__c>{ s3, s1, s2 };
 
-        List<DashboardController.ScanPoint> trend = DashboardController.getScanTrend(10);
+        List<DashboardController.ScanPoint> trend = DashboardController.getScanTrend(10, null);
         System.assertEquals(3, trend.size());
         // Oldest first: s1 → s2 → s3
         System.assertEquals(100000, trend[0].totalUsd);
@@ -136,7 +208,7 @@ private class DashboardControllerTest {
     @isTest
     static void getFindingsByCategory_emptyWhenNoScans() {
         DashboardController.CategoryFindingsDto dto =
-            DashboardController.getFindingsByCategory('revenue_leakage');
+            DashboardController.getFindingsByCategory('revenue_leakage', null);
         System.assertEquals(0, dto.findingCount);
         System.assertEquals(0, dto.findings.size());
         System.assertEquals(0, dto.byDetector.size());
@@ -167,7 +239,7 @@ private class DashboardControllerTest {
         };
 
         DashboardController.CategoryFindingsDto rl =
-            DashboardController.getFindingsByCategory('revenue_leakage');
+            DashboardController.getFindingsByCategory('revenue_leakage', null);
         System.assertEquals(3, rl.findingCount, 'REN-002 should be excluded');
         System.assertEquals(80000, rl.totalUsd);
         System.assertEquals(2, rl.byDetector.size(), '2 detectors in revenue_leakage');
@@ -178,14 +250,14 @@ private class DashboardControllerTest {
         System.assertEquals(30000, rl.byDetector[1].totalUsd);
 
         DashboardController.CategoryFindingsDto pricing =
-            DashboardController.getFindingsByCategory('pricing');
+            DashboardController.getFindingsByCategory('pricing', null);
         System.assertEquals(1, pricing.findingCount);
         System.assertEquals('REN-002', pricing.byDetector[0].detectorId);
     }
 
     @isTest
     static void getSinceLastScan_emptyWhenNoScans() {
-        DashboardController.SinceLastScanDto dto = DashboardController.getSinceLastScan();
+        DashboardController.SinceLastScanDto dto = DashboardController.getSinceLastScan(null);
         System.assertEquals(false, dto.hasPrior);
         System.assertEquals(0, dto.addedCount);
         System.assertEquals(0, dto.resolvedCount);
@@ -232,7 +304,7 @@ private class DashboardControllerTest {
         };
 
         Test.startTest();
-        DashboardController.SinceLastScanDto dto = DashboardController.getSinceLastScan();
+        DashboardController.SinceLastScanDto dto = DashboardController.getSinceLastScan(null);
         Test.stopTest();
 
         System.assertEquals(true, dto.hasPrior);
@@ -322,10 +394,10 @@ private class DashboardControllerTest {
             );
         }
         // null → defaults to 10 (still works)
-        System.assertEquals(3, DashboardController.getScanTrend(null).size());
+        System.assertEquals(3, DashboardController.getScanTrend(null, null).size());
         // explicit 2 → only 2 returned
-        System.assertEquals(2, DashboardController.getScanTrend(2).size());
+        System.assertEquals(2, DashboardController.getScanTrend(2, null).size());
         // over 50 → clamped to default 10 (so 3 here)
-        System.assertEquals(3, DashboardController.getScanTrend(999).size());
+        System.assertEquals(3, DashboardController.getScanTrend(999, null).size());
     }
 }

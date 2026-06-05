@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomMetadata xmlns="http://soap.sforce.com/2006/04/metadata" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" fqn="RemediationRecipe__mdt.DSC_FOR_001">
+    <label>DSC-FOR-001</label>
+    <protected>false</protected>
+    <values><field>DetectorId__c</field><value xsi:type="xsd:string">DSC-FOR-001</value></values>
+    <values><field>Title__c</field><value xsi:type="xsd:string">Remove expired promo discount on Quote Line {primaryRecordId}</value></values>
+    <values><field>EstimatedEffort__c</field><value xsi:type="xsd:string">15-20 min</value></values>
+    <values><field>Skill__c</field><value xsi:type="xsd:string">CPQ Admin</value></values>
+    <values><field>Steps__c</field><value xsi:type="xsd:string">1. Open Quote Line {primaryRecordId} — promo schedule &quot;{scheduleName}&quot; ended {scheduleEndDate} but discount is still being applied.
+2. In Setup, locate the SBQQ__DiscountSchedule__c record and confirm SBQQ__EndDate__c.
+3. Either inactivate the schedule (SBQQ__Active__c = false) OR rebuild it with a current effective window if the promo was extended.
+4. Re-calculate any open Quotes that referenced this schedule to flush the stale discount.
+5. Add a Validation Rule on SBQQ__DiscountSchedule__c blocking lookups to inactive/expired schedules so this can't recur.</value></values>
+    <values><field>Version__c</field><value xsi:type="xsd:double">1.0</value></values>
+    <values>
+        <field>NoteSuggestion1__c</field>
+        <value xsi:type="xsd:string">Discount schedule inactivated; open quotes recalculated.</value>
+    </values>
+    <values>
+        <field>NoteSuggestion2__c</field>
+        <value xsi:type="xsd:string">Confirmed promo was extended; new schedule replaces this one.</value>
+    </values>
+    <values>
+        <field>NoteSuggestion3__c</field>
+        <value xsi:type="xsd:string">False positive - discount applies to a different SKU; suppressing.</value>
+    </values>
+</CustomMetadata>

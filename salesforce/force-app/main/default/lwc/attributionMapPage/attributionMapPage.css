@@ -1,0 +1,174 @@
+.op-am {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px;
+  font-family: var(--op-font-body, 'Salesforce Sans', Arial, sans-serif);
+}
+.op-am__loading { padding: 40px; display: flex; justify-content: center; }
+.op-am__error,
+.op-am__empty { font-size: 13px; color: #6b7280; padding: 30px; text-align: center; }
+
+.op-am__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 22px;
+  padding: 16px 20px;
+  background: linear-gradient(135deg, #ede9fe 0%, #f3e8ff 100%);
+  border: 1px solid #ddd6fe;
+  border-radius: 12px;
+}
+.op-am__head-left { display: flex; gap: 12px; align-items: center; }
+.op-am__head-icon-wrap {
+  width: 40px; height: 40px;
+  background: #c4b5fd; border-radius: 10px;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.op-am__head-icon { --sds-c-icon-color-foreground-default: #6d28d9; }
+.op-am__title { font-size: 22px; font-weight: 800; color: #4c1d95; margin: 0; }
+.op-am__subtitle { font-size: 12px; color: #6d28d9; margin: 2px 0 0; }
+.op-am__head-right { text-align: right; }
+.op-am__head-total { font-size: 22px; font-weight: 800; color: #6d28d9; margin: 0; font-feature-settings: 'tnum'; }
+.op-am__head-sub { font-size: 11px; color: #7c3aed; margin: 0; }
+
+.op-am__list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.op-am__row {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: box-shadow 0.12s;
+}
+.op-am__row:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+.op-am__row-head {
+  display: grid;
+  grid-template-columns: 120px 1fr 60px 120px 24px;
+  gap: 14px;
+  align-items: center;
+  padding: 12px 16px;
+}
+.op-am__type {
+  font-family: 'SF Mono', 'Consolas', monospace;
+  font-size: 10px;
+  font-weight: 700;
+  background: #ede9fe;
+  color: #6d28d9;
+  padding: 3px 8px;
+  border-radius: 4px;
+  text-align: center;
+}
+.op-am__row-main { min-width: 0; }
+.op-am__row-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: #111827;
+  margin: 0 0 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.op-am__row-class {
+  font-size: 11px;
+  color: #6b7280;
+  margin: 0;
+}
+.op-am__row-count {
+  font-size: 12px;
+  font-weight: 700;
+  text-align: center;
+  background: #f3f4f6;
+  color: #4b5563;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-feature-settings: 'tnum';
+}
+.op-am__row-total {
+  font-size: 16px;
+  font-weight: 800;
+  color: #6d28d9;
+  text-align: right;
+  font-feature-settings: 'tnum';
+}
+.op-am__chev {
+  --sds-c-icon-color-foreground-default: #9ca3af;
+  transition: transform 0.15s;
+}
+.op-am__chev--open { transform: rotate(180deg); }
+
+.op-am__findings {
+  list-style: none;
+  padding: 6px 16px 12px 152px;
+  margin: 0;
+  border-top: 1px solid #f3f4f6;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.op-am__finding {
+  display: grid;
+  grid-template-columns: 70px 90px 1fr 100px;
+  gap: 10px;
+  align-items: center;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: #fafafa;
+}
+.op-am__finding:hover { background: #f3f4f6; }
+.op-am__sev {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 999px;
+  text-transform: uppercase;
+  text-align: center;
+}
+.op-am__sev--critical { background: #fee2e2; color: #b91c1c; }
+.op-am__sev--warning  { background: #fef3c7; color: #b45309; }
+.op-am__sev--info     { background: #dbeafe; color: #1d4ed8; }
+.op-am__finding-det {
+  font-family: 'SF Mono', 'Consolas', monospace;
+  font-size: 11px;
+  color: #6b7280;
+}
+.op-am__finding-title {
+  font-size: 13px;
+  color: #1f2937;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.op-am__finding-gap {
+  font-size: 13px;
+  font-weight: 700;
+  color: #047857;
+  font-feature-settings: 'tnum';
+  text-align: right;
+}
+
+/* ─── WCAG 2.1 AA accessibility ────────────────────────────────────── */
+/* Visible keyboard focus indicators on all interactives */
+button:focus-visible,
+a:focus-visible,
+[role="button"]:focus-visible,
+[role="dialog"]:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.2);
+}
+/* Honor user's reduced-motion preference */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    transform: none !important;
+  }
+}

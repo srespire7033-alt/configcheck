@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomMetadata xmlns="http://soap.sforce.com/2006/04/metadata" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" fqn="RemediationRecipe__mdt.CT_FOR_001">
+    <label>CT-FOR-001</label>
+    <protected>false</protected>
+    <values><field>DetectorId__c</field><value xsi:type="xsd:string">CT-FOR-001</value></values>
+    <values><field>Title__c</field><value xsi:type="xsd:string">Inactivate expired Contracted Price {contractedPriceId}</value></values>
+    <values><field>EstimatedEffort__c</field><value xsi:type="xsd:string">10-15 min</value></values>
+    <values><field>Skill__c</field><value xsi:type="xsd:string">CPQ Admin</value></values>
+    <values><field>Steps__c</field><value xsi:type="xsd:string">1. Open Contracted Price {contractedPriceId} — expired {daysExpired} days ago on {expiration}.
+2. Locked price was {lockedPrice}; current list is {currentList}. Quotes are still picking up the stale value.
+3. Either delete the Contracted Price OR set SBQQ__Active__c = false. Either path stops it from applying to new quotes.
+4. Re-calculate any open Quotes that referenced this CP to flush the stale price.
+5. Add a scheduled Apex job to inactivate expired Contracted Prices nightly — there's no native cleanup.</value></values>
+    <values><field>Version__c</field><value xsi:type="xsd:double">1.0</value></values>
+    <values>
+        <field>NoteSuggestion1__c</field>
+        <value xsi:type="xsd:string">Contracted Price inactivated; open quotes recalculated.</value>
+    </values>
+    <values>
+        <field>NoteSuggestion2__c</field>
+        <value xsi:type="xsd:string">Nightly cleanup job scheduled to retire expired CPs.</value>
+    </values>
+    <values>
+        <field>NoteSuggestion3__c</field>
+        <value xsi:type="xsd:string">Contracted Price intentionally retained for audit history; suppressing.</value>
+    </values>
+</CustomMetadata>

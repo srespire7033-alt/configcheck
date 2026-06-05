@@ -30,7 +30,8 @@ export default class ScanLauncherV2 extends NavigationMixin(LightningElement) {
   running = false;
   lastError;
 
-  @wire(getDashboardSummary)
+  // Pass null connectedOrgId: scan launcher operates globally, not per-org.
+  @wire(getDashboardSummary, { connectedOrgId: null })
   wireSummary(result) {
     this.wiredSummary = result;
   }

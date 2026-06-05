@@ -9,7 +9,7 @@
  * class can power many schedules — each registered job knows which
  * schedule row to look up on fire.
  */
-public class ForensicScanScheduler implements Schedulable {
+public with sharing class ForensicScanScheduler implements Schedulable {
 
     private Id scheduleId;
 
@@ -22,7 +22,7 @@ public class ForensicScanScheduler implements Schedulable {
         try {
             schedule = [
                 SELECT Id, ProductType__c, IsActive__c
-                FROM ScanSchedule__c WHERE Id = :scheduleId LIMIT 1
+                FROM ScanSchedule__c WHERE Id = :scheduleId WITH SECURITY_ENFORCED LIMIT 1
             ];
         } catch (Exception e) {
             // Schedule was deleted but the cron job survived — abort

@@ -32,7 +32,7 @@ public with sharing class ScheduleController {
             SELECT Id, Name, Label__c, ProductType__c, CronExpression__c,
                    IsActive__c, LastRunAt__c, LastRunStatus__c, CronJobId__c
             FROM ScanSchedule__c
-            ORDER BY CreatedDate DESC
+            WITH SECURITY_ENFORCED ORDER BY CreatedDate DESC
             LIMIT 100
         ];
         if (rows.isEmpty()) return out;
@@ -44,8 +44,7 @@ public with sharing class ScheduleController {
         Map<Id, Datetime> nextFireById = new Map<Id, Datetime>();
         if (!jobIds.isEmpty()) {
             for (CronTrigger t : [
-                SELECT Id, NextFireTime FROM CronTrigger WHERE Id IN :jobIds
-            ]) {
+                SELECT Id, NextFireTime FROM CronTrigger WHERE Id IN :jobIds WITH SECURITY_ENFORCED ]) {
                 nextFireById.put(t.Id, t.NextFireTime);
             }
         }
@@ -117,7 +116,7 @@ public with sharing class ScheduleController {
         ScanSchedule__c row = [
             SELECT Id, Label__c, ProductType__c, CronExpression__c,
                    IsActive__c, CronJobId__c
-            FROM ScanSchedule__c WHERE Id = :scheduleId LIMIT 1
+            FROM ScanSchedule__c WHERE Id = :scheduleId WITH SECURITY_ENFORCED LIMIT 1
         ];
         if (active == row.IsActive__c) return; // no-op
 
@@ -148,7 +147,7 @@ public with sharing class ScheduleController {
     @AuraEnabled
     public static void deleteSchedule(Id scheduleId) {
         ScanSchedule__c row = [
-            SELECT Id, CronJobId__c FROM ScanSchedule__c WHERE Id = :scheduleId LIMIT 1
+            SELECT Id, CronJobId__c FROM ScanSchedule__c WHERE Id = :scheduleId WITH SECURITY_ENFORCED LIMIT 1
         ];
         if (String.isNotBlank(row.CronJobId__c)) {
             try { System.abortJob(row.CronJobId__c); } catch (Exception ignored) {}
@@ -163,7 +162,7 @@ public with sharing class ScheduleController {
     @AuraEnabled
     public static Id runNow(Id scheduleId) {
         ScanSchedule__c row = [
-            SELECT Id, ProductType__c FROM ScanSchedule__c WHERE Id = :scheduleId LIMIT 1
+            SELECT Id, ProductType__c FROM ScanSchedule__c WHERE Id = :scheduleId WITH SECURITY_ENFORCED LIMIT 1
         ];
         Id scanId = ForensicScanService.startScan(row.ProductType__c);
         row.LastRunAt__c = System.now();

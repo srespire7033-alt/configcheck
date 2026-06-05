@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>CategoryKey__c</fullName>
+    <label>Category Key</label>
+    <description>Stable identifier (revenue_leakage, governance, pipeline, pricing). Matches Detector__mdt.Category__c values.</description>
+    <type>Text</type><length>40</length><required>true</required><unique>true</unique><externalId>true</externalId>
+    <fieldManageability>SubscriberControlled</fieldManageability>
+</CustomField>

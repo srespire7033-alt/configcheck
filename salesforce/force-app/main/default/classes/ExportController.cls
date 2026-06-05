@@ -23,22 +23,22 @@ public with sharing class ExportController {
         List<ForensicScan__c> scans = [
             SELECT Id, Name FROM ForensicScan__c
             WHERE Status__c IN ('Completed', 'Partial')
-            ORDER BY StartedAt__c DESC LIMIT 1
+            WITH SECURITY_ENFORCED ORDER BY StartedAt__c DESC LIMIT 1
         ];
         if (scans.isEmpty()) return '';
 
         Id scanId = scans[0].Id;
-        List<ForensicFinding__c> rows = [
-            SELECT Id, DetectorId__c, Title__c, Description__c, Severity__c,
-                   EntitledUsd__c, RealizedUsd__c, GapUsd__c, RecoverabilityScore__c,
-                   CurrencyIsoCode, PrimaryRecordType__c, PrimaryRecordId__c,
-                   DetectedAt__c, ConsultantNote__c
-            FROM ForensicFinding__c
-            WHERE ForensicScan__c = :scanId
-              AND HiddenAt__c = null
-            ORDER BY GapUsd__c DESC
-            LIMIT 5000
-        ];
+        String rowsSoql =
+            'SELECT Id, DetectorId__c, Title__c, Description__c, Severity__c, ' +
+            '       EntitledUsd__c, RealizedUsd__c, GapUsd__c, RecoverabilityScore__c' +
+            CurrencyContext.soqlSelect() + ', PrimaryRecordType__c, PrimaryRecordId__c, ' +
+            '       DetectedAt__c, ConsultantNote__c ' +
+            'FROM ForensicFinding__c ' +
+            'WHERE ForensicScan__c = :scanId ' +
+            '  AND HiddenAt__c = null ' +
+            'WITH SECURITY_ENFORCED ORDER BY GapUsd__c DESC ' +
+            'LIMIT 5000';
+        List<ForensicFinding__c> rows = Database.query(rowsSoql);
 
         List<String> lines = new List<String>();
         lines.add(String.join(new List<String>{
@@ -57,7 +57,7 @@ public with sharing class ExportController {
                 esc(f.RealizedUsd__c),
                 esc(f.GapUsd__c),
                 esc(f.RecoverabilityScore__c),
-                esc(f.CurrencyIsoCode),
+                esc(CurrencyContext.read(f)),
                 esc(f.PrimaryRecordType__c),
                 esc(f.PrimaryRecordId__c),
                 esc(f.DetectedAt__c),
@@ -77,7 +77,7 @@ public with sharing class ExportController {
                    ForensicFinding__r.DetectorId__c,
                    ForensicFinding__r.GapUsd__c
             FROM RecoveryAction__c
-            ORDER BY CreatedDate DESC
+            WITH SECURITY_ENFORCED ORDER BY CreatedDate DESC
             LIMIT 5000
         ];
 

@@ -111,7 +111,27 @@ export default class FindingDetail extends NavigationMixin(LightningElement) {
   }
 
   async handleCommit() {
-    await this.runAction(markCommitted, 'Marked as committed');
+    // Phase 14a — markCommitted now auto-verifies in the same
+    // transaction and returns { verdict: { status, message } }.
+    // Surface the verdict in the toast so the consultant sees the
+    // verification outcome immediately.
+    this.busy = true;
+    try {
+      const result = await markCommitted({ actionId: this.detail.recoveryAction.Id });
+      await refreshApex(this.wiredDetail);
+      const verdict = result?.verdict;
+      if (verdict?.status === 'verified') {
+        this.toast('Committed and verified', verdict.message || '', 'success');
+      } else if (verdict?.status === 'regressed') {
+        this.toast('Committed — verification failed', verdict.message || '', 'warning');
+      } else {
+        this.toast('Marked as committed', verdict?.message || '', 'success');
+      }
+    } catch (e) {
+      this.toast('Action failed', this.errMessage(e), 'error');
+    } finally {
+      this.busy = false;
+    }
   }
 
   async handleRestage() {

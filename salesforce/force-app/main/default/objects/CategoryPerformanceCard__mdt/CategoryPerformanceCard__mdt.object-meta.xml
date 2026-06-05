@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomObject xmlns="http://soap.sforce.com/2006/04/metadata">
+    <description>Phase 20c — Per-category cards on the Category Performance grid. One record per card (Products, Price Rules, Subscriptions, etc.) grouped into sections (CPQ/Billing/ARM). Customers add/edit/reorder cards entirely in Setup.</description>
+    <label>Category Performance Card</label>
+    <pluralLabel>Category Performance Cards</pluralLabel>
+    <visibility>Public</visibility>
+</CustomObject>

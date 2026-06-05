@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Title__c</fullName>
+    <label>Title</label>
+    <description>Card heading (e.g. "Governance Risk").</description>
+    <type>Text</type><length>80</length>
+    <fieldManageability>SubscriberControlled</fieldManageability>
+</CustomField>

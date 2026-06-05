@@ -1,0 +1,118 @@
+<template>
+  <article class="op-idp">
+    <template if:true={isLoading}>
+      <div class="op-idp__loading"><lightning-spinner alternative-text="Loading" size="small"></lightning-spinner></div>
+    </template>
+
+    <template if:true={hasError}>
+      <p class="op-idp__error">{error}</p>
+    </template>
+
+    <template if:true={hasData}>
+      <!-- Header -->
+      <header class="op-idp__header">
+        <button class="op-idp__back" onclick={handleBack} aria-label="Back">
+          <lightning-icon icon-name="utility:back" size="small"></lightning-icon>
+        </button>
+        <div class="op-idp__head-body">
+          <div class="op-idp__head-chips">
+            <span class={severityChipClass}>{severityLabel}</span>
+            <span class="op-idp__detector-code">{data.detectorId}</span>
+          </div>
+          <h1 class="op-idp__title">{data.title}</h1>
+        </div>
+        <lightning-combobox
+          variant="label-hidden"
+          label="Status"
+          value={data.status}
+          options={statusOptions}
+          onchange={handleStatusChange}
+          disabled={saving}
+          class="op-idp__status"
+        ></lightning-combobox>
+      </header>
+
+      <!-- Consultant notes — survive across visits and handoffs -->
+      <c-finding-notes record-id={effectiveId}></c-finding-notes>
+
+      <!-- What's Wrong -->
+      <section class="op-idp__card">
+        <header class="op-idp__card-head">
+          <h2 class="op-idp__card-title">What's Wrong</h2>
+        </header>
+        <div class="op-idp__card-body">
+          <p>{data.description}</p>
+        </div>
+      </section>
+
+      <!-- Why It Matters -->
+      <section class="op-idp__card">
+        <header class="op-idp__card-head">
+          <h2 class="op-idp__card-title">Why It Matters</h2>
+        </header>
+        <div class="op-idp__card-body">
+          <p>{data.whyItMatters}</p>
+        </div>
+      </section>
+
+      <!-- What To Change -->
+      <section class="op-idp__card">
+        <header class="op-idp__card-head">
+          <h2 class="op-idp__card-title">What To Change</h2>
+        </header>
+        <div class="op-idp__card-body">
+          <p>{data.recommendedFix}</p>
+        </div>
+      </section>
+
+      <!-- AI Fix Suggestion (purple) -->
+      <section class="op-idp__card op-idp__card--ai">
+        <header class="op-idp__card-head op-idp__card-head--ai">
+          <h2 class="op-idp__card-title op-idp__card-title--ai">
+            <lightning-icon icon-name="utility:einstein" size="x-small" class="op-idp__ai-icon"></lightning-icon>
+            AI Fix Suggestion
+          </h2>
+          <button class="op-idp__ai-btn" onclick={handleGenerateFix}>
+            <lightning-icon icon-name="utility:sparkle" size="xx-small" class="op-idp__ai-btn-icon"></lightning-icon>
+            Generate Fix
+          </button>
+        </header>
+        <div class="op-idp__card-body op-idp__card-body--ai">
+          <p class="op-idp__ai-text">{aiSuggestionText}</p>
+        </div>
+      </section>
+
+      <!-- Affected Records -->
+      <section class="op-idp__card">
+        <header class="op-idp__card-head">
+          <h2 class="op-idp__card-title">Affected Records</h2>
+        </header>
+        <div class="op-idp__card-body">
+          <template if:false={hasAffected}>
+            <p class="op-idp__none">No related records resolved.</p>
+          </template>
+          <template if:true={hasAffected}>
+            <div class="op-idp__affected-list">
+              <template for:each={data.affectedRecords} for:item="r">
+                <div key={r.id} class="op-idp__affected-row">
+                  <span class="op-idp__obj-chip">{r.objectType}</span>
+                  <span class="op-idp__affected-name">{r.name}</span>
+                  <button
+                    type="button"
+                    data-id={r.id}
+                    data-type={r.objectType}
+                    class="op-idp__affected-open"
+                    onclick={handleAffectedOpen}
+                    title="Open record"
+                  >
+                    <lightning-icon icon-name="utility:new_window" size="xx-small"></lightning-icon>
+                  </button>
+                </div>
+              </template>
+            </div>
+          </template>
+        </div>
+      </section>
+    </template>
+  </article>
+</template>

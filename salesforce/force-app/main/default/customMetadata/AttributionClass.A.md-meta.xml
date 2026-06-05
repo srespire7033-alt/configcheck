@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomMetadata xmlns="http://soap.sforce.com/2006/04/metadata" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" fqn="AttributionClass__mdt.A">
+    <label>Class A</label>
+    <protected>false</protected>
+    <values><field>Letter__c</field><value xsi:type="xsd:string">A</value></values>
+    <values><field>Label__c</field><value xsi:type="xsd:string">Process and System Disconnect</value></values>
+    <values><field>Description__c</field><value xsi:type="xsd:string">A bridge between two systems (CPQ to Billing, Sales Cloud to Order Management, provisioning to CPQ) silently failed. Each system internally correct; data flow between them broke.</value></values>
+</CustomMetadata>

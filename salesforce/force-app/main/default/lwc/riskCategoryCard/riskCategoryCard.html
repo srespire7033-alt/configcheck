@@ -1,0 +1,94 @@
+<template>
+  <article class="op-rc">
+    <header class="op-rc__header">
+      <div class="op-rc__head-left">
+        <div class={headerIconWrapClass}>
+          <lightning-icon icon-name={iconName} size="small" class={headerIconClass}></lightning-icon>
+        </div>
+        <div>
+          <h2 class="op-rc__title">{title}</h2>
+          <p class="op-rc__subtitle">{subtitle}</p>
+        </div>
+      </div>
+      <template if:true={hasData}>
+        <div class={summaryChipClass}>
+          <p class="op-rc__summary-big">{summaryBig}</p>
+          <p class="op-rc__summary-small">{summarySmall}</p>
+        </div>
+      </template>
+    </header>
+
+    <template if:true={isLoading}>
+      <div class="op-rc__loading"><lightning-spinner alternative-text="Loading" size="small"></lightning-spinner></div>
+    </template>
+
+    <template if:true={hasError}>
+      <p class="op-rc__error">{error}</p>
+    </template>
+
+    <template if:true={isEmpty}>
+      <p class="op-rc__empty">No findings in this category. Run a forensic scan to populate.</p>
+    </template>
+
+    <template if:true={hasContent}>
+      <!-- Detector summary grid -->
+      <div class="op-rc__detectors">
+        <template for:each={detectorCards} for:item="d">
+          <article key={d.detectorId} class={d.accentBorder}>
+            <p class="op-rc__det-code">{d.detectorId}</p>
+            <p class="op-rc__det-title">{d.title}</p>
+            <p class="op-rc__det-meta">
+              <span>{d.countLabel}</span>
+              <template if:true={d.gapLabel}>
+                <span class="op-rc__det-gap">{d.gapLabel}</span>
+              </template>
+            </p>
+          </article>
+        </template>
+      </div>
+
+      <!-- Findings section -->
+      <header class="op-rc__sec-header">FINDINGS</header>
+      <div class="op-rc__toolbar">
+        <lightning-input
+          type="search"
+          variant="label-hidden"
+          placeholder="Search findings…"
+          value={searchTerm}
+          oninput={handleSearch}
+          class="op-rc__search"
+        ></lightning-input>
+        <div class="op-rc__pill-group">
+          <span class="op-rc__pill-label">Effort</span>
+          <template for:each={effortPills} for:item="p">
+            <button key={p.value} type="button" data-value={p.value}
+                    class={p.pillClass} onclick={toggleEffort}>{p.label}</button>
+          </template>
+        </div>
+        <div class="op-rc__pill-group">
+          <span class="op-rc__pill-label">Severity</span>
+          <template for:each={severityPills} for:item="p">
+            <button key={p.value} type="button" data-value={p.value}
+                    class={p.pillClass} onclick={toggleSev}>{p.label}</button>
+          </template>
+        </div>
+      </div>
+      <p class="op-rc__count">{filteredCountLabel}</p>
+
+      <div class="op-rc__list">
+        <template for:each={findingsRows} for:item="r">
+          <article key={r.id} data-id={r.id} class="op-rc__row" onclick={handleRowClick}>
+            <input type="checkbox" class="op-rc__row-cb" aria-label="Select"/>
+            <span class="op-rc__row-det">{r.detectorId}</span>
+            <span class={r.effortChipClass}>{r.effortLabel}</span>
+            <span class="op-rc__row-title">{r.truncatedTitle}</span>
+            <template if:true={r.gapSuffix}>
+              <span class="op-rc__row-gap">{r.gapSuffix}</span>
+            </template>
+            <lightning-icon icon-name="utility:chevronright" size="xx-small" class="op-rc__row-chev"></lightning-icon>
+          </article>
+        </template>
+      </div>
+    </template>
+  </article>
+</template>

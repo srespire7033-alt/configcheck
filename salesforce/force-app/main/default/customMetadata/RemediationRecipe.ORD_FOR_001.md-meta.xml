@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomMetadata xmlns="http://soap.sforce.com/2006/04/metadata" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" fqn="RemediationRecipe__mdt.ORD_FOR_001">
+    <label>ORD-FOR-001</label>
+    <protected>false</protected>
+    <values><field>DetectorId__c</field><value xsi:type="xsd:string">ORD-FOR-001</value></values>
+    <values><field>Title__c</field><value xsi:type="xsd:string">Generate missing billing schedule for Order {primaryRecordId}</value></values>
+    <values><field>EstimatedEffort__c</field><value xsi:type="xsd:string">30-60 min</value></values>
+    <values><field>Skill__c</field><value xsi:type="xsd:string">Billing Admin</value></values>
+    <values><field>Steps__c</field><value xsi:type="xsd:string">1. Open Order {primaryRecordId} (activated {daysSinceActivation} days ago with {itemCount} OrderItem(s)) and inspect OrderItems.
+2. Confirm blng__BillingRule__c is populated on every OrderItem (a null lookup is the most common cause).
+3. If null: set the BillingRule, re-trigger schedule generation (Activate the Order again, or run the bundled schedule-creation Flow).
+4. If populated: inspect the Order Activation Flow / Apex Trigger that should generate blng__BillingSchedule__c — is it active, errored, or never installed?
+5. Verify schedules now exist by querying blng__BillingSchedule__c WHERE blng__Order__c = {primaryRecordId}.</value></values>
+    <values><field>Version__c</field><value xsi:type="xsd:double">1.0</value></values>
+    <values>
+        <field>NoteSuggestion1__c</field>
+        <value xsi:type="xsd:string">Billing Rule set on OrderItems; schedules now generated.</value>
+    </values>
+    <values>
+        <field>NoteSuggestion2__c</field>
+        <value xsi:type="xsd:string">Activation Flow re-enabled; schedules backfilled.</value>
+    </values>
+    <values>
+        <field>NoteSuggestion3__c</field>
+        <value xsi:type="xsd:string">Customer on legacy billing path; not in scope for OrgPrism.</value>
+    </values>
+</CustomMetadata>

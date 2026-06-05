@@ -1,0 +1,171 @@
+<template>
+  <div class="op-im__backdrop" onclick={handleBackdrop} role="dialog" aria-modal="true" aria-labelledby="op-im-title">
+    <div class="op-im">
+      <template if:true={isLoading}>
+        <div class="op-im__loading"><lightning-spinner alternative-text="Loading" size="small"></lightning-spinner></div>
+      </template>
+
+      <template if:true={hasError}>
+        <div class="op-im__error">
+          <p>{error}</p>
+          <button class="op-im__btn op-im__btn--close" onclick={handleClose}>Close</button>
+        </div>
+      </template>
+
+      <template if:true={hasData}>
+        <!-- Header -->
+        <header class="op-im__header">
+          <div class="op-im__head-left">
+            <div class={headerIconWrapClass}>
+              <lightning-icon icon-name={headerIconName} size="small" class={headerIconClass}></lightning-icon>
+            </div>
+            <div class="op-im__head-meta">
+              <div class="op-im__head-chips">
+                <span class={severityChipClass}>{severityLabel}</span>
+                <span class="op-im__detector-code">{data.detectorId}</span>
+              </div>
+              <h2 class="op-im__head-title" id="op-im-title">{data.title}</h2>
+            </div>
+          </div>
+          <div class="op-im__head-right">
+            <lightning-combobox
+              variant="label-hidden"
+              label="Status"
+              value={data.status}
+              options={statusOptions}
+              onchange={handleStatusChange}
+              disabled={saving}
+              class="op-im__status-select"
+            ></lightning-combobox>
+            <button class="op-im__close" onclick={handleClose} aria-label="Close">
+              <lightning-icon icon-name="utility:close" size="small"></lightning-icon>
+            </button>
+          </div>
+        </header>
+
+        <!-- Key facts grid -->
+        <div class="op-im__facts">
+          <div class="op-im__fact">
+            <p class="op-im__fact-label">SEVERITY</p>
+            <p class={severityFactClass}>{data.severity}</p>
+          </div>
+          <div class="op-im__fact">
+            <p class="op-im__fact-label">AFFECTED</p>
+            <p class="op-im__fact-val">{affectedLabel}</p>
+          </div>
+          <div class="op-im__fact">
+            <p class="op-im__fact-label">REVENUE AT RISK</p>
+            <p class="op-im__fact-val">{revenueLabel}</p>
+          </div>
+          <div class="op-im__fact">
+            <p class="op-im__fact-label">CATEGORY</p>
+            <p class="op-im__fact-val">{data.categoryLabel}</p>
+          </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="op-im__tabs">
+          <button class={detailsTabClass} data-tab="details" onclick={handleTab}>
+            <span>Issue Details</span>
+          </button>
+          <button class={fixTabClass} data-tab="fix" onclick={handleTab}>
+            <lightning-icon icon-name="utility:einstein" size="xx-small" class="op-im__tab-icon"></lightning-icon>
+            <span>Fix &amp; Remediation</span>
+          </button>
+        </div>
+
+        <!-- Tab body -->
+        <div class="op-im__body">
+          <template if:true={isDetailsActive}>
+            <section class="op-im__sec">
+              <p class="op-im__sec-label">
+                <lightning-icon icon-name="utility:description" size="xx-small" class="op-im__sec-icon"></lightning-icon>
+                WHAT'S WRONG
+              </p>
+              <p class="op-im__sec-body">{data.description}</p>
+            </section>
+
+            <section class="op-im__sec">
+              <p class="op-im__sec-label">
+                <lightning-icon icon-name="utility:trending" size="xx-small" class="op-im__sec-icon"></lightning-icon>
+                WHY IT MATTERS
+              </p>
+              <p class="op-im__sec-body">{data.whyItMatters}</p>
+            </section>
+
+            <section class="op-im__sec op-im__sec--fix">
+              <p class="op-im__sec-label op-im__sec-label--fix">
+                <lightning-icon icon-name="utility:target" size="xx-small" class="op-im__sec-icon op-im__sec-icon--fix"></lightning-icon>
+                RECOMMENDED FIX
+              </p>
+              <p class="op-im__sec-body op-im__sec-body--fix">{data.recommendedFix}</p>
+            </section>
+
+            <section class="op-im__sec">
+              <div class="op-im__affected-header">
+                <p class="op-im__sec-label">
+                  <lightning-icon icon-name="utility:settings" size="xx-small" class="op-im__sec-icon"></lightning-icon>
+                  {affectedCountLabel}
+                </p>
+                <lightning-input
+                  variant="label-hidden"
+                  type="search"
+                  placeholder="Filter…"
+                  value={filterTerm}
+                  oninput={handleFilterInput}
+                  class="op-im__filter"
+                ></lightning-input>
+              </div>
+              <div class="op-im__affected-list">
+                <template for:each={filteredAffected} for:item="r">
+                  <div key={r.id} class="op-im__affected-row">
+                    <span class="op-im__obj-chip">{r.objectType}</span>
+                    <span class="op-im__affected-name">{r.name}</span>
+                    <button
+                      type="button"
+                      data-id={r.id}
+                      data-type={r.objectType}
+                      class="op-im__affected-open"
+                      onclick={handleAffectedOpen}
+                      title="Open record"
+                    >
+                      <lightning-icon icon-name="utility:new_window" size="xx-small"></lightning-icon>
+                    </button>
+                  </div>
+                </template>
+              </div>
+            </section>
+          </template>
+
+          <template if:true={isFixActive}>
+            <section class="op-im__sec op-im__sec--fix">
+              <p class="op-im__sec-label op-im__sec-label--fix">
+                <lightning-icon icon-name="utility:target" size="xx-small" class="op-im__sec-icon op-im__sec-icon--fix"></lightning-icon>
+                RECOMMENDED FIX
+              </p>
+              <p class="op-im__sec-body op-im__sec-body--fix">{data.recommendedFix}</p>
+            </section>
+            <p class="op-im__hint">For step-by-step remediation, click <strong>Mark Fixed</strong> after applying the change in Salesforce. Suppression options (False Positive / Not Relevant) skip this finding in future scans once you confirm it's noise.</p>
+          </template>
+        </div>
+
+        <!-- Footer actions -->
+        <footer class="op-im__footer">
+          <button class="op-im__btn op-im__btn--fix" onclick={handleMarkFixed} disabled={saving}>
+            <lightning-icon icon-name="utility:success" size="xx-small" class="op-im__btn-icon"></lightning-icon>
+            Mark Fixed
+          </button>
+          <button class="op-im__btn op-im__btn--false" onclick={handleFalsePositive} disabled={saving}>
+            <lightning-icon icon-name="utility:block_visitor" size="xx-small" class="op-im__btn-icon"></lightning-icon>
+            False Positive
+          </button>
+          <button class="op-im__btn op-im__btn--nr" onclick={handleNotRelevant} disabled={saving}>
+            <lightning-icon icon-name="utility:hide" size="xx-small" class="op-im__btn-icon"></lightning-icon>
+            Not Relevant
+          </button>
+          <button class="op-im__btn op-im__btn--close" onclick={handleClose}>Close</button>
+        </footer>
+      </template>
+    </div>
+  </div>
+</template>

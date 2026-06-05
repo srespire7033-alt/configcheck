@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>PrimaryRecordIdField__c</fullName>
+    <label>Primary Record Id Column</label>
+    <description>Name of the SOQL column whose value is the Id of the affected record (typically "Id"). Lands on ForensicFinding__c.PrimaryRecordId__c.</description>
+    <type>Text</type><length>80</length>
+    <fieldManageability>SubscriberControlled</fieldManageability>
+</CustomField>

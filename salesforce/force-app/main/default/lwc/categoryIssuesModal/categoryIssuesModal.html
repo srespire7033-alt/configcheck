@@ -1,0 +1,132 @@
+<template>
+  <div class="op-cim__backdrop" onclick={handleBackdrop} role="dialog" aria-modal="true">
+    <div class="op-cim">
+      <header class="op-cim__header">
+        <div>
+          <h2 class="op-cim__title">
+            {title} <span class="op-cim__total">{totalCountLabel}</span>
+          </h2>
+        </div>
+        <button class="op-cim__close" onclick={handleClose} aria-label="Close">
+          <lightning-icon icon-name="utility:close" size="small"></lightning-icon>
+        </button>
+      </header>
+
+      <template if:true={isLoading}>
+        <div class="op-cim__loading">
+          <lightning-spinner alternative-text="Loading" size="small"></lightning-spinner>
+        </div>
+      </template>
+
+      <template if:true={hasError}>
+        <p class="op-cim__error">{error}</p>
+      </template>
+
+      <template if:true={hasData}>
+        <div class="op-cim__body">
+          <!-- Critical -->
+          <template if:true={hasCritical}>
+            <div class="op-cim__sec op-cim__sec--critical">
+              <div class="op-cim__sec-header">
+                <lightning-icon icon-name="utility:error" size="x-small" class="op-cim__sec-icon op-cim__sec-icon--critical"></lightning-icon>
+                <span class="op-cim__sec-title op-cim__sec-title--critical">Critical ({criticalCount})</span>
+              </div>
+            </div>
+            <template for:each={criticalRows} for:item="r">
+              <article key={r.id} class="op-cim__row">
+                <div class={r.iconWrapClass}>
+                  <lightning-icon icon-name={r.iconName} size="small" class={r.iconClass}></lightning-icon>
+                </div>
+                <div class="op-cim__row-body">
+                  <div class="op-cim__row-title-line">
+                    <h3 class="op-cim__row-title">{r.title}</h3>
+                    <span class="op-cim__row-chip">{r.detectorId}</span>
+                  </div>
+                  <p class="op-cim__row-desc">{r.description}</p>
+                  <p class="op-cim__row-impact"><strong>Impact:</strong> {r.impactLabel}</p>
+                </div>
+                <div class="op-cim__row-actions">
+                  <button
+                    type="button"
+                    data-id={r.id}
+                    class="op-cim__btn op-cim__btn--fix"
+                    onclick={handleMarkFixed}
+                    disabled={r.markBtnDisabled}
+                  >{r.markBtnLabel}</button>
+                  <button
+                    type="button"
+                    data-id={r.id}
+                    class="op-cim__btn op-cim__btn--details"
+                    onclick={handleDetails}
+                  >Details</button>
+                </div>
+              </article>
+            </template>
+          </template>
+
+          <!-- Warning -->
+          <template if:true={hasWarning}>
+            <div class="op-cim__sec op-cim__sec--warning">
+              <div class="op-cim__sec-header">
+                <lightning-icon icon-name="utility:warning" size="x-small" class="op-cim__sec-icon op-cim__sec-icon--warning"></lightning-icon>
+                <span class="op-cim__sec-title op-cim__sec-title--warning">Warnings ({warningCount})</span>
+              </div>
+            </div>
+            <template for:each={warningRows} for:item="r">
+              <article key={r.id} class="op-cim__row">
+                <div class={r.iconWrapClass}>
+                  <lightning-icon icon-name={r.iconName} size="small" class={r.iconClass}></lightning-icon>
+                </div>
+                <div class="op-cim__row-body">
+                  <div class="op-cim__row-title-line">
+                    <h3 class="op-cim__row-title">{r.title}</h3>
+                    <span class="op-cim__row-chip">{r.detectorId}</span>
+                  </div>
+                  <p class="op-cim__row-desc">{r.description}</p>
+                  <p class="op-cim__row-impact"><strong>Impact:</strong> {r.impactLabel}</p>
+                </div>
+                <div class="op-cim__row-actions">
+                  <button type="button" data-id={r.id} class="op-cim__btn op-cim__btn--fix" onclick={handleMarkFixed} disabled={r.markBtnDisabled}>{r.markBtnLabel}</button>
+                  <button type="button" data-id={r.id} class="op-cim__btn op-cim__btn--details" onclick={handleDetails}>Details</button>
+                </div>
+              </article>
+            </template>
+          </template>
+
+          <!-- Info -->
+          <template if:true={hasInfo}>
+            <div class="op-cim__sec op-cim__sec--info">
+              <div class="op-cim__sec-header">
+                <lightning-icon icon-name="utility:info" size="x-small" class="op-cim__sec-icon op-cim__sec-icon--info"></lightning-icon>
+                <span class="op-cim__sec-title op-cim__sec-title--info">Best Practices ({infoCount})</span>
+              </div>
+            </div>
+            <template for:each={infoRows} for:item="r">
+              <article key={r.id} class="op-cim__row">
+                <div class={r.iconWrapClass}>
+                  <lightning-icon icon-name={r.iconName} size="small" class={r.iconClass}></lightning-icon>
+                </div>
+                <div class="op-cim__row-body">
+                  <div class="op-cim__row-title-line">
+                    <h3 class="op-cim__row-title">{r.title}</h3>
+                    <span class="op-cim__row-chip">{r.detectorId}</span>
+                  </div>
+                  <p class="op-cim__row-desc">{r.description}</p>
+                  <p class="op-cim__row-impact"><strong>Impact:</strong> {r.impactLabel}</p>
+                </div>
+                <div class="op-cim__row-actions">
+                  <button type="button" data-id={r.id} class="op-cim__btn op-cim__btn--fix" onclick={handleMarkFixed} disabled={r.markBtnDisabled}>{r.markBtnLabel}</button>
+                  <button type="button" data-id={r.id} class="op-cim__btn op-cim__btn--details" onclick={handleDetails}>Details</button>
+                </div>
+              </article>
+            </template>
+          </template>
+
+          <template if:false={hasAnyIssues}>
+            <p class="op-cim__empty">No issues in this category. 🎉</p>
+          </template>
+        </div>
+      </template>
+    </div>
+  </div>
+</template>

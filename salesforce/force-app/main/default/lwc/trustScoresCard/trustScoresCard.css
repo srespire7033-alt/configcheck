@@ -1,0 +1,117 @@
+/* Trust Scores card — matches the OrgPrism dashboard surface vocabulary */
+
+.op-ts__error { color: #b91c1c; padding: 12px 0; }
+.op-ts__empty { color: var(--op-text-secondary, #6b7280); padding: 12px 0; font-style: italic; }
+
+.op-ts__summary {
+  display: flex;
+  gap: 24px;
+  margin: 0 0 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.op-ts__summary-block { display: flex; flex-direction: column; }
+.op-ts__summary-block--note { margin-left: auto; }
+
+.op-ts__summary-label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--op-text-secondary, #6b7280);
+  margin: 0;
+}
+
+.op-ts__summary-value {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin: 2px 0 0;
+  color: var(--op-text-primary, #111827);
+}
+
+.op-ts__summary-value--accent { color: #0b5cff; }
+
+.op-ts__summary-note {
+  font-size: 0.78rem;
+  color: #92400e;
+  background: #fef3c7;
+  padding: 4px 10px;
+  border-radius: 12px;
+  margin: 0;
+}
+
+.op-ts__rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--op-border, #e5e7eb);
+}
+
+.op-ts__row {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  padding: 10px 6px;
+  border-bottom: 1px solid var(--op-border, #e5e7eb);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.op-ts__row:hover { background: #f8fafc; }
+.op-ts__row--muted { opacity: 0.55; }
+
+.op-ts__badge {
+  flex: 0 0 auto;
+  min-width: 56px;
+  text-align: center;
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.op-ts__badge--good { background: #dcfce7; color: #166534; }
+.op-ts__badge--warn { background: #fef3c7; color: #92400e; }
+.op-ts__badge--bad  { background: #fee2e2; color: #991b1b; }
+.op-ts__badge--muted { background: #f1f5f9; color: #64748b; font-size: 0.75rem; }
+
+.op-ts__row-body { flex: 1; min-width: 0; }
+
+.op-ts__row-title {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.op-ts__row-label {
+  font-weight: 500;
+  color: var(--op-text-primary, #111827);
+}
+
+.op-ts__row-code {
+  font-family: ui-monospace, monospace;
+  font-size: 0.72rem;
+  color: var(--op-text-secondary, #6b7280);
+  background: #f1f5f9;
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+.op-ts__row-stats {
+  margin: 2px 0 0;
+  font-size: 0.78rem;
+  color: var(--op-text-secondary, #6b7280);
+}
+
+.op-ts__chip {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-weight: 600;
+}
+
+.op-ts__chip--bad { background: #fee2e2; color: #991b1b; }

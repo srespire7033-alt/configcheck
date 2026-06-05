@@ -1,0 +1,44 @@
+<template>
+  <div class="op-fn">
+    <div class="op-fn__header">
+      <span class="op-fn__label">Consultant Notes</span>
+      <span class={savedBadgeClass}>✓ Saved</span>
+    </div>
+
+    <template if:true={hasSuggestions}>
+      <div class="op-fn__chips">
+        <template for:each={suggestionChips} for:item="c">
+          <button
+            key={c.key}
+            type="button"
+            class="op-fn__chip"
+            data-text={c.text}
+            title={c.text}
+            onclick={handleChipClick}
+          >+ {c.displayText}</button>
+        </template>
+      </div>
+    </template>
+
+    <textarea
+      class="op-fn__textarea"
+      placeholder="Add context about this finding — customer conversations, scheduled fixes, manual workarounds. Click a suggestion chip above to start, then edit. Auto-saves on blur."
+      maxlength="32768"
+      value={value}
+      onchange={handleChange}
+      oninput={handleChange}
+      onblur={handleBlur}
+      disabled={saving}
+    ></textarea>
+    <div class="op-fn__footer">
+      <span class={charCountClass}>{charCount} / 32,768</span>
+      <button
+        class="op-fn__save"
+        type="button"
+        onclick={handleSaveClick}
+        disabled={saving}
+        if:true={hasUnsavedChanges}
+      >Save</button>
+    </div>
+  </div>
+</template>

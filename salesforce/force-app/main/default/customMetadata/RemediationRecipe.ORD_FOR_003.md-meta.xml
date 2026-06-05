@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomMetadata xmlns="http://soap.sforce.com/2006/04/metadata" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" fqn="RemediationRecipe__mdt.ORD_FOR_003">
+    <label>ORD-FOR-003</label>
+    <protected>false</protected>
+    <values><field>DetectorId__c</field><value xsi:type="xsd:string">ORD-FOR-003</value></values>
+    <values><field>Title__c</field><value xsi:type="xsd:string">Reconcile amendment delta variance on Quote {primaryRecordId}</value></values>
+    <values><field>EstimatedEffort__c</field><value xsi:type="xsd:string">45-60 min</value></values>
+    <values><field>Skill__c</field><value xsi:type="xsd:string">CPQ Admin</value></values>
+    <values><field>Steps__c</field><value xsi:type="xsd:string">1. Open amendment Quote {primaryRecordId}; expected delta was {quoteNetAmount}, Order sum landed at {orderTotal} ({direction} by {delta}).
+2. List amendment Order(s): {orderIds}. Walk each line and confirm SBQQ__Existing__c flags are correct (FALSE only for new adds; TRUE for carried-over).
+3. Mis-flagged Existing lines double-count on the Order — the Class E attribution path surfaces this if metadata indicates it.
+4. Correct the SBQQ__Existing__c values on the source Quote, void the bad Order(s), and re-activate from the corrected amendment.
+5. Add a Flow check on amendment activation that validates the delta matches before allowing the activation to proceed.</value></values>
+    <values><field>Version__c</field><value xsi:type="xsd:double">1.0</value></values>
+    <values>
+        <field>NoteSuggestion1__c</field>
+        <value xsi:type="xsd:string">Amendment Existing flags corrected; activation re-run.</value>
+    </values>
+    <values>
+        <field>NoteSuggestion2__c</field>
+        <value xsi:type="xsd:string">Variance is expected proration; suppressing as data-quality.</value>
+    </values>
+    <values>
+        <field>NoteSuggestion3__c</field>
+        <value xsi:type="xsd:string">Re-creating amendment with corrected line splits.</value>
+    </values>
+</CustomMetadata>

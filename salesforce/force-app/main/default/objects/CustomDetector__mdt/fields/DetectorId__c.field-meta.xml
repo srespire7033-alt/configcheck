@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>DetectorId__c</fullName>
+    <label>Detector Id</label>
+    <description>Unique identifier for this custom detector (e.g. CUST-001). Lands on ForensicFinding__c.DetectorId__c.</description>
+    <type>Text</type><length>40</length><required>true</required><unique>true</unique><externalId>true</externalId>
+    <fieldManageability>SubscriberControlled</fieldManageability>
+</CustomField>
