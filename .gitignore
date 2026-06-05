@@ -62,3 +62,20 @@ OrgPrism Deck*.html
 
 # Generated recovery CSVs from real org scans — not source
 recovery-*.csv
+
+# Scratch Apex scripts created during deploy/smoke (not source)
+*.apex
+!salesforce/**/*.apex
+
+# Deploy and scan logs
+deploy_*.log
+deploy_*.txt
+deploy_*.json
+*.log
+
+# SFDX local cache
+salesforce/.sf/
+salesforce/.sfdx/
+
+# Excel lock/temp files
+~$*.xlsx
