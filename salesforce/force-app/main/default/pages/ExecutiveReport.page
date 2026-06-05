@@ -49,6 +49,28 @@
     .tile-num   { font-size: 22pt; font-weight: 700; }
     .tile-label { font-size: 9.5pt; opacity: 0.85; margin-top: 2pt; }
 
+    /* Phase 22g — Health Score + Category Breakdown */
+    .health-card {
+      margin-top: 14pt;
+      padding: 12pt 14pt;
+      background: #f8fafc;
+      border: 1pt solid #e5e7eb;
+      border-radius: 8pt;
+    }
+    .health-card__title { font-size: 10pt; font-weight: 700; color: #374151; letter-spacing: 0.06em; text-transform: uppercase; }
+    .health-card__score { font-size: 30pt; font-weight: 700; color: #111827; line-height: 1.1; margin-top: 4pt; }
+    .health-card__score--bad  { color: #b91c1c; }
+    .health-card__score--warn { color: #b45309; }
+    .health-card__score--good { color: #047857; }
+    .health-card__sub { font-size: 9.5pt; color: #6b7280; margin-top: 2pt; }
+    .cat-row { width: 100%; border-collapse: collapse; margin-top: 10pt; font-size: 10pt; }
+    .cat-row td { padding: 5pt 8pt; border-top: 1pt solid #e5e7eb; }
+    .cat-row td.cat-label { color: #374151; font-weight: 600; }
+    .cat-row td.cat-score { text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
+    .cat-score--bad  { color: #b91c1c; }
+    .cat-score--warn { color: #b45309; }
+    .cat-score--good { color: #047857; }
+
     .empty { color: #9ca3af; font-style: italic; padding: 20pt 0; }
 
     .section-meta {
@@ -96,6 +118,58 @@
     .finding-title { font-weight: 700; font-size: 11pt; }
     .finding-meta { color: #6b7280; font-size: 9.5pt; margin-top: 2pt; }
     .finding-desc { color: #374151; font-size: 10pt; margin-top: 6pt; }
+
+    /* Phase 16a — Executive narrative block */
+    .exec-narrative {
+      margin: 18pt 0;
+      padding: 14pt 16pt;
+      background: #f8fafc;
+      border-left: 4pt solid #0b5cff;
+      border-radius: 4pt;
+    }
+    .exec-narrative__title {
+      font-size: 13pt; font-weight: 700; margin: 0 0 10pt;
+      color: #0f172a; text-transform: uppercase; letter-spacing: 0.04em;
+    }
+    .exec-narrative__para {
+      font-size: 11pt; line-height: 1.55; color: #1f2937; margin: 0 0 10pt;
+    }
+    .exec-narrative__subtitle {
+      font-size: 10.5pt; font-weight: 600; margin: 12pt 0 6pt;
+      color: #475569; text-transform: uppercase; letter-spacing: 0.04em;
+    }
+    .exec-priority { width: 100%; border-collapse: collapse; }
+    .exec-priority__rank {
+      width: 22pt; font-weight: 700; color: #64748b; font-size: 11pt;
+      vertical-align: top; padding: 4pt 0;
+    }
+    .exec-priority__label { padding: 4pt 8pt; vertical-align: top; }
+    .exec-priority__title { font-size: 10.5pt; color: #111827; font-weight: 500; }
+    .exec-priority__detail { font-size: 9pt; color: #6b7280; margin-top: 1pt; }
+    .exec-priority__amount {
+      width: 80pt; text-align: right; padding: 4pt 0; vertical-align: top;
+      font-size: 11pt; font-weight: 600; color: #0b5cff;
+    }
+    .finding-attribution {
+      margin-top: 8pt; padding: 8pt 10pt;
+      background: #f1f5f9; border-left: 3pt solid #2563eb; border-radius: 3pt;
+    }
+    .attribution-label { font-size: 9pt; font-weight: 600; color: #1e40af; text-transform: uppercase; letter-spacing: 0.04em; }
+    .attribution-config { font-size: 9.5pt; color: #475569; margin-top: 2pt; font-style: italic; }
+    .attribution-body { font-size: 10pt; color: #1f2937; margin-top: 4pt; }
+    .attribution-confidence { font-size: 9pt; color: #64748b; margin-top: 4pt; }
+    .finding-notes {
+      margin-top: 8pt; padding: 8pt 10pt;
+      background: #fefce8; border-left: 3pt solid #ca8a04; border-radius: 3pt;
+    }
+    .notes-label { font-size: 9pt; font-weight: 600; color: #854d0e; text-transform: uppercase; letter-spacing: 0.04em; }
+    .notes-body { font-size: 10pt; color: #422006; margin-top: 4pt; white-space: pre-wrap; }
+    .finding-recipe {
+      margin-top: 8pt; padding: 8pt 10pt;
+      background: #ecfdf5; border-left: 3pt solid #047857; border-radius: 3pt;
+    }
+    .recipe-label { font-size: 9pt; font-weight: 600; color: #065f46; text-transform: uppercase; letter-spacing: 0.04em; }
+    .recipe-body { font-size: 10pt; color: #064e3b; margin-top: 4pt; white-space: pre-wrap; font-family: ui-monospace, -apple-system, monospace; }
 
     .footer-tag {
       margin-top: 16pt;
@@ -156,6 +230,61 @@
     </tr>
   </table>
 
+  <!-- Phase 22g — Health Score headline + per-category bucket breakdown.
+       Shows where (which area) the org is broken, not just how broken
+       overall. Skipped silently if no scoring data is present. -->
+  <apex:outputPanel rendered="{!healthScore != null}" layout="block">
+    <div class="health-card">
+      <div class="health-card__title">Org Health Score</div>
+      <div class="health-card__score health-card__score--{!healthTone}">
+        {!healthScore}<span style="font-size: 14pt; color: #9ca3af; font-weight: 500;">/100</span>
+      </div>
+      <div class="health-card__sub">
+        Composite score across {!findings.size + (criticalCount + warningCount + infoCount - findings.size)} findings.
+        Lower categories below indicate where remediation effort returns most.
+      </div>
+      <apex:outputPanel rendered="{!categoryScores.size > 0}" layout="block">
+        <table class="cat-row">
+          <apex:repeat value="{!categoryScores}" var="c">
+            <tr>
+              <td class="cat-label" width="70%">{!c.label}</td>
+              <td class="cat-score cat-score--{!c.tone}" width="30%">{!c.score} / 100</td>
+            </tr>
+          </apex:repeat>
+        </table>
+      </apex:outputPanel>
+    </div>
+  </apex:outputPanel>
+
+  <!-- Phase 16a — Executive Summary narrative -->
+  <apex:outputPanel rendered="{!narrative1 != null}" layout="block">
+    <div class="exec-narrative">
+      <h2 class="exec-narrative__title">Executive Summary</h2>
+      <apex:outputPanel rendered="{!NOT(ISBLANK(narrative1.headline))}" layout="block">
+        <p class="exec-narrative__para">{!narrative1.headline}</p>
+      </apex:outputPanel>
+      <apex:outputPanel rendered="{!NOT(ISBLANK(narrative1.rootCauseParagraph))}" layout="block">
+        <p class="exec-narrative__para">{!narrative1.rootCauseParagraph}</p>
+      </apex:outputPanel>
+
+      <apex:outputPanel rendered="{!narrative1.prioritySequence.size > 0}" layout="block">
+        <h3 class="exec-narrative__subtitle">Recommended priority sequence</h3>
+        <table class="exec-priority">
+          <apex:repeat value="{!narrative1.prioritySequence}" var="p">
+            <tr>
+              <td class="exec-priority__rank">{!p.rank}.</td>
+              <td class="exec-priority__label">
+                <div class="exec-priority__title">{!p.label}</div>
+                <div class="exec-priority__detail">{!p.detail}</div>
+              </td>
+              <td class="exec-priority__amount">{!p.amountFmt}</td>
+            </tr>
+          </apex:repeat>
+        </table>
+      </apex:outputPanel>
+    </div>
+  </apex:outputPanel>
+
   <!-- Executive summary by detector -->
   <h2>Recovery opportunities by detector</h2>
   <p class="section-meta">Top patterns driving leakage in this scan, ranked by total recoverable $.</p>
@@ -193,25 +322,62 @@
     <div class="empty">No findings to detail.</div>
   </apex:outputPanel>
 
-  <apex:repeat value="{!findings}" var="f">
+  <apex:repeat value="{!findingRows}" var="row">
     <div class="finding-block">
-      <div class="finding-title">{!f.Title__c}</div>
+      <div class="finding-title">{!row.f.Title__c}</div>
       <div class="finding-meta">
-        <span class="sev-{!IF(f.Severity__c == 'Critical', 'crit', IF(f.Severity__c == 'Warning', 'warn', 'info'))}">{!f.Severity__c}</span>
-        · {!f.DetectorId__c}
+        <span class="sev-{!IF(row.f.Severity__c == 'Critical', 'crit', IF(row.f.Severity__c == 'Warning', 'warn', 'info'))}">{!row.f.Severity__c}</span>
+        · {!row.f.DetectorId__c}
         ·
         <apex:outputText value="{0, number, $###,###,##0}">
-          <apex:param value="{!IF(f.GapUsd__c == null, 0, f.GapUsd__c)}"/>
+          <apex:param value="{!IF(row.f.GapUsd__c == null, 0, row.f.GapUsd__c)}"/>
         </apex:outputText> recoverable
-        <apex:outputPanel rendered="{!f.RecoverabilityScore__c != null}">
+        <apex:outputPanel rendered="{!row.f.RecoverabilityScore__c != null}">
           ·
           <apex:outputText value="{0, number, 0%}">
-            <apex:param value="{!f.RecoverabilityScore__c}"/>
+            <apex:param value="{!row.f.RecoverabilityScore__c}"/>
           </apex:outputText> confidence
         </apex:outputPanel>
       </div>
-      <apex:outputPanel rendered="{!NOT(ISBLANK(f.Description__c))}" layout="block">
-        <div class="finding-desc">{!f.Description__c}</div>
+      <apex:outputPanel rendered="{!NOT(ISBLANK(row.f.Description__c))}" layout="block">
+        <div class="finding-desc">{!row.f.Description__c}</div>
+      </apex:outputPanel>
+
+      <!-- Phase 14b: attribution trace — the polished root-cause narrative -->
+      <apex:outputPanel rendered="{!row.primaryTrace != null}" layout="block">
+        <div class="finding-attribution">
+          <div class="attribution-label">Root cause · {!row.rootCauseLabel}</div>
+          <apex:outputPanel rendered="{!NOT(ISBLANK(row.primaryTrace.RootConfigName__c))}" layout="block">
+            <div class="attribution-config">{!row.primaryTrace.RootConfigType__c} · {!row.primaryTrace.RootConfigName__c}</div>
+          </apex:outputPanel>
+          <apex:outputPanel rendered="{!NOT(ISBLANK(row.primaryTrace.AiExplanation__c))}" layout="block">
+            <div class="attribution-body">{!row.primaryTrace.AiExplanation__c}</div>
+          </apex:outputPanel>
+          <apex:outputPanel rendered="{!row.primaryTrace.Confidence__c != null}" layout="block">
+            <div class="attribution-confidence">
+              Confidence:
+              <apex:outputText value="{0, number, 0%}">
+                <apex:param value="{!row.primaryTrace.Confidence__c}"/>
+              </apex:outputText>
+            </div>
+          </apex:outputPanel>
+        </div>
+      </apex:outputPanel>
+
+      <!-- Phase 16b: remediation recipe (per-detector fix steps) -->
+      <apex:outputPanel rendered="{!NOT(ISBLANK(row.f.RemediationRecipe__c))}" layout="block">
+        <div class="finding-recipe">
+          <div class="recipe-label">Remediation</div>
+          <div class="recipe-body">{!row.f.RemediationRecipe__c}</div>
+        </div>
+      </apex:outputPanel>
+
+      <!-- Phase 14b: consultant notes -->
+      <apex:outputPanel rendered="{!row.hasNotes}" layout="block">
+        <div class="finding-notes">
+          <div class="notes-label">Consultant Notes</div>
+          <div class="notes-body">{!row.notes}</div>
+        </div>
       </apex:outputPanel>
     </div>
   </apex:repeat>

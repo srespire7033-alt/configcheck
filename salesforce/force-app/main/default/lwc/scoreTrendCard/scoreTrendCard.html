@@ -1,0 +1,141 @@
+<template>
+  <c-dashboard-card title="Score Trend" subtitle="Click any point to compare scans from that date forward">
+    <lightning-button
+      slot="actions"
+      variant="neutral"
+      label="View History"
+      icon-name="utility:rotate"
+      onclick={handleViewHistory}
+    ></lightning-button>
+
+    <template if:true={isLoading}>
+      <div class="op-tr__loading">
+        <lightning-spinner alternative-text="Loading" size="small"></lightning-spinner>
+      </div>
+    </template>
+
+    <template if:true={hasError}>
+      <p class="op-tr__error">{error}</p>
+    </template>
+
+    <template if:true={isEmpty}>
+      <p class="op-tr__empty">Score trend needs at least 2 completed scans to plot.</p>
+    </template>
+
+    <template if:true={hasEnoughData}>
+      <!-- 4 KPI tiles -->
+      <div class="op-tr__tiles">
+        <div class="op-tr__tile">
+          <p class="op-tr__tile-label">STARTING SCAN</p>
+          <p class="op-tr__tile-value">{startingScore}<span class="op-tr__tile-denom">/100</span></p>
+          <p class="op-tr__tile-meta">{startingDate} (first scan)</p>
+        </div>
+
+        <div class="op-tr__tile">
+          <p class="op-tr__tile-label">LATEST</p>
+          <p class="op-tr__tile-value op-tr__tile-value--accent">{latestScore}<span class="op-tr__tile-denom">/100</span></p>
+          <p class="op-tr__tile-meta">{latestDate}</p>
+          <p class={scoreDeltaClass}>{scoreDeltaLabel}</p>
+        </div>
+
+        <div class="op-tr__tile">
+          <p class="op-tr__tile-label">ISSUES CHANGE</p>
+          <p class={issuesDeltaClass}>{issuesDeltaLabel}</p>
+          <p class="op-tr__tile-meta">{issuesTransition}</p>
+        </div>
+
+        <div class="op-tr__tile">
+          <p class="op-tr__tile-label">CRITICAL ISSUES CHANGE</p>
+          <p class={critDeltaClass}>{critDeltaLabel}</p>
+          <p class="op-tr__tile-meta">{critTransition}</p>
+        </div>
+      </div>
+
+      <!-- Since-last-scan strip -->
+      <div class="op-tr__since">{sinceLastScanLabel}</div>
+
+      <!-- Phase 22g — Per-category breakdown for the latest scan.
+           Shows WHERE the org is broken, not just how broken overall.
+           Sorted ascending so worst category surfaces first. -->
+      <template if:true={hasCategoryBreakdown}>
+        <div class="op-tr__cat-wrap">
+          <p class="op-tr__cat-title">Latest scan by category</p>
+          <div class="op-tr__cat-row">
+            <template for:each={categoryPills} for:item="p">
+              <span key={p.key} class={p.cls} title={p.title}>
+                {p.label}&nbsp;·&nbsp;<strong>{p.score}</strong>
+              </span>
+            </template>
+          </div>
+        </div>
+      </template>
+
+      <!-- Chart -->
+      <div class="op-tr__chart-wrap">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 800 220"
+          class="op-tr__svg"
+          preserveAspectRatio="xMidYMid meet"
+          role="img"
+          aria-label="Score trend over time"
+        >
+          <!-- Vertical gridlines (light) -->
+          <g class="op-tr__grid">
+            <template for:each={chart.vlines} for:item="v">
+              <line key={v.x} x1={v.x} y1={v.y1} x2={v.x} y2={v.y2} class="op-tr__vline"></line>
+            </template>
+          </g>
+          <!-- Horizontal gridlines + Y ticks -->
+          <g class="op-tr__grid">
+            <line x1="30" y1="25"  x2="770" y2="25"  class="op-tr__gridline"></line>
+            <line x1="30" y1="73"  x2="770" y2="73"  class="op-tr__gridline"></line>
+            <line x1="30" y1="122" x2="770" y2="122" class="op-tr__gridline"></line>
+            <line x1="30" y1="171" x2="770" y2="171" class="op-tr__gridline"></line>
+            <line x1="30" y1="195" x2="770" y2="195" class="op-tr__gridline"></line>
+            <text x="20" y="29"  class="op-tr__ytick" text-anchor="end">100</text>
+            <text x="20" y="126" class="op-tr__ytick" text-anchor="end">50</text>
+            <text x="20" y="199" class="op-tr__ytick" text-anchor="end">0</text>
+          </g>
+
+          <!-- Polyline -->
+          <polyline points={chart.polyline} class="op-tr__line"></polyline>
+
+          <!-- Points -->
+          <template for:each={chart.dots} for:item="d">
+            <circle
+              key={d.scanId}
+              data-id={d.scanId}
+              cx={d.cx}
+              cy={d.cy}
+              r="5"
+              class={d.cls}
+              onclick={handleDotClick}
+            >
+              <title>{d.title}</title>
+            </circle>
+          </template>
+
+          <!-- X-axis labels -->
+          <template for:each={chart.xLabels} for:item="l">
+            <text
+              key={l.x}
+              x={l.x}
+              y="215"
+              class="op-tr__xtick"
+              text-anchor="middle"
+            >{l.label}</text>
+          </template>
+        </svg>
+
+        <!-- Legend -->
+        <div class="op-tr__legend">
+          <span class="op-tr__lg op-tr__lg--baseline">● Baseline</span>
+          <span class="op-tr__lg op-tr__lg--best">● Best</span>
+          <span class="op-tr__lg op-tr__lg--low">● Low</span>
+          <span class="op-tr__lg op-tr__lg--other">● Other scans</span>
+        </div>
+      </div>
+    </template>
+  </c-dashboard-card>
+</template>

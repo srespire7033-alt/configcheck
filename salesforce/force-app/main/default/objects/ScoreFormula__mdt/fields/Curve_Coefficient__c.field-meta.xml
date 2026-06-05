@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Curve_Coefficient__c</fullName>
+    <label>Curve Coefficient</label>
+    <description>Multiplier on sqrt(raw_penalty). Higher = steeper drop-off. Default 4.0 gives a pristine org ~95-100, healthy production ~70-85, messy ~40-60, broken ~10-30.</description>
+    <type>Number</type>
+    <precision>5</precision>
+    <scale>2</scale>
+    <required>false</required>
+</CustomField>

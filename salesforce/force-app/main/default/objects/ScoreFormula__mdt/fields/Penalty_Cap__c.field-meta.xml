@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Penalty_Cap__c</fullName>
+    <label>Penalty Cap</label>
+    <description>Caps the raw weighted-sum penalty before the sqrt curve is applied. Prevents runaway finding counts from saturating the score at 0. Default 300.</description>
+    <type>Number</type>
+    <precision>7</precision>
+    <scale>2</scale>
+    <required>false</required>
+</CustomField>

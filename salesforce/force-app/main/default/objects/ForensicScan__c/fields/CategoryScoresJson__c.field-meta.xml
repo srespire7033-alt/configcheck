@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>CategoryScoresJson__c</fullName>
+    <label>Category Scores JSON</label>
+    <description>Serialized JSON map of category name to 0-100 score, computed by HealthScoreCalculator on scan completion using Vercel-style bucket weights. Read by DashboardController for the per-category UI.</description>
+    <type>LongTextArea</type>
+    <length>32768</length>
+    <visibleLines>5</visibleLines>
+</CustomField>

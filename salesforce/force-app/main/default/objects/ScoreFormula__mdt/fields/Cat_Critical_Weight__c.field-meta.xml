@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Cat_Critical_Weight__c</fullName>
+    <label>Category Critical Weight</label>
+    <description>Points deducted from 100 per Critical finding when computing per-category bucket sub-scores. Vercel default 15. Independent of the headline weight so categories saturate faster than the org-level score.</description>
+    <type>Number</type>
+    <precision>5</precision>
+    <scale>2</scale>
+    <required>false</required>
+</CustomField>

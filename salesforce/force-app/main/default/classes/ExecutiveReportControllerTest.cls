@@ -97,4 +97,93 @@ private class ExecutiveReportControllerTest {
         System.assertNotEquals(null, ctrl.scan);
         System.assertEquals(older.Id, ctrl.scan.Id, 'URL param should override latest-fallback');
     }
+
+    // ── Phase 22g — Health Score headline + category breakdown ──
+
+    @isTest
+    static void healthScore_andCategoryBreakdown_loadFromScan() {
+        ForensicScan__c scan = new ForensicScan__c(
+            Status__c = 'Completed', ProductType__c = 'CPQ',
+            StartedAt__c = System.now(), CompletedAt__c = System.now(),
+            TotalLeakageUsd__c = 50000, FindingCount__c = 4,
+            HealthScore__c = 52,
+            CategoryScoresJson__c = '{"revenue_leakage":80,"pricing":64,"leakage":55,"governance":0}'
+        );
+        insert scan;
+
+        Test.setCurrentPage(Page.ExecutiveReport);
+        ExecutiveReportController ctrl = new ExecutiveReportController();
+        System.assertEquals(52, ctrl.healthScore);
+        System.assertEquals('warn', ctrl.healthTone, '52 should be warn (50-79)');
+        System.assertEquals(4, ctrl.categoryScores.size());
+        // First entry should be the WORST (governance, 0) per ascending sort
+        System.assertEquals('governance', ctrl.categoryScores[0].key);
+        System.assertEquals(0, ctrl.categoryScores[0].score);
+        System.assertEquals('bad', ctrl.categoryScores[0].tone);
+        // Last entry should be the BEST (revenue_leakage, 80)
+        System.assertEquals('revenue_leakage', ctrl.categoryScores[3].key);
+        System.assertEquals('good', ctrl.categoryScores[3].tone);
+        System.assertEquals('Revenue Leakage', ctrl.categoryScores[3].label,
+            'Friendly label should Title-Case underscored keys');
+    }
+
+    @isTest
+    static void healthTone_appliesGradient() {
+        // Score 30 → bad
+        ForensicScan__c s1 = new ForensicScan__c(
+            Status__c='Completed', ProductType__c='CPQ',
+            StartedAt__c=System.now(), CompletedAt__c=System.now(),
+            TotalLeakageUsd__c=0, FindingCount__c=0, HealthScore__c=30
+        );
+        insert s1;
+        PageReference pg = Page.ExecutiveReport;
+        pg.getParameters().put('scanId', s1.Id);
+        Test.setCurrentPage(pg);
+        ExecutiveReportController c1 = new ExecutiveReportController();
+        System.assertEquals('bad', c1.healthTone);
+
+        // Score 92 → good
+        ForensicScan__c s2 = new ForensicScan__c(
+            Status__c='Completed', ProductType__c='CPQ',
+            StartedAt__c=System.now(), CompletedAt__c=System.now(),
+            TotalLeakageUsd__c=0, FindingCount__c=0, HealthScore__c=92
+        );
+        insert s2;
+        pg.getParameters().put('scanId', s2.Id);
+        Test.setCurrentPage(pg);
+        ExecutiveReportController c2 = new ExecutiveReportController();
+        System.assertEquals('good', c2.healthTone);
+    }
+
+    @isTest
+    static void parseCategoryScores_handlesNullBlankMalformed() {
+        // null → empty list
+        System.assertEquals(0,
+            ExecutiveReportController.parseCategoryScores(null).size());
+        // blank → empty list
+        System.assertEquals(0,
+            ExecutiveReportController.parseCategoryScores('   ').size());
+        // malformed JSON → empty list (caught)
+        System.assertEquals(0,
+            ExecutiveReportController.parseCategoryScores('not-json').size());
+        // valid → 1 entry
+        System.assertEquals(1,
+            ExecutiveReportController.parseCategoryScores('{"governance":42}').size());
+    }
+
+    @isTest
+    static void friendlyCategoryLabel_handlesEdgeCases() {
+        System.assertEquals('Uncategorized',
+            ExecutiveReportController.friendlyCategoryLabel(null));
+        System.assertEquals('Uncategorized',
+            ExecutiveReportController.friendlyCategoryLabel('   '));
+        System.assertEquals('Uncategorized',
+            ExecutiveReportController.friendlyCategoryLabel('__uncategorized__'));
+        System.assertEquals('Governance',
+            ExecutiveReportController.friendlyCategoryLabel('governance'));
+        System.assertEquals('Revenue Leakage',
+            ExecutiveReportController.friendlyCategoryLabel('revenue_leakage'));
+        System.assertEquals('Arm Billing Policies',
+            ExecutiveReportController.friendlyCategoryLabel('arm_billing_policies'));
+    }
 }
