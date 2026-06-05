@@ -69,6 +69,34 @@ Direct SOQL on the cpq target via `sf data query` shows that several V-only CPQ 
 
 ---
 
+## Phase 22k follow-up — the "V-only" CPQ classification was stale
+
+After 22j shipped, I ran a direct-invocation harness against the cpq Connected Org (`OrgPrism_cpq` Named Credential) calling each of the 5 suspect bundles' `run(ctx)` method outside the `ForensicScanService` orchestrator. **Findings: the bundles already work and the "V-only" detectors fire**:
+
+```
+PriceRuleChecksBundle:
+  FIRED:PR-002 × 5 (Price Rule with no conditions/actions)
+ProductRuleChecksBundle:
+  FIRED:LQ-005 × 3  (Selection rule, no eval order)
+  FIRED:PRD-002    (2 rules share evaluation order)
+  FIRED:PRD-003 × 3 (Product Rule has no conditions or actions)
+  FIRED:PRD-004
+SubscriptionChecksBundle:
+  FIRED:SR-001, SR-004     (SR-002/SR-003 don't fire — data state)
+ImpactAnalysisChecksBundle:
+  FIRED:IA-003, IA-004
+ContractedPriceChecksBundle:
+  FIRED:CP-001 × 3 (CP-003 doesn't fire — likely SBQQ__OriginalQuoteLine__c populated)
+```
+
+This means the "V-only" classification in v2 (`FS-0011`, score 72, 55 findings) is **outdated** for current cpq-org data. Either the org data evolved between v2 and now, or `Detector__mdt.IsActive__c` was toggled, or the scan-service orchestrator handles certain bundles differently than direct invocation. The Phase 22k premise — "apply the 22j try/catch fix to 5 more bundles" — was therefore wrong: those bundles don't have the bug.
+
+**Phase 22k action: no code change.** A follow-up scan (FS-0045, still running at time of writing) should confirm these detectors land in persisted findings. If FS-0045 completes and any of {PR-002, LQ-005, PRD-002, PRD-003, IA-003, IA-004, CP-001} still don't appear in `ForensicFinding__c`, then there IS a service-level bug worth chasing. If they do appear, the v2 "V-only" gap was a snapshot artifact and CPQ-side parity is closer than v2 reported.
+
+**SR-002 / SR-003 / CP-003** genuinely don't fire in direct invocation either — the data state on cpq satisfies their predicates (e.g. all subscriptions have non-null ProrateMultiplier and Contract). These are correctly silent.
+
+---
+
 ## What still differs (after 22j)
 
 - **ARM:** 5 V-only detectors remain, 4 of which are correctly silent (data/schema-driven). Phase 22j closed 3 of the 8 V-only detectors v2 documented.
