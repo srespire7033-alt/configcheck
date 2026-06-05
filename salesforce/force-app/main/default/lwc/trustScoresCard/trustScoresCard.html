@@ -56,6 +56,14 @@
           </li>
         </template>
       </ul>
+
+      <!-- Phase 22q — pagination toggle. Appears whenever the table
+           has more rows than the preview window. -->
+      <template if:true={isPaginated}>
+        <button class="op-ts__toggle" onclick={toggleShowAll} type="button">
+          {toggleLabel}
+        </button>
+      </template>
     </template>
   </c-dashboard-card>
 </template>

@@ -42,12 +42,18 @@ const FALLBACK_DETECTOR_LABELS = {
   'MDQ-FOR-001': 'MDQ segment pricing inconsistency',
 };
 
+/** Phase 22q — collapse long rows to a short preview with a "View all"
+ *  toggle. The full table is overwhelming when 60+ detectors are tracked;
+ *  start with the top N and let the user expand. */
+const INITIAL_VISIBLE = 7;
+
 export default class TrustScoresCard extends NavigationMixin(LightningElement) {
   data;
   error;
   loading = true;
   @track connectedOrgId = null;
   @track catalogEntries = [];
+  @track showAll = false;
 
   @wire(getCatalog)
   wireCatalog({ data }) {
@@ -117,6 +123,22 @@ export default class TrustScoresCard extends NavigationMixin(LightningElement) {
 
   // ── Row data ──
   get rows() {
+    const all = this.allRows;
+    return this.showAll ? all : all.slice(0, INITIAL_VISIBLE);
+  }
+  /** Phase 22q — pagination toggle support. The toggle button appears
+   *  whenever the underlying list has more entries than the initial
+   *  preview window; the label flips between "View all N" and
+   *  "Show less" based on current state. */
+  get isPaginated() {
+    return this.allRows.length > INITIAL_VISIBLE;
+  }
+  get toggleLabel() {
+    return this.showAll ? 'Show less' : `View all ${this.allRows.length}`;
+  }
+  toggleShowAll() { this.showAll = !this.showAll; }
+
+  get allRows() {
     if (!this.data) return [];
     return this.data.map((r) => {
       const score = r.Score__c;

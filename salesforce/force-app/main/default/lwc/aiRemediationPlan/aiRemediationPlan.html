@@ -54,6 +54,12 @@
                 </li>
               </template>
             </ol>
+            <!-- Phase 22q — per-phase view-all toggle -->
+            <template if:true={p.paginated}>
+              <button class="op-rp__toggle" data-phase={p.phaseNum} onclick={toggleShowAll} type="button">
+                {p.toggleLabel}
+              </button>
+            </template>
           </section>
         </template>
       </div>

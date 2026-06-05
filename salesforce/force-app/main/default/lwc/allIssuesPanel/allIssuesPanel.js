@@ -7,6 +7,8 @@ import bulkUpdateStatus from '@salesforce/apex/IssuesController.bulkUpdateStatus
 
 const SEVERITY_OPTIONS = ['Critical', 'Warning', 'Info'];
 const STATUS_OPTIONS = ['Open', 'Acknowledged', 'Resolved'];
+/** Phase 22q — initial preview rows before "View all" expands the list. */
+const INITIAL_VISIBLE = 8;
 
 export default class AllIssuesPanel extends NavigationMixin(LightningElement) {
   @track issues;
@@ -18,6 +20,7 @@ export default class AllIssuesPanel extends NavigationMixin(LightningElement) {
   @track selectedIds = new Set();
   @track openDetailId = null;
   @track saving = false;
+  @track showAll = false;
   wiredResult;
 
   connectedCallback() { window.addEventListener('op:scan-completed', this.handleScanCompleted); }
@@ -53,7 +56,7 @@ export default class AllIssuesPanel extends NavigationMixin(LightningElement) {
     return n === 1 ? '1 issue' : `${n} issues`;
   }
 
-  get rows() {
+  get allRows() {
     return (this.issues || []).map((i) => {
       const sev = (i.severity || '').toLowerCase();
       const status = (i.status || 'Open').toLowerCase().replace(/\s+/g, '-');
@@ -66,6 +69,17 @@ export default class AllIssuesPanel extends NavigationMixin(LightningElement) {
       };
     });
   }
+  /** Phase 22q — show first N rows; toggle expands to the full list. */
+  get rows() {
+    return this.showAll ? this.allRows : this.allRows.slice(0, INITIAL_VISIBLE);
+  }
+  get isPaginated() {
+    return this.allRows.length > INITIAL_VISIBLE;
+  }
+  get toggleLabel() {
+    return this.showAll ? 'Show less' : `View all ${this.allRows.length} issues`;
+  }
+  toggleShowAll() { this.showAll = !this.showAll; }
 
   // ── Toolbar ──
   severityOptions = SEVERITY_OPTIONS.map((s) => ({ label: s, value: s }));

@@ -3,11 +3,16 @@ import { refreshApex } from '@salesforce/apex';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import getPlan from '@salesforce/apex/RemediationPlanController.getPlan';
 
+/** Phase 22q — initial preview steps per phase before "View all" expands. */
+const INITIAL_VISIBLE_PER_PHASE = 5;
+
 export default class AiRemediationPlan extends LightningElement {
   @track data;
   @track error;
   @track loading = true;
   @track regenerating = false;
+  /** Phase 22q — per-phase expansion state. Key: phaseNum, value: bool. */
+  @track expandedPhases = {};
   wiredResult;
 
   connectedCallback() { window.addEventListener('op:scan-completed', this.handleScanCompleted); }
@@ -39,18 +44,43 @@ export default class AiRemediationPlan extends LightningElement {
   }
 
   get phaseRows() {
-    return (this.data?.phases || []).map((p) => ({
-      ...p,
-      heading: `Phase ${p.phaseNum} — ${p.title}`,
-      subHeading: p.timeRange,
-      totalRecoveredLabel: `Total Estimated Annual Recovery for Phase ${p.phaseNum}: ${this.formatMoney(p.totalRecovered)}`,
-      stepRows: (p.steps || []).map((s) => ({
+    return (this.data?.phases || []).map((p) => {
+      const allSteps = (p.steps || []).map((s) => ({
         ...s,
         timeLabel: this.formatHours(s.estHours),
         recoveredLabel: `${this.formatMoney(s.recoveredUsd)}/yr`,
         findingLabel: s.findingCount === 1 ? '1 finding' : `${s.findingCount} findings`,
-      })),
-    }));
+      }));
+      // Phase 22q — collapse long step lists. Track per-phase
+      // expansion so the user can open Phase 1's steps while
+      // Phase 3's remain compact.
+      const expanded = this.expandedPhases[p.phaseNum] === true;
+      const total = allSteps.length;
+      const visibleSteps = expanded ? allSteps : allSteps.slice(0, INITIAL_VISIBLE_PER_PHASE);
+      const paginated = total > INITIAL_VISIBLE_PER_PHASE;
+      const toggleLabel = expanded
+        ? 'Show less'
+        : `View all ${total} steps`;
+      return {
+        ...p,
+        heading: `Phase ${p.phaseNum} — ${p.title}`,
+        subHeading: p.timeRange,
+        totalRecoveredLabel: `Total Estimated Annual Recovery for Phase ${p.phaseNum}: ${this.formatMoney(p.totalRecovered)}`,
+        stepRows: visibleSteps,
+        paginated,
+        toggleLabel,
+      };
+    });
+  }
+
+  /** Phase 22q — flip a phase's expansion state. */
+  toggleShowAll(event) {
+    const phaseNum = Number(event.currentTarget.dataset.phase);
+    if (!phaseNum) return;
+    this.expandedPhases = {
+      ...this.expandedPhases,
+      [phaseNum]: !this.expandedPhases[phaseNum],
+    };
   }
 
   // ── Regenerate (refresh + toast) ──

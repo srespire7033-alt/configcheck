@@ -92,6 +92,13 @@
           </article>
         </template>
       </div>
+
+      <!-- Phase 22q — show-more toggle -->
+      <template if:true={isPaginated}>
+        <button class="op-aip__toggle" onclick={toggleShowAll} type="button">
+          {toggleLabel}
+        </button>
+      </template>
     </template>
 
     <template if:true={isModalOpen}>

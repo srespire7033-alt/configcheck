@@ -214,3 +214,21 @@ textarea:focus-visible,
     transform: none !important;
   }
 }
+
+/* Phase 22q — View-all / Show-less toggle */
+.op-aip__toggle {
+  display: block;
+  margin: 12px auto 0;
+  padding: 6px 14px;
+  background: transparent;
+  border: 1px solid #e5e7eb;
+  border-radius: 999px;
+  color: #1e40af;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.op-aip__toggle:hover {
+  background: #f3f4f6;
+  border-color: #1e40af;
+}
