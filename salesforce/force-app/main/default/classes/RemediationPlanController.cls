@@ -78,19 +78,39 @@ public with sharing class RemediationPlanController {
         'MDQ-FOR-001' => 'Recalculate MDQ segment prices using the latest pricebook; redeploy if pricing rules changed.'
     };
 
+    /**
+     * Phase 22s — connectedOrgId param. When set, the plan picks the most
+     * recent scan FOR THAT Connected Org instead of "most recent scan
+     * globally." Without this, the ARM dashboard's hero showed 86 (from
+     * the ARM scan) while the Remediation Plan card showed 62 (from
+     * whatever the latest CPQ scan happened to be) — the two widgets
+     * disagreed because they were looking at different scans. Null arg
+     * preserves legacy "most-recent-anywhere" behavior for callers that
+     * don't have a connected-org context.
+     */
     @AuraEnabled(cacheable=true)
-    public static PlanDto getPlan() {
+    public static PlanDto getPlan(Id connectedOrgId) {
         PlanDto dto = new PlanDto();
         dto.currentScore = 100;
         dto.totalAnnualLeakage = 0;
         dto.phases = new List<Phase>();
         dto.generatedAt = System.now();
 
-        List<ForensicScan__c> scans = [
-            SELECT Id, HealthScore__c FROM ForensicScan__c
-            WHERE Status__c IN ('Completed','Partial')
-            WITH SECURITY_ENFORCED ORDER BY CompletedAt__c DESC NULLS LAST LIMIT 1
-        ];
+        List<ForensicScan__c> scans;
+        if (connectedOrgId != null) {
+            scans = [
+                SELECT Id, HealthScore__c FROM ForensicScan__c
+                WHERE Status__c IN ('Completed','Partial')
+                  AND ConnectedOrg__c = :connectedOrgId
+                WITH SECURITY_ENFORCED ORDER BY CompletedAt__c DESC NULLS LAST LIMIT 1
+            ];
+        } else {
+            scans = [
+                SELECT Id, HealthScore__c FROM ForensicScan__c
+                WHERE Status__c IN ('Completed','Partial')
+                WITH SECURITY_ENFORCED ORDER BY CompletedAt__c DESC NULLS LAST LIMIT 1
+            ];
+        }
         if (scans.isEmpty()) return dto;
         Id scanId = scans[0].Id;
         dto.currentScore = scans[0].HealthScore__c == null ? 100 : Integer.valueOf(scans[0].HealthScore__c);

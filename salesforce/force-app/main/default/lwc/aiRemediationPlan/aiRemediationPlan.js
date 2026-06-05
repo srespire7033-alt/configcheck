@@ -1,4 +1,5 @@
 import { LightningElement, wire, track } from 'lwc';
+import { CurrentPageReference } from 'lightning/navigation';
 import { refreshApex } from '@salesforce/apex';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import getPlan from '@salesforce/apex/RemediationPlanController.getPlan';
@@ -13,13 +14,25 @@ export default class AiRemediationPlan extends LightningElement {
   @track regenerating = false;
   /** Phase 22q — per-phase expansion state. Key: phaseNum, value: bool. */
   @track expandedPhases = {};
+  /** Phase 22s — scope the plan to the same Connected Org the hero +
+   *  category grid are showing. Without this, the plan reads the latest
+   *  scan globally and can disagree with the hero's score. */
+  @track connectedOrgId = null;
   wiredResult;
+
+  @wire(CurrentPageReference)
+  wirePageRef(pageRef) {
+    if (!pageRef) return;
+    this.connectedOrgId = pageRef.state?.c__connectedOrgId
+      || pageRef.state?.connectedOrgId
+      || null;
+  }
 
   connectedCallback() { window.addEventListener('op:scan-completed', this.handleScanCompleted); }
   disconnectedCallback() { window.removeEventListener('op:scan-completed', this.handleScanCompleted); }
   handleScanCompleted = () => { if (this.wiredResult) refreshApex(this.wiredResult); };
 
-  @wire(getPlan)
+  @wire(getPlan, { connectedOrgId: '$connectedOrgId' })
   wireData(result) {
     this.wiredResult = result;
     this.loading = false;

@@ -4,7 +4,7 @@ private class RemediationPlanControllerTest {
     @isTest
     static void emptyOrgReturnsDefault() {
         Test.startTest();
-        RemediationPlanController.PlanDto dto = RemediationPlanController.getPlan();
+        RemediationPlanController.PlanDto dto = RemediationPlanController.getPlan(null);
         Test.stopTest();
         System.assertNotEquals(null, dto);
         System.assertEquals(100, dto.currentScore);
@@ -39,7 +39,7 @@ private class RemediationPlanControllerTest {
         };
 
         Test.startTest();
-        RemediationPlanController.PlanDto dto = RemediationPlanController.getPlan();
+        RemediationPlanController.PlanDto dto = RemediationPlanController.getPlan(null);
         Test.stopTest();
 
         System.assertEquals(71, dto.currentScore);
