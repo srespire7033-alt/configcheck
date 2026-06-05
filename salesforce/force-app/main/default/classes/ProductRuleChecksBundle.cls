@@ -33,19 +33,44 @@ public with sharing class ProductRuleChecksBundle implements IDetector {
             // Phase 22a-3 — widened SELECT for PRD-001..PRD-004:
             // adds SBQQ__ConditionsMet__c (PRD-004) and the
             // SBQQ__ErrorConditions__r subquery (PRD-003).
-            String conditionsMetField = SchemaUtil.hasField('SBQQ__ProductRule__c', 'SBQQ__ConditionsMet__c')
-                ? ', SBQQ__ConditionsMet__c' : '';
-            String errorCondSubquery = SchemaUtil.hasObject('SBQQ__ErrorCondition__c')
+            //
+            // Phase 22n — on REMOTE scans the host org's schema (where
+            // SchemaUtil.hasField/hasObject probe) does NOT reflect the
+            // target. Stripping the field locally would cause every
+            // returned row to be missing it, breaking predicates that
+            // depend on its value (false-fired PRD-004 against the cpq
+            // target when techtorch host lacked SBQQ__ProductRule__c).
+            // On remote, always request optional fields and use
+            // queryWithFallback to drop them server-side via INVALID_FIELD
+            // if the target genuinely lacks them.
+            Boolean isRemote = ctx.isRemote();
+            Boolean hasCondMet = isRemote
+                || SchemaUtil.hasField('SBQQ__ProductRule__c', 'SBQQ__ConditionsMet__c');
+            Boolean hasErrCond = isRemote
+                || SchemaUtil.hasObject('SBQQ__ErrorCondition__c');
+            String conditionsMetField = hasCondMet ? ', SBQQ__ConditionsMet__c' : '';
+            String errorCondSubquery  = hasErrCond
                 ? ', (SELECT Id FROM SBQQ__ErrorConditions__r LIMIT 1) ' : ' ';
-            String soql =
+            String soqlStrict =
                 'SELECT Id, Name, SBQQ__Active__c, SBQQ__Type__c, ' +
                 '  SBQQ__EvaluationOrder__c, SBQQ__LookupObject__c' + conditionsMetField + ', ' +
                 '  (SELECT Id, SBQQ__Type__c, SBQQ__Product__c, ' +
                 '          SBQQ__Product__r.Name, SBQQ__Product__r.IsActive ' +
                 '   FROM SBQQ__Actions__r)' + errorCondSubquery +
                 'FROM SBQQ__ProductRule__c LIMIT 5000';
-            try { rows = OrgQueryService.query(ctx, soql); }
-            catch (Exception e) {
+            // Loose fallback drops both optional bits; evaluatePRD003 /
+            // evaluatePRD004 then skip rows where the field/subquery is
+            // genuinely absent instead of treating null as "blank".
+            String soqlLoose =
+                'SELECT Id, Name, SBQQ__Active__c, SBQQ__Type__c, ' +
+                '  SBQQ__EvaluationOrder__c, SBQQ__LookupObject__c, ' +
+                '  (SELECT Id, SBQQ__Type__c, SBQQ__Product__c, ' +
+                '          SBQQ__Product__r.Name, SBQQ__Product__r.IsActive ' +
+                '   FROM SBQQ__Actions__r) ' +
+                'FROM SBQQ__ProductRule__c LIMIT 5000';
+            try {
+                rows = OrgQueryService.queryWithFallback(ctx, soqlStrict, soqlLoose);
+            } catch (Exception e) {
                 System.debug(LoggingLevel.WARN, '[OrgPrism Skip] PRD-BUNDLE: ' + e.getMessage());
                 return results;
             }
@@ -196,6 +221,10 @@ public with sharing class ProductRuleChecksBundle implements IDetector {
             if (!isActive(rule)) continue;
             String t = typeOf(rule);
             if (t != 'Validation' && t != 'Alert') continue;
+            // Phase 22n — if the field wasn't returned (loose fallback
+            // dropped it because the target lacks it), we cannot evaluate
+            // — skip rather than treat null as "blank" and false-fire.
+            if (!rule.containsKey('SBQQ__ConditionsMet__c')) continue;
             Object cm = rule.get('SBQQ__ConditionsMet__c');
             String cmStr = (cm == null) ? null : String.valueOf(cm);
             if (!String.isBlank(cmStr)) continue;
