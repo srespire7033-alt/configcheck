@@ -1,4 +1,5 @@
 import { LightningElement, wire, track } from 'lwc';
+import { CurrentPageReference } from 'lightning/navigation';
 import getComplexity from '@salesforce/apex/OrgComplexityController.getComplexity';
 
 const RATING_THEME = {
@@ -13,8 +14,21 @@ export default class ComplexityCard extends LightningElement {
   error;
   loading = true;
   @track expanded = true;
+  /** Phase 22t — scope to the active Connected Org. Same pattern as
+   *  heroBlock / categoryPerformanceGrid / aiRemediationPlan. Without
+   *  this, the card always shows host-org (techtorch) counts no
+   *  matter which Connected Org dashboard you're on. */
+  @track connectedOrgId = null;
 
-  @wire(getComplexity)
+  @wire(CurrentPageReference)
+  wirePageRef(pageRef) {
+    if (!pageRef) return;
+    this.connectedOrgId = pageRef.state?.c__connectedOrgId
+      || pageRef.state?.connectedOrgId
+      || null;
+  }
+
+  @wire(getComplexity, { connectedOrgId: '$connectedOrgId' })
   wireData(result) {
     this.loading = false;
     if (result.data) {
