@@ -6,7 +6,7 @@
     <values><field>CardKey__c</field><value xsi:type="xsd:string">contracted</value></values>
     <values><field>Label__c</field><value xsi:type="xsd:string">Contracted</value></values>
     <values><field>IconName__c</field><value xsi:type="xsd:string">utility:contract</value></values>
-    <values><field>DetectorIds__c</field><value xsi:type="xsd:string">CT-FOR-001,CON-FOR-001</value></values>
+    <values><field>DetectorIds__c</field><value xsi:type="xsd:string">CP-001,CP-002,CP-003,CT-FOR-001,CON-FOR-001</value></values>
     <values><field>Sequence__c</field><value xsi:type="xsd:double">5</value></values>
     <values><field>IsActive__c</field><value xsi:type="xsd:boolean">true</value></values>
 </CustomMetadata>

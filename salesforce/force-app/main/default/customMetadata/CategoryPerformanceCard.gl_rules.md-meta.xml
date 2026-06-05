@@ -6,7 +6,7 @@
     <values><field>CardKey__c</field><value xsi:type="xsd:string">gl_rules</value></values>
     <values><field>Label__c</field><value xsi:type="xsd:string">GL Rules</value></values>
     <values><field>IconName__c</field><value xsi:type="xsd:string">utility:advanced_function</value></values>
-    <values><field>DetectorIds__c</field><value xsi:type="xsd:string"></value></values>
+    <values><field>DetectorIds__c</field><value xsi:type="xsd:string">GL-001,GL-002,GL-003,GL-004,GL-005</value></values>
     <values><field>Sequence__c</field><value xsi:type="xsd:double">3</value></values>
     <values><field>IsActive__c</field><value xsi:type="xsd:boolean">true</value></values>
 </CustomMetadata>

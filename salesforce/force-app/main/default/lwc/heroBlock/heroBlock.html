@@ -131,16 +131,10 @@
                   </template>
                 </div>
               </template>
-              <button
-                type="button"
-                class="op-hero__refresh"
-                onclick={handleRefresh}
-                disabled={running}
-                title="Refresh data"
-                aria-label="Refresh"
-              >
-                <lightning-icon icon-name="utility:refresh" size="x-small"></lightning-icon>
-              </button>
+<!-- Phase 22p — refresh icon removed. Apex @wire(getDashboardSummary)
+                   auto-refreshes after every scan via refreshApex + the
+                   op:scan-completed pub/sub event; the manual button was
+                   redundant and confusing. -->
             </div>
 
             <!-- Report dropdown -->

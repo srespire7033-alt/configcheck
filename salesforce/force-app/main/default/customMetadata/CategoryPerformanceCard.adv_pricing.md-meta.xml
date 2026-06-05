@@ -6,7 +6,7 @@
     <values><field>CardKey__c</field><value xsi:type="xsd:string">adv_pricing</value></values>
     <values><field>Label__c</field><value xsi:type="xsd:string">Adv. Pricing</value></values>
     <values><field>IconName__c</field><value xsi:type="xsd:string">utility:advanced_function</value></values>
-    <values><field>DetectorIds__c</field><value xsi:type="xsd:string">MDQ-FOR-001</value></values>
+    <values><field>DetectorIds__c</field><value xsi:type="xsd:string">AP-001,AP-002,AP-003,AP-004,AP-005,MDQ-FOR-001</value></values>
     <values><field>Sequence__c</field><value xsi:type="xsd:double">15</value></values>
     <values><field>IsActive__c</field><value xsi:type="xsd:boolean">true</value></values>
 </CustomMetadata>

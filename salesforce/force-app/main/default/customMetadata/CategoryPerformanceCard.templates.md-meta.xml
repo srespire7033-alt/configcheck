@@ -6,7 +6,7 @@
     <values><field>CardKey__c</field><value xsi:type="xsd:string">templates</value></values>
     <values><field>Label__c</field><value xsi:type="xsd:string">Templates</value></values>
     <values><field>IconName__c</field><value xsi:type="xsd:string">utility:file</value></values>
-    <values><field>DetectorIds__c</field><value xsi:type="xsd:string"></value></values>
+    <values><field>DetectorIds__c</field><value xsi:type="xsd:string">QT-001,QT-002,QT-003,QT-004,QT-005</value></values>
     <values><field>Sequence__c</field><value xsi:type="xsd:double">17</value></values>
     <values><field>IsActive__c</field><value xsi:type="xsd:boolean">true</value></values>
 </CustomMetadata>

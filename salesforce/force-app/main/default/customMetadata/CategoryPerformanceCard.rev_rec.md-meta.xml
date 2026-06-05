@@ -6,7 +6,7 @@
     <values><field>CardKey__c</field><value xsi:type="xsd:string">rev_rec</value></values>
     <values><field>Label__c</field><value xsi:type="xsd:string">Rev Rec</value></values>
     <values><field>IconName__c</field><value xsi:type="xsd:string">utility:percent</value></values>
-    <values><field>DetectorIds__c</field><value xsi:type="xsd:string"></value></values>
+    <values><field>DetectorIds__c</field><value xsi:type="xsd:string">RR-001,RR-002,RR-003,RR-004</value></values>
     <values><field>Sequence__c</field><value xsi:type="xsd:double">7</value></values>
     <values><field>IsActive__c</field><value xsi:type="xsd:boolean">true</value></values>
 </CustomMetadata>

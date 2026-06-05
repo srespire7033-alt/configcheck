@@ -6,7 +6,7 @@
     <values><field>CardKey__c</field><value xsi:type="xsd:string">impact</value></values>
     <values><field>Label__c</field><value xsi:type="xsd:string">Impact</value></values>
     <values><field>IconName__c</field><value xsi:type="xsd:string">utility:chart</value></values>
-    <values><field>DetectorIds__c</field><value xsi:type="xsd:string">AST-FOR-001</value></values>
+    <values><field>DetectorIds__c</field><value xsi:type="xsd:string">IA-001,IA-002,IA-003,IA-004,IA-005,IA-006,AST-FOR-001</value></values>
     <values><field>Sequence__c</field><value xsi:type="xsd:double">8</value></values>
     <values><field>IsActive__c</field><value xsi:type="xsd:boolean">true</value></values>
 </CustomMetadata>

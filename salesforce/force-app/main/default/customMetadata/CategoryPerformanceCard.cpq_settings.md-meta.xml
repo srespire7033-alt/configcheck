@@ -6,7 +6,7 @@
     <values><field>CardKey__c</field><value xsi:type="xsd:string">cpq_settings</value></values>
     <values><field>Label__c</field><value xsi:type="xsd:string">CPQ Settings</value></values>
     <values><field>IconName__c</field><value xsi:type="xsd:string">utility:settings</value></values>
-    <values><field>DetectorIds__c</field><value xsi:type="xsd:string"></value></values>
+    <values><field>DetectorIds__c</field><value xsi:type="xsd:string">SET-001,SET-002,SET-003,SET-004</value></values>
     <values><field>Sequence__c</field><value xsi:type="xsd:double">16</value></values>
     <values><field>IsActive__c</field><value xsi:type="xsd:boolean">true</value></values>
 </CustomMetadata>

@@ -6,7 +6,7 @@
     <values><field>CardKey__c</field><value xsi:type="xsd:string">approvals</value></values>
     <values><field>Label__c</field><value xsi:type="xsd:string">Approvals</value></values>
     <values><field>IconName__c</field><value xsi:type="xsd:string">utility:approval</value></values>
-    <values><field>DetectorIds__c</field><value xsi:type="xsd:string">QL-FOR-002</value></values>
+    <values><field>DetectorIds__c</field><value xsi:type="xsd:string">AR-001,AR-002,AR-003,AR-004,AR-005,QL-FOR-002</value></values>
     <values><field>Sequence__c</field><value xsi:type="xsd:double">2</value></values>
     <values><field>IsActive__c</field><value xsi:type="xsd:boolean">true</value></values>
 </CustomMetadata>

@@ -6,7 +6,7 @@
     <values><field>CardKey__c</field><value xsi:type="xsd:string">lookups</value></values>
     <values><field>Label__c</field><value xsi:type="xsd:string">Lookups</value></values>
     <values><field>IconName__c</field><value xsi:type="xsd:string">utility:search</value></values>
-    <values><field>DetectorIds__c</field><value xsi:type="xsd:string"></value></values>
+    <values><field>DetectorIds__c</field><value xsi:type="xsd:string">LQ-001,LQ-002,LQ-003,LQ-004,LQ-005</value></values>
     <values><field>Sequence__c</field><value xsi:type="xsd:double">9</value></values>
     <values><field>IsActive__c</field><value xsi:type="xsd:boolean">true</value></values>
 </CustomMetadata>

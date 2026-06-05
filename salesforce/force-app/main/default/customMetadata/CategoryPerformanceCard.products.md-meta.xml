@@ -6,7 +6,7 @@
     <values><field>CardKey__c</field><value xsi:type="xsd:string">products</value></values>
     <values><field>Label__c</field><value xsi:type="xsd:string">Products</value></values>
     <values><field>IconName__c</field><value xsi:type="xsd:string">utility:product_required</value></values>
-    <values><field>DetectorIds__c</field><value xsi:type="xsd:string">PROV-FOR-001,PROV-FOR-002</value></values>
+    <values><field>DetectorIds__c</field><value xsi:type="xsd:string">PB-001,PB-002,PB-003,PB-004,UA-001,UA-003,PROV-FOR-001,PROV-FOR-002</value></values>
     <values><field>Sequence__c</field><value xsi:type="xsd:double">1</value></values>
     <values><field>IsActive__c</field><value xsi:type="xsd:boolean">true</value></values>
 </CustomMetadata>

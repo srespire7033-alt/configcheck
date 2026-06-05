@@ -6,7 +6,7 @@
     <values><field>CardKey__c</field><value xsi:type="xsd:string">subscriptions</value></values>
     <values><field>Label__c</field><value xsi:type="xsd:string">Subscriptions</value></values>
     <values><field>IconName__c</field><value xsi:type="xsd:string">utility:refresh</value></values>
-    <values><field>DetectorIds__c</field><value xsi:type="xsd:string">SUB-FOR-001,REN-003,REN-004</value></values>
+    <values><field>DetectorIds__c</field><value xsi:type="xsd:string">SR-001,SR-002,SR-003,SR-004,SUB-FOR-001,REN-003,REN-004</value></values>
     <values><field>Sequence__c</field><value xsi:type="xsd:double">18</value></values>
     <values><field>IsActive__c</field><value xsi:type="xsd:boolean">true</value></values>
 </CustomMetadata>

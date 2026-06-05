@@ -6,7 +6,7 @@
     <values><field>CardKey__c</field><value xsi:type="xsd:string">invoicing</value></values>
     <values><field>Label__c</field><value xsi:type="xsd:string">Invoicing</value></values>
     <values><field>IconName__c</field><value xsi:type="xsd:string">utility:list</value></values>
-    <values><field>DetectorIds__c</field><value xsi:type="xsd:string"></value></values>
+    <values><field>DetectorIds__c</field><value xsi:type="xsd:string">INV-001,INV-002,INV-003,INV-004,INV-005</value></values>
     <values><field>Sequence__c</field><value xsi:type="xsd:double">4</value></values>
     <values><field>IsActive__c</field><value xsi:type="xsd:boolean">true</value></values>
 </CustomMetadata>

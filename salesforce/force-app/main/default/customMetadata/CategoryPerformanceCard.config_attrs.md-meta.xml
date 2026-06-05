@@ -6,7 +6,7 @@
     <values><field>CardKey__c</field><value xsi:type="xsd:string">config_attrs</value></values>
     <values><field>Label__c</field><value xsi:type="xsd:string">Config Attrs</value></values>
     <values><field>IconName__c</field><value xsi:type="xsd:string">utility:setup</value></values>
-    <values><field>DetectorIds__c</field><value xsi:type="xsd:string"></value></values>
+    <values><field>DetectorIds__c</field><value xsi:type="xsd:string">CA-001,CA-002,CA-003,CA-004,TF-001</value></values>
     <values><field>Sequence__c</field><value xsi:type="xsd:double">4</value></values>
     <values><field>IsActive__c</field><value xsi:type="xsd:boolean">true</value></values>
 </CustomMetadata>

@@ -6,7 +6,7 @@
     <values><field>CardKey__c</field><value xsi:type="xsd:string">performance</value></values>
     <values><field>Label__c</field><value xsi:type="xsd:string">Performance</value></values>
     <values><field>IconName__c</field><value xsi:type="xsd:string">utility:speedometer</value></values>
-    <values><field>DetectorIds__c</field><value xsi:type="xsd:string"></value></values>
+    <values><field>DetectorIds__c</field><value xsi:type="xsd:string">PERF-001,PERF-002,PERF-003,PERF-004,PERF-005</value></values>
     <values><field>Sequence__c</field><value xsi:type="xsd:double">10</value></values>
     <values><field>IsActive__c</field><value xsi:type="xsd:boolean">true</value></values>
 </CustomMetadata>

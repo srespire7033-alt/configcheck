@@ -6,7 +6,7 @@
     <values><field>CardKey__c</field><value xsi:type="xsd:string">discounts</value></values>
     <values><field>Label__c</field><value xsi:type="xsd:string">Discounts</value></values>
     <values><field>IconName__c</field><value xsi:type="xsd:string">utility:money</value></values>
-    <values><field>DetectorIds__c</field><value xsi:type="xsd:string">DSC-FOR-001,DSC-FOR-002</value></values>
+    <values><field>DetectorIds__c</field><value xsi:type="xsd:string">DS-001,DS-002,DS-003,DS-004,DSC-FOR-001,DSC-FOR-002</value></values>
     <values><field>Sequence__c</field><value xsi:type="xsd:double">6</value></values>
     <values><field>IsActive__c</field><value xsi:type="xsd:boolean">true</value></values>
 </CustomMetadata>

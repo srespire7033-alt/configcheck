@@ -6,7 +6,7 @@
     <values><field>CardKey__c</field><value xsi:type="xsd:string">summary_vars</value></values>
     <values><field>Label__c</field><value xsi:type="xsd:string">Summary Vars</value></values>
     <values><field>IconName__c</field><value xsi:type="xsd:string">utility:variable</value></values>
-    <values><field>DetectorIds__c</field><value xsi:type="xsd:string"></value></values>
+    <values><field>DetectorIds__c</field><value xsi:type="xsd:string">SV-001,SV-002,SV-003,SV-004,SV-005,SV-006</value></values>
     <values><field>Sequence__c</field><value xsi:type="xsd:double">19</value></values>
     <values><field>IsActive__c</field><value xsi:type="xsd:boolean">true</value></values>
 </CustomMetadata>

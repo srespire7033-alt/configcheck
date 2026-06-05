@@ -178,10 +178,10 @@ export default class HeroBlock extends NavigationMixin(LightningElement) {
     this.selectedProductType = event.currentTarget.dataset.id;
   }
 
-  async handleRefresh() {
-    if (this.running) return;
-    await refreshApex(this.wiredResult);
-  }
+  // Phase 22p — handleRefresh/op-hero__refresh removed. Auto-refresh
+  // via the op:scan-completed event covers every scenario the manual
+  // button did, and the button was confusing alongside the existing
+  // New Scan / +Forensics split.
 
   async handleNewScan() {
     if (this.running) return;

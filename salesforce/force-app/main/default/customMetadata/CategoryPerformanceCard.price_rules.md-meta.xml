@@ -6,7 +6,7 @@
     <values><field>CardKey__c</field><value xsi:type="xsd:string">price_rules</value></values>
     <values><field>Label__c</field><value xsi:type="xsd:string">Price Rules</value></values>
     <values><field>IconName__c</field><value xsi:type="xsd:string">utility:currency</value></values>
-    <values><field>DetectorIds__c</field><value xsi:type="xsd:string">REN-002,REN-001</value></values>
+    <values><field>DetectorIds__c</field><value xsi:type="xsd:string">PR-001,PR-002,PR-003,PR-004,PR-005,REN-001,REN-002</value></values>
     <values><field>Sequence__c</field><value xsi:type="xsd:double">11</value></values>
     <values><field>IsActive__c</field><value xsi:type="xsd:boolean">true</value></values>
 </CustomMetadata>

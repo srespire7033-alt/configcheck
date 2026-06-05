@@ -6,7 +6,7 @@
     <values><field>CardKey__c</field><value xsi:type="xsd:string">billing_config</value></values>
     <values><field>Label__c</field><value xsi:type="xsd:string">Billing Config</value></values>
     <values><field>IconName__c</field><value xsi:type="xsd:string">utility:setup_assistant_guide</value></values>
-    <values><field>DetectorIds__c</field><value xsi:type="xsd:string">ORD-FOR-001</value></values>
+    <values><field>DetectorIds__c</field><value xsi:type="xsd:string">PBC-001,PBC-002,PBC-003,PBC-004,PBC-005,PBC-006,ORD-FOR-001</value></values>
     <values><field>Sequence__c</field><value xsi:type="xsd:double">6</value></values>
     <values><field>IsActive__c</field><value xsi:type="xsd:boolean">true</value></values>
 </CustomMetadata>

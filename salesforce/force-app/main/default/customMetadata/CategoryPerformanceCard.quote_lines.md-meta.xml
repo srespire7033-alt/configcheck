@@ -6,7 +6,7 @@
     <values><field>CardKey__c</field><value xsi:type="xsd:string">quote_lines</value></values>
     <values><field>Label__c</field><value xsi:type="xsd:string">Quote Lines</value></values>
     <values><field>IconName__c</field><value xsi:type="xsd:string">utility:quotes</value></values>
-    <values><field>DetectorIds__c</field><value xsi:type="xsd:string">QL-FOR-001,QL-FOR-002</value></values>
+    <values><field>DetectorIds__c</field><value xsi:type="xsd:string">QL-001,QL-002,QL-003,QL-004,QL-FOR-001,QL-FOR-002</value></values>
     <values><field>Sequence__c</field><value xsi:type="xsd:double">14</value></values>
     <values><field>IsActive__c</field><value xsi:type="xsd:boolean">true</value></values>
 </CustomMetadata>

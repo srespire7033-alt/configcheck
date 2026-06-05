@@ -6,7 +6,7 @@
     <values><field>CardKey__c</field><value xsi:type="xsd:string">qcp</value></values>
     <values><field>Label__c</field><value xsi:type="xsd:string">QCP</value></values>
     <values><field>IconName__c</field><value xsi:type="xsd:string">utility:apex</value></values>
-    <values><field>DetectorIds__c</field><value xsi:type="xsd:string"></value></values>
+    <values><field>DetectorIds__c</field><value xsi:type="xsd:string">QCP-001,QCP-002,QCP-003,QCP-004</value></values>
     <values><field>Sequence__c</field><value xsi:type="xsd:double">13</value></values>
     <values><field>IsActive__c</field><value xsi:type="xsd:boolean">true</value></values>
 </CustomMetadata>

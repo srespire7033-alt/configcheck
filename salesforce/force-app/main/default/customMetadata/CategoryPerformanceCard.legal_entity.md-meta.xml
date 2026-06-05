@@ -6,7 +6,7 @@
     <values><field>CardKey__c</field><value xsi:type="xsd:string">legal_entity</value></values>
     <values><field>Label__c</field><value xsi:type="xsd:string">Legal Entity</value></values>
     <values><field>IconName__c</field><value xsi:type="xsd:string">utility:case</value></values>
-    <values><field>DetectorIds__c</field><value xsi:type="xsd:string"></value></values>
+    <values><field>DetectorIds__c</field><value xsi:type="xsd:string">LE-001,LE-002,LE-003,LE-004</value></values>
     <values><field>Sequence__c</field><value xsi:type="xsd:double">5</value></values>
     <values><field>IsActive__c</field><value xsi:type="xsd:boolean">true</value></values>
 </CustomMetadata>
