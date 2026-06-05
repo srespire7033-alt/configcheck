@@ -185,7 +185,7 @@ public with sharing class ForensicScanService {
         String namedCredentialName = null;
         if (connectedOrgId != null) {
             List<ConnectedOrg__c> cos = [
-                SELECT Id, NamedCredentialName__c, Status__c
+                SELECT Id, NamedCredentialName__c, Status__c, ProductType__c
                 FROM ConnectedOrg__c WHERE Id = :connectedOrgId WITH SECURITY_ENFORCED LIMIT 1
             ];
             if (cos.isEmpty()) {
@@ -194,6 +194,16 @@ public with sharing class ForensicScanService {
             namedCredentialName = cos[0].NamedCredentialName__c;
             if (String.isBlank(namedCredentialName)) {
                 throw new AuraHandledException('Connected Org has no Named Credential configured');
+            }
+            // Phase 22m — auto-derive productType from the Connected Org so
+            // ARM detectors don't leak into CPQ-typed scans (and vice-versa).
+            // FS-0047 saw ARM-001/002b/037 fire on a CPQ scan because the
+            // caller passed productType=null, which fell into the "no filter"
+            // branch of getDetectorsFor. The Connected Org row already knows
+            // what it is — use it.
+            if (String.isBlank(productType)
+                    && String.isNotBlank(cos[0].ProductType__c)) {
+                productType = cos[0].ProductType__c;
             }
         }
 
