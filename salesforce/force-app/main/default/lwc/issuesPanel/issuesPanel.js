@@ -3,6 +3,7 @@ import { CurrentPageReference } from 'lightning/navigation';
 import { refreshApex } from '@salesforce/apex';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import getTopIssueGroups from '@salesforce/apex/IssuesController.getTopIssueGroups';
+import getRootIssueRecords from '@salesforce/apex/IssuesController.getRootIssueRecords';
 import bulkStage from '@salesforce/apex/RecoveryActionService.bulkStage';
 import markGroupNotApplicable from '@salesforce/apex/IssuesController.markGroupNotApplicable';
 
@@ -23,7 +24,10 @@ export default class IssuesPanel extends LightningElement {
   @track connectedOrgId = null;
   /** Phase 24y-D — which group's button is mid-action (disables siblings). */
   @track busyKey = null;
+  /** Phase 24y-E — records with 3+ distinct detectors firing on them. */
+  @track roots;
   wiredResult;
+  wiredRoots;
 
   @wire(CurrentPageReference)
   wirePageRef(pageRef) {
@@ -34,7 +38,16 @@ export default class IssuesPanel extends LightningElement {
 
   connectedCallback() { window.addEventListener('op:scan-completed', this.handleScanCompleted); }
   disconnectedCallback() { window.removeEventListener('op:scan-completed', this.handleScanCompleted); }
-  handleScanCompleted = () => { if (this.wiredResult) refreshApex(this.wiredResult); };
+  handleScanCompleted = () => {
+    if (this.wiredResult) refreshApex(this.wiredResult);
+    if (this.wiredRoots) refreshApex(this.wiredRoots);
+  };
+
+  @wire(getRootIssueRecords, { maxRoots: 3, connectedOrgId: '$connectedOrgId' })
+  wireRoots(result) {
+    this.wiredRoots = result;
+    if (result.data) this.roots = result.data;
+  }
 
   @wire(getTopIssueGroups, { maxGroups: 5, connectedOrgId: '$connectedOrgId' })
   wireData(result) {
@@ -47,6 +60,30 @@ export default class IssuesPanel extends LightningElement {
       this.error = result.error.body?.message || result.error.message;
     }
   }
+
+  /** Phase 24y-E — render root issues at top of panel. */
+  get rootRows() {
+    return (this.roots || []).map(r => {
+      const sev = (r.severity || '').toLowerCase();
+      const gap = Number(r.totalGapUsd) || 0;
+      const findingCount = (r.findingIds || []).length;
+      const rootKey = `root:${r.primaryRecordId}`;
+      return {
+        ...r,
+        rootKey,
+        severityChipClass: `op-tip__sev op-tip__sev--${sev}`,
+        borderClass: `op-tip__row op-tip__row--root op-tip__row--${sev}`,
+        gapLabel: gap > 0 ? this.formatMoney(gap) + ' at risk' : '',
+        hasGap: gap > 0,
+        detectorsLabel: (r.detectorIds || []).join(' · '),
+        stageLabel: `Stage all ${findingCount} fixes`,
+        canStage: findingCount > 0 && !this.busyKey,
+        isBusy: this.busyKey === rootKey,
+        subtitle: `${r.detectorCount} detectors across ${(r.categories || []).length} categor${(r.categories || []).length === 1 ? 'y' : 'ies'}`,
+      };
+    });
+  }
+  get hasRoots() { return (this.roots || []).length > 0; }
 
   get isLoading() { return this.loading; }
   get hasError() { return !this.loading && Boolean(this.error); }
@@ -114,7 +151,11 @@ export default class IssuesPanel extends LightningElement {
   async handleStageAll(e) {
     e.stopPropagation();
     const key = e.currentTarget.dataset.key;
-    const g = (this.groups || []).find(x => x.groupKey === key);
+    // Phase 24y-E — root rows use rootKey ("root:<id>"); category rows use groupKey.
+    const isRoot = key.startsWith('root:');
+    const g = isRoot
+      ? (this.roots || []).find(x => `root:${x.primaryRecordId}` === key)
+      : (this.groups || []).find(x => x.groupKey === key);
     if (!g || !g.findingIds || g.findingIds.length === 0) return;
     this.busyKey = key;
     try {
@@ -127,6 +168,7 @@ export default class IssuesPanel extends LightningElement {
         variant: staged > 0 ? 'success' : 'info',
       }));
       if (this.wiredResult) await refreshApex(this.wiredResult);
+      if (this.wiredRoots) await refreshApex(this.wiredRoots);
     } catch (err) {
       this.dispatchEvent(new ShowToastEvent({
         title: 'Stage failed',

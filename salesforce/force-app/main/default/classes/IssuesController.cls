@@ -603,6 +603,158 @@ public with sharing class IssuesController {
     }
 
     /**
+     * Phase 24y-E — Root-cause records. When a single record (Product,
+     * Subscription, Quote, etc.) has 3+ distinct detectors firing on
+     * it, surface it as ONE root issue rather than scattering the same
+     * record across 3+ category cards.
+     *
+     * Example: "Creativity Suite License" Product has TR-001 (no tax
+     * rule) + PBC-001 (no billing rule) + PBC-002 (no rev rec) + PB-002
+     * (no description) + PB-003 (no ProductCode) firing. Today's Top
+     * Issues shows these as 5 cards across 5 categories; the consultant
+     * chases the same product 5 times. Root-cause view rolls them up:
+     * "Product 'Creativity Suite License' is partially configured — 5
+     * issues across Billing, Tax, Hygiene."
+     *
+     * Threshold: 3+ distinct detectors on the same primaryRecordId.
+     * Returns top N by detector count, then severity, then gap.
+     * Info-severity findings are dropped (Phase 24d parity).
+     */
+    public class RootIssue {
+        @AuraEnabled public String primaryRecordId;
+        @AuraEnabled public String primaryRecordType;
+        @AuraEnabled public String recordName;
+        @AuraEnabled public Integer detectorCount;
+        @AuraEnabled public List<String> detectorIds;
+        @AuraEnabled public List<String> categories;
+        @AuraEnabled public String severity;
+        @AuraEnabled public Decimal totalGapUsd;
+        @AuraEnabled public List<Id> findingIds;
+        @AuraEnabled public String headlineTitle;
+        @AuraEnabled public String categoriesLabel;  // "Billing · Tax · Hygiene"
+    }
+
+    @AuraEnabled(cacheable=true)
+    public static List<RootIssue> getRootIssueRecords(Integer maxRoots, Id connectedOrgId) {
+        Integer n = (maxRoots == null || maxRoots <= 0) ? 3 : maxRoots;
+        // Pull the same finding set Top Issues uses.
+        List<ForensicScan__c> scans;
+        if (connectedOrgId != null) {
+            scans = [
+                SELECT Id FROM ForensicScan__c
+                WHERE Status__c IN ('Completed','Partial')
+                  AND ConnectedOrg__c = :connectedOrgId
+                WITH SECURITY_ENFORCED ORDER BY CompletedAt__c DESC NULLS LAST LIMIT 1
+            ];
+        } else {
+            scans = [
+                SELECT Id FROM ForensicScan__c
+                WHERE Status__c IN ('Completed','Partial')
+                WITH SECURITY_ENFORCED ORDER BY CompletedAt__c DESC NULLS LAST LIMIT 1
+            ];
+        }
+        if (scans.isEmpty()) return new List<RootIssue>();
+        Id scanId = scans[0].Id;
+
+        // Group raw findings by primaryRecordId.
+        Map<String, List<ForensicFinding__c>> byRecord = new Map<String, List<ForensicFinding__c>>();
+        for (ForensicFinding__c f : [
+            SELECT Id, DetectorId__c, Title__c, Severity__c, GapUsd__c,
+                   PrimaryRecordId__c, PrimaryRecordType__c
+            FROM ForensicFinding__c
+            WHERE ForensicScan__c = :scanId AND HiddenAt__c = null
+              AND Severity__c != 'Info'
+              AND PrimaryRecordId__c != null
+            WITH SECURITY_ENFORCED
+        ]) {
+            String rid = f.PrimaryRecordId__c;
+            if (!byRecord.containsKey(rid)) byRecord.put(rid, new List<ForensicFinding__c>());
+            byRecord.get(rid).add(f);
+        }
+
+        List<RootIssue> roots = new List<RootIssue>();
+        for (String rid : byRecord.keySet()) {
+            List<ForensicFinding__c> rows = byRecord.get(rid);
+            Set<String> distinctDetectors = new Set<String>();
+            for (ForensicFinding__c f : rows) distinctDetectors.add(f.DetectorId__c);
+            // Threshold: 3+ distinct detectors on the same record.
+            if (distinctDetectors.size() < 3) continue;
+
+            RootIssue ri = new RootIssue();
+            ri.primaryRecordId = rid;
+            ri.primaryRecordType = rows[0].PrimaryRecordType__c;
+            ri.findingIds = new List<Id>();
+            ri.detectorIds = new List<String>();
+            Set<String> categorySet = new Set<String>();
+            Decimal totalGap = 0;
+            String worstSev = 'Info';
+            String firstName = null;
+
+            for (ForensicFinding__c f : rows) {
+                ri.findingIds.add(f.Id);
+                totalGap += (f.GapUsd__c == null ? 0 : f.GapUsd__c);
+                if (firstName == null) firstName = extractQuotedName(f.Title__c);
+                String s = f.Severity__c;
+                if (s == 'Critical') worstSev = 'Critical';
+                else if (s == 'Warning' && worstSev != 'Critical') worstSev = 'Warning';
+                String cat = DETECTOR_CATEGORY_LABEL.containsKey(f.DetectorId__c)
+                    ? DETECTOR_CATEGORY_LABEL.get(f.DetectorId__c) : null;
+                if (String.isNotBlank(cat)) categorySet.add(cat);
+            }
+            ri.detectorIds.addAll(distinctDetectors);
+            ri.categories = new List<String>(categorySet);
+            ri.categoriesLabel = String.join(ri.categories, ' · ');
+            ri.severity = worstSev;
+            ri.totalGapUsd = totalGap;
+            ri.detectorCount = distinctDetectors.size();
+            String objLabel = String.isBlank(ri.primaryRecordType) ? 'Record'
+                : ri.primaryRecordType.replace('__c', '').replace('SBQQ__', '');
+            String displayName = String.isBlank(firstName) ? rid.substring(0, 8) : firstName;
+            ri.recordName = displayName;
+            ri.headlineTitle = objLabel + ' "' + displayName + '" has '
+                + distinctDetectors.size() + ' issues';
+            roots.add(ri);
+        }
+
+        roots.sort(new RootIssueComparator());
+        if (roots.size() > n) {
+            List<RootIssue> trimmed = new List<RootIssue>();
+            for (Integer i = 0; i < n; i++) trimmed.add(roots[i]);
+            return trimmed;
+        }
+        return roots;
+    }
+
+    public class RootIssueComparator implements Comparator<RootIssue> {
+        public Integer compare(RootIssue a, RootIssue b) {
+            // severity DESC → detectorCount DESC → totalGapUsd DESC
+            Integer rs = sevRank(b.severity) - sevRank(a.severity);
+            if (rs != 0) return rs;
+            Integer rc = (b.detectorCount == null ? 0 : b.detectorCount)
+                       - (a.detectorCount == null ? 0 : a.detectorCount);
+            if (rc != 0) return rc;
+            Decimal ag = a.totalGapUsd == null ? 0 : a.totalGapUsd;
+            Decimal bg = b.totalGapUsd == null ? 0 : b.totalGapUsd;
+            if (bg != ag) return bg > ag ? 1 : -1;
+            return 0;
+        }
+        private Integer sevRank(String s) {
+            if (s == 'Critical') return 3;
+            if (s == 'Warning') return 2;
+            if (s == 'Info') return 1;
+            return 0;
+        }
+    }
+
+    private static String extractQuotedName(String title) {
+        if (String.isBlank(title)) return null;
+        Pattern p = Pattern.compile('"([^"]+)"');
+        Matcher m = p.matcher(title);
+        if (m.find()) return m.group(1);
+        return null;
+    }
+
+    /**
      * Phase 24y-D — One-click "Mark not applicable" from the Top Issues
      * card. Creates a DetectorOverride__c row pinning the detector to
      * "Not Applicable" for the supplied org. Future scans skip this

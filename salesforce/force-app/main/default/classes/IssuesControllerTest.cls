@@ -1,6 +1,123 @@
 @isTest
 private class IssuesControllerTest {
 
+    /**
+     * Phase 24y-E — Root cause record surfaces when 3+ distinct detectors
+     * fire on the same primaryRecordId. Threshold gate + headline +
+     * severity rollup + category labels all exercised here.
+     */
+    @isTest
+    static void rootIssueRecords_groupsRecordWith3PlusDetectors() {
+        ForensicScan__c scan = new ForensicScan__c(Status__c='Completed',
+            CompletedAt__c=System.now(), TotalLeakageUsd__c=0, FindingCount__c=4);
+        insert scan;
+        String prod = '01tNS00000ABCDEAAA';
+        insert new List<ForensicFinding__c>{
+            // 3 distinct detectors on the SAME product — should roll up
+            new ForensicFinding__c(ForensicScan__c=scan.Id, DetectorId__c='TR-001',
+                PrimaryRecordId__c=prod, PrimaryRecordType__c='Product2',
+                Title__c='Product "Creativity Suite" missing tax rule',
+                Severity__c='Critical', GapUsd__c=5000, EntitledUsd__c=5000, RealizedUsd__c=0,
+                Status__c='Open', DetectedAt__c=System.now()),
+            new ForensicFinding__c(ForensicScan__c=scan.Id, DetectorId__c='PBC-001',
+                PrimaryRecordId__c=prod, PrimaryRecordType__c='Product2',
+                Title__c='Product "Creativity Suite" has no billing rule',
+                Severity__c='Warning', GapUsd__c=2000, EntitledUsd__c=2000, RealizedUsd__c=0,
+                Status__c='Open', DetectedAt__c=System.now()),
+            new ForensicFinding__c(ForensicScan__c=scan.Id, DetectorId__c='PB-002',
+                PrimaryRecordId__c=prod, PrimaryRecordType__c='Product2',
+                Title__c='Product "Creativity Suite" has no description',
+                Severity__c='Warning', GapUsd__c=0, EntitledUsd__c=0, RealizedUsd__c=0,
+                Status__c='Open', DetectedAt__c=System.now()),
+            // A 4th finding on an unrelated product — should NOT roll up (only 1 detector)
+            new ForensicFinding__c(ForensicScan__c=scan.Id, DetectorId__c='TR-001',
+                PrimaryRecordId__c='01tNS00000XXXXXAA', PrimaryRecordType__c='Product2',
+                Title__c='Product "Other Thing" missing tax rule',
+                Severity__c='Warning', GapUsd__c=1000, EntitledUsd__c=1000, RealizedUsd__c=0,
+                Status__c='Open', DetectedAt__c=System.now())
+        };
+        Test.startTest();
+        List<IssuesController.RootIssue> roots = IssuesController.getRootIssueRecords(3, null);
+        Test.stopTest();
+
+        System.assertEquals(1, roots.size(), 'Only one record has 3+ detectors');
+        IssuesController.RootIssue r = roots[0];
+        System.assertEquals(prod, r.primaryRecordId);
+        System.assertEquals(3, r.detectorCount);
+        System.assertEquals('Critical', r.severity, 'Worst-case severity wins');
+        System.assertEquals(7000, r.totalGapUsd, 'Gap sums across constituent findings');
+        System.assertEquals(3, r.findingIds.size());
+        System.assert(r.headlineTitle.contains('Creativity Suite'),
+            'Extracted quoted name flows into headline');
+    }
+
+    @isTest
+    static void rootIssueRecords_skipsRecordsBelowThreshold() {
+        ForensicScan__c scan = new ForensicScan__c(Status__c='Completed',
+            CompletedAt__c=System.now(), TotalLeakageUsd__c=0, FindingCount__c=2);
+        insert scan;
+        // Only 2 detectors on the record — under the 3-detector threshold
+        insert new List<ForensicFinding__c>{
+            new ForensicFinding__c(ForensicScan__c=scan.Id, DetectorId__c='TR-001',
+                PrimaryRecordId__c='01tNS00000AAAAAAB', PrimaryRecordType__c='Product2',
+                Title__c='Product missing tax rule',
+                Severity__c='Critical', GapUsd__c=5000, EntitledUsd__c=5000, RealizedUsd__c=0,
+                Status__c='Open', DetectedAt__c=System.now()),
+            new ForensicFinding__c(ForensicScan__c=scan.Id, DetectorId__c='PBC-001',
+                PrimaryRecordId__c='01tNS00000AAAAAAB', PrimaryRecordType__c='Product2',
+                Title__c='Product has no billing rule',
+                Severity__c='Warning', GapUsd__c=2000, EntitledUsd__c=2000, RealizedUsd__c=0,
+                Status__c='Open', DetectedAt__c=System.now())
+        };
+        List<IssuesController.RootIssue> roots = IssuesController.getRootIssueRecords(3, null);
+        System.assertEquals(0, roots.size(), '2 detectors < 3-detector threshold');
+    }
+
+    @isTest
+    static void rootIssueRecords_emptyWhenNoScans() {
+        List<IssuesController.RootIssue> roots = IssuesController.getRootIssueRecords(3, null);
+        System.assertEquals(0, roots.size());
+    }
+
+    @isTest
+    static void rootIssueRecords_nullMaxRoots_defaultsTo3() {
+        ForensicScan__c scan = new ForensicScan__c(Status__c='Completed',
+            CompletedAt__c=System.now(), TotalLeakageUsd__c=0, FindingCount__c=0);
+        insert scan;
+        // null maxRoots → defaults to 3 (no exception)
+        List<IssuesController.RootIssue> roots = IssuesController.getRootIssueRecords(null, null);
+        System.assertEquals(0, roots.size());
+        // negative maxRoots → also defaults
+        roots = IssuesController.getRootIssueRecords(-5, null);
+        System.assertEquals(0, roots.size());
+    }
+
+    @isTest
+    static void rootIssueRecords_caps_at_maxRoots() {
+        ForensicScan__c scan = new ForensicScan__c(Status__c='Completed',
+            CompletedAt__c=System.now(), TotalLeakageUsd__c=0, FindingCount__c=9);
+        insert scan;
+        // 3 different records each with 3 detectors. Asking for maxRoots=1 → 1 returned.
+        List<ForensicFinding__c> rows = new List<ForensicFinding__c>();
+        String[] recs = new String[]{
+            '01tNS00000RRRRRAAA', '01tNS00000SSSSSAAA', '01tNS00000TTTTTAAA'};
+        String[] dets = new String[]{'TR-001','PBC-001','PB-002'};
+        for (String r : recs) {
+            for (String d : dets) {
+                rows.add(new ForensicFinding__c(
+                    ForensicScan__c=scan.Id, DetectorId__c=d,
+                    PrimaryRecordId__c=r, PrimaryRecordType__c='Product2',
+                    Title__c='Product "Test" finding ' + d,
+                    Severity__c='Warning', GapUsd__c=1000,
+                    EntitledUsd__c=1000, RealizedUsd__c=0,
+                    Status__c='Open', DetectedAt__c=System.now()));
+            }
+        }
+        insert rows;
+        List<IssuesController.RootIssue> roots = IssuesController.getRootIssueRecords(1, null);
+        System.assertEquals(1, roots.size(), 'maxRoots=1 caps the result');
+    }
+
     @isTest
     static void normalizeTitleStripsEmbeddedRecordNames() {
         // Verbatim from prod data — verifies the dedup behavior.

@@ -24,6 +24,44 @@
       <p class="op-tip__empty">No issues to display.</p>
     </template>
 
+    <!-- Phase 24y-E — Root cause records (3+ detectors on same primary record) -->
+    <template if:true={hasRoots}>
+      <div class="op-tip__roots-band">
+        <p class="op-tip__roots-band-title">Root causes — one record, many issues</p>
+        <p class="op-tip__roots-band-hint">Fix these first: each one collapses 3+ findings across categories.</p>
+        <div class="op-tip__list">
+          <template for:each={rootRows} for:item="r">
+            <article key={r.rootKey} data-key={r.rootKey} class={r.borderClass}>
+              <div class="op-tip__row-num">★</div>
+              <div class="op-tip__row-body">
+                <div class="op-tip__row-chips">
+                  <span class={r.severityChipClass}>{r.severity}</span>
+                  <span class="op-tip__row-cat">ROOT · {r.primaryRecordType}</span>
+                  <span class="op-tip__related-chip">{r.detectorCount} DETECTORS</span>
+                  <template lwc:if={r.hasGap}>
+                    <span class="op-tip__gap-chip">{r.gapLabel}</span>
+                  </template>
+                </div>
+                <h3 class="op-tip__row-title">{r.headlineTitle}</h3>
+                <p class="op-tip__row-desc">
+                  Spans: <strong>{r.categoriesLabel}</strong> · Detectors: {r.detectorsLabel}
+                </p>
+                <div class="op-tip__row-actions">
+                  <button
+                    type="button"
+                    class="op-tip__action op-tip__action--primary"
+                    data-key={r.rootKey}
+                    onclick={handleStageAll}
+                    disabled={r.isBusy}
+                  >{r.stageLabel}</button>
+                </div>
+              </div>
+            </article>
+          </template>
+        </div>
+      </div>
+    </template>
+
     <template if:true={hasGroups}>
       <div class="op-tip__list">
         <template for:each={rows} for:item="r">
