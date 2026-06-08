@@ -47,6 +47,9 @@ public with sharing class IssuesController {
         @AuraEnabled public String categoryLabel;
         @AuraEnabled public Decimal gapUsd;
         @AuraEnabled public Integer affectedCount;
+        // Phase 24y-B — needed for scan-over-scan diff. Already
+        // queried; just wasn't surfaced on the DTO before.
+        @AuraEnabled public String primaryRecordId;
     }
 
     /** A grouped row in the Top Issues panel — same title rolled up. */
@@ -64,6 +67,14 @@ public with sharing class IssuesController {
         // this group. Drives the headline $ figure on the Top Issues
         // card and the within-severity ranking ($-DESC tiebreak).
         @AuraEnabled public Decimal totalGapUsd;
+        // Phase 24y-B — scan-over-scan trend per category group.
+        // newCount: findings that didn't exist on the prior scan.
+        // resolvedCount: findings that existed prior but not now.
+        // Both 0 → "no change" copy in the UI. First-scan callers
+        // see both as 0 and the LWC shows "first scan".
+        @AuraEnabled public Integer newCount;
+        @AuraEnabled public Integer resolvedCount;
+        @AuraEnabled public Boolean isFirstScan;
     }
 
     public class IssueDetailDto {
@@ -142,6 +153,7 @@ public with sharing class IssuesController {
                 ? DETECTOR_CATEGORY_LABEL.get(f.DetectorId__c) : f.DetectorId__c;
             r.gapUsd = f.GapUsd__c == null ? 0 : f.GapUsd__c;
             r.affectedCount = 1;
+            r.primaryRecordId = f.PrimaryRecordId__c;
             out.add(r);
         }
         // Sort: critical first, warning, info; then gapUsd desc
@@ -243,6 +255,15 @@ public with sharing class IssuesController {
         List<IssueRow> raw = getTopIssuesScoped(500, connectedOrgId);
         if (raw.isEmpty()) return new List<IssueGroup>();
 
+        // Phase 24y-B — load prior scan's findings once so we can stamp
+        // each group with newCount / resolvedCount for the trend chips
+        // on the Top Issues card. priorKeys = "detectorId|primaryRecordId"
+        // identifiers from the second-most-recent completed scan for
+        // this org. Empty when this is the first scan.
+        Set<String> priorKeys = loadPriorScanKeys(connectedOrgId);
+        Map<String, Set<String>> priorByDetector = indexKeysByDetector(priorKeys);
+        Boolean isFirstScan = priorKeys.isEmpty();
+
         // Phase 24d — Vercel parity: Top Issues drops Info-severity rows
         // before grouping (src/app/orgs/[orgId]/page.tsx ≈L1510).
         // "Top" means the highest-priority items the user needs to act on;
@@ -317,6 +338,32 @@ public with sharing class IssuesController {
             g.headlineTitle = members[0].title;
             g.headlineDescription = members[0].description;
             g.members = members;
+            // Phase 24y-B — trend counts.
+            g.isFirstScan = isFirstScan;
+            Integer newCnt = 0;
+            Set<String> currentDetectorsInGroup = new Set<String>();
+            for (IssueRow r : rows) {
+                String key = (r.detectorId == null ? '' : r.detectorId) + '|'
+                           + (r.primaryRecordId == null ? '' : r.primaryRecordId);
+                if (r.detectorId != null) currentDetectorsInGroup.add(r.detectorId);
+                if (!priorKeys.contains(key)) newCnt++;
+            }
+            Integer resolvedCnt = 0;
+            for (String det : currentDetectorsInGroup) {
+                Set<String> priorRecs = priorByDetector.get(det);
+                if (priorRecs == null) continue;
+                Set<String> currentRecs = new Set<String>();
+                for (IssueRow r : rows) {
+                    if (r.detectorId == det && r.primaryRecordId != null) {
+                        currentRecs.add(r.primaryRecordId);
+                    }
+                }
+                for (String rec : priorRecs) {
+                    if (!currentRecs.contains(rec)) resolvedCnt++;
+                }
+            }
+            g.newCount = newCnt;
+            g.resolvedCount = resolvedCnt;
             groups.add(g);
         }
 
@@ -530,6 +577,59 @@ public with sharing class IssuesController {
         s.PrimaryRecordId__c = primaryRecordId;
         s.Reason__c = reason;
         return s;
+    }
+
+    /**
+     * Phase 24y-B — Prior-scan keys for the trend chips on Top Issues.
+     * Returns the set of (detectorId|primaryRecordId) strings from the
+     * second-most-recent completed scan for the org. Empty when there's
+     * only one scan (first-scan case).
+     */
+    private static Set<String> loadPriorScanKeys(Id connectedOrgId) {
+        Set<String> keys = new Set<String>();
+        List<ForensicScan__c> recent;
+        if (connectedOrgId != null) {
+            recent = [
+                SELECT Id FROM ForensicScan__c
+                WHERE Status__c IN ('Completed','Partial')
+                  AND ConnectedOrg__c = :connectedOrgId
+                WITH SECURITY_ENFORCED ORDER BY CompletedAt__c DESC NULLS LAST
+                LIMIT 2
+            ];
+        } else {
+            recent = [
+                SELECT Id FROM ForensicScan__c
+                WHERE Status__c IN ('Completed','Partial')
+                WITH SECURITY_ENFORCED ORDER BY CompletedAt__c DESC NULLS LAST
+                LIMIT 2
+            ];
+        }
+        if (recent.size() < 2) return keys;
+        Id priorScanId = recent[1].Id;
+        for (ForensicFinding__c f : [
+            SELECT DetectorId__c, PrimaryRecordId__c
+            FROM ForensicFinding__c
+            WHERE ForensicScan__c = :priorScanId AND HiddenAt__c = null
+            WITH SECURITY_ENFORCED
+        ]) {
+            String d = f.DetectorId__c == null ? '' : f.DetectorId__c;
+            String r = f.PrimaryRecordId__c == null ? '' : f.PrimaryRecordId__c;
+            keys.add(d + '|' + r);
+        }
+        return keys;
+    }
+
+    private static Map<String, Set<String>> indexKeysByDetector(Set<String> keys) {
+        Map<String, Set<String>> out = new Map<String, Set<String>>();
+        for (String k : keys) {
+            Integer pipe = k.indexOf('|');
+            if (pipe < 0) continue;
+            String d = k.substring(0, pipe);
+            String r = k.substring(pipe + 1);
+            if (!out.containsKey(d)) out.put(d, new Set<String>());
+            out.get(d).add(r);
+        }
+        return out;
     }
 
     /**

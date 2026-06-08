@@ -44,6 +44,7 @@
                 <template lwc:if={r.hasGap}>
                   <span class="op-tip__gap-chip">{r.gapLabel}</span>
                 </template>
+                <span class={r.trendClass}>{r.trendLabel}</span>
               </div>
               <h3 class="op-tip__row-title" data-id={r.primaryFindingId} onclick={handleHeadlineClick}>
                 {r.headlineWithCount}

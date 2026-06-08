@@ -55,8 +55,29 @@ export default class IssuesPanel extends LightningElement {
       const isMulti = (g.relatedCount || 0) > 1;
       const gap = Number(g.totalGapUsd) || 0;
       const hasGap = gap > 0;
+      // Phase 24y-B — trend chip. Priority: new > resolved > steady.
+      // Skipped entirely on the first scan (no prior to compare against).
+      const newCount = Number(g.newCount) || 0;
+      const resolvedCount = Number(g.resolvedCount) || 0;
+      let trendLabel = '';
+      let trendClass = '';
+      if (g.isFirstScan) {
+        trendLabel = 'first scan';
+        trendClass = 'op-tip__trend op-tip__trend--neutral';
+      } else if (newCount > 0) {
+        trendLabel = `↑ +${newCount} new`;
+        trendClass = 'op-tip__trend op-tip__trend--up';
+      } else if (resolvedCount > 0) {
+        trendLabel = `↓ ${resolvedCount} fixed`;
+        trendClass = 'op-tip__trend op-tip__trend--down';
+      } else {
+        trendLabel = '→ no change';
+        trendClass = 'op-tip__trend op-tip__trend--neutral';
+      }
       return {
         ...g,
+        trendLabel,
+        trendClass,
         rowNumber: idx + 1,
         isExpanded,
         isMulti,

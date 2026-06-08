@@ -232,3 +232,17 @@ textarea:focus-visible,
   letter-spacing: 0.02em;
 }
 
+
+/* Phase 24y-B — trend chip on Top Issues cards */
+.op-tip__trend {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+}
+.op-tip__trend--up      { background: #fee2e2; color: #991b1b; }
+.op-tip__trend--down    { background: #d1fae5; color: #065f46; }
+.op-tip__trend--neutral { background: #f3f4f6; color: #6b7280; }
+
