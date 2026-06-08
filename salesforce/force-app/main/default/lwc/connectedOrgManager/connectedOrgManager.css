@@ -92,12 +92,18 @@
 /* ─── Card grid ─── */
 .op-co__grid {
   display: grid; gap: 20px;
-  /* Phase 24u — auto-fill columns. 320px floor lets the grid fit 4
-   * cards at the 1400px breakpoint (your 3 orgs + add-tile lines up
-   * in a single row on wide screens) and 5 cards on ultra-wide. */
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  /* Phase 24x — capped at 4 columns. Auto-fill made cards shrink and
+   * crowd at 5+ across on ultra-wide; cards are info-dense and want
+   * breathing room. Breakpoints land at 720 / 1080 / 1400. */
+  grid-template-columns: 1fr;
 }
+@media (min-width: 720px)  { .op-co__grid { grid-template-columns: repeat(2, 1fr); } }
+@media (min-width: 1080px) { .op-co__grid { grid-template-columns: repeat(3, 1fr); } }
+@media (min-width: 1400px) { .op-co__grid { grid-template-columns: repeat(4, 1fr); } }
 .op-co__grid--list { grid-template-columns: 1fr; }
+@media (min-width: 720px)  { .op-co__grid--list { grid-template-columns: 1fr; } }
+@media (min-width: 1080px) { .op-co__grid--list { grid-template-columns: 1fr; } }
+@media (min-width: 1400px) { .op-co__grid--list { grid-template-columns: 1fr; } }
 
 /* ─── Org card ─── */
 .op-co__card {
