@@ -172,6 +172,11 @@
         <editable>true</editable>
     </fieldPermissions>
     <fieldPermissions>
+        <field>ForensicScan__c.SurfaceGatedDetectors__c</field>
+        <readable>true</readable>
+        <editable>true</editable>
+    </fieldPermissions>
+    <fieldPermissions>
         <field>ForensicScan__c.ResolvedCount__c</field>
         <readable>true</readable>
         <editable>true</editable>
@@ -463,11 +468,6 @@
     </fieldPermissions>
     <fieldPermissions>
         <field>ConnectedOrg__c.RemoteOrgId__c</field>
-        <readable>true</readable>
-        <editable>true</editable>
-    </fieldPermissions>
-    <fieldPermissions>
-        <field>ConnectedOrg__c.RemoteOrgName__c</field>
         <readable>true</readable>
         <editable>true</editable>
     </fieldPermissions>
