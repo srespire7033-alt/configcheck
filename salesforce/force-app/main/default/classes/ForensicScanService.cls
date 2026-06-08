@@ -692,6 +692,19 @@ public with sharing class ForensicScanService {
             SurfaceGatedDetectors__c = gatedJson
         );
 
+        // Phase 24z-D — auto-correct ConnectedOrg__c.ProductType__c from
+        // the schema probe we already ran for 24z-A. The user-set value
+        // at registration time is often wrong (Techtorch was tagged ARM
+        // but is vanilla DE). Update only when detected differs and is
+        // non-null — null means probe failed or no recognized package,
+        // in which case we leave the existing value alone.
+        if (connectedOrgId != null && String.isNotBlank(namedCredentialName)) {
+            String detected = OrgQueryService.detectInstalledProductType(namedCredentialName);
+            if (String.isNotBlank(detected) && detected != productType) {
+                update new ConnectedOrg__c(Id = connectedOrgId, ProductType__c = detected);
+            }
+        }
+
         try { HealthScoreCalculator.computeAndStore(scanId); }
         catch (Exception e) {
             System.debug(LoggingLevel.ERROR,

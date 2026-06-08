@@ -24,6 +24,16 @@
                 <default>false</default>
                 <label>ARM</label>
             </value>
+            <value>
+                <fullName>Billing</fullName>
+                <default>false</default>
+                <label>Billing</label>
+            </value>
+            <value>
+                <fullName>None</fullName>
+                <default>false</default>
+                <label>None (no Revenue Cloud installed)</label>
+            </value>
         </valueSetDefinition>
     </valueSet>
 </CustomField>

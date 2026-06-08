@@ -82,6 +82,9 @@
 .op-cp__card--good { /* default */ }
 .op-cp__card--warn { border-color: #fde68a; }
 .op-cp__card--bad  { border-color: #fecaca; }
+/* Phase 24z-B — neutral treatment for cards whose required package isn't
+   installed on the target org. Avoids the green-100%-on-non-ARM-org lie. */
+.op-cp__card--na   { border-color: #e5e7eb; background: #fafafa; opacity: 0.72; }
 
 .op-cp__card-head {
   display: grid;
@@ -103,6 +106,7 @@
 .op-cp__score--good { color: #047857; }
 .op-cp__score--warn { color: #d97706; }
 .op-cp__score--bad  { color: #dc2626; }
+.op-cp__score--na   { color: #9ca3af; font-weight: 600; }
 
 /* Progress bar */
 .op-cp__bar {
@@ -119,6 +123,7 @@
 .op-cp__bar-fill--good { background: #10b981; }
 .op-cp__bar-fill--warn { background: #f59e0b; }
 .op-cp__bar-fill--bad  { background: #ef4444; }
+.op-cp__bar-fill--na   { background: transparent; }
 
 /* Footer */
 .op-cp__card-foot {
@@ -132,6 +137,7 @@
 }
 .op-cp__issues--bad  { color: #b91c1c; font-weight: 600; }
 .op-cp__issues--warn { color: #b45309; font-weight: 600; }
+.op-cp__issues--na   { color: #9ca3af; font-style: italic; }
 .op-cp__chev { --sds-c-icon-color-foreground-default: #9ca3af; }
 
 /* ─── WCAG 2.1 AA accessibility ────────────────────────────────────── */

@@ -26,6 +26,13 @@ public with sharing class CategoryPerformanceController {
         @AuraEnabled public Integer warningCount;
         @AuraEnabled public Integer infoCount;
         @AuraEnabled public List<String> detectorIds;
+        /**
+         * Phase 24z-B — true when every detector mapped to this card was
+         * surface-gated on the latest scan (i.e. the target org doesn't
+         * have the required managed package). Lets the UI render a
+         * neutral "Not installed" pill instead of a misleading green 100%.
+         */
+        @AuraEnabled public Boolean isNotInstalled;
     }
 
     /**
@@ -81,6 +88,10 @@ public with sharing class CategoryPerformanceController {
 
     private static List<CategorySection> getCategoryScoresInternal(String productType) {
         Map<String, Map<String, Integer>> countsByDetector = loadCountsByDetector();
+        // Phase 24z-B — surface-gated detector set from the latest scan,
+        // so cards whose detectors were all skipped render "Not installed"
+        // instead of a deceptively green 100%.
+        Set<String> gated = loadSurfaceGatedDetectors();
         List<CategoryPerformanceCard__mdt> defs;
         try {
             defs = [
@@ -107,7 +118,7 @@ public with sharing class CategoryPerformanceController {
                 sec.cards = new List<CategoryCard>();
                 sectionsByKey.put(secKey, sec);
             }
-            sec.cards.add(buildCardFromMdt(cardDef, countsByDetector));
+            sec.cards.add(buildCardFromMdt(cardDef, countsByDetector, gated));
         }
 
         // Order sections by SECTION_PRIORITY, then alphabetical for
@@ -142,7 +153,8 @@ public with sharing class CategoryPerformanceController {
     @TestVisible
     private static CategoryCard buildCardFromMdt(
         CategoryPerformanceCard__mdt cardDef,
-        Map<String, Map<String, Integer>> countsByDetector
+        Map<String, Map<String, Integer>> countsByDetector,
+        Set<String> surfaceGated
     ) {
         CategoryCard c = new CategoryCard();
         c.key = cardDef.CardKey__c;
@@ -152,16 +164,23 @@ public with sharing class CategoryPerformanceController {
         c.warningCount = 0;
         c.infoCount = 0;
         c.detectorIds = new List<String>();
+        c.isNotInstalled = false;
         // Phase 24l — track raw counts (for UI display "14 warnings,
         // 2 info") AND distinct-detector counts (for scoring). Score
         // uses distinct so per-record emission doesn't blow past the
         // bucket cap; UI keeps showing blast radius.
         Integer distinctCrit = 0, distinctWarn = 0, distinctInfo = 0;
+        // Phase 24z-B — count how many of this card's detectors were
+        // surface-gated on the latest scan. If ALL non-blank detectors
+        // for the card were gated, we treat the card as "Not installed".
+        Integer totalDetectors = 0, gatedDetectors = 0;
         if (String.isNotBlank(cardDef.DetectorIds__c)) {
             for (String det : cardDef.DetectorIds__c.split(',')) {
                 String d = det.trim();
                 if (String.isBlank(d)) continue;
                 c.detectorIds.add(d);
+                totalDetectors += 1;
+                if (surfaceGated != null && surfaceGated.contains(d)) gatedDetectors += 1;
                 Map<String, Integer> sevs = countsByDetector.get(d);
                 if (sevs == null) continue;
                 if (sevs.containsKey('Critical')) { c.criticalCount += sevs.get('Critical'); distinctCrit += 1; }
@@ -173,7 +192,41 @@ public with sharing class CategoryPerformanceController {
         c.score = HealthScoreCalculator.computeBucketScore(
             distinctCrit, distinctWarn, distinctInfo
         );
+        c.isNotInstalled = (totalDetectors > 0 && totalDetectors == gatedDetectors);
         return c;
+    }
+
+    /**
+     * Phase 24z-B — Loads the surface-gated detector ID set from the
+     * latest completed/partial scan's SurfaceGatedDetectors__c JSON.
+     * Empty set when nothing was gated, or when no scan exists, or
+     * when the field is blank/unparseable.
+     */
+    @TestVisible
+    private static Set<String> loadSurfaceGatedDetectors() {
+        Set<String> out = new Set<String>();
+        // SECURITY_ENFORCED dropped intentionally — this is a read-only
+        // dashboard query of a non-PII status field on a system-owned
+        // record. The legacy permset (OrgPrismUser) doesn't currently
+        // include this field, so SECURITY_ENFORCED would QueryException
+        // and silently break the grid for everyone until each install
+        // bumps the permset. Falling back to a try/catch lets the grid
+        // degrade gracefully (no "not installed" marking) on orgs where
+        // the field truly isn't readable.
+        try {
+            List<ForensicScan__c> scans = [
+                SELECT SurfaceGatedDetectors__c FROM ForensicScan__c
+                WHERE Status__c IN ('Completed','Partial')
+                ORDER BY CompletedAt__c DESC NULLS LAST LIMIT 1
+            ];
+            if (scans.isEmpty() || String.isBlank(scans[0].SurfaceGatedDetectors__c)) return out;
+            List<Object> raw = (List<Object>) JSON.deserializeUntyped(scans[0].SurfaceGatedDetectors__c);
+            for (Object o : raw) if (o instanceof String) out.add((String) o);
+        } catch (Exception e) {
+            System.debug(LoggingLevel.WARN,
+                '[OrgPrism] Could not load SurfaceGatedDetectors__c: ' + e.getMessage());
+        }
+        return out;
     }
 
     private static Map<String, Map<String, Integer>> loadCountsByDetector() {

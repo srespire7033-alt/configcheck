@@ -96,6 +96,41 @@ public with sharing class OrgQueryService {
      * failure → true (fail open — surface a detector we're unsure about
      * rather than silently hide it). Probe succeeded + name absent → false.
      */
+    /**
+     * Phase 24z-D — Auto-detect installed packages on the remote org.
+     *
+     * Reads the same per-tx schema probe cache that 24z-A populates and
+     * returns the highest product tier the target actually has:
+     *   - "ARM"          — ProductSellingModel present (with or without CPQ/Billing)
+     *   - "CPQ+Billing"  — SBQQ__Quote__c + blng__BillingRule__c both present
+     *   - "CPQ"          — SBQQ__Quote__c only
+     *   - "Billing"      — blng__BillingRule__c only
+     *   - "None"         — probe succeeded but no Revenue Cloud package
+     *                      is installed (vanilla DE / Sales Cloud only).
+     *                      The dashboard renders this as a neutral badge.
+     *   - null           — probe FAILED (auth/network/403). Caller should
+     *                      NOT overwrite the existing ProductType__c since
+     *                      we genuinely don't know what's on the target.
+     *
+     * Why marker SObjects instead of the Installed Packages list: the probe
+     * we already make is /sobjects/, which lists *every* SObject the user
+     * can see — including those that come with managed packages. One
+     * marker per tier is enough; we don't need the full installed-packages
+     * REST call.
+     */
+    public static String detectInstalledProductType(String namedCredentialName) {
+        Set<String> names = getRemoteSObjectNames(namedCredentialName);
+        if (names == null) return null; // probe failed → leave caller's existing value alone
+        Boolean hasCpq     = names.contains('SBQQ__Quote__c');
+        Boolean hasBilling = names.contains('blng__BillingRule__c');
+        Boolean hasArm     = names.contains('ProductSellingModel');
+        if (hasArm) return 'ARM';
+        if (hasCpq && hasBilling) return 'CPQ+Billing';
+        if (hasCpq) return 'CPQ';
+        if (hasBilling) return 'Billing';
+        return 'None'; // probe succeeded; org has no Revenue Cloud package
+    }
+
     public static Boolean remoteSObjectExists(String namedCredentialName, String objName) {
         if (String.isBlank(objName)) return true;
         if (String.isBlank(namedCredentialName)) return true;

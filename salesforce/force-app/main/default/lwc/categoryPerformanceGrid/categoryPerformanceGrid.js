@@ -100,26 +100,36 @@ export default class CategoryPerformanceGrid extends LightningElement {
 
   decorateCard(c, sectionKey) {
     const score = c.score ?? 100;
-    const tone = score >= 90 ? 'good' : score >= 70 ? 'warn' : 'bad';
+    // Phase 24z-B — neutral "Not installed" treatment when every detector
+    // mapped to this card was surface-gated on the latest scan. Better than
+    // showing a deceptively green 100% for ARM Catalog on a non-ARM org.
+    const tone = c.isNotInstalled
+      ? 'na'
+      : (score >= 90 ? 'good' : score >= 70 ? 'warn' : 'bad');
     const issueParts = [];
     if (c.criticalCount > 0) issueParts.push(`${c.criticalCount} critical`);
     if (c.warningCount > 0)  issueParts.push(`${c.warningCount} warning${c.warningCount === 1 ? '' : 's'}`);
     if (c.infoCount > 0)     issueParts.push(`${c.infoCount} info`);
-    const issueLabel = issueParts.length === 0 ? 'No issues' : issueParts.join(', ');
+    const issueLabel = c.isNotInstalled
+      ? 'Not installed'
+      : (issueParts.length === 0 ? 'No issues' : issueParts.join(', '));
     const detectorIdsStr = (c.detectorIds || []).join(',');
     return {
       ...c,
       sectionKey,
       score,
-      barStyle: `width: ${score}%;`,
+      // Don't draw a filled bar when the package isn't installed.
+      barStyle: c.isNotInstalled ? 'width: 0%;' : `width: ${score}%;`,
       cardClass: `op-cp__card op-cp__card--${tone}`,
       scoreClass: `op-cp__score op-cp__score--${tone}`,
       barClass: `op-cp__bar-fill op-cp__bar-fill--${tone}`,
-      issueClass: c.criticalCount > 0 ? 'op-cp__issues op-cp__issues--bad'
+      issueClass: c.isNotInstalled ? 'op-cp__issues op-cp__issues--na'
+                : c.criticalCount > 0 ? 'op-cp__issues op-cp__issues--bad'
                 : c.warningCount > 0  ? 'op-cp__issues op-cp__issues--warn'
                 : 'op-cp__issues',
       issueLabel,
       detectorIdsStr,
+      scoreDisplay: c.isNotInstalled ? '—' : `${score}%`,
     };
   }
 
