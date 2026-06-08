@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Severity__c</fullName>
+    <label>Severity</label>
+    <description>Default severity for findings from this detector, matching the Vercel-side spec. Detectors read this as the floor; gap-USD based logic can escalate above it but never demote below it. Values: Critical | Warning | Info.</description>
+    <type>Text</type>
+    <length>16</length>
+    <fieldManageability>SubscriberControlled</fieldManageability>
+</CustomField>

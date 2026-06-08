@@ -11,4 +11,5 @@
     <values><field>IsActive__c</field><value xsi:type="xsd:boolean">true</value></values>
     <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
     <values><field>RequiredSurface__c</field><value xsi:type="xsd:string">SBQQ__GuidedSellingProcess__c</value></values>
+    <values><field>Severity__c</field><value xsi:type="xsd:string">Critical</value></values>
 </CustomMetadata>
