@@ -103,8 +103,12 @@ private class HealthScoreCalculatorTest {
         // PB-001 Category__c = 'governance' per its mdt record.
         System.assert(cs.containsKey('governance'),
             'Expected key "governance", got: ' + cs.keySet());
-        System.assertEquals(65, cs.get('governance'),
-            'Expected 100 - 2*15 - 1*5 = 65, got ' + cs.get('governance'));
+        // Phase 24l — detector-aware bucket scoring. The 3 findings
+        // all share detectorId PB-001 (2 Critical + 1 Warning), so:
+        //   distinct critical detectors = 1, distinct warning = 1
+        //   score = 100 - 1·15 - 1·5 = 80.
+        System.assertEquals(80, cs.get('governance'),
+            'Expected 100 - 1*15 - 1*5 = 80, got ' + cs.get('governance'));
     }
 
     @isTest
@@ -120,7 +124,11 @@ private class HealthScoreCalculatorTest {
     }
 
     @isTest
-    static void computeCategoryScores_clampsToZeroOnHighVolume() {
+    static void computeCategoryScores_oneDetectorIgnoresVolume() {
+        // Phase 24l — under detector-aware scoring, 10 findings of the
+        // same PB-001 count as 1 distinct critical detector → score 85,
+        // not clamped to 0. This is the point of the fix: per-record
+        // blast radius doesn't punish the headline twice.
         ForensicScan__c scan = new ForensicScan__c(
             Status__c='Completed', ProductType__c='CPQ',
             StartedAt__c=System.now(), CompletedAt__c=System.now(),
@@ -131,9 +139,9 @@ private class HealthScoreCalculatorTest {
         for (Integer i = 0; i < 10; i++) fs.add(f(scan.Id, 'PB-001', 'Critical'));
         insert fs;
         Map<String, Integer> cs = HealthScoreCalculator.computeCategoryScores(scan.Id);
-        // 10 crit × 15 = 150 deduction → clamped to 0
-        System.assertEquals(0, cs.get('governance'),
-            'Should clamp to 0 — got ' + cs.get('governance'));
+        // 1 distinct critical × 15 = 15 deduction → score 85
+        System.assertEquals(85, cs.get('governance'),
+            'One detector × N findings → one bucket hit; got ' + cs.get('governance'));
     }
 
     @isTest

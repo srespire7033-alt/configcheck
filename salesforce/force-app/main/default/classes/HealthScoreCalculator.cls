@@ -131,24 +131,31 @@ public with sharing class HealthScoreCalculator {
     public static Map<String, Integer> computeCategoryScores(Id scanId) {
         Map<String, Integer> out = new Map<String, Integer>();
         if (scanId == null) return out;
-        // (Severity, Category) buckets via a single aggregate.
+        // Phase 24l — detector-aware bucket scoring.
+        //
+        // Same fix as the headline score (Phase 24k): count DISTINCT
+        // detectors per (category, severity), not raw finding counts.
+        // The aggregate groups by (DetectorId__c, Severity__c) so each
+        // row is one detector contributing in one severity — we count
+        // the row, not the row's `cnt`. Otherwise per-record emission
+        // (Phase 24c) blows past the bucket cap and any card with a
+        // single heavy-hitter detector shows 0% regardless of how
+        // many other clean detectors are also in the category.
         AggregateResult[] agg = [
             SELECT DetectorId__c det, Severity__c sev, COUNT(Id) cnt
             FROM ForensicFinding__c
             WHERE ForensicScan__c = :scanId AND HiddenAt__c = null
             WITH SECURITY_ENFORCED GROUP BY DetectorId__c, Severity__c
         ];
-        // Aggregate by category.
         Map<String, Integer[]> byCat = new Map<String, Integer[]>(); // cat → [crit, warn, info]
         for (AggregateResult a : agg) {
             String det = (String) a.get('det');
             String sev = (String) a.get('sev');
-            Integer n = (Integer) a.get('cnt');
             String cat = categoryOf(det);
             Integer[] bucket = byCat.containsKey(cat) ? byCat.get(cat) : new Integer[]{0, 0, 0};
-            if (sev == 'Critical')     bucket[0] += n;
-            else if (sev == 'Warning') bucket[1] += n;
-            else if (sev == 'Info')    bucket[2] += n;
+            if (sev == 'Critical')     bucket[0] += 1;
+            else if (sev == 'Warning') bucket[1] += 1;
+            else if (sev == 'Info')    bucket[2] += 1;
             byCat.put(cat, bucket);
         }
         for (String cat : byCat.keySet()) {

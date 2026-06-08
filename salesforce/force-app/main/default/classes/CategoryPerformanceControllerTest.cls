@@ -77,7 +77,12 @@ private class CategoryPerformanceControllerTest {
             if (c.key == 'billing_rules') billingRules = c;
         }
         System.assertNotEquals(null, billingRules);
-        System.assertEquals(65, billingRules.score, 'Score 100 - 2×15 - 1×5 = 65');
+        // Phase 24l — score uses distinct detectors per severity.
+        // Three findings all on one detectorId → 1 distinct critical +
+        // 1 distinct warning → 100 - 1·15 - 1·5 = 80. Raw criticalCount/
+        // warningCount stay as blast radius for the UI.
+        System.assertEquals(80, billingRules.score,
+            'Score 100 - 1×15 - 1×5 = 80 (distinct-detector scoring)');
         System.assertEquals(2, billingRules.criticalCount);
         System.assertEquals(1, billingRules.warningCount);
     }

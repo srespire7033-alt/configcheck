@@ -152,6 +152,11 @@ public with sharing class CategoryPerformanceController {
         c.warningCount = 0;
         c.infoCount = 0;
         c.detectorIds = new List<String>();
+        // Phase 24l — track raw counts (for UI display "14 warnings,
+        // 2 info") AND distinct-detector counts (for scoring). Score
+        // uses distinct so per-record emission doesn't blow past the
+        // bucket cap; UI keeps showing blast radius.
+        Integer distinctCrit = 0, distinctWarn = 0, distinctInfo = 0;
         if (String.isNotBlank(cardDef.DetectorIds__c)) {
             for (String det : cardDef.DetectorIds__c.split(',')) {
                 String d = det.trim();
@@ -159,18 +164,14 @@ public with sharing class CategoryPerformanceController {
                 c.detectorIds.add(d);
                 Map<String, Integer> sevs = countsByDetector.get(d);
                 if (sevs == null) continue;
-                if (sevs.containsKey('Critical')) c.criticalCount += sevs.get('Critical');
-                if (sevs.containsKey('Warning'))  c.warningCount  += sevs.get('Warning');
-                if (sevs.containsKey('Info'))     c.infoCount     += sevs.get('Info');
+                if (sevs.containsKey('Critical')) { c.criticalCount += sevs.get('Critical'); distinctCrit += 1; }
+                if (sevs.containsKey('Warning'))  { c.warningCount  += sevs.get('Warning');  distinctWarn += 1; }
+                if (sevs.containsKey('Info'))     { c.infoCount     += sevs.get('Info');     distinctInfo += 1; }
             }
         }
-        // Phase 22f — Delegate to HealthScoreCalculator.computeBucketScore so
-        // pillar scores (per-category aggregate) and card-grid scores (per
-        // CategoryPerformanceCard__mdt grouping) share one mdt-tunable formula.
-        // Defaults to Vercel bucket weights 15/5/1; the previous hardcoded
-        // 10/3/1 formula went away because admins couldn't tune it.
+        // Score from distinct counts; raw counts remain for the UI.
         c.score = HealthScoreCalculator.computeBucketScore(
-            c.criticalCount, c.warningCount, c.infoCount
+            distinctCrit, distinctWarn, distinctInfo
         );
         return c;
     }
