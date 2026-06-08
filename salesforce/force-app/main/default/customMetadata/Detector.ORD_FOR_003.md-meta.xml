@@ -16,4 +16,5 @@
 Why it matters: Amendments are where Q↔O variance most often slips through — partial swaps, mid-term changes, and complex proration produce mismatches. Direct revenue leakage at amendment time.
 Suppress a finding: when the variance is approved and documented.
 Disable the detector: only if you don&apos;t process amendments. Most should leave this on.</value></values>
+    <values><field>Severity__c</field><value xsi:type="xsd:string">Critical</value></values>
 </CustomMetadata>

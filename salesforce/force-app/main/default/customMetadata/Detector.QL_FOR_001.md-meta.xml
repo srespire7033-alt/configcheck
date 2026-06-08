@@ -16,4 +16,5 @@
 Why it matters: Required components shipped at $0 — the bundle was sold without billing for parts the customer is receiving. Margin loss baked into every renewal.
 Suppress a finding: when the option is intentionally inclusive (bundled in the parent&apos;s price by design).
 Disable the detector: only if your bundle pricing intentionally zeroes required components. Most should leave this on.</value></values>
+    <values><field>Severity__c</field><value xsi:type="xsd:string">Critical</value></values>
 </CustomMetadata>

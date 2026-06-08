@@ -16,4 +16,5 @@
 Why it matters: Reps stack discounts past approval thresholds — margin disappears one approved discount at a time. Often slips past because each individual discount looks reasonable.
 Suppress a finding: for executive-approved strategic deals where the cap was waived.
 Disable the detector: only if your org has no discount cap policy. Most should leave this on.</value></values>
+    <values><field>Severity__c</field><value xsi:type="xsd:string">Critical</value></values>
 </CustomMetadata>

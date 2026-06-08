@@ -11,7 +11,7 @@
     <values><field>IsActive__c</field><value xsi:type="xsd:boolean">true</value></values>
     <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
     <values><field>RequiredSurface__c</field><value xsi:type="xsd:string">Product2;PricebookEntry</value></values>
-    <values><field>Severity__c</field><value xsi:type="xsd:string">Critical</value></values>
+    <values><field>Severity__c</field><value xsi:type="xsd:string">Info</value></values>
     <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: Active Product2 records with no PricebookEntry on the standard pricebook (or any active pricebook).
 Why it matters: The product can&apos;t be added to opportunities or quotes — sales tries to add it and gets a &quot;not on this pricebook&quot; error. Looks active in the catalog but is unsellable.
 Suppress a finding: for products intentionally restricted from sale (asset-only, internal-use SKUs).

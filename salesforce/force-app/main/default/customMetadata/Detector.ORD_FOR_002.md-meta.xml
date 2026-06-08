@@ -16,4 +16,5 @@
 Why it matters: What sales sold and what billing invoices differ — customers dispute, finance has to reconcile, and one side or the other is wrong by real money on every divergent deal.
 Suppress a finding: when the divergence reflects an approved post-quote adjustment.
 Disable the detector: only if Q↔O variance is expected. Most should leave this on.</value></values>
+    <values><field>Severity__c</field><value xsi:type="xsd:string">Critical</value></values>
 </CustomMetadata>

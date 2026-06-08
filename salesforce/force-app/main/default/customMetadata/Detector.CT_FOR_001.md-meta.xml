@@ -16,4 +16,5 @@
 Why it matters: Customers continue to get the old (typically lower) negotiated price after the contract should have rolled to standard pricing. Compounding revenue leakage that grows monthly.
 Suppress a finding: when the contract was extended verbally and the date update is pending.
 Disable the detector: only if expired contracted prices are intentionally honored. Most should leave this on.</value></values>
+    <values><field>Severity__c</field><value xsi:type="xsd:string">Critical</value></values>
 </CustomMetadata>
