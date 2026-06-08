@@ -1,6 +1,31 @@
 # Phase 23y — End-to-End Validation Report
 
-**Date:** 2026-06-06
+**Last updated:** 2026-06-08 (Phase 23z diff added)
+
+## Phase 23z — Wedge expansion diff
+
+After seeding 4 CPQ extension fixtures + 1 ARM (W7 active empty RateCard):
+
+| Org | Before (scan1) | After (scan2) | Δ findings | Δ score |
+|---|---|---|---|---|
+| CPQ | 26 / Score 83 | 29 / Score 82 | **+3** | -1 |
+| ARM | 14 / Score 87 | 14 / Score 87 | **0** | 0 |
+
+**CPQ new detectors fired:**
+- ✅ CT-FOR-001 — expired ContractedPrice still referenced by QL
+- ✅ CP-001 — related ContractedPrice metadata detector (bonus)
+- ✅ MDQ-FOR-001 — segmented pricing mismatch across SegmentIndex 1+2
+
+**Didn't fire (org-schema mismatch, documented next steps):**
+- REN-001 — predicate uses `SBQQ__PriorPrice__c` which doesn't exist in this org; requires a full prior Subscription chain to compute uplift
+- QL-FOR-001 — predicate uses `SBQQ__Required__c` which doesn't exist in this org; bundle-required setup is on SBQQ__ProductOption__c instead
+- ARM-021 — W7 active+empty RateCard didn't fire; the detector reads `IsActive` on RateCard but the field probably isn't set; need org-side admin to set IsActive=true or detector logic adjustment
+
+**Investigation findings on original misses:**
+- ARM-014 predicate = `ProductRelatedComponent → IsActive=false Product2`. Requires `Product2.Type='Bundle'` on parent which is NOT Apex-writeable in this org (admin-only via UI). Blocked.
+- Asset lifecycle detectors look at `CurrentLifecycleEndDate` (formula field), not PurchaseDate/InstallDate. Need a different fixture pattern.
+
+**Date:** 2026-06-06 (original baseline)
 **Scans:**
 - CPQ org (`cpq smoke target`): scan `a0SVs00000o4XGjMAM`, Score **83**, **26 findings**
 - ARM org (`Ksolves-Sanjeev`): scan `a0SVs00000o4XGkMAM`, Score **87**, **14 findings**
