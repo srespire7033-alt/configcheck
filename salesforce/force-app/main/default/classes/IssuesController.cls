@@ -60,6 +60,10 @@ public with sharing class IssuesController {
         @AuraEnabled public Integer relatedCount;       // number of distinct sub-titles
         @AuraEnabled public Id primaryFindingId;        // for direct-link "View"
         @AuraEnabled public List<IssueRow> members;     // distinct titles → roll-up rows
+        // Phase 24y-A — total revenue at risk across every finding in
+        // this group. Drives the headline $ figure on the Top Issues
+        // card and the within-severity ranking ($-DESC tiebreak).
+        @AuraEnabled public Decimal totalGapUsd;
     }
 
     public class IssueDetailDto {
@@ -250,12 +254,18 @@ public with sharing class IssuesController {
         }
         if (flat.isEmpty()) return new List<IssueGroup>();
 
-        // Bucket by categoryLabel
+        // Bucket by categoryLabel + sum gap per category for ranking
         Map<String, List<IssueRow>> byCat = new Map<String, List<IssueRow>>();
+        Map<String, Decimal> gapByCat = new Map<String, Decimal>();
         for (IssueRow r : flat) {
             String k = r.categoryLabel == null ? '—' : r.categoryLabel;
-            if (!byCat.containsKey(k)) byCat.put(k, new List<IssueRow>());
+            if (!byCat.containsKey(k)) {
+                byCat.put(k, new List<IssueRow>());
+                gapByCat.put(k, 0);
+            }
             byCat.get(k).add(r);
+            Decimal g = r.gapUsd == null ? 0 : r.gapUsd;
+            gapByCat.put(k, gapByCat.get(k) + g);
         }
 
         List<IssueGroup> groups = new List<IssueGroup>();
@@ -302,8 +312,8 @@ public with sharing class IssuesController {
             g.severity = worstSeverity(rows);
             g.totalAffected = totalAffected;
             g.relatedCount = members.size();
+            g.totalGapUsd = gapByCat.containsKey(cat) ? gapByCat.get(cat) : 0;
             g.primaryFindingId = members.isEmpty() ? null : members[0].id;
-            // Use the largest-count member's title as the headline; fall back to a built phrase.
             g.headlineTitle = members[0].title;
             g.headlineDescription = members[0].description;
             g.members = members;
@@ -522,11 +532,21 @@ public with sharing class IssuesController {
         return s;
     }
 
-    /** Sort groups: worst-severity first, then total affected desc. */
+    /**
+     * Phase 24y-A — Sort: worst severity first, then total $ at risk
+     * within severity, then affected-count. Within a tier, $-impacting
+     * groups always rank above $-zero hygiene groups regardless of
+     * how many records they touch. A $50K Critical sits above a
+     * Critical with no money on the line; a $200K Warning sits above
+     * a 0-USD Warning with 100 records affected.
+     */
     public class IssueGroupComparator implements Comparator<IssueGroup> {
         public Integer compare(IssueGroup a, IssueGroup b) {
             Integer rs = sevRank(b.severity) - sevRank(a.severity);
             if (rs != 0) return rs;
+            Decimal ag = a.totalGapUsd == null ? 0 : a.totalGapUsd;
+            Decimal bg = b.totalGapUsd == null ? 0 : b.totalGapUsd;
+            if (bg != ag) return bg > ag ? 1 : -1;
             return (b.totalAffected == null ? 0 : b.totalAffected)
                  - (a.totalAffected == null ? 0 : a.totalAffected);
         }

@@ -53,11 +53,15 @@ export default class IssuesPanel extends LightningElement {
       const isExpanded = this.expandedKey === g.groupKey;
       const sev = (g.severity || '').toLowerCase();
       const isMulti = (g.relatedCount || 0) > 1;
+      const gap = Number(g.totalGapUsd) || 0;
+      const hasGap = gap > 0;
       return {
         ...g,
         rowNumber: idx + 1,
         isExpanded,
         isMulti,
+        hasGap,
+        gapLabel: hasGap ? this.formatMoney(gap) + ' at risk' : '',
         borderClass: `op-tip__row op-tip__row--${sev}`,
         severityChipClass: `op-tip__sev op-tip__sev--${sev}`,
         chevronIcon: isExpanded ? 'utility:chevrondown' : 'utility:chevronright',
@@ -70,6 +74,14 @@ export default class IssuesPanel extends LightningElement {
           : g.headlineTitle,
       };
     });
+  }
+
+  // Phase 24y-A — money formatting shared by Top Issues cards.
+  formatMoney(n) {
+    const v = Number(n) || 0;
+    if (v >= 1_000_000) return `$${(v / 1_000_000).toFixed(2)}M`;
+    if (v >= 1_000)     return `$${(v / 1_000).toFixed(1)}K`;
+    return `$${Math.round(v).toLocaleString()}`;
   }
 
   toggleExpand(event) {

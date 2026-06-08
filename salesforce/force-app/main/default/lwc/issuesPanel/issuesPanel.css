@@ -217,3 +217,18 @@ textarea:focus-visible,
     transform: none !important;
   }
 }
+
+/* Phase 24y-A — $ at-risk chip on Top Issues cards. Visually
+   distinct from severity chips so it reads as money, not status. */
+.op-tip__gap-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  background: #fef3c7;
+  color: #92400e;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+

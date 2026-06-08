@@ -41,6 +41,9 @@
                 <template if:true={r.isMulti}>
                   <span class="op-tip__related-chip">{r.relatedLabel}</span>
                 </template>
+                <template lwc:if={r.hasGap}>
+                  <span class="op-tip__gap-chip">{r.gapLabel}</span>
+                </template>
               </div>
               <h3 class="op-tip__row-title" data-id={r.primaryFindingId} onclick={handleHeadlineClick}>
                 {r.headlineWithCount}
