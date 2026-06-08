@@ -41,7 +41,8 @@ public with sharing class RevRecRuleChecksBundle implements IDetector {
         }
 
         if (DetectorCatalogController.isActive('RR-001')) results.addAll(evaluateRR001(rules, products));
-        if (DetectorCatalogController.isActive('RR-002')) results.addAll(evaluateRR002(rules));
+        // RR-002 migrated to CustomDetector__mdt (Phase 24h).
+        // if (DetectorCatalogController.isActive('RR-002')) results.addAll(evaluateRR002(rules));
         if (DetectorCatalogController.isActive('RR-003')) results.addAll(evaluateRR003(rules));
         if (DetectorCatalogController.isActive('RR-004')) results.addAll(evaluateRR004(rules, products));
         return results;

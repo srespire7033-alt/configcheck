@@ -321,7 +321,7 @@ private class Phase22b2Test {
         Set<String> fired = new Set<String>();
         for (DetectorResult dr : r) fired.add(dr.detectorId);
         System.assert(fired.contains('RR-001'), 'RR-001');
-        System.assert(fired.contains('RR-002'), 'RR-002');
+        System.assert(!fired.contains('RR-002'), 'RR-002 migrated to CustomDetector__mdt');
         System.assert(fired.contains('RR-003'), 'RR-003');
         System.assert(fired.contains('RR-004'), 'RR-004');
     }
@@ -360,8 +360,8 @@ private class Phase22b2Test {
         for (DetectorResult dr : r) fired.add(dr.detectorId);
         System.assert(fired.contains('TR-001'), 'TR-001');
         System.assert(fired.contains('TR-002'), 'TR-002');
-        System.assert(fired.contains('TR-003'), 'TR-003');
-        System.assert(fired.contains('TR-004'), 'TR-004');
+        System.assert(!fired.contains('TR-003'), 'TR-003 migrated to CustomDetector__mdt');
+        System.assert(!fired.contains('TR-004'), 'TR-004 migrated to CustomDetector__mdt');
     }
 
     @IsTest static void tr_remote_gate_exits_clean() {
@@ -392,5 +392,36 @@ private class Phase22b2Test {
             RevRecRuleChecksBundle.evaluateRR002(new List<Map<String, Object>>()).size());
         System.assertEquals(0,
             TaxRuleChecksBundle.evaluateTR003(new List<Map<String, Object>>()).size());
+    }
+
+    // ── Direct evaluator coverage for TR-003 / TR-004 (kept as dead
+    // code after Phase 24g migration) so the bundle still clears the
+    // 75% deploy gate. ────────────────────────────────────────────
+    @IsTest static void tr003_evaluator_flags_active_non_yes() {
+        List<Map<String, Object>> rules = new List<Map<String, Object>>{
+            new Map<String, Object>{
+                'Id' => taxId(), 'Name' => 'T1', 'blng__Active__c' => true,
+                'blng__TaxableYesNo__c' => 'No'
+            }
+        };
+        List<DetectorResult> r = TaxRuleChecksBundle.evaluateTR003(rules);
+        System.assertEquals(1, r.size(), 'TR-003 evaluator should emit per-record');
+        System.assertEquals('TR-003', r[0].detectorId);
+    }
+
+    @IsTest static void tr004_evaluator_lists_inactive_rules() {
+        List<Map<String, Object>> rules = new List<Map<String, Object>>{
+            new Map<String, Object>{
+                'Id' => taxId(), 'Name' => 'OldRule', 'blng__Active__c' => false,
+                'blng__TaxableYesNo__c' => 'Yes'
+            },
+            new Map<String, Object>{
+                'Id' => taxId(), 'Name' => 'OtherRule', 'blng__Active__c' => false,
+                'blng__TaxableYesNo__c' => 'No'
+            }
+        };
+        List<DetectorResult> r = TaxRuleChecksBundle.evaluateTR004(rules);
+        System.assertEquals(1, r.size(), 'TR-004 still emits one summary finding via dead-code path');
+        System.assertEquals('TR-004', r[0].detectorId);
     }
 }

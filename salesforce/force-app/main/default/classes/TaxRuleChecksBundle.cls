@@ -50,8 +50,12 @@ public with sharing class TaxRuleChecksBundle implements IDetector {
 
         if (DetectorCatalogController.isActive('TR-001')) results.addAll(evaluateTR001(productsAll));
         if (DetectorCatalogController.isActive('TR-002')) results.addAll(evaluateTR002(rules, productsRefs));
-        if (DetectorCatalogController.isActive('TR-003')) results.addAll(evaluateTR003(rules));
-        if (DetectorCatalogController.isActive('TR-004')) results.addAll(evaluateTR004(rules));
+        // TR-003 migrated to CustomDetector__mdt (Phase 24g).
+        // if (DetectorCatalogController.isActive('TR-003')) results.addAll(evaluateTR003(rules));
+        // TR-004 migrated to CustomDetector__mdt (Phase 24g).
+        // Note: mdt path emits one Info per inactive rule (per-record); old Apex emitted a
+        // single summary finding with sample names. Intentional Vercel-parity upgrade.
+        // if (DetectorCatalogController.isActive('TR-004')) results.addAll(evaluateTR004(rules));
         return results;
     }
 

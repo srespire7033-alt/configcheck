@@ -46,7 +46,10 @@ public with sharing class ContractedPriceChecksBundle implements IDetector {
         Boolean runCP003 = DetectorCatalogController.isActive('CP-003');
 
         if (runCP001) results.addAll(evaluateCP001(rows));
-        if (runCP002) results.addAll(evaluateCP002(rows));
+        // CP-002 migrated to CustomDetector__mdt (Phase 24g).
+        // Note: mdt path emits per-record findings (one per dateless contracted price);
+        // old Apex emitted a single summary finding. Intentional Vercel-parity upgrade.
+        // if (runCP002) results.addAll(evaluateCP002(rows));
         if (runCP003) results.addAll(evaluateCP003(rows));
         return results;
     }

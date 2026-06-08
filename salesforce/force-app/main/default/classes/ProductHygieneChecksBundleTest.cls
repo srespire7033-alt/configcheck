@@ -40,8 +40,8 @@ private class ProductHygieneChecksBundleTest {
         // so the bundle no longer dispatches it.
         System.assert(byId.containsKey('PB-001'), 'PB-001 should fire');
         System.assert(!byId.containsKey('PB-002'), 'PB-002 migrated to CustomDetector__mdt');
-        System.assert(byId.containsKey('PB-003'), 'PB-003 should fire');
-        System.assert(byId.containsKey('PB-004'), 'PB-004 should fire');
+        System.assert(!byId.containsKey('PB-003'), 'PB-003 migrated to CustomDetector__mdt');
+        System.assert(!byId.containsKey('PB-004'), 'PB-004 migrated to CustomDetector__mdt');
         System.assert(byId.containsKey('UA-001'), 'UA-001 should fire');
 
         // PB-001: all 4 products lack PricebookEntry → 1 primary + 3 supporting = 4 total
@@ -84,20 +84,16 @@ private class ProductHygieneChecksBundleTest {
 
     @isTest
     static void supportingRecordsCappedAt25_pb003() {
-        // Phase 24f: PB-002 moved to CustomDetector__mdt (per-record, no cap).
-        // PB-003 still uses the summary path with the 25-ref cap, so we
-        // exercise the same supporting-records behavior via PB-003.
+        // Phase 24g: PB-003 moved to CustomDetector__mdt (per-record, no cap),
+        // so bundle.run() no longer dispatches PB-003. We still exercise the
+        // evaluator directly to keep coverage on the legacy summary path
+        // (it's retained as dead code for one cycle, same as the pilot).
         List<Map<String, Object>> ps = new List<Map<String, Object>>();
         for (Integer i = 0; i < 30; i++) ps.add(product('P' + i, null, 'desc', 'F'));
-        ProductHygieneChecksBundle.testStubProducts = ps;
-        ProductHygieneChecksBundle.testStubPbeProducts = new List<Map<String, Object>>();
-        ProductHygieneChecksBundle.testStubUsedProducts = new List<Map<String, Object>>();
-        ProductHygieneChecksBundle.testStubSbqqPresent = false;
 
-        List<DetectorResult> rs = new ProductHygieneChecksBundle().run(ctx());
-        DetectorResult pb003 = null;
-        for (DetectorResult r : rs) if (r.detectorId == 'PB-003') pb003 = r;
-        System.assertNotEquals(null, pb003);
+        List<DetectorResult> rs = ProductHygieneChecksBundle.evaluatePB003(ps);
+        System.assertEquals(1, rs.size(), 'evaluatePB003 still emits one summary finding');
+        DetectorResult pb003 = rs[0];
         // 1 primary + max 24 supporting = 25 affected refs visible
         System.assert(pb003.supportingRecords.size() <= 24, 'supportingRecords capped');
         // Title should still report the full 30

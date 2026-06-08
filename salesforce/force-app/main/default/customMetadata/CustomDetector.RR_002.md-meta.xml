@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomMetadata xmlns="http://soap.sforce.com/2006/04/metadata" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" fqn="CustomDetector__mdt.RR_002">
+    <label>RR-002</label>
+    <protected>false</protected>
+    <values><field>DetectorId__c</field><value xsi:type="xsd:string">RR-002</value></values>
+    <values><field>Label__c</field><value xsi:type="xsd:string">Rev rec rules missing schedule config</value></values>
+    <values><field>Category__c</field><value xsi:type="xsd:string">governance</value></values>
+    <values><field>AppliesTo__c</field><value xsi:type="xsd:string">CPQ+Billing;ARM</value></values>
+    <values><field>SoqlQuery__c</field><value xsi:type="xsd:string">SELECT Id, Name FROM blng__RevenueRecognitionRule__c WHERE blng__Active__c = true AND blng__CreateRevenueSchedule__c = null</value></values>
+    <values><field>TitleTemplate__c</field><value xsi:type="xsd:string">Revenue recognition rule &quot;{Name}&quot; missing schedule creation config</value></values>
+    <values><field>DescriptionTemplate__c</field><value xsi:type="xsd:string">Active revenue recognition rule has no Create Revenue Schedule value set. Without an explicit selection, revenue may not be scheduled correctly.</value></values>
+    <values><field>PrimaryRecordIdField__c</field><value xsi:type="xsd:string">Id</value></values>
+    <values><field>PrimaryRecordType__c</field><value xsi:type="xsd:string">blng__RevenueRecognitionRule__c</value></values>
+    <values><field>EntitledUsdField__c</field><value xsi:nil="true"/></values>
+    <values><field>RealizedUsdField__c</field><value xsi:nil="true"/></values>
+    <values><field>IsActive__c</field><value xsi:type="xsd:boolean">true</value></values>
+    <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
+</CustomMetadata>

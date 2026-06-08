@@ -361,8 +361,10 @@ private class Phase22a56Test {
         CpqSettingsChecksBundle.testStubHasQcp = true;
         DetectorContext ctx = new DetectorContext(null, 'USD', 'CPQ');
         List<DetectorResult> out = new CpqSettingsChecksBundle().run(ctx);
-        // SET-001 (triggers disabled) + SET-002 (qcp active) + SET-003 (no renewal) + SET-004 (no term unit)
-        System.assertEquals(4, out.size());
+        // Phase 24g — SET-001/003/004 migrated to CustomDetector__mdt.
+        // Only SET-002 (QCP active) still fires from the bundle path.
+        System.assertEquals(1, out.size(), 'Only SET-002 fires from bundle; others migrated');
+        System.assertEquals('SET-002', out[0].detectorId);
     }
 
     @IsTest static void performance_run_with_data() {

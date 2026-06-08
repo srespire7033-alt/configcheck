@@ -45,9 +45,11 @@ public with sharing class QuoteTemplateChecksBundle implements IDetector {
 
         if (runQT001) results.addAll(evaluateQT001(rows));
         if (runQT002) results.addAll(evaluateQT002(rows));
-        if (runQT003) results.addAll(evaluateQT003(rows));
+        // QT-003 migrated to CustomDetector__mdt (Phase 24h).
+        // if (runQT003) results.addAll(evaluateQT003(rows));
         if (runQT004) results.addAll(evaluateQT004(rows));
-        if (runQT005) results.addAll(evaluateQT005(rows));
+        // QT-005 migrated to CustomDetector__mdt (Phase 24h).
+        // if (runQT005) results.addAll(evaluateQT005(rows));
         return results;
     }
 

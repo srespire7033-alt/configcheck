@@ -51,7 +51,8 @@ public with sharing class QuoteLineChecksBundle implements IDetector {
         Boolean runQL004 = DetectorCatalogController.isActive('QL-004');
         Boolean runTF001 = DetectorCatalogController.isActive('TF-001');
 
-        if (runQL001) results.addAll(evaluateQL001(rows));
+        // QL-001 migrated to CustomDetector__mdt (Phase 24h).
+        // if (runQL001) results.addAll(evaluateQL001(rows));
         if (runQL002) results.addAll(evaluateQL002(rows));
         if (runQL003) results.addAll(evaluateQL003(rows));
         if (runQL004) results.addAll(evaluateQL004(rows));

@@ -74,11 +74,15 @@ public with sharing class BillingRuleBundle implements IDetector {
         Boolean runPBC006 = DetectorCatalogController.isActive('PBC-006');
 
         if (runBR001)  results.addAll(evaluateBR001(products, rules));
-        if (runBR002)  results.addAll(evaluateBR002(rules, glTreatments));
-        if (runBR003)  results.addAll(evaluateBR003(products, rules));
+        // BR-002 migrated to CustomDetector__mdt (Phase 24h).
+        // if (runBR002)  results.addAll(evaluateBR002(rules, glTreatments));
+        // BR-003 migrated to CustomDetector__mdt (Phase 24h).
+        // if (runBR003)  results.addAll(evaluateBR003(products, rules));
         if (runBR004)  results.addAll(evaluateBR004(rules));
-        if (runPBC001) results.addAll(evaluatePBC001(products));
-        if (runPBC002) results.addAll(evaluatePBC002(products));
+        // PBC-001 migrated to CustomDetector__mdt (Phase 24h).
+        // if (runPBC001) results.addAll(evaluatePBC001(products));
+        // PBC-002 migrated to CustomDetector__mdt (Phase 24h).
+        // if (runPBC002) results.addAll(evaluatePBC002(products));
         if (runPBC003) results.addAll(evaluatePBC003(products));
         if (runPBC004) results.addAll(evaluatePBC004(products));
         if (runPBC005) results.addAll(evaluatePBC005(products));

@@ -86,8 +86,13 @@ public with sharing class ProductHygieneChecksBundle implements IDetector {
         // Note: the mdt path emits per-record findings (Vercel parity);
         // old Apex emitted one summary finding. Intentional upgrade.
         // if (DetectorCatalogController.isActive('PB-002')) results.addAll(evaluatePB002(products));
-        if (DetectorCatalogController.isActive('PB-003')) results.addAll(evaluatePB003(products));
-        if (DetectorCatalogController.isActive('PB-004')) results.addAll(evaluatePB004(products));
+        // PB-003 migrated to CustomDetector__mdt (Phase 24g).
+        // Note: mdt path emits per-record findings (one per active product missing ProductCode);
+        // old Apex emitted a single summary finding via buildAggregateResult. Intentional Vercel-parity upgrade.
+        // if (DetectorCatalogController.isActive('PB-003')) results.addAll(evaluatePB003(products));
+        // PB-004 migrated to CustomDetector__mdt (Phase 24g).
+        // Same per-record vs summary behavior change as PB-003.
+        // if (DetectorCatalogController.isActive('PB-004')) results.addAll(evaluatePB004(products));
         if (sbqqPresent && DetectorCatalogController.isActive('UA-001')) {
             results.addAll(evaluateUA001(products, usedProductIds));
         }

@@ -43,10 +43,13 @@ public with sharing class SubscriptionChecksBundle implements IDetector {
         Boolean runSR003 = DetectorCatalogController.isActive('SR-003');
         Boolean runSR004 = DetectorCatalogController.isActive('SR-004');
 
-        if (runSR001) results.addAll(evaluateSR001(rows));
+        // SR-001 migrated to CustomDetector__mdt (Phase 24h).
+        // if (runSR001) results.addAll(evaluateSR001(rows));
         if (runSR002) results.addAll(evaluateSR002(rows));
-        if (runSR003) results.addAll(evaluateSR003(rows));
-        if (runSR004) results.addAll(evaluateSR004(rows));
+        // SR-003 migrated to CustomDetector__mdt (Phase 24h).
+        // if (runSR003) results.addAll(evaluateSR003(rows));
+        // SR-004 migrated to CustomDetector__mdt (Phase 24h).
+        // if (runSR004) results.addAll(evaluateSR004(rows));
         return results;
     }
 

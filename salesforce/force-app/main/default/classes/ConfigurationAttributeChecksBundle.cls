@@ -46,7 +46,8 @@ public with sharing class ConfigurationAttributeChecksBundle implements IDetecto
         Boolean runCA003 = DetectorCatalogController.isActive('CA-003');
         Boolean runCA004 = DetectorCatalogController.isActive('CA-004');
 
-        if (runCA001) results.addAll(evaluateCA001(rows));
+        // CA-001 migrated to CustomDetector__mdt (Phase 24g).
+        // if (runCA001) results.addAll(evaluateCA001(rows));
         if (runCA002) results.addAll(evaluateCA002(rows));
         if (runCA003) results.addAll(evaluateCA003(rows));
         if (runCA004) results.addAll(evaluateCA004(rows));

@@ -74,7 +74,8 @@ public with sharing class AdvancedPricingChecksBundle implements IDetector {
         if (runAP001) results.addAll(evaluateAP001(products));
         if (runAP002) results.addAll(evaluateAP002(products, optionChildIds));
         if (runAP003) results.addAll(evaluateAP003(products, pbeProductIds));
-        if (runAP004) results.addAll(evaluateAP004(products));
+        // AP-004 migrated to CustomDetector__mdt (Phase 24g).
+        // if (runAP004) results.addAll(evaluateAP004(products));
         if (runAP005) results.addAll(evaluateAP005(products));
         return results;
     }

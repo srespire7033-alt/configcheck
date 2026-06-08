@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomMetadata xmlns="http://soap.sforce.com/2006/04/metadata" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" fqn="CustomDetector__mdt.INV_002">
+    <label>INV-002</label>
+    <protected>false</protected>
+    <values><field>DetectorId__c</field><value xsi:type="xsd:string">INV-002</value></values>
+    <values><field>Label__c</field><value xsi:type="xsd:string">Posted invoice with $0 amount</value></values>
+    <values><field>Category__c</field><value xsi:type="xsd:string">governance</value></values>
+    <values><field>AppliesTo__c</field><value xsi:type="xsd:string">CPQ+Billing;ARM</value></values>
+    <values><field>SoqlQuery__c</field><value xsi:type="xsd:string">SELECT Id, Name FROM blng__Invoice__c WHERE blng__InvoiceStatus__c = 'Posted' AND blng__TotalAmount__c = 0</value></values>
+    <values><field>TitleTemplate__c</field><value xsi:type="xsd:string">Posted invoice &quot;{Name}&quot; has $0 amount</value></values>
+    <values><field>DescriptionTemplate__c</field><value xsi:type="xsd:string">Invoice was Posted with a $0 total. This may indicate a duplicate or erroneous invoice generation that needs review.</value></values>
+    <values><field>PrimaryRecordIdField__c</field><value xsi:type="xsd:string">Id</value></values>
+    <values><field>PrimaryRecordType__c</field><value xsi:type="xsd:string">blng__Invoice__c</value></values>
+    <values><field>EntitledUsdField__c</field><value xsi:nil="true"/></values>
+    <values><field>RealizedUsdField__c</field><value xsi:nil="true"/></values>
+    <values><field>IsActive__c</field><value xsi:type="xsd:boolean">true</value></values>
+    <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
+</CustomMetadata>

@@ -73,7 +73,8 @@ public with sharing class PriceRuleChecksBundle implements IDetector {
         if (runPR002) results.addAll(evaluatePR002(rows));
         if (runPR003) results.addAll(evaluatePR003(rows));
         if (runPR004) results.addAll(evaluatePR004(rows));
-        if (runPR005) results.addAll(evaluatePR005(rows));
+        // PR-005 migrated to CustomDetector__mdt (Phase 24h).
+        // if (runPR005) results.addAll(evaluatePR005(rows));
         if (runLQ001) results.addAll(evaluateLQ001(rows));
         if (runLQ002) results.addAll(evaluateLQ002(rows));
         if (runUA003) results.addAll(evaluateUA003(ctx, rows));

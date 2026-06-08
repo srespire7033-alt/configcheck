@@ -46,8 +46,12 @@ public with sharing class InvoicingChecksBundle implements IDetector {
         Boolean runINV004 = DetectorCatalogController.isActive('INV-004');
         Boolean runINV005 = DetectorCatalogController.isActive('INV-005');
 
-        if (runINV001) results.addAll(evaluateINV001(invoices));
-        if (runINV002) results.addAll(evaluateINV002(invoices));
+        // INV-001 migrated to CustomDetector__mdt (Phase 24h).
+        // if (runINV001) results.addAll(evaluateINV001(invoices));
+        // INV-002 migrated to CustomDetector__mdt (Phase 24g).
+        // Note: mdt path emits per-record findings (one per posted $0 invoice);
+        // old Apex emitted a single summary finding. Intentional Vercel-parity upgrade.
+        // if (runINV002) results.addAll(evaluateINV002(invoices));
         if (runINV003) results.addAll(evaluateINV003(creditNotes));
         if (runINV004) results.addAll(evaluateINV004(invoices));
         if (runINV005) results.addAll(evaluateINV005(invoices));

@@ -50,7 +50,8 @@ public with sharing class CustomScriptChecksBundle implements IDetector {
         Boolean runQCP003 = DetectorCatalogController.isActive('QCP-003');
         Boolean runQCP004 = DetectorCatalogController.isActive('QCP-004');
 
-        if (runQCP001) results.addAll(evaluateQCP001(rows));
+        // QCP-001 migrated to CustomDetector__mdt (Phase 24g).
+        // if (runQCP001) results.addAll(evaluateQCP001(rows));
         if (runQCP002) results.addAll(evaluateQCP002(rows));
         if (runQCP003) results.addAll(evaluateQCP003(rows));
         if (runQCP004) results.addAll(evaluateQCP004(rows));

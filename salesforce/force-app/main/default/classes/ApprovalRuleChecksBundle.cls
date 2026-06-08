@@ -46,7 +46,8 @@ public with sharing class ApprovalRuleChecksBundle implements IDetector {
 
         // AR-001 migrated to CustomDetector__mdt (Phase 24f pilot).
         // if (runAR001) results.addAll(evaluateAR001(rows));
-        if (runAR002) results.addAll(evaluateAR002(rows));
+        // AR-002 migrated to CustomDetector__mdt (Phase 24h).
+        // if (runAR002) results.addAll(evaluateAR002(rows));
         if (runAR003) results.addAll(evaluateAR003(rows));
         if (runAR004) results.addAll(evaluateAR004(rows));
         if (runAR005) results.addAll(evaluateAR005(rows));

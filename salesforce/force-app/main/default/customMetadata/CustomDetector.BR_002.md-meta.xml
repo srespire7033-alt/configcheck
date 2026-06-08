@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomMetadata xmlns="http://soap.sforce.com/2006/04/metadata" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" fqn="CustomDetector__mdt.BR_002">
+    <label>BR-002</label>
+    <protected>false</protected>
+    <values><field>DetectorId__c</field><value xsi:type="xsd:string">BR-002</value></values>
+    <values><field>Label__c</field><value xsi:type="xsd:string">Active billing rule missing GL Treatment</value></values>
+    <values><field>Category__c</field><value xsi:type="xsd:string">governance</value></values>
+    <values><field>AppliesTo__c</field><value xsi:type="xsd:string">CPQ+Billing;ARM</value></values>
+    <values><field>SoqlQuery__c</field><value xsi:type="xsd:string">SELECT Id, Name FROM blng__BillingRule__c WHERE blng__Active__c = true AND Id NOT IN (SELECT blng__GLRule__c FROM blng__GLTreatment__c WHERE blng__GLRule__c != null)</value></values>
+    <values><field>TitleTemplate__c</field><value xsi:type="xsd:string">Active billing rule &quot;{Name}&quot; has no GL treatment</value></values>
+    <values><field>DescriptionTemplate__c</field><value xsi:type="xsd:string">Active billing rule has no GL treatment. Revenue will not be posted to the general ledger for invoices using this rule.</value></values>
+    <values><field>PrimaryRecordIdField__c</field><value xsi:type="xsd:string">Id</value></values>
+    <values><field>PrimaryRecordType__c</field><value xsi:type="xsd:string">blng__BillingRule__c</value></values>
+    <values><field>EntitledUsdField__c</field><value xsi:nil="true"/></values>
+    <values><field>RealizedUsdField__c</field><value xsi:nil="true"/></values>
+    <values><field>IsActive__c</field><value xsi:type="xsd:boolean">true</value></values>
+    <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
+</CustomMetadata>

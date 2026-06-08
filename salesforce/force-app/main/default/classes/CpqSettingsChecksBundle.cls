@@ -43,10 +43,13 @@ public with sharing class CpqSettingsChecksBundle implements IDetector {
         Boolean runSET003 = DetectorCatalogController.isActive('SET-003');
         Boolean runSET004 = DetectorCatalogController.isActive('SET-004');
 
-        if (runSET001) results.addAll(evaluateSET001(settings));
+        // SET-001 migrated to CustomDetector__mdt (Phase 24g).
+        // if (runSET001) results.addAll(evaluateSET001(settings));
         if (runSET002 && hasQcp) results.addAll(evaluateSET002());
-        if (runSET003) results.addAll(evaluateSET003(settings));
-        if (runSET004) results.addAll(evaluateSET004(settings));
+        // SET-003 migrated to CustomDetector__mdt (Phase 24g).
+        // if (runSET003) results.addAll(evaluateSET003(settings));
+        // SET-004 migrated to CustomDetector__mdt (Phase 24g).
+        // if (runSET004) results.addAll(evaluateSET004(settings));
         return results;
     }
 

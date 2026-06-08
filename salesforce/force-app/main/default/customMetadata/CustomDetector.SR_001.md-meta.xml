@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomMetadata xmlns="http://soap.sforce.com/2006/04/metadata" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" fqn="CustomDetector__mdt.SR_001">
+    <label>SR-001</label>
+    <protected>false</protected>
+    <values><field>DetectorId__c</field><value xsi:type="xsd:string">SR-001</value></values>
+    <values><field>Label__c</field><value xsi:type="xsd:string">Zero / null subscription NetPrice</value></values>
+    <values><field>Category__c</field><value xsi:type="xsd:string">revenue_leakage</value></values>
+    <values><field>AppliesTo__c</field><value xsi:type="xsd:string">CPQ;CPQ+Billing</value></values>
+    <values><field>SoqlQuery__c</field><value xsi:type="xsd:string">SELECT Id, Name FROM SBQQ__Subscription__c WHERE SBQQ__NetPrice__c = null OR SBQQ__NetPrice__c = 0</value></values>
+    <values><field>TitleTemplate__c</field><value xsi:type="xsd:string">Subscription &quot;{Name}&quot; has zero or missing NetPrice</value></values>
+    <values><field>DescriptionTemplate__c</field><value xsi:type="xsd:string">Subscription record has zero or null NetPrice. May be intentional free, or pricing was not applied — review to confirm.</value></values>
+    <values><field>PrimaryRecordIdField__c</field><value xsi:type="xsd:string">Id</value></values>
+    <values><field>PrimaryRecordType__c</field><value xsi:type="xsd:string">SBQQ__Subscription__c</value></values>
+    <values><field>EntitledUsdField__c</field><value xsi:nil="true"/></values>
+    <values><field>RealizedUsdField__c</field><value xsi:nil="true"/></values>
+    <values><field>IsActive__c</field><value xsi:type="xsd:boolean">true</value></values>
+    <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
+</CustomMetadata>
