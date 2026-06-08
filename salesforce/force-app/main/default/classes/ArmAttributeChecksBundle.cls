@@ -58,9 +58,11 @@ public with sharing class ArmAttributeChecksBundle implements IDetector {
             }
         }
 
-        if (DetectorCatalogController.isActive('ARM-004')) results.addAll(evaluateARM004(rules));
+        // ARM-004 migrated to CustomDetector__mdt (Phase 24i).
+        // if (DetectorCatalogController.isActive('ARM-004')) results.addAll(evaluateARM004(rules));
         if (DetectorCatalogController.isActive('ARM-024')) results.addAll(evaluateARM024(defs, values));
-        if (DetectorCatalogController.isActive('ARM-025')) results.addAll(evaluateARM025(defs));
+        // ARM-025 migrated to CustomDetector__mdt (Phase 24i).
+        // if (DetectorCatalogController.isActive('ARM-025')) results.addAll(evaluateARM025(defs));
         if (DetectorCatalogController.isActive('ARM-026')) results.addAll(evaluateARM026(defs, categories));
         return results;
     }

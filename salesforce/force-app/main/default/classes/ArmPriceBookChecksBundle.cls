@@ -40,7 +40,8 @@ public with sharing class ArmPriceBookChecksBundle implements IDetector {
         }
 
         if (DetectorCatalogController.isActive('ARM-007') && rcPresent) results.addAll(evaluateARM007(books));
-        if (DetectorCatalogController.isActive('ARM-028')) results.addAll(evaluateARM028(books));
+        // ARM-028 migrated to CustomDetector__mdt (Phase 24i).
+        // if (DetectorCatalogController.isActive('ARM-028')) results.addAll(evaluateARM028(books));
         return results;
     }
 

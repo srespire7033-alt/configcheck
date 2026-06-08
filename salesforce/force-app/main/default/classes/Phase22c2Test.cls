@@ -53,8 +53,8 @@ private class Phase22c2Test {
         for (DetectorResult dr : r) fired.add(dr.detectorId);
         System.assert(fired.contains('ARM-003'), 'ARM-003');
         System.assert(fired.contains('ARM-016'), 'ARM-016');
-        System.assert(fired.contains('ARM-017'), 'ARM-017');
-        System.assert(fired.contains('ARM-020'), 'ARM-020');
+        System.assert(!fired.contains('ARM-017'), 'ARM-017 migrated to CustomDetector__mdt (Phase 24i)');
+        System.assert(!fired.contains('ARM-020'), 'ARM-020 migrated to CustomDetector__mdt (Phase 24i)');
     }
 
     @IsTest static void padj_surface_skip() {
@@ -97,11 +97,11 @@ private class Phase22c2Test {
         Set<String> fired = new Set<String>();
         for (DetectorResult dr : r) fired.add(dr.detectorId);
         System.assert(fired.contains('ARM-021'), 'ARM-021');
-        System.assert(fired.contains('ARM-022'), 'ARM-022');
-        System.assert(fired.contains('ARM-023'), 'ARM-023');
-        System.assert(fired.contains('ARM-006'), 'ARM-006');
+        System.assert(!fired.contains('ARM-022'), 'ARM-022 migrated to CustomDetector__mdt (Phase 24i)');
+        System.assert(!fired.contains('ARM-023'), 'ARM-023 migrated to CustomDetector__mdt (Phase 24i)');
+        System.assert(!fired.contains('ARM-006'), 'ARM-006 migrated to CustomDetector__mdt (Phase 24i)');
         System.assert(fired.contains('ARM-027'), 'ARM-027');
-        System.assert(fired.contains('ARM-008'), 'ARM-008');
+        System.assert(!fired.contains('ARM-008'), 'ARM-008 migrated to CustomDetector__mdt (Phase 24i)');
         System.assert(fired.contains('ARM-029'), 'ARM-029');  // no Active among 2 Draft/Inactive
     }
 
@@ -140,7 +140,7 @@ private class Phase22c2Test {
         Set<String> fired = new Set<String>();
         for (DetectorResult dr : r) fired.add(dr.detectorId);
         System.assert(fired.contains('ARM-007'), 'ARM-007');
-        System.assert(fired.contains('ARM-028'), 'ARM-028');
+        System.assert(!fired.contains('ARM-028'), 'ARM-028 migrated to CustomDetector__mdt (Phase 24i)');
     }
 
     // ── Direct helper coverage ─────────────────────────────────────
@@ -160,5 +160,80 @@ private class Phase22c2Test {
         System.assertEquals(0, ArmRateCardProcedureChecksBundle.evaluateARM029(empty).size());
         System.assertEquals(0, ArmPriceBookChecksBundle.evaluateARM007(empty).size());
         System.assertEquals(0, ArmPriceBookChecksBundle.evaluateARM028(empty).size());
+    }
+
+    // ── Phase 24i — positive-case direct evaluator tests for migrated detectors ──
+
+    @IsTest static void arm_017_evaluator_direct() {
+        List<DetectorResult> r = ArmPriceAdjustmentChecksBundle.evaluateARM017(
+            new List<Map<String, Object>>{
+                new Map<String, Object>{ 'Id' => tierId(), 'PriceAdjustmentScheduleId' => schedId(),
+                    'LowerBound' => 100, 'UpperBound' => 50 }
+            }, new List<Map<String, Object>>());
+        System.assertEquals(1, r.size());
+        System.assertEquals('ARM-017', r[0].detectorId);
+    }
+
+    @IsTest static void arm_020_evaluator_direct() {
+        List<DetectorResult> r = ArmPriceAdjustmentChecksBundle.evaluateARM020(new List<Map<String, Object>>{
+            new Map<String, Object>{ 'Id' => ruleId(), 'Name' => 'OldRule', 'IsActive' => true,
+                'EffectiveEndDate' => Date.today().addDays(-30) }
+        });
+        System.assertEquals(1, r.size());
+        System.assertEquals('ARM-020', r[0].detectorId);
+    }
+
+    @IsTest static void arm_022_evaluator_direct() {
+        Id c = cardId();
+        List<DetectorResult> r = ArmRateCardProcedureChecksBundle.evaluateARM022(
+            new List<Map<String, Object>>{
+                new Map<String, Object>{ 'Id' => entryId(), 'RateCardId' => c, 'Price' => null }
+            }, new List<Map<String, Object>>{
+                new Map<String, Object>{ 'Id' => c, 'Name' => 'Card' }
+            });
+        System.assertEquals(1, r.size());
+        System.assertEquals('ARM-022', r[0].detectorId);
+    }
+
+    @IsTest static void arm_023_evaluator_direct() {
+        List<DetectorResult> r = ArmRateCardProcedureChecksBundle.evaluateARM023(new List<Map<String, Object>>{
+            new Map<String, Object>{ 'Id' => cardId(), 'Name' => 'Old', 'IsActive' => true,
+                'EffectiveEndDate' => Date.today().addDays(-10) }
+        });
+        System.assertEquals(1, r.size());
+        System.assertEquals('ARM-023', r[0].detectorId);
+    }
+
+    @IsTest static void arm_006_evaluator_direct() {
+        List<DetectorResult> r = ArmRateCardProcedureChecksBundle.evaluateARM006(new List<Map<String, Object>>{
+            new Map<String, Object>{ 'Id' => esId(), 'ApiName' => 'NoUT', 'UsageType' => null }
+        });
+        System.assertEquals(1, r.size());
+        System.assertEquals('ARM-006', r[0].detectorId);
+    }
+
+    @IsTest static void arm_008_evaluator_direct() {
+        List<DetectorResult> r = ArmRateCardProcedureChecksBundle.evaluateARM008(new List<Map<String, Object>>{
+            new Map<String, Object>{ 'Id' => dtId(), 'MasterLabel' => 'DT1', 'Status' => 'Draft' }
+        });
+        System.assertEquals(1, r.size());
+        System.assertEquals('ARM-008', r[0].detectorId);
+    }
+
+    @IsTest static void arm_028_evaluator_direct() {
+        List<DetectorResult> r = ArmPriceBookChecksBundle.evaluateARM028(new List<Map<String, Object>>{
+            new Map<String, Object>{ 'Id' => pbId(), 'Name' => 'Std',
+                'IsStandard' => true, 'IsActive' => false }
+        });
+        System.assertEquals(1, r.size());
+        System.assertEquals('ARM-028', r[0].detectorId);
+    }
+
+    @IsTest static void arm_050_evaluator_direct() {
+        List<DetectorResult> r = ArmCostBookChecksBundle.evaluateARM050(new List<Map<String, Object>>{
+            new Map<String, Object>{ 'Id' => mkId('a0y'), 'Cost' => 0 }
+        });
+        System.assertEquals(1, r.size());
+        System.assertEquals('ARM-050', r[0].detectorId);
     }
 }

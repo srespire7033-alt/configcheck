@@ -27,10 +27,12 @@ public with sharing class ArmClauseChecksBundle implements IDetector {
                     : new List<Map<String, Object>>();
             } catch (Exception e) { return results; }
         }
-        if (DetectorCatalogController.isActive('ARM-210')) results.addAll(evaluateARM210(clauses));
+        // ARM-210 migrated to CustomDetector__mdt (Phase 24i).
+        // if (DetectorCatalogController.isActive('ARM-210')) results.addAll(evaluateARM210(clauses));
         if (DetectorCatalogController.isActive('ARM-211')) results.addAll(evaluateARM211(clauses));
         if (DetectorCatalogController.isActive('ARM-212')) results.addAll(evaluateARM212(clauses));
-        if (DetectorCatalogController.isActive('ARM-213')) results.addAll(evaluateARM213(clauses));
+        // ARM-213 migrated to CustomDetector__mdt (Phase 24i).
+        // if (DetectorCatalogController.isActive('ARM-213')) results.addAll(evaluateARM213(clauses));
         if (DetectorCatalogController.isActive('ARM-214')) results.addAll(evaluateARM214(clauses));
         return results;
     }

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomMetadata xmlns="http://soap.sforce.com/2006/04/metadata" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" fqn="CustomDetector__mdt.ARM_042">
+    <label>ARM-042</label>
+    <protected>false</protected>
+    <values><field>DetectorId__c</field><value xsi:type="xsd:string">ARM-042</value></values>
+    <values><field>Label__c</field><value xsi:type="xsd:string">Expired usage grant still active</value></values>
+    <values><field>Category__c</field><value xsi:type="xsd:string">governance</value></values>
+    <values><field>AppliesTo__c</field><value xsi:type="xsd:string">ARM</value></values>
+    <values><field>SoqlQuery__c</field><value xsi:type="xsd:string">SELECT Id, Name, EffectiveEndDate FROM ProductUsageGrant WHERE Status = 'Active' AND EffectiveEndDate != null AND EffectiveEndDate &lt; TODAY</value></values>
+    <values><field>TitleTemplate__c</field><value xsi:type="xsd:string">Usage grant &quot;{Name}&quot; expired {EffectiveEndDate}</value></values>
+    <values><field>DescriptionTemplate__c</field><value xsi:type="xsd:string">Deactivate expired grants to avoid silent overage.</value></values>
+    <values><field>PrimaryRecordIdField__c</field><value xsi:type="xsd:string">Id</value></values>
+    <values><field>PrimaryRecordType__c</field><value xsi:type="xsd:string">ProductUsageGrant</value></values>
+    <values><field>EntitledUsdField__c</field><value xsi:nil="true"/></values>
+    <values><field>RealizedUsdField__c</field><value xsi:nil="true"/></values>
+    <values><field>IsActive__c</field><value xsi:type="xsd:boolean">true</value></values>
+    <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
+</CustomMetadata>

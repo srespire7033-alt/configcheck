@@ -36,11 +36,16 @@ public with sharing class ArmUsageManagementChecksBundle implements IDetector {
                     'SELECT Id, Name, Status, EffectiveStartDate, EffectiveEndDate FROM ProductUsageGrant LIMIT 10000', null)
                 : new List<Map<String, Object>>();
         }
-        if (DetectorCatalogController.isActive('ARM-040')) results.addAll(evaluateARM040(uomClasses));
-        if (DetectorCatalogController.isActive('ARM-041')) results.addAll(evaluateARM041(resources));
-        if (DetectorCatalogController.isActive('ARM-042')) results.addAll(evaluateARM042(grants));
-        if (DetectorCatalogController.isActive('ARM-043')) results.addAll(evaluateARM043(grants));
-        if (DetectorCatalogController.isActive('ARM-044')) results.addAll(evaluateARM044(resources));
+        // ARM-040 migrated to CustomDetector__mdt (Phase 24i).
+        // if (DetectorCatalogController.isActive('ARM-040')) results.addAll(evaluateARM040(uomClasses));
+        // ARM-041 migrated to CustomDetector__mdt (Phase 24i).
+        // if (DetectorCatalogController.isActive('ARM-041')) results.addAll(evaluateARM041(resources));
+        // ARM-042 migrated to CustomDetector__mdt (Phase 24i).
+        // if (DetectorCatalogController.isActive('ARM-042')) results.addAll(evaluateARM042(grants));
+        // ARM-043 migrated to CustomDetector__mdt (Phase 24i).
+        // if (DetectorCatalogController.isActive('ARM-043')) results.addAll(evaluateARM043(grants));
+        // ARM-044 migrated to CustomDetector__mdt (Phase 24i).
+        // if (DetectorCatalogController.isActive('ARM-044')) results.addAll(evaluateARM044(resources));
         return results;
     }
 

@@ -104,8 +104,8 @@ private class Phase22c1Test {
         List<DetectorResult> r = new ArmSellingModelChecksBundle().run(ctx());
         Set<String> fired = new Set<String>();
         for (DetectorResult dr : r) fired.add(dr.detectorId);
-        System.assert(fired.contains('ARM-002'), 'ARM-002');
-        System.assert(fired.contains('ARM-011'), 'ARM-011');
+        System.assert(!fired.contains('ARM-002'), 'ARM-002 migrated to CustomDetector__mdt (Phase 24i)');
+        System.assert(!fired.contains('ARM-011'), 'ARM-011 migrated to CustomDetector__mdt (Phase 24i)');
         System.assert(fired.contains('ARM-012'), 'ARM-012');
         System.assert(fired.contains('ARM-019'), 'ARM-019');
         System.assert(fired.contains('ARM-133'), 'ARM-133');
@@ -142,7 +142,7 @@ private class Phase22c1Test {
         Set<String> fired = new Set<String>();
         for (DetectorResult dr : r) fired.add(dr.detectorId);
         System.assert(fired.contains('ARM-005'), 'ARM-005'); // bundleP has 'bundle' in name, no components
-        System.assert(fired.contains('ARM-013'), 'ARM-013');
+        System.assert(!fired.contains('ARM-013'), 'ARM-013 migrated to CustomDetector__mdt (Phase 24i)');
         System.assert(fired.contains('ARM-014'), 'ARM-014');
         System.assert(fired.contains('ARM-015'), 'ARM-015');
     }
@@ -178,9 +178,9 @@ private class Phase22c1Test {
         List<DetectorResult> r = new ArmAttributeChecksBundle().run(ctx());
         Set<String> fired = new Set<String>();
         for (DetectorResult dr : r) fired.add(dr.detectorId);
-        System.assert(fired.contains('ARM-004'), 'ARM-004');
+        System.assert(!fired.contains('ARM-004'), 'ARM-004 migrated to CustomDetector__mdt (Phase 24i)');
         System.assert(fired.contains('ARM-024'), 'ARM-024');
-        System.assert(fired.contains('ARM-025'), 'ARM-025');
+        System.assert(!fired.contains('ARM-025'), 'ARM-025 migrated to CustomDetector__mdt (Phase 24i)');
         System.assert(fired.contains('ARM-026'), 'ARM-026');
     }
 
@@ -219,8 +219,8 @@ private class Phase22c1Test {
         List<DetectorResult> r = new ArmQualificationChecksBundle().run(ctx());
         Set<String> fired = new Set<String>();
         for (DetectorResult dr : r) fired.add(dr.detectorId);
-        System.assert(fired.contains('ARM-110'), 'ARM-110');
-        System.assert(fired.contains('ARM-111'), 'ARM-111');
+        System.assert(!fired.contains('ARM-110'), 'ARM-110 migrated to CustomDetector__mdt (Phase 24i)');
+        System.assert(!fired.contains('ARM-111'), 'ARM-111 migrated to CustomDetector__mdt (Phase 24i)');
         System.assert(fired.contains('ARM-112'), 'ARM-112');
     }
 
@@ -254,8 +254,8 @@ private class Phase22c1Test {
         List<DetectorResult> r = new ArmRampChecksBundle().run(ctx());
         Set<String> fired = new Set<String>();
         for (DetectorResult dr : r) fired.add(dr.detectorId);
-        System.assert(fired.contains('ARM-120'), 'ARM-120');
-        System.assert(fired.contains('ARM-121'), 'ARM-121');
+        System.assert(!fired.contains('ARM-120'), 'ARM-120 migrated to CustomDetector__mdt (Phase 24i)');
+        System.assert(!fired.contains('ARM-121'), 'ARM-121 migrated to CustomDetector__mdt (Phase 24i)');
         System.assert(fired.contains('ARM-122'), 'ARM-122');
     }
 
@@ -292,5 +292,104 @@ private class Phase22c1Test {
         System.assertEquals(0, ArmRampChecksBundle.evaluateARM120(empty).size());
         System.assertEquals(0, ArmRampChecksBundle.evaluateARM121(empty).size());
         System.assertEquals(0, ArmRampChecksBundle.evaluateARM122(empty).size());
+    }
+
+    // ── Phase 24i — positive-case direct evaluator tests for migrated detectors ──
+
+    @IsTest static void arm_032_evaluator_direct() {
+        List<DetectorResult> r = ArmAssetChecksBundle.evaluateARM032(new List<Map<String, Object>>{
+            new Map<String, Object>{ 'Id' => mkId('02i'), 'Name' => 'Past', 'Status' => 'Active',
+                'CurrentLifecycleEndDate' => Date.today().addDays(-5) }
+        });
+        System.assertEquals(1, r.size());
+        System.assertEquals('ARM-032', r[0].detectorId);
+    }
+
+    @IsTest static void arm_035_evaluator_direct() {
+        List<DetectorResult> r = ArmAssetChecksBundle.evaluateARM035(new List<Map<String, Object>>{
+            new Map<String, Object>{ 'Id' => mkId('a0p'), 'IsCurrent' => true, 'Quantity' => 0 }
+        });
+        System.assertEquals(1, r.size());
+        System.assertEquals('ARM-035', r[0].detectorId);
+    }
+
+    @IsTest static void arm_004_evaluator_direct() {
+        List<DetectorResult> r = ArmAttributeChecksBundle.evaluateARM004(new List<Map<String, Object>>{
+            new Map<String, Object>{ 'Id' => abId(), 'Name' => 'NoDates', 'IsActive' => true,
+                'EffectiveStartDate' => null, 'EffectiveEndDate' => null }
+        });
+        System.assertEquals(1, r.size());
+        System.assertEquals('ARM-004', r[0].detectorId);
+    }
+
+    @IsTest static void arm_025_evaluator_direct() {
+        List<DetectorResult> r = ArmAttributeChecksBundle.evaluateARM025(new List<Map<String, Object>>{
+            new Map<String, Object>{ 'Id' => adId(), 'Name' => 'ReqNoDef', 'IsActive' => true,
+                'IsRequired' => true, 'DefaultValue' => null }
+        });
+        System.assertEquals(1, r.size());
+        System.assertEquals('ARM-025', r[0].detectorId);
+    }
+
+    @IsTest static void arm_013_evaluator_direct() {
+        List<DetectorResult> r = ArmBundleChecksBundle.evaluateARM013(new List<Map<String, Object>>{
+            new Map<String, Object>{ 'Id' => prcId(), 'MinQuantity' => 10, 'MaxQuantity' => 5 }
+        });
+        System.assertEquals(1, r.size());
+        System.assertEquals('ARM-013', r[0].detectorId);
+    }
+
+    @IsTest static void arm_002_evaluator_direct() {
+        List<DetectorResult> r = ArmSellingModelChecksBundle.evaluateARM002(new List<Map<String, Object>>{
+            new Map<String, Object>{ 'Id' => psmId(), 'Name' => 'TermNoFreq', 'IsActive' => true,
+                'SellingModelType' => 'TermDefined', 'SellingFrequencyId' => null }
+        });
+        System.assertEquals(1, r.size());
+        System.assertEquals('ARM-002', r[0].detectorId);
+    }
+
+    @IsTest static void arm_011_evaluator_direct() {
+        List<DetectorResult> r = ArmSellingModelChecksBundle.evaluateARM011(new List<Map<String, Object>>{
+            new Map<String, Object>{ 'Id' => psmId(), 'Name' => 'TermNoTerm', 'IsActive' => true,
+                'SellingModelType' => 'TermDefined', 'PricingTerm' => 0 }
+        });
+        System.assertEquals(1, r.size());
+        System.assertEquals('ARM-011', r[0].detectorId);
+    }
+
+    @IsTest static void arm_120_evaluator_direct() {
+        List<DetectorResult> r = ArmRampChecksBundle.evaluateARM120(new List<Map<String, Object>>{
+            new Map<String, Object>{ 'Id' => rsId(), 'Name' => 'NoModel', 'ProductSellingModelId' => null,
+                'SegmentType' => 'Standard' }
+        });
+        System.assertEquals(1, r.size());
+        System.assertEquals('ARM-120', r[0].detectorId);
+    }
+
+    @IsTest static void arm_121_evaluator_direct() {
+        List<DetectorResult> r = ArmRampChecksBundle.evaluateARM121(new List<Map<String, Object>>{
+            new Map<String, Object>{ 'Id' => rsId(), 'Name' => 'NoDur', 'SegmentType' => 'FreeTrial',
+                'TrialDuration' => null, 'DurationType' => null }
+        });
+        System.assertEquals(1, r.size());
+        System.assertEquals('ARM-121', r[0].detectorId);
+    }
+
+    @IsTest static void arm_110_evaluator_direct() {
+        List<DetectorResult> r = ArmQualificationChecksBundle.evaluateARM110(new List<Map<String, Object>>{
+            new Map<String, Object>{ 'Id' => qId(), 'Name' => 'Exp', 'IsQualified' => true,
+                'EffectiveToDate' => Date.today().addDays(-10) }
+        });
+        System.assertEquals(1, r.size());
+        System.assertEquals('ARM-110', r[0].detectorId);
+    }
+
+    @IsTest static void arm_111_evaluator_direct() {
+        List<DetectorResult> r = ArmQualificationChecksBundle.evaluateARM111(new List<Map<String, Object>>{
+            new Map<String, Object>{ 'Id' => qId(), 'Name' => 'Rev',
+                'EffectiveFromDate' => Date.today(), 'EffectiveToDate' => Date.today().addDays(-30) }
+        });
+        System.assertEquals(1, r.size());
+        System.assertEquals('ARM-111', r[0].detectorId);
     }
 }

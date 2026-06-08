@@ -41,7 +41,8 @@ public with sharing class ArmBundleChecksBundle implements IDetector {
         }
 
         if (DetectorCatalogController.isActive('ARM-005')) results.addAll(evaluateARM005(products, components));
-        if (DetectorCatalogController.isActive('ARM-013')) results.addAll(evaluateARM013(components));
+        // ARM-013 migrated to CustomDetector__mdt (Phase 24i).
+        // if (DetectorCatalogController.isActive('ARM-013')) results.addAll(evaluateARM013(components));
         if (DetectorCatalogController.isActive('ARM-014')) results.addAll(evaluateARM014(components, products));
         if (DetectorCatalogController.isActive('ARM-015')) results.addAll(evaluateARM015(components, products));
         return results;

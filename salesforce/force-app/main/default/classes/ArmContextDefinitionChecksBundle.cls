@@ -19,7 +19,8 @@ public with sharing class ArmContextDefinitionChecksBundle implements IDetector 
                     'SELECT Id, DeveloperName, IsActive FROM ContextDefinition LIMIT 1000');
             } catch (Exception e) { return results; }
         }
-        if (DetectorCatalogController.isActive('ARM-009')) results.addAll(evaluateARM009(defs));
+        // ARM-009 migrated to CustomDetector__mdt (Phase 24i).
+        // if (DetectorCatalogController.isActive('ARM-009')) results.addAll(evaluateARM009(defs));
         if (DetectorCatalogController.isActive('ARM-030')) results.addAll(evaluateARM030(defs));
         return results;
     }

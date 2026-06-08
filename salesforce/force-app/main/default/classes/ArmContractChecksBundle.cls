@@ -27,10 +27,14 @@ public with sharing class ArmContractChecksBundle implements IDetector {
                     : new List<Map<String, Object>>();
             } catch (Exception e) { return results; }
         }
-        if (DetectorCatalogController.isActive('ARM-036')) results.addAll(evaluateARM036(prices));
-        if (DetectorCatalogController.isActive('ARM-037')) results.addAll(evaluateARM037(contracts));
-        if (DetectorCatalogController.isActive('ARM-038')) results.addAll(evaluateARM038(prices));
-        if (DetectorCatalogController.isActive('ARM-039')) results.addAll(evaluateARM039(contracts));
+        // ARM-036 migrated to CustomDetector__mdt (Phase 24i).
+        // if (DetectorCatalogController.isActive('ARM-036')) results.addAll(evaluateARM036(prices));
+        // ARM-037 migrated to CustomDetector__mdt (Phase 24i).
+        // if (DetectorCatalogController.isActive('ARM-037')) results.addAll(evaluateARM037(contracts));
+        // ARM-038 migrated to CustomDetector__mdt (Phase 24i).
+        // if (DetectorCatalogController.isActive('ARM-038')) results.addAll(evaluateARM038(prices));
+        // ARM-039 migrated to CustomDetector__mdt (Phase 24i).
+        // if (DetectorCatalogController.isActive('ARM-039')) results.addAll(evaluateARM039(contracts));
         return results;
     }
 

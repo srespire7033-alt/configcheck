@@ -72,11 +72,15 @@ public with sharing class ArmRateCardProcedureChecksBundle implements IDetector 
         }
 
         if (DetectorCatalogController.isActive('ARM-021')) results.addAll(evaluateARM021(rateCards, rateCardEntries));
-        if (DetectorCatalogController.isActive('ARM-022')) results.addAll(evaluateARM022(rateCardEntries, rateCards));
-        if (DetectorCatalogController.isActive('ARM-023')) results.addAll(evaluateARM023(rateCards));
-        if (DetectorCatalogController.isActive('ARM-006')) results.addAll(evaluateARM006(procedures));
+        // ARM-022 migrated to CustomDetector__mdt (Phase 24i).
+        // if (DetectorCatalogController.isActive('ARM-022')) results.addAll(evaluateARM022(rateCardEntries, rateCards));
+        // ARM-023 migrated to CustomDetector__mdt (Phase 24i).
+        // if (DetectorCatalogController.isActive('ARM-023')) results.addAll(evaluateARM023(rateCards));
+        // ARM-006 migrated to CustomDetector__mdt (Phase 24i).
+        // if (DetectorCatalogController.isActive('ARM-006')) results.addAll(evaluateARM006(procedures));
         if (DetectorCatalogController.isActive('ARM-027')) results.addAll(evaluateARM027(procedures));
-        if (DetectorCatalogController.isActive('ARM-008')) results.addAll(evaluateARM008(dts));
+        // ARM-008 migrated to CustomDetector__mdt (Phase 24i).
+        // if (DetectorCatalogController.isActive('ARM-008')) results.addAll(evaluateARM008(dts));
         if (DetectorCatalogController.isActive('ARM-029')) results.addAll(evaluateARM029(dts));
         return results;
     }

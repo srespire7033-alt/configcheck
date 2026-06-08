@@ -39,8 +39,10 @@ public with sharing class ArmQualificationChecksBundle implements IDetector {
             }
         }
 
-        if (DetectorCatalogController.isActive('ARM-110')) results.addAll(evaluateARM110(quals));
-        if (DetectorCatalogController.isActive('ARM-111')) results.addAll(evaluateARM111(quals));
+        // ARM-110 migrated to CustomDetector__mdt (Phase 24i).
+        // if (DetectorCatalogController.isActive('ARM-110')) results.addAll(evaluateARM110(quals));
+        // ARM-111 migrated to CustomDetector__mdt (Phase 24i).
+        // if (DetectorCatalogController.isActive('ARM-111')) results.addAll(evaluateARM111(quals));
         if (DetectorCatalogController.isActive('ARM-112')) results.addAll(evaluateARM112(quals, products));
         return results;
     }

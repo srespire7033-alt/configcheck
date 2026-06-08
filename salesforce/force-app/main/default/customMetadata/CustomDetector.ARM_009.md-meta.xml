@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomMetadata xmlns="http://soap.sforce.com/2006/04/metadata" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" fqn="CustomDetector__mdt.ARM_009">
+    <label>ARM-009</label>
+    <protected>false</protected>
+    <values><field>DetectorId__c</field><value xsi:type="xsd:string">ARM-009</value></values>
+    <values><field>Label__c</field><value xsi:type="xsd:string">Inactive context definitions</value></values>
+    <values><field>Category__c</field><value xsi:type="xsd:string">governance</value></values>
+    <values><field>AppliesTo__c</field><value xsi:type="xsd:string">ARM</value></values>
+    <values><field>SoqlQuery__c</field><value xsi:type="xsd:string">SELECT Id, DeveloperName FROM ContextDefinition WHERE IsActive = false</value></values>
+    <values><field>TitleTemplate__c</field><value xsi:type="xsd:string">Context definition &quot;{DeveloperName}&quot; is inactive</value></values>
+    <values><field>DescriptionTemplate__c</field><value xsi:type="xsd:string">Inactive ContextDefinition records linger in the org and confuse picklists and dependent pricing logic. Either reactivate or delete.</value></values>
+    <values><field>PrimaryRecordIdField__c</field><value xsi:type="xsd:string">Id</value></values>
+    <values><field>PrimaryRecordType__c</field><value xsi:type="xsd:string">ContextDefinition</value></values>
+    <values><field>EntitledUsdField__c</field><value xsi:nil="true"/></values>
+    <values><field>RealizedUsdField__c</field><value xsi:nil="true"/></values>
+    <values><field>IsActive__c</field><value xsi:type="xsd:boolean">true</value></values>
+    <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
+</CustomMetadata>

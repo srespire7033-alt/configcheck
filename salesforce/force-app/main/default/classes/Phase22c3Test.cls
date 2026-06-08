@@ -20,8 +20,15 @@ private class Phase22c3Test {
             new Map<String, Object>{ 'Id' => mkId('a0c'), 'DeveloperName' => 'D1', 'IsActive' => false }
         };
         Set<String> fired = ids(new ArmContextDefinitionChecksBundle().run(ctx()));
-        System.assert(fired.contains('ARM-009'));
+        // Phase 24i — ARM-009 migrated to CustomDetector__mdt.
+        System.assert(!fired.contains('ARM-009'), 'ARM-009 migrated to CustomDetector__mdt');
         System.assert(fired.contains('ARM-030'));
+        // Direct evaluator call to keep coverage on the dead-code path.
+        System.assertEquals(1, ArmContextDefinitionChecksBundle.evaluateARM009(
+            new List<Map<String, Object>>{
+                new Map<String, Object>{ 'Id' => mkId('a0c'), 'DeveloperName' => 'D2', 'IsActive' => false }
+            }
+        ).size());
     }
     @IsTest static void ctx_skip() {
         ArmContextDefinitionChecksBundle.testStubDefs = null;
@@ -46,10 +53,10 @@ private class Phase22c3Test {
         };
         Set<String> fired = ids(new ArmAssetChecksBundle().run(ctx()));
         System.assert(fired.contains('ARM-031'));
-        System.assert(fired.contains('ARM-032'));
+        System.assert(!fired.contains('ARM-032')); // migrated to CustomDetector__mdt (Phase 24i)
         System.assert(fired.contains('ARM-033'));
         System.assert(fired.contains('ARM-034'));
-        System.assert(fired.contains('ARM-035'));
+        System.assert(!fired.contains('ARM-035')); // migrated to CustomDetector__mdt (Phase 24i)
     }
     @IsTest static void assets_skip() {
         ArmAssetChecksBundle.testStubAssets = null;
@@ -73,10 +80,10 @@ private class Phase22c3Test {
                 'EffectiveStartDate' => Date.today(), 'EffectiveEndDate' => null, 'Price' => 0 } // 038
         };
         Set<String> fired = ids(new ArmContractChecksBundle().run(ctx()));
-        System.assert(fired.contains('ARM-036'));
-        System.assert(fired.contains('ARM-037'));
-        System.assert(fired.contains('ARM-038'));
-        System.assert(fired.contains('ARM-039'));
+        System.assert(!fired.contains('ARM-036')); // migrated to CustomDetector__mdt (Phase 24i)
+        System.assert(!fired.contains('ARM-037')); // migrated to CustomDetector__mdt (Phase 24i)
+        System.assert(!fired.contains('ARM-038')); // migrated to CustomDetector__mdt (Phase 24i)
+        System.assert(!fired.contains('ARM-039')); // migrated to CustomDetector__mdt (Phase 24i)
     }
     @IsTest static void contracts_skip() {
         ArmContractChecksBundle.testStubContracts = null;
@@ -100,11 +107,11 @@ private class Phase22c3Test {
                 'EffectiveStartDate' => Date.today(), 'EffectiveEndDate' => Date.today().addDays(-30) } // 043
         };
         Set<String> fired = ids(new ArmUsageManagementChecksBundle().run(ctx()));
-        System.assert(fired.contains('ARM-040'));
-        System.assert(fired.contains('ARM-041'));
-        System.assert(fired.contains('ARM-042'));
-        System.assert(fired.contains('ARM-043'));
-        System.assert(fired.contains('ARM-044'));
+        System.assert(!fired.contains('ARM-040')); // migrated to CustomDetector__mdt (Phase 24i)
+        System.assert(!fired.contains('ARM-041')); // migrated to CustomDetector__mdt (Phase 24i)
+        System.assert(!fired.contains('ARM-042')); // migrated to CustomDetector__mdt (Phase 24i)
+        System.assert(!fired.contains('ARM-043')); // migrated to CustomDetector__mdt (Phase 24i)
+        System.assert(!fired.contains('ARM-044')); // migrated to CustomDetector__mdt (Phase 24i)
     }
     @IsTest static void usage_skip() {
         ArmUsageManagementChecksBundle.testStubUomClasses = null;
@@ -134,11 +141,11 @@ private class Phase22c3Test {
                 'DependsOnStepDefinitionId' => sd } // 171 self
         };
         Set<String> fired = ids(new ArmOrchestrationChecksBundle().run(ctx()));
-        System.assert(fired.contains('ARM-045'));
+        System.assert(!fired.contains('ARM-045')); // migrated to CustomDetector__mdt (Phase 24i)
         System.assert(fired.contains('ARM-046'));
-        System.assert(fired.contains('ARM-047'));
-        System.assert(fired.contains('ARM-048'));
-        System.assert(fired.contains('ARM-171'));
+        System.assert(!fired.contains('ARM-047')); // migrated to CustomDetector__mdt (Phase 24i)
+        System.assert(!fired.contains('ARM-048')); // migrated to CustomDetector__mdt (Phase 24i)
+        System.assert(!fired.contains('ARM-171')); // migrated to CustomDetector__mdt (Phase 24i)
     }
     @IsTest static void orch_skip() {
         ArmOrchestrationChecksBundle.testStubSteps = null;
@@ -162,7 +169,7 @@ private class Phase22c3Test {
         };
         Set<String> fired = ids(new ArmCostBookChecksBundle().run(ctx()));
         System.assert(fired.contains('ARM-049'));
-        System.assert(fired.contains('ARM-050'));
+        System.assert(!fired.contains('ARM-050')); // migrated to CustomDetector__mdt (Phase 24i)
         System.assert(fired.contains('ARM-051'));
     }
     @IsTest static void costbook_skip() {
@@ -226,9 +233,9 @@ private class Phase22c3Test {
         };
         ArmClauseChecksBundle.testStubClauseSets = new List<Map<String, Object>>();
         Set<String> fired = ids(new ArmClauseChecksBundle().run(ctx()));
-        System.assert(fired.contains('ARM-210'));
+        System.assert(!fired.contains('ARM-210')); // migrated to CustomDetector__mdt (Phase 24i)
         System.assert(fired.contains('ARM-211'));
-        System.assert(fired.contains('ARM-213'));
+        System.assert(!fired.contains('ARM-213')); // migrated to CustomDetector__mdt (Phase 24i)
     }
     @IsTest static void clause_skip() {
         ArmClauseChecksBundle.testStubClauses = null;
@@ -302,6 +309,164 @@ private class Phase22c3Test {
         System.assertEquals(0, ArmClauseChecksBundle.evaluateARM213(e).size());
         System.assertEquals(0, ArmDeferredPricingChecksBundle.evaluateARM130(e, e).size());
         System.assertEquals(0, ArmDeferredPricingChecksBundle.evaluateARM132(e, e).size());
+    }
+
+    // ── Phase 24i — positive-case direct evaluator tests for migrated detectors ──
+
+    @IsTest static void arm_036_evaluator_direct() {
+        List<DetectorResult> r = ArmContractChecksBundle.evaluateARM036(new List<Map<String, Object>>{
+            new Map<String, Object>{ 'Id' => mkId('a0i'), 'Name' => 'IP1',
+                'EffectiveStartDate' => null, 'EffectiveEndDate' => null }
+        });
+        System.assertEquals(1, r.size());
+        System.assertEquals('ARM-036', r[0].detectorId);
+    }
+
+    @IsTest static void arm_037_evaluator_direct() {
+        List<DetectorResult> r = ArmContractChecksBundle.evaluateARM037(new List<Map<String, Object>>{
+            new Map<String, Object>{ 'Id' => mkId('800'), 'ContractNumber' => 'C1', 'Status' => 'Activated',
+                'EndDate' => Date.today().addDays(-30) }
+        });
+        System.assertEquals(1, r.size());
+        System.assertEquals('ARM-037', r[0].detectorId);
+    }
+
+    @IsTest static void arm_038_evaluator_direct() {
+        List<DetectorResult> r = ArmContractChecksBundle.evaluateARM038(new List<Map<String, Object>>{
+            new Map<String, Object>{ 'Id' => mkId('a0i'), 'Name' => 'IP', 'Price' => 0 }
+        });
+        System.assertEquals(1, r.size());
+        System.assertEquals('ARM-038', r[0].detectorId);
+    }
+
+    @IsTest static void arm_039_evaluator_direct() {
+        List<DetectorResult> r = ArmContractChecksBundle.evaluateARM039(new List<Map<String, Object>>{
+            new Map<String, Object>{ 'Id' => mkId('800'), 'ContractNumber' => 'C2',
+                'StartDate' => Date.today(), 'EndDate' => Date.today().addDays(-30) }
+        });
+        System.assertEquals(1, r.size());
+        System.assertEquals('ARM-039', r[0].detectorId);
+    }
+
+    @IsTest static void arm_045_evaluator_direct() {
+        List<DetectorResult> r = ArmOrchestrationChecksBundle.evaluateARM045(new List<Map<String, Object>>{
+            new Map<String, Object>{ 'Id' => mkId('a0s'), 'Name' => 'S1', 'FulfillmentStepDefinitionGroupId' => null }
+        });
+        System.assertEquals(1, r.size());
+        System.assertEquals('ARM-045', r[0].detectorId);
+    }
+
+    @IsTest static void arm_047_evaluator_direct() {
+        List<DetectorResult> r = ArmOrchestrationChecksBundle.evaluateARM047(new List<Map<String, Object>>{
+            new Map<String, Object>{ 'Id' => mkId('a0t'), 'Name' => 'T1', 'Status' => 'Active', 'AssignedToId' => null }
+        });
+        System.assertEquals(1, r.size());
+        System.assertEquals('ARM-047', r[0].detectorId);
+    }
+
+    @IsTest static void arm_048_evaluator_direct() {
+        List<DetectorResult> r = ArmOrchestrationChecksBundle.evaluateARM048(new List<Map<String, Object>>{
+            new Map<String, Object>{ 'Id' => mkId('a0n'), 'Name' => 'Sc1', 'Status' => 'Draft' }
+        });
+        System.assertEquals(1, r.size());
+        System.assertEquals('ARM-048', r[0].detectorId);
+    }
+
+    @IsTest static void arm_171_evaluator_direct() {
+        Id sd = mkId('a0s');
+        List<DetectorResult> r = ArmOrchestrationChecksBundle.evaluateARM171(new List<Map<String, Object>>{
+            new Map<String, Object>{ 'Id' => mkId('a0e'), 'FulfillmentStepDefinitionId' => sd,
+                'DependsOnStepDefinitionId' => sd }
+        });
+        System.assertEquals(1, r.size());
+        System.assertEquals('ARM-171', r[0].detectorId);
+    }
+
+    @IsTest static void arm_210_evaluator_direct() {
+        List<DetectorResult> r = ArmClauseChecksBundle.evaluateARM210(new List<Map<String, Object>>{
+            new Map<String, Object>{ 'Id' => mkId('a0l'), 'Name' => 'CL1', 'Status' => 'Active',
+                'Content' => null }
+        });
+        System.assertEquals(1, r.size());
+        System.assertEquals('ARM-210', r[0].detectorId);
+    }
+
+    @IsTest static void arm_213_evaluator_direct() {
+        List<DetectorResult> r = ArmClauseChecksBundle.evaluateARM213(new List<Map<String, Object>>{
+            new Map<String, Object>{ 'Id' => mkId('a0l'), 'Name' => 'CL3',
+                'DocumentClauseSetId' => mkId('a0q'),
+                'DocumentClauseSet' => new Map<String, Object>{ 'Status' => 'Inactive' } }
+        });
+        System.assertEquals(1, r.size());
+        System.assertEquals('ARM-213', r[0].detectorId);
+    }
+
+    // Phase 24i — coverage bumps for stay-Apex clause evaluators
+    // (ARM-212 alternate-without-main, ARM-214 archived-then-modified).
+    // Without these the bundle drops below the 75% coverage gate.
+    @IsTest static void arm_212_evaluator_positive() {
+        Id setId = mkId('a0q');
+        List<DetectorResult> r = ArmClauseChecksBundle.evaluateARM212(new List<Map<String, Object>>{
+            // Alternate with no main → flagged
+            new Map<String, Object>{ 'Id' => mkId('a0l'), 'IsAlternateClause' => true,
+                'DocumentClauseSetId' => setId, 'ClauseName' => 'X', 'ClauseLanguage' => 'en' }
+        });
+        System.assertEquals(1, r.size());
+        System.assertEquals('ARM-212', r[0].detectorId);
+    }
+
+    @IsTest static void arm_214_evaluator_positive() {
+        Datetime created = Datetime.newInstance(2024, 1, 1, 0, 0, 0);
+        Datetime modified = Datetime.newInstance(2024, 6, 1, 0, 0, 0);
+        List<DetectorResult> r = ArmClauseChecksBundle.evaluateARM214(new List<Map<String, Object>>{
+            new Map<String, Object>{ 'Id' => mkId('a0l'), 'Name' => 'ArcCL',
+                'Status' => 'Archived', 'CreatedDate' => created, 'LastModifiedDate' => modified }
+        });
+        System.assertEquals(1, r.size());
+        System.assertEquals('ARM-214', r[0].detectorId);
+    }
+
+    @IsTest static void arm_040_evaluator_direct() {
+        List<DetectorResult> r = ArmUsageManagementChecksBundle.evaluateARM040(new List<Map<String, Object>>{
+            new Map<String, Object>{ 'Id' => mkId('a0u'), 'Name' => 'U', 'IsActive' => true, 'DefaultUomId' => null }
+        });
+        System.assertEquals(1, r.size());
+        System.assertEquals('ARM-040', r[0].detectorId);
+    }
+
+    @IsTest static void arm_041_evaluator_direct() {
+        List<DetectorResult> r = ArmUsageManagementChecksBundle.evaluateARM041(new List<Map<String, Object>>{
+            new Map<String, Object>{ 'Id' => mkId('a0w'), 'Name' => 'R1', 'Status' => 'Inactive' }
+        });
+        System.assertEquals(1, r.size());
+        System.assertEquals('ARM-041', r[0].detectorId);
+    }
+
+    @IsTest static void arm_042_evaluator_direct() {
+        List<DetectorResult> r = ArmUsageManagementChecksBundle.evaluateARM042(new List<Map<String, Object>>{
+            new Map<String, Object>{ 'Id' => mkId('a0g'), 'Name' => 'G1', 'Status' => 'Active',
+                'EffectiveEndDate' => Date.today().addDays(-10) }
+        });
+        System.assertEquals(1, r.size());
+        System.assertEquals('ARM-042', r[0].detectorId);
+    }
+
+    @IsTest static void arm_043_evaluator_direct() {
+        List<DetectorResult> r = ArmUsageManagementChecksBundle.evaluateARM043(new List<Map<String, Object>>{
+            new Map<String, Object>{ 'Id' => mkId('a0g'), 'Name' => 'G2',
+                'EffectiveStartDate' => Date.today(), 'EffectiveEndDate' => Date.today().addDays(-30) }
+        });
+        System.assertEquals(1, r.size());
+        System.assertEquals('ARM-043', r[0].detectorId);
+    }
+
+    @IsTest static void arm_044_evaluator_direct() {
+        List<DetectorResult> r = ArmUsageManagementChecksBundle.evaluateARM044(new List<Map<String, Object>>{
+            new Map<String, Object>{ 'Id' => mkId('a0w'), 'Name' => 'R2', 'Status' => 'Active',
+                'UnitOfMeasureClassId' => null }
+        });
+        System.assertEquals(1, r.size());
+        System.assertEquals('ARM-044', r[0].detectorId);
     }
 
     static Set<String> ids(List<DetectorResult> r) {

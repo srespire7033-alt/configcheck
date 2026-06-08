@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomMetadata xmlns="http://soap.sforce.com/2006/04/metadata" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" fqn="CustomDetector__mdt.ARM_008">
+    <label>ARM-008</label>
+    <protected>false</protected>
+    <values><field>DetectorId__c</field><value xsi:type="xsd:string">ARM-008</value></values>
+    <values><field>Label__c</field><value xsi:type="xsd:string">Decision tables not Active</value></values>
+    <values><field>Category__c</field><value xsi:type="xsd:string">governance</value></values>
+    <values><field>AppliesTo__c</field><value xsi:type="xsd:string">ARM</value></values>
+    <values><field>SoqlQuery__c</field><value xsi:type="xsd:string">SELECT Id, MasterLabel, Status FROM DecisionTable WHERE Status != 'Active'</value></values>
+    <values><field>TitleTemplate__c</field><value xsi:type="xsd:string">Decision table &quot;{MasterLabel}&quot; status is {Status}</value></values>
+    <values><field>DescriptionTemplate__c</field><value xsi:type="xsd:string">Decision tables in Draft/Inactive status will not be evaluated by the engine.</value></values>
+    <values><field>PrimaryRecordIdField__c</field><value xsi:type="xsd:string">Id</value></values>
+    <values><field>PrimaryRecordType__c</field><value xsi:type="xsd:string">DecisionTable</value></values>
+    <values><field>EntitledUsdField__c</field><value xsi:nil="true"/></values>
+    <values><field>RealizedUsdField__c</field><value xsi:nil="true"/></values>
+    <values><field>IsActive__c</field><value xsi:type="xsd:boolean">true</value></values>
+    <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
+</CustomMetadata>

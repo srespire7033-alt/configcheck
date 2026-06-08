@@ -50,11 +50,15 @@ public with sharing class ArmOrchestrationChecksBundle implements IDetector {
                     'SELECT Id, FulfillmentStepDefinitionId, DependsOnStepDefinitionId FROM FulfillmentStepDependencyDef LIMIT 5000', null)
                 : new List<Map<String, Object>>();
         }
-        if (DetectorCatalogController.isActive('ARM-045')) results.addAll(evaluateARM045(steps));
+        // ARM-045 migrated to CustomDetector__mdt (Phase 24i).
+        // if (DetectorCatalogController.isActive('ARM-045')) results.addAll(evaluateARM045(steps));
         if (DetectorCatalogController.isActive('ARM-046')) results.addAll(evaluateARM046(groups, steps));
-        if (DetectorCatalogController.isActive('ARM-047')) results.addAll(evaluateARM047(taskRules));
-        if (DetectorCatalogController.isActive('ARM-048')) results.addAll(evaluateARM048(scenarios));
-        if (DetectorCatalogController.isActive('ARM-171')) results.addAll(evaluateARM171(deps));
+        // ARM-047 migrated to CustomDetector__mdt (Phase 24i).
+        // if (DetectorCatalogController.isActive('ARM-047')) results.addAll(evaluateARM047(taskRules));
+        // ARM-048 migrated to CustomDetector__mdt (Phase 24i).
+        // if (DetectorCatalogController.isActive('ARM-048')) results.addAll(evaluateARM048(scenarios));
+        // ARM-171 migrated to CustomDetector__mdt (Phase 24i).
+        // if (DetectorCatalogController.isActive('ARM-171')) results.addAll(evaluateARM171(deps));
         return results;
     }
 

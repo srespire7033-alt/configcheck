@@ -33,8 +33,10 @@ public with sharing class ArmRampChecksBundle implements IDetector {
             }
         }
 
-        if (DetectorCatalogController.isActive('ARM-120')) results.addAll(evaluateARM120(ramps));
-        if (DetectorCatalogController.isActive('ARM-121')) results.addAll(evaluateARM121(ramps));
+        // ARM-120 migrated to CustomDetector__mdt (Phase 24i).
+        // if (DetectorCatalogController.isActive('ARM-120')) results.addAll(evaluateARM120(ramps));
+        // ARM-121 migrated to CustomDetector__mdt (Phase 24i).
+        // if (DetectorCatalogController.isActive('ARM-121')) results.addAll(evaluateARM121(ramps));
         if (DetectorCatalogController.isActive('ARM-122')) results.addAll(evaluateARM122(ramps));
         return results;
     }

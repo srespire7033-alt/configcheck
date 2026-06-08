@@ -42,8 +42,10 @@ public with sharing class ArmPriceAdjustmentChecksBundle implements IDetector {
 
         if (DetectorCatalogController.isActive('ARM-003')) results.addAll(evaluateARM003(tiers, schedules));
         if (DetectorCatalogController.isActive('ARM-016')) results.addAll(evaluateARM016(schedules, tiers));
-        if (DetectorCatalogController.isActive('ARM-017')) results.addAll(evaluateARM017(tiers, schedules));
-        if (DetectorCatalogController.isActive('ARM-020')) results.addAll(evaluateARM020(rules));
+        // ARM-017 migrated to CustomDetector__mdt (Phase 24i).
+        // if (DetectorCatalogController.isActive('ARM-017')) results.addAll(evaluateARM017(tiers, schedules));
+        // ARM-020 migrated to CustomDetector__mdt (Phase 24i).
+        // if (DetectorCatalogController.isActive('ARM-020')) results.addAll(evaluateARM020(rules));
         return results;
     }
 

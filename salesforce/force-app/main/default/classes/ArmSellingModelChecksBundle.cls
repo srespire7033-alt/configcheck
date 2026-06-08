@@ -56,8 +56,10 @@ public with sharing class ArmSellingModelChecksBundle implements IDetector {
             }
         }
 
-        if (DetectorCatalogController.isActive('ARM-002')) results.addAll(evaluateARM002(models));
-        if (DetectorCatalogController.isActive('ARM-011')) results.addAll(evaluateARM011(models));
+        // ARM-002 migrated to CustomDetector__mdt (Phase 24i).
+        // if (DetectorCatalogController.isActive('ARM-002')) results.addAll(evaluateARM002(models));
+        // ARM-011 migrated to CustomDetector__mdt (Phase 24i).
+        // if (DetectorCatalogController.isActive('ARM-011')) results.addAll(evaluateARM011(models));
         if (DetectorCatalogController.isActive('ARM-012')) results.addAll(evaluateARM012(models, psmos));
         if (DetectorCatalogController.isActive('ARM-019')) results.addAll(evaluateARM019(psmos));
         if (DetectorCatalogController.isActive('ARM-133')) results.addAll(evaluateARM133(models, psmos, pbes));

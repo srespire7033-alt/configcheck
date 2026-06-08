@@ -34,10 +34,12 @@ public with sharing class ArmAssetChecksBundle implements IDetector {
             } catch (Exception e) { return results; }
         }
         if (DetectorCatalogController.isActive('ARM-031')) results.addAll(evaluateARM031(assets, periods));
-        if (DetectorCatalogController.isActive('ARM-032')) results.addAll(evaluateARM032(assets));
+        // ARM-032 migrated to CustomDetector__mdt (Phase 24i).
+        // if (DetectorCatalogController.isActive('ARM-032')) results.addAll(evaluateARM032(assets));
         if (DetectorCatalogController.isActive('ARM-033')) results.addAll(evaluateARM033(rels));
         if (DetectorCatalogController.isActive('ARM-034')) results.addAll(evaluateARM034(periods));
-        if (DetectorCatalogController.isActive('ARM-035')) results.addAll(evaluateARM035(periods));
+        // ARM-035 migrated to CustomDetector__mdt (Phase 24i).
+        // if (DetectorCatalogController.isActive('ARM-035')) results.addAll(evaluateARM035(periods));
         return results;
     }
 

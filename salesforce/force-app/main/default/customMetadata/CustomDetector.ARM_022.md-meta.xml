@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomMetadata xmlns="http://soap.sforce.com/2006/04/metadata" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" fqn="CustomDetector__mdt.ARM_022">
+    <label>ARM-022</label>
+    <protected>false</protected>
+    <values><field>DetectorId__c</field><value xsi:type="xsd:string">ARM-022</value></values>
+    <values><field>Label__c</field><value xsi:type="xsd:string">Rate card entry with no price</value></values>
+    <values><field>Category__c</field><value xsi:type="xsd:string">leakage</value></values>
+    <values><field>AppliesTo__c</field><value xsi:type="xsd:string">ARM</value></values>
+    <values><field>SoqlQuery__c</field><value xsi:type="xsd:string">SELECT Id FROM RateCardEntry WHERE Price = null OR Price = 0</value></values>
+    <values><field>TitleTemplate__c</field><value xsi:type="xsd:string">Rate card entry has zero/null price</value></values>
+    <values><field>DescriptionTemplate__c</field><value xsi:type="xsd:string">Entries with null or zero price will not produce revenue.</value></values>
+    <values><field>PrimaryRecordIdField__c</field><value xsi:type="xsd:string">Id</value></values>
+    <values><field>PrimaryRecordType__c</field><value xsi:type="xsd:string">RateCardEntry</value></values>
+    <values><field>EntitledUsdField__c</field><value xsi:nil="true"/></values>
+    <values><field>RealizedUsdField__c</field><value xsi:nil="true"/></values>
+    <values><field>IsActive__c</field><value xsi:type="xsd:boolean">true</value></values>
+    <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
+</CustomMetadata>

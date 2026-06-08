@@ -28,7 +28,8 @@ public with sharing class ArmCostBookChecksBundle implements IDetector {
             } catch (Exception e) { return results; }
         }
         if (DetectorCatalogController.isActive('ARM-049')) results.addAll(evaluateARM049(books, entries));
-        if (DetectorCatalogController.isActive('ARM-050')) results.addAll(evaluateARM050(entries));
+        // ARM-050 migrated to CustomDetector__mdt (Phase 24i).
+        // if (DetectorCatalogController.isActive('ARM-050')) results.addAll(evaluateARM050(entries));
         if (DetectorCatalogController.isActive('ARM-051')) results.addAll(evaluateARM051(books));
         return results;
     }
