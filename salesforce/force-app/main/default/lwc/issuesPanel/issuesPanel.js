@@ -68,9 +68,11 @@ export default class IssuesPanel extends LightningElement {
       const gap = Number(r.totalGapUsd) || 0;
       const findingCount = (r.findingIds || []).length;
       const rootKey = `root:${r.primaryRecordId}`;
+      const firstFindingId = (r.findingIds && r.findingIds.length) ? r.findingIds[0] : null;
       return {
         ...r,
         rootKey,
+        firstFindingId,
         severityChipClass: `op-tip__sev op-tip__sev--${sev}`,
         borderClass: `op-tip__row op-tip__row--root op-tip__row--${sev}`,
         gapLabel: gap > 0 ? this.formatMoney(gap) + ' at risk' : '',
@@ -82,6 +84,19 @@ export default class IssuesPanel extends LightningElement {
         subtitle: `${r.detectorCount} detectors across ${(r.categories || []).length} categor${(r.categories || []).length === 1 ? 'y' : 'ies'}`,
       };
     });
+  }
+
+  /**
+   * Phase 24z-F — clicking a root-cause card opens the first
+   * constituent finding in the existing issue detail modal so the
+   * user can drill in. Better than dead-ending on a non-clickable
+   * card; the consultant can pivot from any finding into its
+   * record, see related findings via the modal's own surface,
+   * then come back and Stage all from the card.
+   */
+  handleRootCardClick(event) {
+    const findingId = event.currentTarget.dataset.findingId;
+    if (findingId) this.openDetailId = findingId;
   }
   get hasRoots() { return (this.roots || []).length > 0; }
 

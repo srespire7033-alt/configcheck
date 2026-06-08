@@ -31,7 +31,13 @@
         <p class="op-tip__roots-band-hint">Fix these first: each one collapses 3+ findings across categories.</p>
         <div class="op-tip__list">
           <template for:each={rootRows} for:item="r">
-            <article key={r.rootKey} data-key={r.rootKey} class={r.borderClass}>
+            <article
+              key={r.rootKey}
+              data-key={r.rootKey}
+              data-finding-id={r.firstFindingId}
+              class={r.borderClass}
+              onclick={handleRootCardClick}
+            >
               <div class="op-tip__row-num">★</div>
               <div class="op-tip__row-body">
                 <div class="op-tip__row-chips">
