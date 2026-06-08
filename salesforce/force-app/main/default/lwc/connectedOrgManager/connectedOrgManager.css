@@ -1,6 +1,6 @@
 /* ─── Container ─── */
 .op-co {
-  max-width: 1400px;
+  max-width: 1680px;
   margin: 0 auto;
   padding: 24px;
   font-family: var(--op-font-body, 'Salesforce Sans', Arial, sans-serif);
@@ -92,7 +92,10 @@
 /* ─── Card grid ─── */
 .op-co__grid {
   display: grid; gap: 20px;
-  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+  /* Phase 24u — auto-fill columns. 320px floor lets the grid fit 4
+   * cards at the 1400px breakpoint (your 3 orgs + add-tile lines up
+   * in a single row on wide screens) and 5 cards on ultra-wide. */
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
 }
 .op-co__grid--list { grid-template-columns: 1fr; }
 
