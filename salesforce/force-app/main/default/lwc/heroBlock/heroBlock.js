@@ -59,6 +59,24 @@ export default class HeroBlock extends NavigationMixin(LightningElement) {
    *  most recent global scan. Reactive via @wire CurrentPageReference. */
   @track connectedOrgId = null;
 
+  // Phase 24r — subscribe to the cross-LWC scan-completed event so the
+  // hero numbers refresh whenever ANY component triggers a scan (e.g.
+  // the "Run Scan" button on the Connected Orgs card grid). Without
+  // this the hero rendered stale data until the user manually
+  // reloaded the page.
+  _scanCompleteHandler = null;
+  connectedCallback() {
+    this._scanCompleteHandler = () => {
+      if (this.wiredResult) refreshApex(this.wiredResult);
+    };
+    window.addEventListener('op:scan-completed', this._scanCompleteHandler);
+  }
+  disconnectedCallback() {
+    if (this._scanCompleteHandler) {
+      window.removeEventListener('op:scan-completed', this._scanCompleteHandler);
+    }
+  }
+
   @wire(CurrentPageReference)
   wirePageRef(pageRef) {
     if (!pageRef) return;
@@ -140,9 +158,31 @@ export default class HeroBlock extends NavigationMixin(LightningElement) {
   }
 
   // ── Severity tiles ──
-  get criticalCount() { return this.data?.criticalCount || 0; }
-  get warningCount() { return this.data?.warningCount || 0; }
-  get bestPracticeCount() { return this.data?.infoCount || 0; }
+  // Phase 24r — distinct-detector counts drive the headline numbers
+  // (Phase 24k made these the basis of the score). Raw counts are
+  // exposed as the "records affected" subtext so blast radius is
+  // still visible without breaking the score-tile math.
+  get criticalCount() { return this.data?.criticalDetectors || 0; }
+  get warningCount() { return this.data?.warningDetectors || 0; }
+  get bestPracticeCount() { return this.data?.infoDetectors || 0; }
+  get criticalRecords() { return this.data?.criticalCount || 0; }
+  get warningRecords() { return this.data?.warningCount || 0; }
+  get bestPracticeRecords() { return this.data?.infoCount || 0; }
+  // Subtitle strings ("55 records affected"), hidden when distinct
+  // == raw (one detector firing once — no point repeating the same
+  // number with different framing).
+  get criticalSub() {
+    return this.criticalRecords > this.criticalCount
+      ? `${this.criticalRecords} records affected` : '';
+  }
+  get warningSub() {
+    return this.warningRecords > this.warningCount
+      ? `${this.warningRecords} records affected` : '';
+  }
+  get bestPracticeSub() {
+    return this.bestPracticeRecords > this.bestPracticeCount
+      ? `${this.bestPracticeRecords} records affected` : '';
+  }
 
   // ── Resolution progress ──
   get totalIssues() {

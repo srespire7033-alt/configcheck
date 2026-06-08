@@ -489,3 +489,11 @@ textarea:focus-visible,
     transform: none !important;
   }
 }
+
+/* Phase 24r — tile subtext: raw-finding count when distinct < raw */
+.op-hero__tile-sub {
+  margin: 2px 0 0 0;
+  font-size: 11px;
+  color: #6b7280;
+  font-weight: 400;
+}

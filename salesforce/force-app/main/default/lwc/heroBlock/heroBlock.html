@@ -71,6 +71,9 @@
                   <span class="op-hero__tile-num">{criticalCount}</span>
                 </div>
                 <p class="op-hero__tile-label">Critical</p>
+                <template lwc:if={criticalSub}>
+                  <p class="op-hero__tile-sub">{criticalSub}</p>
+                </template>
               </button>
               <button
                 type="button"
@@ -84,6 +87,9 @@
                   <span class="op-hero__tile-num">{warningCount}</span>
                 </div>
                 <p class="op-hero__tile-label">Warnings</p>
+                <template lwc:if={warningSub}>
+                  <p class="op-hero__tile-sub">{warningSub}</p>
+                </template>
               </button>
               <button
                 type="button"
@@ -97,6 +103,9 @@
                   <span class="op-hero__tile-num">{bestPracticeCount}</span>
                 </div>
                 <p class="op-hero__tile-label">Best Practices</p>
+                <template lwc:if={bestPracticeSub}>
+                  <p class="op-hero__tile-sub">{bestPracticeSub}</p>
+                </template>
               </button>
             </div>
 

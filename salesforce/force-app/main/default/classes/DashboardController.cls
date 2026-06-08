@@ -22,9 +22,17 @@ public with sharing class DashboardController {
         @AuraEnabled public Integer scanCount;
         @AuraEnabled public Decimal totalVerifiedUsd;
         @AuraEnabled public Integer findingCount;
+        // Raw finding counts per severity — blast radius.
         @AuraEnabled public Integer criticalCount;
         @AuraEnabled public Integer warningCount;
         @AuraEnabled public Integer infoCount;
+        // Phase 24r — distinct-detector counts per severity. These
+        // are what the headline score is computed from (Phase 24k);
+        // the hero tiles show them as the primary number with the
+        // raw counts as the "N records affected" subtext.
+        @AuraEnabled public Integer criticalDetectors;
+        @AuraEnabled public Integer warningDetectors;
+        @AuraEnabled public Integer infoDetectors;
         @AuraEnabled public Integer resolvedCount;
         @AuraEnabled public Integer healthScore;          // 0-100 from ScoreFormula__mdt
         // Phase 22e — Per-category bucket sub-scores. Categories absent
@@ -66,6 +74,9 @@ public with sharing class DashboardController {
         dto.criticalCount = 0;
         dto.warningCount = 0;
         dto.infoCount = 0;
+        dto.criticalDetectors = 0;
+        dto.warningDetectors = 0;
+        dto.infoDetectors = 0;
         dto.topFindings = new List<TopFinding>();
         dto.hasForensicData = false;
         dto.resolvedCount = 0;
@@ -142,7 +153,9 @@ public with sharing class DashboardController {
         // records (rather than denormalized on the scan) so they stay
         // accurate if findings are added/hidden after scan completion.
         AggregateResult[] sevAgg = [
-            SELECT Severity__c sev, COUNT(Id) cnt
+            SELECT Severity__c sev,
+                   COUNT(Id) cnt,
+                   COUNT_DISTINCT(DetectorId__c) dcnt
             FROM ForensicFinding__c
             WHERE ForensicScan__c = :latest.Id
               AND HiddenAt__c = null
@@ -151,15 +164,17 @@ public with sharing class DashboardController {
         for (AggregateResult ag : sevAgg) {
             String s = (String) ag.get('sev');
             Integer c = (Integer) ag.get('cnt');
-            if (s == 'Critical') dto.criticalCount = c;
-            else if (s == 'Warning') dto.warningCount = c;
-            else if (s == 'Info') dto.infoCount = c;
+            Integer d = (Integer) ag.get('dcnt');
+            if (s == 'Critical') { dto.criticalCount = c; dto.criticalDetectors = d; }
+            else if (s == 'Warning') { dto.warningCount = c; dto.warningDetectors = d; }
+            else if (s == 'Info') { dto.infoCount = c; dto.infoDetectors = d; }
         }
         // Live-compute score when the stored field is missing (legacy
-        // scans inserted before the calculator shipped).
+        // scans inserted before the calculator shipped). Phase 24k —
+        // score takes DISTINCT detector counts, not raw findings.
         if (latest.HealthScore__c == null) {
             dto.healthScore = HealthScoreCalculator.compute(
-                dto.criticalCount, dto.warningCount, dto.infoCount
+                dto.criticalDetectors, dto.warningDetectors, dto.infoDetectors
             );
         }
 
