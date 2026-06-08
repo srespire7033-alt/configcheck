@@ -85,9 +85,14 @@ export default class ConnectedOrgManager extends NavigationMixin(LightningElemen
     return Math.round(scored.reduce((a, r) => a + r.score, 0) / scored.length);
   }
   get kpiAvgScoreClass() {
+    // Phase 24v — align with the rest of the dashboard. Hero ring,
+    // Score Trend, scanHistoryPage and categoryPerformanceGrid all
+    // use 90/70 cutoffs (>=90 good, >=70 mid, else bad). This was
+    // the outlier at 80/60 which made the same score render green
+    // here but amber elsewhere.
     const v = this.kpiAvgScore;
-    if (v === '—' || v >= 80) return 'op-co__kpi-num op-co__kpi-num--good';
-    if (v >= 60) return 'op-co__kpi-num op-co__kpi-num--mid';
+    if (v === '—' || v >= 90) return 'op-co__kpi-num op-co__kpi-num--good';
+    if (v >= 70) return 'op-co__kpi-num op-co__kpi-num--mid';
     return 'op-co__kpi-num op-co__kpi-num--bad';
   }
   get kpiOrgsWithCritical() {
@@ -117,9 +122,11 @@ export default class ConnectedOrgManager extends NavigationMixin(LightningElemen
 
       const scoreDisplay = (r.score == null) ? '—' : String(r.score);
       const scoreClass = (() => {
+        // Phase 24v — 90/70 thresholds, matching the rest of the
+        // dashboard (hero ring, score trend, scan history).
         if (r.score == null) return 'op-co__score op-co__score--none';
-        if (r.score >= 80) return 'op-co__score op-co__score--good';
-        if (r.score >= 60) return 'op-co__score op-co__score--mid';
+        if (r.score >= 90) return 'op-co__score op-co__score--good';
+        if (r.score >= 70) return 'op-co__score op-co__score--mid';
         return 'op-co__score op-co__score--bad';
       })();
 
