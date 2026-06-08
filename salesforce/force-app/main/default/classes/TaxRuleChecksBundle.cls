@@ -97,15 +97,17 @@ public with sharing class TaxRuleChecksBundle implements IDetector {
             if (rid == null || !inactiveRuleIds.contains((Id) rid)) continue;
             bad.add(prodRef(p));
         }
-        if (bad.isEmpty()) return new List<DetectorResult>();
-        DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'TR-002'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Critical'); dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
-        dr.title = 'Inactive tax rules assigned to active products';
-        dr.description = bad.size() + ' active product(s) reference inactive tax rules.';
-        dr.primaryRecord = bad[0];
-        Integer cap = Math.min(50, bad.size());
-        for (Integer i = 1; i < cap; i++) dr.supportingRecords.add(bad[i]);
-        return new List<DetectorResult>{ dr };
+        List<DetectorResult> dout = new List<DetectorResult>();
+        String dsev = DetectorCatalogController.getSeverity('TR-002', 'Critical');
+        for (SourceRecord dsr : bad) {
+            DetectorResult dr = new DetectorResult();
+            dr.detectorId = 'TR-002'; dr.severity = dsev; dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
+            dr.title = '"' + dsr.name + '" — ' + ('Inactive tax rules assigned to active products');
+            dr.description = bad.size() + ' active product(s) reference inactive tax rules.';
+            dr.primaryRecord = dsr;
+            dout.add(dr);
+        }
+        return dout;
     }
 
     @TestVisible
@@ -116,15 +118,17 @@ public with sharing class TaxRuleChecksBundle implements IDetector {
             if (String.valueOf(r.get('blng__TaxableYesNo__c')) == 'Yes') continue;
             bad.add(ruleRef(r));
         }
-        if (bad.isEmpty()) return new List<DetectorResult>();
-        DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'TR-003'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Warning'); dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
-        dr.title = 'Active tax rules not marked as taxable';
-        dr.description = bad.size() + ' active tax rule(s) don\'t have Taxable=Yes. Products using these won\'t have tax applied.';
-        dr.primaryRecord = bad[0];
-        Integer cap = Math.min(50, bad.size());
-        for (Integer i = 1; i < cap; i++) dr.supportingRecords.add(bad[i]);
-        return new List<DetectorResult>{ dr };
+        List<DetectorResult> dout = new List<DetectorResult>();
+        String dsev = DetectorCatalogController.getSeverity('TR-003', 'Warning');
+        for (SourceRecord dsr : bad) {
+            DetectorResult dr = new DetectorResult();
+            dr.detectorId = 'TR-003'; dr.severity = dsev; dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
+            dr.title = '"' + dsr.name + '" — ' + ('Active tax rules not marked as taxable');
+            dr.description = bad.size() + ' active tax rule(s) don\'t have Taxable=Yes. Products using these won\'t have tax applied.';
+            dr.primaryRecord = dsr;
+            dout.add(dr);
+        }
+        return dout;
     }
 
     @TestVisible

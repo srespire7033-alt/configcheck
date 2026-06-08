@@ -76,14 +76,17 @@ public with sharing class ArmBillingPolicyChecksBundle implements IDetector {
             if (!badPlan) continue;
             bad.add(new SourceRecord('BillingMilestonePlan', (Id) p.get('Id'), String.valueOf(p.get('Name'))));
         }
-        if (bad.isEmpty()) return new List<DetectorResult>();
-        DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'ARM-192'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Critical'); dr.gapUsd = 0; dr.recoverabilityScore = 0.95;
-        dr.title = bad.size() + ' active milestone plan(s) with no items or inactive default treatment';
-        dr.description = 'Milestone plans must have at least one item AND an Active DefaultBillingTreatment.';
-        dr.primaryRecord = bad[0];
-        for (Integer i = 1; i < bad.size(); i++) dr.supportingRecords.add(bad[i]);
-        return new List<DetectorResult>{ dr };
+        List<DetectorResult> dout = new List<DetectorResult>();
+        String dsev = DetectorCatalogController.getSeverity('ARM-192', 'Critical');
+        for (SourceRecord dsr : bad) {
+            DetectorResult dr = new DetectorResult();
+            dr.detectorId = 'ARM-192'; dr.severity = dsev; dr.gapUsd = 0; dr.recoverabilityScore = 0.95;
+            dr.title = '"' + dsr.name + '" — ' + (' active milestone plan(s) with no items or inactive default treatment');
+            dr.description = 'Milestone plans must have at least one item AND an Active DefaultBillingTreatment.';
+            dr.primaryRecord = dsr;
+            dout.add(dr);
+        }
+        return dout;
     }
 
 
@@ -104,14 +107,17 @@ public with sharing class ArmBillingPolicyChecksBundle implements IDetector {
             if (!missing) continue;
             bad.add(new SourceRecord('BillingPolicy', (Id) p.get('Id'), String.valueOf(p.get('Name'))));
         }
-        if (bad.isEmpty()) return new List<DetectorResult>();
-        DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'ARM-190'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Critical'); dr.gapUsd = 0; dr.recoverabilityScore = 0.95;
-        dr.title = bad.size() + ' active billing polic(ies) without active default treatment';
-        dr.description = 'Default-selection policies need an active DefaultBillingTreatment.';
-        dr.primaryRecord = bad[0];
-        for (Integer i = 1; i < bad.size(); i++) dr.supportingRecords.add(bad[i]);
-        return new List<DetectorResult>{ dr };
+        List<DetectorResult> dout = new List<DetectorResult>();
+        String dsev = DetectorCatalogController.getSeverity('ARM-190', 'Critical');
+        for (SourceRecord dsr : bad) {
+            DetectorResult dr = new DetectorResult();
+            dr.detectorId = 'ARM-190'; dr.severity = dsev; dr.gapUsd = 0; dr.recoverabilityScore = 0.95;
+            dr.title = '"' + dsr.name + '" — ' + (' active billing polic(ies) without active default treatment');
+            dr.description = 'Default-selection policies need an active DefaultBillingTreatment.';
+            dr.primaryRecord = dsr;
+            dout.add(dr);
+        }
+        return dout;
     }
 
     @TestVisible
@@ -127,14 +133,17 @@ public with sharing class ArmBillingPolicyChecksBundle implements IDetector {
             if (withLines.contains((Id) a.get('Id'))) continue;
             bad.add(new SourceRecord('BillingArrangement', (Id) a.get('Id'), String.valueOf(a.get('Name'))));
         }
-        if (bad.isEmpty()) return new List<DetectorResult>();
-        DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'ARM-191'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Critical'); dr.gapUsd = 0; dr.recoverabilityScore = 0.95;
-        dr.title = bad.size() + ' active billing arrangement(s) without lines';
-        dr.description = 'Arrangements without lines cannot generate invoices.';
-        dr.primaryRecord = bad[0];
-        for (Integer i = 1; i < bad.size(); i++) dr.supportingRecords.add(bad[i]);
-        return new List<DetectorResult>{ dr };
+        List<DetectorResult> dout = new List<DetectorResult>();
+        String dsev = DetectorCatalogController.getSeverity('ARM-191', 'Critical');
+        for (SourceRecord dsr : bad) {
+            DetectorResult dr = new DetectorResult();
+            dr.detectorId = 'ARM-191'; dr.severity = dsev; dr.gapUsd = 0; dr.recoverabilityScore = 0.95;
+            dr.title = '"' + dsr.name + '" — ' + (' active billing arrangement(s) without lines');
+            dr.description = 'Arrangements without lines cannot generate invoices.';
+            dr.primaryRecord = dsr;
+            dout.add(dr);
+        }
+        return dout;
     }
 
     @TestVisible

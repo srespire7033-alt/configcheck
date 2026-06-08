@@ -66,16 +66,17 @@ public with sharing class RevRecRuleChecksBundle implements IDetector {
             if (!inactiveRuleIds.contains((Id) rid)) continue;
             bad.add(prodRef(p));
         }
-        if (bad.isEmpty()) return new List<DetectorResult>();
-        DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'RR-001'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Critical'); dr.gapUsd = bad.size() * 10000;
-        dr.recoverabilityScore = 0.9;
-        dr.title = 'Inactive revenue recognition rules assigned to active products';
-        dr.description = bad.size() + ' active product(s) reference inactive revenue recognition rules. Revenue will not be recognized.';
-        dr.primaryRecord = bad[0];
-        Integer cap = Math.min(50, bad.size());
-        for (Integer i = 1; i < cap; i++) dr.supportingRecords.add(bad[i]);
-        return new List<DetectorResult>{ dr };
+        List<DetectorResult> dout = new List<DetectorResult>();
+        String dsev = DetectorCatalogController.getSeverity('RR-001', 'Critical');
+        for (SourceRecord dsr : bad) {
+            DetectorResult dr = new DetectorResult();
+            dr.detectorId = 'RR-001'; dr.severity = dsev; dr.gapUsd = bad.size() * 10000; dr.recoverabilityScore = 0.9;
+            dr.title = '"' + dsr.name + '" — ' + ('Inactive revenue recognition rules assigned to active products');
+            dr.description = bad.size() + ' active product(s) reference inactive revenue recognition rules. Revenue will not be recognized.';
+            dr.primaryRecord = dsr;
+            dout.add(dr);
+        }
+        return dout;
     }
 
     @TestVisible
@@ -87,15 +88,17 @@ public with sharing class RevRecRuleChecksBundle implements IDetector {
             if (v != null && !String.isBlank(String.valueOf(v))) continue;
             bad.add(ruleRef(r));
         }
-        if (bad.isEmpty()) return new List<DetectorResult>();
-        DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'RR-002'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Warning'); dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
-        dr.title = 'Revenue recognition rules missing schedule creation config';
-        dr.description = bad.size() + ' active revenue recognition rule(s) have no Create Revenue Schedule value set.';
-        dr.primaryRecord = bad[0];
-        Integer cap = Math.min(50, bad.size());
-        for (Integer i = 1; i < cap; i++) dr.supportingRecords.add(bad[i]);
-        return new List<DetectorResult>{ dr };
+        List<DetectorResult> dout = new List<DetectorResult>();
+        String dsev = DetectorCatalogController.getSeverity('RR-002', 'Warning');
+        for (SourceRecord dsr : bad) {
+            DetectorResult dr = new DetectorResult();
+            dr.detectorId = 'RR-002'; dr.severity = dsev; dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
+            dr.title = '"' + dsr.name + '" — ' + ('Revenue recognition rules missing schedule creation config');
+            dr.description = bad.size() + ' active revenue recognition rule(s) have no Create Revenue Schedule value set.';
+            dr.primaryRecord = dsr;
+            dout.add(dr);
+        }
+        return dout;
     }
 
     @TestVisible
@@ -106,15 +109,17 @@ public with sharing class RevRecRuleChecksBundle implements IDetector {
             if (String.valueOf(r.get('blng__CreateRevenueSchedule__c')) != 'No') continue;
             bad.add(ruleRef(r));
         }
-        if (bad.isEmpty()) return new List<DetectorResult>();
-        DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'RR-003'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Warning'); dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
-        dr.title = 'Revenue recognition rules with schedule creation disabled';
-        dr.description = bad.size() + ' active rule(s) have revenue schedule creation set to "No".';
-        dr.primaryRecord = bad[0];
-        Integer cap = Math.min(50, bad.size());
-        for (Integer i = 1; i < cap; i++) dr.supportingRecords.add(bad[i]);
-        return new List<DetectorResult>{ dr };
+        List<DetectorResult> dout = new List<DetectorResult>();
+        String dsev = DetectorCatalogController.getSeverity('RR-003', 'Warning');
+        for (SourceRecord dsr : bad) {
+            DetectorResult dr = new DetectorResult();
+            dr.detectorId = 'RR-003'; dr.severity = dsev; dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
+            dr.title = '"' + dsr.name + '" — ' + ('Revenue recognition rules with schedule creation disabled');
+            dr.description = bad.size() + ' active rule(s) have revenue schedule creation set to "No".';
+            dr.primaryRecord = dsr;
+            dout.add(dr);
+        }
+        return dout;
     }
 
     @TestVisible
@@ -128,14 +133,16 @@ public with sharing class RevRecRuleChecksBundle implements IDetector {
         for (Map<String, Object> r : rules) {
             if (!usedRuleIds.contains((Id) r.get('Id'))) orphans.add(ruleRef(r));
         }
-        if (orphans.isEmpty()) return new List<DetectorResult>();
-        DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'RR-004'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Info'); dr.gapUsd = 0; dr.recoverabilityScore = 1.0;
-        dr.title = 'Unused revenue recognition rules';
-        dr.description = orphans.size() + ' revenue recognition rule(s) are not assigned to any product.';
-        dr.primaryRecord = orphans[0];
-        Integer cap = Math.min(50, orphans.size());
-        for (Integer i = 1; i < cap; i++) dr.supportingRecords.add(orphans[i]);
-        return new List<DetectorResult>{ dr };
+        List<DetectorResult> dout = new List<DetectorResult>();
+        String dsev = DetectorCatalogController.getSeverity('RR-004', 'Info');
+        for (SourceRecord dsr : orphans) {
+            DetectorResult dr = new DetectorResult();
+            dr.detectorId = 'RR-004'; dr.severity = dsev; dr.gapUsd = 0; dr.recoverabilityScore = 1.0;
+            dr.title = '"' + dsr.name + '" — ' + ('Unused revenue recognition rules');
+            dr.description = orphans.size() + ' revenue recognition rule(s) are not assigned to any product.';
+            dr.primaryRecord = dsr;
+            dout.add(dr);
+        }
+        return dout;
     }
 }

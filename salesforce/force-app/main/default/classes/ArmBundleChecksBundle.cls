@@ -69,15 +69,17 @@ public with sharing class ArmBundleChecksBundle implements IDetector {
             if (hasComponentRelation.contains((Id) p.get('Id'))) continue;
             bad.add(prodRef(p));
         }
-        if (bad.isEmpty()) return new List<DetectorResult>();
-        DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'ARM-005'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Critical'); dr.gapUsd = 0; dr.recoverabilityScore = 0.85;
-        dr.title = bad.size() + ' bundle product(s) with no components';
-        dr.description = 'Products named/categorized as bundles have no ProductRelatedComponent rows.';
-        dr.primaryRecord = bad[0];
-        Integer cap = Math.min(25, bad.size());
-        for (Integer i = 1; i < cap; i++) dr.supportingRecords.add(bad[i]);
-        return new List<DetectorResult>{ dr };
+        List<DetectorResult> dout = new List<DetectorResult>();
+        String dsev = DetectorCatalogController.getSeverity('ARM-005', 'Critical');
+        for (SourceRecord dsr : bad) {
+            DetectorResult dr = new DetectorResult();
+            dr.detectorId = 'ARM-005'; dr.severity = dsev; dr.gapUsd = 0; dr.recoverabilityScore = 0.85;
+            dr.title = '"' + dsr.name + '" — ' + (' bundle product(s) with no components');
+            dr.description = 'Products named/categorized as bundles have no ProductRelatedComponent rows.';
+            dr.primaryRecord = dsr;
+            dout.add(dr);
+        }
+        return dout;
     }
 
     @TestVisible
@@ -91,14 +93,17 @@ public with sharing class ArmBundleChecksBundle implements IDetector {
             bad.add(new SourceRecord('ProductRelatedComponent', (Id) c.get('Id'),
                 'Min ' + dn + ' > Max ' + dx));
         }
-        if (bad.isEmpty()) return new List<DetectorResult>();
-        DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'ARM-013'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Critical'); dr.gapUsd = 0; dr.recoverabilityScore = 0.95;
-        dr.title = bad.size() + ' bundle component(s) with impossible quantity range';
-        dr.description = 'MinQuantity exceeds MaxQuantity. Configuration will fail at runtime.';
-        dr.primaryRecord = bad[0];
-        for (Integer i = 1; i < bad.size(); i++) dr.supportingRecords.add(bad[i]);
-        return new List<DetectorResult>{ dr };
+        List<DetectorResult> dout = new List<DetectorResult>();
+        String dsev = DetectorCatalogController.getSeverity('ARM-013', 'Critical');
+        for (SourceRecord dsr : bad) {
+            DetectorResult dr = new DetectorResult();
+            dr.detectorId = 'ARM-013'; dr.severity = dsev; dr.gapUsd = 0; dr.recoverabilityScore = 0.95;
+            dr.title = '"' + dsr.name + '" — ' + (' bundle component(s) with impossible quantity range');
+            dr.description = 'MinQuantity exceeds MaxQuantity. Configuration will fail at runtime.';
+            dr.primaryRecord = dsr;
+            dout.add(dr);
+        }
+        return dout;
     }
 
     @TestVisible
@@ -111,15 +116,17 @@ public with sharing class ArmBundleChecksBundle implements IDetector {
             if (cp == null || !inactives.contains((Id) cp)) continue;
             bad.add(new SourceRecord('ProductRelatedComponent', (Id) c.get('Id'), 'Component'));
         }
-        if (bad.isEmpty()) return new List<DetectorResult>();
-        DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'ARM-014'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Warning'); dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
-        dr.title = bad.size() + ' bundle component(s) reference inactive children';
-        dr.description = 'These components point to a deactivated Product2 — the bundle will fail validation.';
-        dr.primaryRecord = bad[0];
-        Integer cap = Math.min(25, bad.size());
-        for (Integer i = 1; i < cap; i++) dr.supportingRecords.add(bad[i]);
-        return new List<DetectorResult>{ dr };
+        List<DetectorResult> dout = new List<DetectorResult>();
+        String dsev = DetectorCatalogController.getSeverity('ARM-014', 'Warning');
+        for (SourceRecord dsr : bad) {
+            DetectorResult dr = new DetectorResult();
+            dr.detectorId = 'ARM-014'; dr.severity = dsev; dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
+            dr.title = '"' + dsr.name + '" — ' + (' bundle component(s) reference inactive children');
+            dr.description = 'These components point to a deactivated Product2 — the bundle will fail validation.';
+            dr.primaryRecord = dsr;
+            dout.add(dr);
+        }
+        return dout;
     }
 
     @TestVisible

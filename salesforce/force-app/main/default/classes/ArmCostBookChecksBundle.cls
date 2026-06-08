@@ -47,14 +47,17 @@ public with sharing class ArmCostBookChecksBundle implements IDetector {
             if (withEntries.contains((Id) b.get('Id'))) continue;
             bad.add(new SourceRecord('CostBook', (Id) b.get('Id'), String.valueOf(b.get('Name'))));
         }
-        if (bad.isEmpty()) return new List<DetectorResult>();
-        DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'ARM-049'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Warning'); dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
-        dr.title = bad.size() + ' active cost book(s) with no entries';
-        dr.description = 'Cost books without entries cannot supply COGS data.';
-        dr.primaryRecord = bad[0];
-        for (Integer i = 1; i < bad.size(); i++) dr.supportingRecords.add(bad[i]);
-        return new List<DetectorResult>{ dr };
+        List<DetectorResult> dout = new List<DetectorResult>();
+        String dsev = DetectorCatalogController.getSeverity('ARM-049', 'Warning');
+        for (SourceRecord dsr : bad) {
+            DetectorResult dr = new DetectorResult();
+            dr.detectorId = 'ARM-049'; dr.severity = dsev; dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
+            dr.title = '"' + dsr.name + '" — ' + (' active cost book(s) with no entries');
+            dr.description = 'Cost books without entries cannot supply COGS data.';
+            dr.primaryRecord = dsr;
+            dout.add(dr);
+        }
+        return dout;
     }
 
     @TestVisible
@@ -66,14 +69,17 @@ public with sharing class ArmCostBookChecksBundle implements IDetector {
             if (v != null && v != 0) continue;
             bad.add(new SourceRecord('CostBookEntry', (Id) e.get('Id'), 'Entry'));
         }
-        if (bad.isEmpty()) return new List<DetectorResult>();
-        DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'ARM-050'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Info'); dr.gapUsd = 0; dr.recoverabilityScore = 1.0;
-        dr.title = bad.size() + ' cost book entry/entries with no cost';
-        dr.description = 'Entries with null/zero cost produce no margin data.';
-        dr.primaryRecord = bad[0];
-        for (Integer i = 1; i < bad.size(); i++) dr.supportingRecords.add(bad[i]);
-        return new List<DetectorResult>{ dr };
+        List<DetectorResult> dout = new List<DetectorResult>();
+        String dsev = DetectorCatalogController.getSeverity('ARM-050', 'Info');
+        for (SourceRecord dsr : bad) {
+            DetectorResult dr = new DetectorResult();
+            dr.detectorId = 'ARM-050'; dr.severity = dsev; dr.gapUsd = 0; dr.recoverabilityScore = 1.0;
+            dr.title = '"' + dsr.name + '" — ' + (' cost book entry/entries with no cost');
+            dr.description = 'Entries with null/zero cost produce no margin data.';
+            dr.primaryRecord = dsr;
+            dout.add(dr);
+        }
+        return dout;
     }
 
     @TestVisible
@@ -97,14 +103,16 @@ public with sharing class ArmCostBookChecksBundle implements IDetector {
             for (Map<String, Object> b : grp) bad.add(new SourceRecord('CostBook', (Id) b.get('Id'),
                 cur + ': "' + String.valueOf(b.get('Name')) + '"'));
         }
-        if (bad.isEmpty()) return new List<DetectorResult>();
-        DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'ARM-051'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Info'); dr.gapUsd = 0; dr.recoverabilityScore = 1.0;
-        dr.title = currencies + ' currency/currencies with multiple active cost books';
-        dr.description = 'Multiple active cost books per currency complicate margin reporting.';
-        dr.primaryRecord = bad[0];
-        Integer cap = Math.min(10, bad.size());
-        for (Integer i = 1; i < cap; i++) dr.supportingRecords.add(bad[i]);
-        return new List<DetectorResult>{ dr };
+        List<DetectorResult> dout = new List<DetectorResult>();
+        String dsev = DetectorCatalogController.getSeverity('ARM-051', 'Info');
+        for (SourceRecord dsr : bad) {
+            DetectorResult dr = new DetectorResult();
+            dr.detectorId = 'ARM-051'; dr.severity = dsev; dr.gapUsd = 0; dr.recoverabilityScore = 1.0;
+            dr.title = '"' + dsr.name + '" — ' + (currencies + ' currency/currencies with multiple active cost books');
+            dr.description = 'Multiple active cost books per currency complicate margin reporting.';
+            dr.primaryRecord = dsr;
+            dout.add(dr);
+        }
+        return dout;
     }
 }

@@ -53,14 +53,17 @@ public with sharing class ArmRampChecksBundle implements IDetector {
             if (st == null || String.valueOf(st) == 'FreeTrial') continue;
             bad.add(rampRef(r));
         }
-        if (bad.isEmpty()) return new List<DetectorResult>();
-        DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'ARM-120'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Critical'); dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
-        dr.title = bad.size() + ' ramp segment(s) without selling model';
-        dr.description = 'Non-FreeTrial ramp segments require a ProductSellingModelId.';
-        dr.primaryRecord = bad[0];
-        for (Integer i = 1; i < bad.size(); i++) dr.supportingRecords.add(bad[i]);
-        return new List<DetectorResult>{ dr };
+        List<DetectorResult> dout = new List<DetectorResult>();
+        String dsev = DetectorCatalogController.getSeverity('ARM-120', 'Critical');
+        for (SourceRecord dsr : bad) {
+            DetectorResult dr = new DetectorResult();
+            dr.detectorId = 'ARM-120'; dr.severity = dsev; dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
+            dr.title = '"' + dsr.name + '" — ' + (' ramp segment(s) without selling model');
+            dr.description = 'Non-FreeTrial ramp segments require a ProductSellingModelId.';
+            dr.primaryRecord = dsr;
+            dout.add(dr);
+        }
+        return dout;
     }
 
     @TestVisible
@@ -74,14 +77,17 @@ public with sharing class ArmRampChecksBundle implements IDetector {
             if (n != null && n > 0 && dtType != null && !String.isBlank(String.valueOf(dtType))) continue;
             bad.add(rampRef(r));
         }
-        if (bad.isEmpty()) return new List<DetectorResult>();
-        DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'ARM-121'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Critical'); dr.gapUsd = 0; dr.recoverabilityScore = 0.95;
-        dr.title = bad.size() + ' FreeTrial ramp(s) missing TrialDuration/DurationType';
-        dr.description = 'FreeTrial segments must specify duration to provision correctly.';
-        dr.primaryRecord = bad[0];
-        for (Integer i = 1; i < bad.size(); i++) dr.supportingRecords.add(bad[i]);
-        return new List<DetectorResult>{ dr };
+        List<DetectorResult> dout = new List<DetectorResult>();
+        String dsev = DetectorCatalogController.getSeverity('ARM-121', 'Critical');
+        for (SourceRecord dsr : bad) {
+            DetectorResult dr = new DetectorResult();
+            dr.detectorId = 'ARM-121'; dr.severity = dsev; dr.gapUsd = 0; dr.recoverabilityScore = 0.95;
+            dr.title = '"' + dsr.name + '" — ' + (' FreeTrial ramp(s) missing TrialDuration/DurationType');
+            dr.description = 'FreeTrial segments must specify duration to provision correctly.';
+            dr.primaryRecord = dsr;
+            dout.add(dr);
+        }
+        return dout;
     }
 
     @TestVisible
@@ -101,14 +107,16 @@ public with sharing class ArmRampChecksBundle implements IDetector {
             if (grp.size() <= 1) continue;
             for (Map<String, Object> r : grp) bad.add(rampRef(r));
         }
-        if (bad.isEmpty()) return new List<DetectorResult>();
-        DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'ARM-122'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Warning'); dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
-        dr.title = bad.size() + ' overlapping custom ramp segment(s) on same product';
-        dr.description = 'Multiple Custom ramp segments share the same (Product, SellingModel) pair.';
-        dr.primaryRecord = bad[0];
-        Integer cap = Math.min(25, bad.size());
-        for (Integer i = 1; i < cap; i++) dr.supportingRecords.add(bad[i]);
-        return new List<DetectorResult>{ dr };
+        List<DetectorResult> dout = new List<DetectorResult>();
+        String dsev = DetectorCatalogController.getSeverity('ARM-122', 'Warning');
+        for (SourceRecord dsr : bad) {
+            DetectorResult dr = new DetectorResult();
+            dr.detectorId = 'ARM-122'; dr.severity = dsev; dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
+            dr.title = '"' + dsr.name + '" — ' + (' overlapping custom ramp segment(s) on same product');
+            dr.description = 'Multiple Custom ramp segments share the same (Product, SellingModel) pair.';
+            dr.primaryRecord = dsr;
+            dout.add(dr);
+        }
+        return dout;
     }
 }

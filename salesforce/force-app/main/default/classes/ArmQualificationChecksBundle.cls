@@ -67,14 +67,17 @@ public with sharing class ArmQualificationChecksBundle implements IDetector {
             if (ed == null || !(ed < td)) continue;
             bad.add(qRef(q));
         }
-        if (bad.isEmpty()) return new List<DetectorResult>();
-        DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'ARM-110'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Critical'); dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
-        dr.title = bad.size() + ' expired qualification(s) still marked qualified';
-        dr.description = 'Product qualifications past their end date should be re-evaluated.';
-        dr.primaryRecord = bad[0];
-        for (Integer i = 1; i < bad.size(); i++) dr.supportingRecords.add(bad[i]);
-        return new List<DetectorResult>{ dr };
+        List<DetectorResult> dout = new List<DetectorResult>();
+        String dsev = DetectorCatalogController.getSeverity('ARM-110', 'Critical');
+        for (SourceRecord dsr : bad) {
+            DetectorResult dr = new DetectorResult();
+            dr.detectorId = 'ARM-110'; dr.severity = dsev; dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
+            dr.title = '"' + dsr.name + '" — ' + (' expired qualification(s) still marked qualified');
+            dr.description = 'Product qualifications past their end date should be re-evaluated.';
+            dr.primaryRecord = dsr;
+            dout.add(dr);
+        }
+        return dout;
     }
 
     @TestVisible
@@ -87,14 +90,17 @@ public with sharing class ArmQualificationChecksBundle implements IDetector {
             if (!(ed < fd)) continue;
             bad.add(qRef(q));
         }
-        if (bad.isEmpty()) return new List<DetectorResult>();
-        DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'ARM-111'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Critical'); dr.gapUsd = 0; dr.recoverabilityScore = 0.95;
-        dr.title = bad.size() + ' qualification(s) with reversed effective dates';
-        dr.description = 'EffectiveToDate is before EffectiveFromDate — data entry error.';
-        dr.primaryRecord = bad[0];
-        for (Integer i = 1; i < bad.size(); i++) dr.supportingRecords.add(bad[i]);
-        return new List<DetectorResult>{ dr };
+        List<DetectorResult> dout = new List<DetectorResult>();
+        String dsev = DetectorCatalogController.getSeverity('ARM-111', 'Critical');
+        for (SourceRecord dsr : bad) {
+            DetectorResult dr = new DetectorResult();
+            dr.detectorId = 'ARM-111'; dr.severity = dsev; dr.gapUsd = 0; dr.recoverabilityScore = 0.95;
+            dr.title = '"' + dsr.name + '" — ' + (' qualification(s) with reversed effective dates');
+            dr.description = 'EffectiveToDate is before EffectiveFromDate — data entry error.';
+            dr.primaryRecord = dsr;
+            dout.add(dr);
+        }
+        return dout;
     }
 
     @TestVisible
@@ -109,13 +115,16 @@ public with sharing class ArmQualificationChecksBundle implements IDetector {
             if (!hit) continue;
             bad.add(qRef(q));
         }
-        if (bad.isEmpty()) return new List<DetectorResult>();
-        DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'ARM-112'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Warning'); dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
-        dr.title = bad.size() + ' qualification(s) reference inactive product(s)';
-        dr.description = 'Either the product or root product on the qualification is deactivated.';
-        dr.primaryRecord = bad[0];
-        for (Integer i = 1; i < bad.size(); i++) dr.supportingRecords.add(bad[i]);
-        return new List<DetectorResult>{ dr };
+        List<DetectorResult> dout = new List<DetectorResult>();
+        String dsev = DetectorCatalogController.getSeverity('ARM-112', 'Warning');
+        for (SourceRecord dsr : bad) {
+            DetectorResult dr = new DetectorResult();
+            dr.detectorId = 'ARM-112'; dr.severity = dsev; dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
+            dr.title = '"' + dsr.name + '" — ' + (' qualification(s) reference inactive product(s)');
+            dr.description = 'Either the product or root product on the qualification is deactivated.';
+            dr.primaryRecord = dsr;
+            dout.add(dr);
+        }
+        return dout;
     }
 }

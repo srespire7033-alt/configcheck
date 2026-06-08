@@ -91,15 +91,17 @@ public with sharing class ArmCatalogChecksBundle implements IDetector {
         for (Map<String, Object> p : products) {
             if (!productsWithModel.contains((Id) p.get('Id'))) bad.add(prodRef(p));
         }
-        if (bad.isEmpty()) return new List<DetectorResult>();
-        DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'ARM-001'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Critical'); dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
-        dr.title = bad.size() + ' active product(s) have no selling model';
-        dr.description = 'Sales reps will see configuration or runtime errors when trying to quote these products.';
-        dr.primaryRecord = bad[0];
-        Integer cap = Math.min(25, bad.size());
-        for (Integer i = 1; i < cap; i++) dr.supportingRecords.add(bad[i]);
-        return new List<DetectorResult>{ dr };
+        List<DetectorResult> dout = new List<DetectorResult>();
+        String dsev = DetectorCatalogController.getSeverity('ARM-001', 'Critical');
+        for (SourceRecord dsr : bad) {
+            DetectorResult dr = new DetectorResult();
+            dr.detectorId = 'ARM-001'; dr.severity = dsev; dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
+            dr.title = '"' + dsr.name + '" — ' + (' active product(s) have no selling model');
+            dr.description = 'Sales reps will see configuration or runtime errors when trying to quote these products.';
+            dr.primaryRecord = dsr;
+            dout.add(dr);
+        }
+        return dout;
     }
 
     @TestVisible
@@ -115,15 +117,17 @@ public with sharing class ArmCatalogChecksBundle implements IDetector {
         for (Map<String, Object> p : products) {
             if (!productsWithPbe.contains((Id) p.get('Id'))) bad.add(prodRef(p));
         }
-        if (bad.isEmpty()) return new List<DetectorResult>();
-        DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'ARM-002b'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Critical'); dr.gapUsd = 0; dr.recoverabilityScore = 0.85;
-        dr.title = bad.size() + ' active product(s) with no pricing path';
-        dr.description = 'These products have no active PricebookEntry. They cannot be priced on a quote.';
-        dr.primaryRecord = bad[0];
-        Integer cap = Math.min(25, bad.size());
-        for (Integer i = 1; i < cap; i++) dr.supportingRecords.add(bad[i]);
-        return new List<DetectorResult>{ dr };
+        List<DetectorResult> dout = new List<DetectorResult>();
+        String dsev = DetectorCatalogController.getSeverity('ARM-002b', 'Critical');
+        for (SourceRecord dsr : bad) {
+            DetectorResult dr = new DetectorResult();
+            dr.detectorId = 'ARM-002b'; dr.severity = dsev; dr.gapUsd = 0; dr.recoverabilityScore = 0.85;
+            dr.title = '"' + dsr.name + '" — ' + (' active product(s) with no pricing path');
+            dr.description = 'These products have no active PricebookEntry. They cannot be priced on a quote.';
+            dr.primaryRecord = dsr;
+            dout.add(dr);
+        }
+        return dout;
     }
 
     @TestVisible
@@ -158,15 +162,17 @@ public with sharing class ArmCatalogChecksBundle implements IDetector {
                 + ' → ' + (catNames.containsKey((Id) cid) ? catNames.get((Id) cid) : 'Category');
             bad.add(new SourceRecord('ProductCategoryProduct', (Id) cp.get('Id'), label));
         }
-        if (bad.isEmpty()) return new List<DetectorResult>();
-        DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'ARM-010'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Info'); dr.gapUsd = 0; dr.recoverabilityScore = 1.0;
-        dr.title = bad.size() + ' active product(s) in inactive categor(ies)';
-        dr.description = 'Active products are assigned to inactive product categories.';
-        dr.primaryRecord = bad[0];
-        Integer cap = Math.min(25, bad.size());
-        for (Integer i = 1; i < cap; i++) dr.supportingRecords.add(bad[i]);
-        return new List<DetectorResult>{ dr };
+        List<DetectorResult> dout = new List<DetectorResult>();
+        String dsev = DetectorCatalogController.getSeverity('ARM-010', 'Info');
+        for (SourceRecord dsr : bad) {
+            DetectorResult dr = new DetectorResult();
+            dr.detectorId = 'ARM-010'; dr.severity = dsev; dr.gapUsd = 0; dr.recoverabilityScore = 1.0;
+            dr.title = '"' + dsr.name + '" — ' + (' active product(s) in inactive categor(ies)');
+            dr.description = 'Active products are assigned to inactive product categories.';
+            dr.primaryRecord = dsr;
+            dout.add(dr);
+        }
+        return dout;
     }
 
     @TestVisible
@@ -182,14 +188,16 @@ public with sharing class ArmCatalogChecksBundle implements IDetector {
         for (Map<String, Object> p : products) {
             if (!assigned.contains((Id) p.get('Id'))) bad.add(prodRef(p));
         }
-        if (bad.isEmpty()) return new List<DetectorResult>();
-        DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'ARM-018'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Info'); dr.gapUsd = 0; dr.recoverabilityScore = 1.0;
-        dr.title = bad.size() + ' active product(s) without category assignment';
-        dr.description = 'Products without categories are harder to discover and report on.';
-        dr.primaryRecord = bad[0];
-        Integer cap = Math.min(25, bad.size());
-        for (Integer i = 1; i < cap; i++) dr.supportingRecords.add(bad[i]);
-        return new List<DetectorResult>{ dr };
+        List<DetectorResult> dout = new List<DetectorResult>();
+        String dsev = DetectorCatalogController.getSeverity('ARM-018', 'Info');
+        for (SourceRecord dsr : bad) {
+            DetectorResult dr = new DetectorResult();
+            dr.detectorId = 'ARM-018'; dr.severity = dsev; dr.gapUsd = 0; dr.recoverabilityScore = 1.0;
+            dr.title = '"' + dsr.name + '" — ' + (' active product(s) without category assignment');
+            dr.description = 'Products without categories are harder to discover and report on.';
+            dr.primaryRecord = dsr;
+            dout.add(dr);
+        }
+        return dout;
     }
 }

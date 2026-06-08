@@ -60,15 +60,17 @@ public with sharing class ArmClauseChecksBundle implements IDetector {
             bad.add(new SourceRecord('DocumentClause', (Id) c.get('Id'),
                 String.valueOf(nm) + ' / ' + String.valueOf(lang) + ' (alternate without main)'));
         }
-        if (bad.isEmpty()) return new List<DetectorResult>();
-        DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'ARM-212'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Critical'); dr.gapUsd = 0; dr.recoverabilityScore = 0.95;
-        dr.title = bad.size() + ' alternate clause(s) without a main sibling';
-        dr.description = 'Alternate clauses require a matching main clause in the same set + name + language.';
-        dr.primaryRecord = bad[0];
-        Integer cap = Math.min(25, bad.size());
-        for (Integer i = 1; i < cap; i++) dr.supportingRecords.add(bad[i]);
-        return new List<DetectorResult>{ dr };
+        List<DetectorResult> dout = new List<DetectorResult>();
+        String dsev = DetectorCatalogController.getSeverity('ARM-212', 'Critical');
+        for (SourceRecord dsr : bad) {
+            DetectorResult dr = new DetectorResult();
+            dr.detectorId = 'ARM-212'; dr.severity = dsev; dr.gapUsd = 0; dr.recoverabilityScore = 0.95;
+            dr.title = '"' + dsr.name + '" — ' + (' alternate clause(s) without a main sibling');
+            dr.description = 'Alternate clauses require a matching main clause in the same set + name + language.';
+            dr.primaryRecord = dsr;
+            dout.add(dr);
+        }
+        return dout;
     }
 
     @TestVisible
@@ -86,15 +88,17 @@ public with sharing class ArmClauseChecksBundle implements IDetector {
             bad.add(new SourceRecord('DocumentClause', (Id) c.get('Id'),
                 String.valueOf(c.get('Name')) + ' (modified ' + md.format('yyyy-MM-dd') + ')'));
         }
-        if (bad.isEmpty()) return new List<DetectorResult>();
-        DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'ARM-214'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Warning'); dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
-        dr.title = bad.size() + ' archived clause(s) modified after archival';
-        dr.description = 'Archived clauses should not be edited. Investigate the change history.';
-        dr.primaryRecord = bad[0];
-        Integer cap = Math.min(25, bad.size());
-        for (Integer i = 1; i < cap; i++) dr.supportingRecords.add(bad[i]);
-        return new List<DetectorResult>{ dr };
+        List<DetectorResult> dout = new List<DetectorResult>();
+        String dsev = DetectorCatalogController.getSeverity('ARM-214', 'Warning');
+        for (SourceRecord dsr : bad) {
+            DetectorResult dr = new DetectorResult();
+            dr.detectorId = 'ARM-214'; dr.severity = dsev; dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
+            dr.title = '"' + dsr.name + '" — ' + (' archived clause(s) modified after archival');
+            dr.description = 'Archived clauses should not be edited. Investigate the change history.';
+            dr.primaryRecord = dsr;
+            dout.add(dr);
+        }
+        return dout;
     }
 
     static Datetime parseDt(Object o) {
@@ -115,14 +119,17 @@ public with sharing class ArmClauseChecksBundle implements IDetector {
             if (content != null && !String.isBlank(String.valueOf(content))) continue;
             bad.add(new SourceRecord('DocumentClause', (Id) c.get('Id'), String.valueOf(c.get('Name'))));
         }
-        if (bad.isEmpty()) return new List<DetectorResult>();
-        DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'ARM-210'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Critical'); dr.gapUsd = 0; dr.recoverabilityScore = 0.95;
-        dr.title = bad.size() + ' active document clause(s) without content';
-        dr.description = 'Clauses must have body content to render in documents.';
-        dr.primaryRecord = bad[0];
-        for (Integer i = 1; i < bad.size(); i++) dr.supportingRecords.add(bad[i]);
-        return new List<DetectorResult>{ dr };
+        List<DetectorResult> dout = new List<DetectorResult>();
+        String dsev = DetectorCatalogController.getSeverity('ARM-210', 'Critical');
+        for (SourceRecord dsr : bad) {
+            DetectorResult dr = new DetectorResult();
+            dr.detectorId = 'ARM-210'; dr.severity = dsev; dr.gapUsd = 0; dr.recoverabilityScore = 0.95;
+            dr.title = '"' + dsr.name + '" — ' + (' active document clause(s) without content');
+            dr.description = 'Clauses must have body content to render in documents.';
+            dr.primaryRecord = dsr;
+            dout.add(dr);
+        }
+        return dout;
     }
 
     @TestVisible
@@ -145,15 +152,17 @@ public with sharing class ArmClauseChecksBundle implements IDetector {
             for (Map<String, Object> c : grp) bad.add(new SourceRecord('DocumentClause', (Id) c.get('Id'),
                 String.valueOf(c.get('ClauseName')) + ' / ' + String.valueOf(c.get('ClauseLanguage'))));
         }
-        if (bad.isEmpty()) return new List<DetectorResult>();
-        DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'ARM-211'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Critical'); dr.gapUsd = 0; dr.recoverabilityScore = 0.95;
-        dr.title = bad.size() + ' duplicate main clause(s) in clause set/language';
-        dr.description = 'Each (clause set, name, language) should have one main clause.';
-        dr.primaryRecord = bad[0];
-        Integer cap = Math.min(25, bad.size());
-        for (Integer i = 1; i < cap; i++) dr.supportingRecords.add(bad[i]);
-        return new List<DetectorResult>{ dr };
+        List<DetectorResult> dout = new List<DetectorResult>();
+        String dsev = DetectorCatalogController.getSeverity('ARM-211', 'Critical');
+        for (SourceRecord dsr : bad) {
+            DetectorResult dr = new DetectorResult();
+            dr.detectorId = 'ARM-211'; dr.severity = dsev; dr.gapUsd = 0; dr.recoverabilityScore = 0.95;
+            dr.title = '"' + dsr.name + '" — ' + (' duplicate main clause(s) in clause set/language');
+            dr.description = 'Each (clause set, name, language) should have one main clause.';
+            dr.primaryRecord = dsr;
+            dout.add(dr);
+        }
+        return dout;
     }
 
     @TestVisible
@@ -171,13 +180,16 @@ public with sharing class ArmClauseChecksBundle implements IDetector {
             bad.add(new SourceRecord('DocumentClause', (Id) c.get('Id'),
                 String.valueOf(c.get('Name')) + ' (set ' + (setStatus == null ? 'missing' : setStatus) + ')'));
         }
-        if (bad.isEmpty()) return new List<DetectorResult>();
-        DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'ARM-213'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Critical'); dr.gapUsd = 0; dr.recoverabilityScore = 0.95;
-        dr.title = bad.size() + ' clause(s) reference missing/inactive set';
-        dr.description = 'Document clauses must belong to an active clause set.';
-        dr.primaryRecord = bad[0];
-        for (Integer i = 1; i < bad.size(); i++) dr.supportingRecords.add(bad[i]);
-        return new List<DetectorResult>{ dr };
+        List<DetectorResult> dout = new List<DetectorResult>();
+        String dsev = DetectorCatalogController.getSeverity('ARM-213', 'Critical');
+        for (SourceRecord dsr : bad) {
+            DetectorResult dr = new DetectorResult();
+            dr.detectorId = 'ARM-213'; dr.severity = dsev; dr.gapUsd = 0; dr.recoverabilityScore = 0.95;
+            dr.title = '"' + dsr.name + '" — ' + (' clause(s) reference missing/inactive set');
+            dr.description = 'Document clauses must belong to an active clause set.';
+            dr.primaryRecord = dsr;
+            dout.add(dr);
+        }
+        return dout;
     }
 }

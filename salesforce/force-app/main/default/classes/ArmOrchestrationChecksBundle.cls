@@ -65,14 +65,17 @@ public with sharing class ArmOrchestrationChecksBundle implements IDetector {
             if (s.get('FulfillmentStepDefinitionGroupId') != null) continue;
             bad.add(new SourceRecord('FulfillmentStepDefinition', (Id) s.get('Id'), String.valueOf(s.get('Name'))));
         }
-        if (bad.isEmpty()) return new List<DetectorResult>();
-        DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'ARM-045'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Warning'); dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
-        dr.title = bad.size() + ' fulfillment step(s) without group';
-        dr.description = 'Steps must belong to a group to be sequenced.';
-        dr.primaryRecord = bad[0];
-        for (Integer i = 1; i < bad.size(); i++) dr.supportingRecords.add(bad[i]);
-        return new List<DetectorResult>{ dr };
+        List<DetectorResult> dout = new List<DetectorResult>();
+        String dsev = DetectorCatalogController.getSeverity('ARM-045', 'Warning');
+        for (SourceRecord dsr : bad) {
+            DetectorResult dr = new DetectorResult();
+            dr.detectorId = 'ARM-045'; dr.severity = dsev; dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
+            dr.title = '"' + dsr.name + '" — ' + (' fulfillment step(s) without group');
+            dr.description = 'Steps must belong to a group to be sequenced.';
+            dr.primaryRecord = dsr;
+            dout.add(dr);
+        }
+        return dout;
     }
 
     @TestVisible
@@ -87,14 +90,17 @@ public with sharing class ArmOrchestrationChecksBundle implements IDetector {
             if (usedGroups.contains((Id) g.get('Id'))) continue;
             bad.add(new SourceRecord('FulfillmentStepDefinitionGroup', (Id) g.get('Id'), String.valueOf(g.get('Name'))));
         }
-        if (bad.isEmpty()) return new List<DetectorResult>();
-        DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'ARM-046'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Info'); dr.gapUsd = 0; dr.recoverabilityScore = 1.0;
-        dr.title = bad.size() + ' empty fulfillment step group(s)';
-        dr.description = 'Step groups with no member steps add maintenance noise.';
-        dr.primaryRecord = bad[0];
-        for (Integer i = 1; i < bad.size(); i++) dr.supportingRecords.add(bad[i]);
-        return new List<DetectorResult>{ dr };
+        List<DetectorResult> dout = new List<DetectorResult>();
+        String dsev = DetectorCatalogController.getSeverity('ARM-046', 'Info');
+        for (SourceRecord dsr : bad) {
+            DetectorResult dr = new DetectorResult();
+            dr.detectorId = 'ARM-046'; dr.severity = dsev; dr.gapUsd = 0; dr.recoverabilityScore = 1.0;
+            dr.title = '"' + dsr.name + '" — ' + (' empty fulfillment step group(s)');
+            dr.description = 'Step groups with no member steps add maintenance noise.';
+            dr.primaryRecord = dsr;
+            dout.add(dr);
+        }
+        return dout;
     }
 
     @TestVisible
@@ -105,14 +111,17 @@ public with sharing class ArmOrchestrationChecksBundle implements IDetector {
             if (r.get('AssignedToId') != null) continue;
             bad.add(new SourceRecord('FulfillmentTaskAssignmentRule', (Id) r.get('Id'), String.valueOf(r.get('Name'))));
         }
-        if (bad.isEmpty()) return new List<DetectorResult>();
-        DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'ARM-047'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Warning'); dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
-        dr.title = bad.size() + ' active task rule(s) without assignee';
-        dr.description = 'Tasks created from these rules have no owner — they\'ll route to defaults.';
-        dr.primaryRecord = bad[0];
-        for (Integer i = 1; i < bad.size(); i++) dr.supportingRecords.add(bad[i]);
-        return new List<DetectorResult>{ dr };
+        List<DetectorResult> dout = new List<DetectorResult>();
+        String dsev = DetectorCatalogController.getSeverity('ARM-047', 'Warning');
+        for (SourceRecord dsr : bad) {
+            DetectorResult dr = new DetectorResult();
+            dr.detectorId = 'ARM-047'; dr.severity = dsev; dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
+            dr.title = '"' + dsr.name + '" — ' + (' active task rule(s) without assignee');
+            dr.description = 'Tasks created from these rules have no owner — they\'ll route to defaults.';
+            dr.primaryRecord = dsr;
+            dout.add(dr);
+        }
+        return dout;
     }
 
     @TestVisible
@@ -123,14 +132,17 @@ public with sharing class ArmOrchestrationChecksBundle implements IDetector {
             bad.add(new SourceRecord('ProductFulfillmentScenario', (Id) s.get('Id'),
                 String.valueOf(s.get('Name')) + ' (' + String.valueOf(s.get('Status')) + ')'));
         }
-        if (bad.isEmpty()) return new List<DetectorResult>();
-        DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'ARM-048'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Warning'); dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
-        dr.title = bad.size() + ' fulfillment scenario(s) not Active';
-        dr.description = 'Inactive scenarios cannot orchestrate provisioning.';
-        dr.primaryRecord = bad[0];
-        for (Integer i = 1; i < bad.size(); i++) dr.supportingRecords.add(bad[i]);
-        return new List<DetectorResult>{ dr };
+        List<DetectorResult> dout = new List<DetectorResult>();
+        String dsev = DetectorCatalogController.getSeverity('ARM-048', 'Warning');
+        for (SourceRecord dsr : bad) {
+            DetectorResult dr = new DetectorResult();
+            dr.detectorId = 'ARM-048'; dr.severity = dsev; dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
+            dr.title = '"' + dsr.name + '" — ' + (' fulfillment scenario(s) not Active');
+            dr.description = 'Inactive scenarios cannot orchestrate provisioning.';
+            dr.primaryRecord = dsr;
+            dout.add(dr);
+        }
+        return dout;
     }
 
     @TestVisible
@@ -144,13 +156,16 @@ public with sharing class ArmOrchestrationChecksBundle implements IDetector {
             bad.add(new SourceRecord('FulfillmentStepDependencyDef', (Id) d.get('Id'),
                 tgt == null ? 'Null target' : 'Self-reference'));
         }
-        if (bad.isEmpty()) return new List<DetectorResult>();
-        DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'ARM-171'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Critical'); dr.gapUsd = 0; dr.recoverabilityScore = 0.95;
-        dr.title = bad.size() + ' broken fulfillment dependency(s)';
-        dr.description = 'Dependencies that self-reference or have null targets break orchestration.';
-        dr.primaryRecord = bad[0];
-        for (Integer i = 1; i < bad.size(); i++) dr.supportingRecords.add(bad[i]);
-        return new List<DetectorResult>{ dr };
+        List<DetectorResult> dout = new List<DetectorResult>();
+        String dsev = DetectorCatalogController.getSeverity('ARM-171', 'Critical');
+        for (SourceRecord dsr : bad) {
+            DetectorResult dr = new DetectorResult();
+            dr.detectorId = 'ARM-171'; dr.severity = dsev; dr.gapUsd = 0; dr.recoverabilityScore = 0.95;
+            dr.title = '"' + dsr.name + '" — ' + (' broken fulfillment dependency(s)');
+            dr.description = 'Dependencies that self-reference or have null targets break orchestration.';
+            dr.primaryRecord = dsr;
+            dout.add(dr);
+        }
+        return dout;
     }
 }

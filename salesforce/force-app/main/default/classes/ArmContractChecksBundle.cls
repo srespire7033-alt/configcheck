@@ -50,15 +50,17 @@ public with sharing class ArmContractChecksBundle implements IDetector {
             bad.add(new SourceRecord('ContractItemPrice', (Id) p.get('Id'),
                 String.valueOf(p.get('Name'))));
         }
-        if (bad.isEmpty()) return new List<DetectorResult>();
-        DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'ARM-036'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Warning'); dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
-        dr.title = bad.size() + ' contract item price(s) without effective dates';
-        dr.description = 'Without dates, contract pricing may persist indefinitely or never engage.';
-        dr.primaryRecord = bad[0];
-        Integer cap = Math.min(25, bad.size());
-        for (Integer i = 1; i < cap; i++) dr.supportingRecords.add(bad[i]);
-        return new List<DetectorResult>{ dr };
+        List<DetectorResult> dout = new List<DetectorResult>();
+        String dsev = DetectorCatalogController.getSeverity('ARM-036', 'Warning');
+        for (SourceRecord dsr : bad) {
+            DetectorResult dr = new DetectorResult();
+            dr.detectorId = 'ARM-036'; dr.severity = dsev; dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
+            dr.title = '"' + dsr.name + '" — ' + (' contract item price(s) without effective dates');
+            dr.description = 'Without dates, contract pricing may persist indefinitely or never engage.';
+            dr.primaryRecord = dsr;
+            dout.add(dr);
+        }
+        return dout;
     }
 
     @TestVisible
@@ -73,15 +75,17 @@ public with sharing class ArmContractChecksBundle implements IDetector {
             bad.add(new SourceRecord('Contract', (Id) c.get('Id'),
                 String.valueOf(c.get('ContractNumber')) + ' (ended ' + ed + ')'));
         }
-        if (bad.isEmpty()) return new List<DetectorResult>();
-        DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'ARM-037'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Info'); dr.gapUsd = 0; dr.recoverabilityScore = 1.0;
-        dr.title = bad.size() + ' active contract(s) past end date';
-        dr.description = 'Contracts past EndDate should be renewed or set to Expired.';
-        dr.primaryRecord = bad[0];
-        Integer cap = Math.min(25, bad.size());
-        for (Integer i = 1; i < cap; i++) dr.supportingRecords.add(bad[i]);
-        return new List<DetectorResult>{ dr };
+        List<DetectorResult> dout = new List<DetectorResult>();
+        String dsev = DetectorCatalogController.getSeverity('ARM-037', 'Info');
+        for (SourceRecord dsr : bad) {
+            DetectorResult dr = new DetectorResult();
+            dr.detectorId = 'ARM-037'; dr.severity = dsev; dr.gapUsd = 0; dr.recoverabilityScore = 1.0;
+            dr.title = '"' + dsr.name + '" — ' + (' active contract(s) past end date');
+            dr.description = 'Contracts past EndDate should be renewed or set to Expired.';
+            dr.primaryRecord = dsr;
+            dout.add(dr);
+        }
+        return dout;
     }
 
     @TestVisible
@@ -93,15 +97,17 @@ public with sharing class ArmContractChecksBundle implements IDetector {
             if (v != null && v > 0) continue;
             bad.add(new SourceRecord('ContractItemPrice', (Id) p.get('Id'), String.valueOf(p.get('Name'))));
         }
-        if (bad.isEmpty()) return new List<DetectorResult>();
-        DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'ARM-038'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Warning'); dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
-        dr.title = bad.size() + ' contract item price(s) zero or negative';
-        dr.description = 'Zero/negative prices on contract items will not generate revenue.';
-        dr.primaryRecord = bad[0];
-        Integer cap = Math.min(25, bad.size());
-        for (Integer i = 1; i < cap; i++) dr.supportingRecords.add(bad[i]);
-        return new List<DetectorResult>{ dr };
+        List<DetectorResult> dout = new List<DetectorResult>();
+        String dsev = DetectorCatalogController.getSeverity('ARM-038', 'Warning');
+        for (SourceRecord dsr : bad) {
+            DetectorResult dr = new DetectorResult();
+            dr.detectorId = 'ARM-038'; dr.severity = dsev; dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
+            dr.title = '"' + dsr.name + '" — ' + (' contract item price(s) zero or negative');
+            dr.description = 'Zero/negative prices on contract items will not generate revenue.';
+            dr.primaryRecord = dsr;
+            dout.add(dr);
+        }
+        return dout;
     }
 
     @TestVisible
@@ -115,14 +121,16 @@ public with sharing class ArmContractChecksBundle implements IDetector {
             bad.add(new SourceRecord('Contract', (Id) c.get('Id'),
                 String.valueOf(c.get('ContractNumber')) + ' (' + sd + ' > ' + ed + ')'));
         }
-        if (bad.isEmpty()) return new List<DetectorResult>();
-        DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'ARM-039'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Critical'); dr.gapUsd = 0; dr.recoverabilityScore = 0.95;
-        dr.title = bad.size() + ' contract(s) with reversed dates';
-        dr.description = 'StartDate is after EndDate — data entry error.';
-        dr.primaryRecord = bad[0];
-        Integer cap = Math.min(25, bad.size());
-        for (Integer i = 1; i < cap; i++) dr.supportingRecords.add(bad[i]);
-        return new List<DetectorResult>{ dr };
+        List<DetectorResult> dout = new List<DetectorResult>();
+        String dsev = DetectorCatalogController.getSeverity('ARM-039', 'Critical');
+        for (SourceRecord dsr : bad) {
+            DetectorResult dr = new DetectorResult();
+            dr.detectorId = 'ARM-039'; dr.severity = dsev; dr.gapUsd = 0; dr.recoverabilityScore = 0.95;
+            dr.title = '"' + dsr.name + '" — ' + (' contract(s) with reversed dates');
+            dr.description = 'StartDate is after EndDate — data entry error.';
+            dr.primaryRecord = dsr;
+            dout.add(dr);
+        }
+        return dout;
     }
 }

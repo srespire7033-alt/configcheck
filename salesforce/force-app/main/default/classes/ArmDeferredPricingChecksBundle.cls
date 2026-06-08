@@ -102,14 +102,17 @@ public with sharing class ArmDeferredPricingChecksBundle implements IDetector {
             bad.add(new SourceRecord('AttributeBasedAdjRule', (Id) r.get('Id'),
                 String.valueOf(r.get('Name')) + ' (schedule "' + String.valueOf(p.get('Name')) + '")'));
         }
-        if (bad.isEmpty()) return new List<DetectorResult>();
-        DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'ARM-131'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Critical'); dr.gapUsd = 0; dr.recoverabilityScore = 0.95;
-        dr.title = bad.size() + ' attribute adjustment(s) outside parent schedule window';
-        dr.description = 'Rule effective dates extend past the parent PriceAdjustmentSchedule\'s window.';
-        dr.primaryRecord = bad[0];
-        for (Integer i = 1; i < bad.size(); i++) dr.supportingRecords.add(bad[i]);
-        return new List<DetectorResult>{ dr };
+        List<DetectorResult> dout = new List<DetectorResult>();
+        String dsev = DetectorCatalogController.getSeverity('ARM-131', 'Critical');
+        for (SourceRecord dsr : bad) {
+            DetectorResult dr = new DetectorResult();
+            dr.detectorId = 'ARM-131'; dr.severity = dsev; dr.gapUsd = 0; dr.recoverabilityScore = 0.95;
+            dr.title = '"' + dsr.name + '" — ' + (' attribute adjustment(s) outside parent schedule window');
+            dr.description = 'Rule effective dates extend past the parent PriceAdjustmentSchedule\'s window.';
+            dr.primaryRecord = dsr;
+            dout.add(dr);
+        }
+        return dout;
     }
 
     static Date parseD(Object o) {
@@ -140,14 +143,17 @@ public with sharing class ArmDeferredPricingChecksBundle implements IDetector {
             bad.add(new SourceRecord('PriceAdjustmentTier', (Id) t.get('Id'),
                 'Schedule "' + String.valueOf(p.get('Name')) + '"'));
         }
-        if (bad.isEmpty()) return new List<DetectorResult>();
-        DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'ARM-130'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Critical'); dr.gapUsd = 0; dr.recoverabilityScore = 0.95;
-        dr.title = bad.size() + ' price adjustment tier(s) outside parent schedule date range';
-        dr.description = 'Tier effective dates extend past the parent schedule\'s effective window.';
-        dr.primaryRecord = bad[0];
-        for (Integer i = 1; i < bad.size(); i++) dr.supportingRecords.add(bad[i]);
-        return new List<DetectorResult>{ dr };
+        List<DetectorResult> dout = new List<DetectorResult>();
+        String dsev = DetectorCatalogController.getSeverity('ARM-130', 'Critical');
+        for (SourceRecord dsr : bad) {
+            DetectorResult dr = new DetectorResult();
+            dr.detectorId = 'ARM-130'; dr.severity = dsev; dr.gapUsd = 0; dr.recoverabilityScore = 0.95;
+            dr.title = '"' + dsr.name + '" — ' + (' price adjustment tier(s) outside parent schedule date range');
+            dr.description = 'Tier effective dates extend past the parent schedule\'s effective window.';
+            dr.primaryRecord = dsr;
+            dout.add(dr);
+        }
+        return dout;
     }
 
     @TestVisible
@@ -168,14 +174,16 @@ public with sharing class ArmDeferredPricingChecksBundle implements IDetector {
             if (validKeys.contains(k)) continue;
             bad.add(new SourceRecord('PricebookEntry', (Id) e.get('Id'), 'PBE without matching PSMO'));
         }
-        if (bad.isEmpty()) return new List<DetectorResult>();
-        DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'ARM-132'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Critical'); dr.gapUsd = 0; dr.recoverabilityScore = 0.95;
-        dr.title = bad.size() + ' pricebook entry/entries reference selling model with no matching option';
-        dr.description = 'These PBEs name a ProductSellingModel that has no matching ProductSellingModelOption.';
-        dr.primaryRecord = bad[0];
-        Integer cap = Math.min(25, bad.size());
-        for (Integer i = 1; i < cap; i++) dr.supportingRecords.add(bad[i]);
-        return new List<DetectorResult>{ dr };
+        List<DetectorResult> dout = new List<DetectorResult>();
+        String dsev = DetectorCatalogController.getSeverity('ARM-132', 'Critical');
+        for (SourceRecord dsr : bad) {
+            DetectorResult dr = new DetectorResult();
+            dr.detectorId = 'ARM-132'; dr.severity = dsev; dr.gapUsd = 0; dr.recoverabilityScore = 0.95;
+            dr.title = '"' + dsr.name + '" — ' + (' pricebook entry/entries reference selling model with no matching option');
+            dr.description = 'These PBEs name a ProductSellingModel that has no matching ProductSellingModelOption.';
+            dr.primaryRecord = dsr;
+            dout.add(dr);
+        }
+        return dout;
     }
 }

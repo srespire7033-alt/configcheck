@@ -43,4 +43,37 @@ public class DetectorResult {
         Decimal r = (realizedUsd != null) ? realizedUsd : 0;
         this.gapUsd = e - r;
     }
+
+    /**
+     * Phase 24c — per-record emission helper. Collapses the
+     * "1 finding per record" pattern that 80+ evaluators did inline.
+     * Severity comes from the catalog; sevFallback used when null.
+     * titleTemplate uses {name} as a placeholder for SourceRecord.name.
+     */
+    public static List<DetectorResult> emitPerRecord(
+        List<SourceRecord> records,
+        String detectorId,
+        String sevFallback,
+        Decimal gapUsdEach,
+        Decimal recoverability,
+        String titleTemplate,
+        String description
+    ) {
+        List<DetectorResult> out = new List<DetectorResult>();
+        if (records == null || records.isEmpty()) return out;
+        String sev = DetectorCatalogController.getSeverity(detectorId, sevFallback);
+        for (SourceRecord sr : records) {
+            DetectorResult dr = new DetectorResult();
+            dr.detectorId = detectorId;
+            dr.severity = sev;
+            dr.gapUsd = gapUsdEach;
+            dr.recoverabilityScore = recoverability;
+            String safeName = (sr != null && sr.name != null) ? sr.name : 'record';
+            dr.title = titleTemplate.replace('{name}', safeName);
+            dr.description = description;
+            dr.primaryRecord = sr;
+            out.add(dr);
+        }
+        return out;
+    }
 }

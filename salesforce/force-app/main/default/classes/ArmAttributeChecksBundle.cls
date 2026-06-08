@@ -75,14 +75,17 @@ public with sharing class ArmAttributeChecksBundle implements IDetector {
             if (r.get('EffectiveStartDate') != null || r.get('EffectiveEndDate') != null) continue;
             bad.add(new SourceRecord('AttributeBasedAdjRule', (Id) r.get('Id'), (String) r.get('Name')));
         }
-        if (bad.isEmpty()) return new List<DetectorResult>();
-        DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'ARM-004'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Warning'); dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
-        dr.title = bad.size() + ' attribute rule(s) without effective dates';
-        dr.description = 'Rules without effective dates fire indefinitely — silent revenue leakage risk.';
-        dr.primaryRecord = bad[0];
-        for (Integer i = 1; i < bad.size(); i++) dr.supportingRecords.add(bad[i]);
-        return new List<DetectorResult>{ dr };
+        List<DetectorResult> dout = new List<DetectorResult>();
+        String dsev = DetectorCatalogController.getSeverity('ARM-004', 'Warning');
+        for (SourceRecord dsr : bad) {
+            DetectorResult dr = new DetectorResult();
+            dr.detectorId = 'ARM-004'; dr.severity = dsev; dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
+            dr.title = '"' + dsr.name + '" — ' + (' attribute rule(s) without effective dates');
+            dr.description = 'Rules without effective dates fire indefinitely — silent revenue leakage risk.';
+            dr.primaryRecord = dsr;
+            dout.add(dr);
+        }
+        return dout;
     }
 
     @TestVisible
@@ -100,14 +103,17 @@ public with sharing class ArmAttributeChecksBundle implements IDetector {
             if (defsWithValue.contains((Id) d.get('Id'))) continue;
             bad.add(new SourceRecord('AttributeDefinition', (Id) d.get('Id'), (String) d.get('Name')));
         }
-        if (bad.isEmpty()) return new List<DetectorResult>();
-        DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'ARM-024'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Critical'); dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
-        dr.title = bad.size() + ' picklist attribute(s) with no values';
-        dr.description = 'Picklist attributes without AttributePicklistValue rows cannot be selected at runtime.';
-        dr.primaryRecord = bad[0];
-        for (Integer i = 1; i < bad.size(); i++) dr.supportingRecords.add(bad[i]);
-        return new List<DetectorResult>{ dr };
+        List<DetectorResult> dout = new List<DetectorResult>();
+        String dsev = DetectorCatalogController.getSeverity('ARM-024', 'Critical');
+        for (SourceRecord dsr : bad) {
+            DetectorResult dr = new DetectorResult();
+            dr.detectorId = 'ARM-024'; dr.severity = dsev; dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
+            dr.title = '"' + dsr.name + '" — ' + (' picklist attribute(s) with no values');
+            dr.description = 'Picklist attributes without AttributePicklistValue rows cannot be selected at runtime.';
+            dr.primaryRecord = dsr;
+            dout.add(dr);
+        }
+        return dout;
     }
 
     @TestVisible
@@ -120,14 +126,17 @@ public with sharing class ArmAttributeChecksBundle implements IDetector {
             if (v != null && !String.isBlank(String.valueOf(v))) continue;
             bad.add(new SourceRecord('AttributeDefinition', (Id) d.get('Id'), (String) d.get('Name')));
         }
-        if (bad.isEmpty()) return new List<DetectorResult>();
-        DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'ARM-025'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Warning'); dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
-        dr.title = bad.size() + ' required attribute(s) without default value';
-        dr.description = 'Required attributes should have a default to avoid blocking sales reps.';
-        dr.primaryRecord = bad[0];
-        for (Integer i = 1; i < bad.size(); i++) dr.supportingRecords.add(bad[i]);
-        return new List<DetectorResult>{ dr };
+        List<DetectorResult> dout = new List<DetectorResult>();
+        String dsev = DetectorCatalogController.getSeverity('ARM-025', 'Warning');
+        for (SourceRecord dsr : bad) {
+            DetectorResult dr = new DetectorResult();
+            dr.detectorId = 'ARM-025'; dr.severity = dsev; dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
+            dr.title = '"' + dsr.name + '" — ' + (' required attribute(s) without default value');
+            dr.description = 'Required attributes should have a default to avoid blocking sales reps.';
+            dr.primaryRecord = dsr;
+            dout.add(dr);
+        }
+        return dout;
     }
 
     @TestVisible
@@ -142,13 +151,16 @@ public with sharing class ArmAttributeChecksBundle implements IDetector {
             if (cid == null || !inactiveCats.contains((Id) cid)) continue;
             bad.add(new SourceRecord('AttributeDefinition', (Id) d.get('Id'), (String) d.get('Name')));
         }
-        if (bad.isEmpty()) return new List<DetectorResult>();
-        DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'ARM-026'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Warning'); dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
-        dr.title = bad.size() + ' active attribute(s) in inactive categor(ies)';
-        dr.description = 'Active attribute definitions belong to deactivated AttributeCategory records.';
-        dr.primaryRecord = bad[0];
-        for (Integer i = 1; i < bad.size(); i++) dr.supportingRecords.add(bad[i]);
-        return new List<DetectorResult>{ dr };
+        List<DetectorResult> dout = new List<DetectorResult>();
+        String dsev = DetectorCatalogController.getSeverity('ARM-026', 'Warning');
+        for (SourceRecord dsr : bad) {
+            DetectorResult dr = new DetectorResult();
+            dr.detectorId = 'ARM-026'; dr.severity = dsev; dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
+            dr.title = '"' + dsr.name + '" — ' + (' active attribute(s) in inactive categor(ies)');
+            dr.description = 'Active attribute definitions belong to deactivated AttributeCategory records.';
+            dr.primaryRecord = dsr;
+            dout.add(dr);
+        }
+        return dout;
     }
 }

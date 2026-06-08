@@ -211,15 +211,17 @@ public with sharing class FinanceBookChecksBundle implements IDetector {
             if (booksWithPeriods.contains((Id) book.get('Id'))) continue;
             bad.add(bookRef(book));
         }
-        if (bad.isEmpty()) return new List<DetectorResult>();
-        DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'FB-004'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Critical'); dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
-        dr.title = 'Active finance books with no periods';
-        dr.description = bad.size() + ' active finance book(s) have no finance periods defined. No transactions can be posted.';
-        dr.primaryRecord = bad[0];
-        Integer cap = Math.min(20, bad.size());
-        for (Integer i = 1; i < cap; i++) dr.supportingRecords.add(bad[i]);
-        return new List<DetectorResult>{ dr };
+        List<DetectorResult> dout = new List<DetectorResult>();
+        String dsev = DetectorCatalogController.getSeverity('FB-004', 'Critical');
+        for (SourceRecord dsr : bad) {
+            DetectorResult dr = new DetectorResult();
+            dr.detectorId = 'FB-004'; dr.severity = dsev; dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
+            dr.title = '"' + dsr.name + '" — ' + ('Active finance books with no periods');
+            dr.description = bad.size() + ' active finance book(s) have no finance periods defined. No transactions can be posted.';
+            dr.primaryRecord = dsr;
+            dout.add(dr);
+        }
+        return dout;
     }
 
     @TestVisible
@@ -233,15 +235,17 @@ public with sharing class FinanceBookChecksBundle implements IDetector {
             if (ed.year() >= cutoffYear) continue;
             bad.add(periodRef(p));
         }
-        if (bad.isEmpty()) return new List<DetectorResult>();
-        DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'FB-005'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Warning'); dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
-        dr.title = 'Old finance periods still open';
-        dr.description = bad.size() + ' finance period(s) from prior fiscal years remain open. Close after year-end reconciliation.';
-        dr.primaryRecord = bad[0];
-        Integer cap = Math.min(50, bad.size());
-        for (Integer i = 1; i < cap; i++) dr.supportingRecords.add(bad[i]);
-        return new List<DetectorResult>{ dr };
+        List<DetectorResult> dout = new List<DetectorResult>();
+        String dsev = DetectorCatalogController.getSeverity('FB-005', 'Warning');
+        for (SourceRecord dsr : bad) {
+            DetectorResult dr = new DetectorResult();
+            dr.detectorId = 'FB-005'; dr.severity = dsev; dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
+            dr.title = '"' + dsr.name + '" — ' + ('Old finance periods still open');
+            dr.description = bad.size() + ' finance period(s) from prior fiscal years remain open. Close after year-end reconciliation.';
+            dr.primaryRecord = dsr;
+            dout.add(dr);
+        }
+        return dout;
     }
 
     @TestVisible
@@ -275,14 +279,16 @@ public with sharing class FinanceBookChecksBundle implements IDetector {
             if (ed == null || !(ed < todayDate)) continue;
             bad.add(periodRef(p));
         }
-        if (bad.isEmpty()) return new List<DetectorResult>();
-        DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'FB-007'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Info'); dr.gapUsd = 0; dr.recoverabilityScore = 1.0;
-        dr.title = bad.size() + ' finance period(s) past end date still open';
-        dr.description = bad.size() + ' finance period(s) have ended but remain open. Best practice: close after reconciliation.';
-        dr.primaryRecord = bad[0];
-        Integer cap = Math.min(20, bad.size());
-        for (Integer i = 1; i < cap; i++) dr.supportingRecords.add(bad[i]);
-        return new List<DetectorResult>{ dr };
+        List<DetectorResult> dout = new List<DetectorResult>();
+        String dsev = DetectorCatalogController.getSeverity('FB-007', 'Info');
+        for (SourceRecord dsr : bad) {
+            DetectorResult dr = new DetectorResult();
+            dr.detectorId = 'FB-007'; dr.severity = dsev; dr.gapUsd = 0; dr.recoverabilityScore = 1.0;
+            dr.title = '"' + dsr.name + '" — ' + (' finance period(s) past end date still open');
+            dr.description = bad.size() + ' finance period(s) have ended but remain open. Best practice: close after reconciliation.';
+            dr.primaryRecord = dsr;
+            dout.add(dr);
+        }
+        return dout;
     }
 }

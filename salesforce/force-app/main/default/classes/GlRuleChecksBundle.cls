@@ -89,15 +89,17 @@ public with sharing class GlRuleChecksBundle implements IDetector {
             if (rulesWithTreatments.contains((Id) r.get('Id'))) continue;
             bad.add(ruleRef(r));
         }
-        if (bad.isEmpty()) return new List<DetectorResult>();
-        DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'GL-002'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Critical'); dr.gapUsd = 0; dr.recoverabilityScore = 0.85;
-        dr.title = 'GL rules with no treatments';
-        dr.description = bad.size() + ' active GL rule(s) have no GL treatments configured.';
-        dr.primaryRecord = bad[0];
-        Integer cap = Math.min(50, bad.size());
-        for (Integer i = 1; i < cap; i++) dr.supportingRecords.add(bad[i]);
-        return new List<DetectorResult>{ dr };
+        List<DetectorResult> dout = new List<DetectorResult>();
+        String dsev = DetectorCatalogController.getSeverity('GL-002', 'Critical');
+        for (SourceRecord dsr : bad) {
+            DetectorResult dr = new DetectorResult();
+            dr.detectorId = 'GL-002'; dr.severity = dsev; dr.gapUsd = 0; dr.recoverabilityScore = 0.85;
+            dr.title = '"' + dsr.name + '" — ' + ('GL rules with no treatments');
+            dr.description = bad.size() + ' active GL rule(s) have no GL treatments configured.';
+            dr.primaryRecord = dsr;
+            dout.add(dr);
+        }
+        return dout;
     }
 
     @TestVisible
@@ -111,15 +113,17 @@ public with sharing class GlRuleChecksBundle implements IDetector {
             if (rid == null || !activeRuleIds.contains((Id) rid)) continue;
             bad.add(trtRef(t));
         }
-        if (bad.isEmpty()) return new List<DetectorResult>();
-        DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'GL-003'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Warning'); dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
-        dr.title = 'Inactive GL treatments on active GL rules';
-        dr.description = bad.size() + ' inactive GL treatment(s) exist under active GL rules. Certain transaction types may not post.';
-        dr.primaryRecord = bad[0];
-        Integer cap = Math.min(50, bad.size());
-        for (Integer i = 1; i < cap; i++) dr.supportingRecords.add(bad[i]);
-        return new List<DetectorResult>{ dr };
+        List<DetectorResult> dout = new List<DetectorResult>();
+        String dsev = DetectorCatalogController.getSeverity('GL-003', 'Warning');
+        for (SourceRecord dsr : bad) {
+            DetectorResult dr = new DetectorResult();
+            dr.detectorId = 'GL-003'; dr.severity = dsev; dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
+            dr.title = '"' + dsr.name + '" — ' + ('Inactive GL treatments on active GL rules');
+            dr.description = bad.size() + ' inactive GL treatment(s) exist under active GL rules. Certain transaction types may not post.';
+            dr.primaryRecord = dsr;
+            dout.add(dr);
+        }
+        return dout;
     }
 
     @TestVisible
@@ -132,15 +136,17 @@ public with sharing class GlRuleChecksBundle implements IDetector {
             if (hasC == hasD) continue; // both or neither — not one-sided
             bad.add(trtRef(t));
         }
-        if (bad.isEmpty()) return new List<DetectorResult>();
-        DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'GL-004'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Warning'); dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
-        dr.title = 'GL treatments with only one account mapped';
-        dr.description = bad.size() + ' active GL treatment(s) have only credit OR debit mapped, not both.';
-        dr.primaryRecord = bad[0];
-        Integer cap = Math.min(50, bad.size());
-        for (Integer i = 1; i < cap; i++) dr.supportingRecords.add(bad[i]);
-        return new List<DetectorResult>{ dr };
+        List<DetectorResult> dout = new List<DetectorResult>();
+        String dsev = DetectorCatalogController.getSeverity('GL-004', 'Warning');
+        for (SourceRecord dsr : bad) {
+            DetectorResult dr = new DetectorResult();
+            dr.detectorId = 'GL-004'; dr.severity = dsev; dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
+            dr.title = '"' + dsr.name + '" — ' + ('GL treatments with only one account mapped');
+            dr.description = bad.size() + ' active GL treatment(s) have only credit OR debit mapped, not both.';
+            dr.primaryRecord = dsr;
+            dout.add(dr);
+        }
+        return dout;
     }
 
     @TestVisible

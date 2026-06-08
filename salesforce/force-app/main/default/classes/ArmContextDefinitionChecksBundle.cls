@@ -31,15 +31,17 @@ public with sharing class ArmContextDefinitionChecksBundle implements IDetector 
             if (Boolean.valueOf(d.get('IsActive'))) continue;
             bad.add(new SourceRecord('ContextDefinition', (Id) d.get('Id'), String.valueOf(d.get('DeveloperName'))));
         }
-        if (bad.isEmpty()) return new List<DetectorResult>();
-        DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'ARM-009'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Warning'); dr.gapUsd = 0; dr.recoverabilityScore = 1.0;
-        dr.title = bad.size() + ' inactive context definition(s)';
-        dr.description = 'Context Service definitions are inactive — features depending on them will not resolve.';
-        dr.primaryRecord = bad[0];
-        Integer cap = Math.min(25, bad.size());
-        for (Integer i = 1; i < cap; i++) dr.supportingRecords.add(bad[i]);
-        return new List<DetectorResult>{ dr };
+        List<DetectorResult> dout = new List<DetectorResult>();
+        String dsev = DetectorCatalogController.getSeverity('ARM-009', 'Warning');
+        for (SourceRecord dsr : bad) {
+            DetectorResult dr = new DetectorResult();
+            dr.detectorId = 'ARM-009'; dr.severity = dsev; dr.gapUsd = 0; dr.recoverabilityScore = 1.0;
+            dr.title = '"' + dsr.name + '" — ' + (' inactive context definition(s)');
+            dr.description = 'Context Service definitions are inactive — features depending on them will not resolve.';
+            dr.primaryRecord = dsr;
+            dout.add(dr);
+        }
+        return dout;
     }
 
     @TestVisible

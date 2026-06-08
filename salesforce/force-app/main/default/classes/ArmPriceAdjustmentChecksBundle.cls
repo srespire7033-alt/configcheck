@@ -144,14 +144,17 @@ public with sharing class ArmPriceAdjustmentChecksBundle implements IDetector {
             if (hasTier.contains((Id) s.get('Id'))) continue;
             bad.add(new SourceRecord('PriceAdjustmentSchedule', (Id) s.get('Id'), (String) s.get('Name')));
         }
-        if (bad.isEmpty()) return new List<DetectorResult>();
-        DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'ARM-016'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Warning'); dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
-        dr.title = bad.size() + ' active price schedule(s) with no tiers';
-        dr.description = 'Schedules without tier rows produce no adjustment at runtime.';
-        dr.primaryRecord = bad[0];
-        for (Integer i = 1; i < bad.size(); i++) dr.supportingRecords.add(bad[i]);
-        return new List<DetectorResult>{ dr };
+        List<DetectorResult> dout = new List<DetectorResult>();
+        String dsev = DetectorCatalogController.getSeverity('ARM-016', 'Warning');
+        for (SourceRecord dsr : bad) {
+            DetectorResult dr = new DetectorResult();
+            dr.detectorId = 'ARM-016'; dr.severity = dsev; dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
+            dr.title = '"' + dsr.name + '" — ' + (' active price schedule(s) with no tiers');
+            dr.description = 'Schedules without tier rows produce no adjustment at runtime.';
+            dr.primaryRecord = dsr;
+            dout.add(dr);
+        }
+        return dout;
     }
 
     @TestVisible
@@ -169,14 +172,17 @@ public with sharing class ArmPriceAdjustmentChecksBundle implements IDetector {
                 + ' (Lower ' + lo + ', Upper ' + hi + ')';
             bad.add(new SourceRecord('PriceAdjustmentTier', (Id) t.get('Id'), label));
         }
-        if (bad.isEmpty()) return new List<DetectorResult>();
-        DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'ARM-017'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Critical'); dr.gapUsd = 0; dr.recoverabilityScore = 0.95;
-        dr.title = bad.size() + ' tier(s) with reversed quantity bounds';
-        dr.description = 'LowerBound exceeds UpperBound — the tier can never match.';
-        dr.primaryRecord = bad[0];
-        for (Integer i = 1; i < bad.size(); i++) dr.supportingRecords.add(bad[i]);
-        return new List<DetectorResult>{ dr };
+        List<DetectorResult> dout = new List<DetectorResult>();
+        String dsev = DetectorCatalogController.getSeverity('ARM-017', 'Critical');
+        for (SourceRecord dsr : bad) {
+            DetectorResult dr = new DetectorResult();
+            dr.detectorId = 'ARM-017'; dr.severity = dsev; dr.gapUsd = 0; dr.recoverabilityScore = 0.95;
+            dr.title = '"' + dsr.name + '" — ' + (' tier(s) with reversed quantity bounds');
+            dr.description = 'LowerBound exceeds UpperBound — the tier can never match.';
+            dr.primaryRecord = dsr;
+            dout.add(dr);
+        }
+        return dout;
     }
 
     @TestVisible
@@ -190,13 +196,16 @@ public with sharing class ArmPriceAdjustmentChecksBundle implements IDetector {
             bad.add(new SourceRecord('AttributeBasedAdjRule', (Id) r.get('Id'),
                 (String) r.get('Name') + ' (ended ' + ed + ')'));
         }
-        if (bad.isEmpty()) return new List<DetectorResult>();
-        DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'ARM-020'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Info'); dr.gapUsd = 0; dr.recoverabilityScore = 1.0;
-        dr.title = bad.size() + ' attribute rule(s) past their end date';
-        dr.description = 'These rules continue to apply because they were not deactivated after expiring.';
-        dr.primaryRecord = bad[0];
-        for (Integer i = 1; i < bad.size(); i++) dr.supportingRecords.add(bad[i]);
-        return new List<DetectorResult>{ dr };
+        List<DetectorResult> dout = new List<DetectorResult>();
+        String dsev = DetectorCatalogController.getSeverity('ARM-020', 'Info');
+        for (SourceRecord dsr : bad) {
+            DetectorResult dr = new DetectorResult();
+            dr.detectorId = 'ARM-020'; dr.severity = dsev; dr.gapUsd = 0; dr.recoverabilityScore = 1.0;
+            dr.title = '"' + dsr.name + '" — ' + (' attribute rule(s) past their end date');
+            dr.description = 'These rules continue to apply because they were not deactivated after expiring.';
+            dr.primaryRecord = dsr;
+            dout.add(dr);
+        }
+        return dout;
     }
 }
