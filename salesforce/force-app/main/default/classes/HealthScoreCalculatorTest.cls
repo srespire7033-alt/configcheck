@@ -70,9 +70,12 @@ private class HealthScoreCalculatorTest {
             SELECT HealthScore__c, CategoryScoresJson__c
             FROM ForensicScan__c WHERE Id = :scan.Id
         ];
-        // Phase 24c — linear: 2·2 + 1·0.5 = 4.5 → 100-4.5 = 95.5,
-        // intValue() truncates → 95.
-        System.assertEquals(95, after.HealthScore__c);
+        // Phase 24k — detector-aware linear. Three findings all share
+        // detectorId PB-001 (2 Critical + 1 Warning), so:
+        //   distinct critical detectors = 1, distinct warning = 1
+        //   penalty = 1·2 + 1·0.5 = 2.5 → score = 100 - 2.5 = 97.5,
+        //   intValue() truncates to 97.
+        System.assertEquals(97, after.HealthScore__c);
         System.assert(String.isNotBlank(after.CategoryScoresJson__c),
             'CategoryScoresJson__c should be populated');
         Map<String, Object> parsed = (Map<String, Object>)

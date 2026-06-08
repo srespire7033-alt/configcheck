@@ -168,8 +168,23 @@ public with sharing class HealthScoreCalculator {
     /** Compute + persist headline score AND category JSON on a ForensicScan__c. */
     public static void computeAndStore(Id scanId) {
         if (scanId == null) return;
+        // Phase 24k — Detector-aware linear scoring.
+        //
+        // Why this changed: Phase 24c switched detectors to per-record
+        // emission for blast-radius parity with Vercel. That broke the
+        // Vercel-linear score formula, which was calibrated for the
+        // summary-emission era (~1 finding per check). After 24c, a
+        // single broken config — e.g. "55 active products missing tax
+        // rule" — generated 55 critical findings, blew past the
+        // penalty cap, and floored real orgs at score 0.
+        //
+        // The fix: count DISTINCT detectors per severity, not raw
+        // findings. A buyer reads the score as "5 distinct problems →
+        // 90", not "1000 affected records → 0". The card UI still
+        // shows the per-record count for blast radius; only the
+        // headline score uses distinct-detector counts.
         AggregateResult[] agg = [
-            SELECT Severity__c sev, COUNT(Id) cnt
+            SELECT Severity__c sev, COUNT_DISTINCT(DetectorId__c) dcnt
             FROM ForensicFinding__c
             WHERE ForensicScan__c = :scanId AND HiddenAt__c = null
             WITH SECURITY_ENFORCED GROUP BY Severity__c
@@ -177,7 +192,7 @@ public with sharing class HealthScoreCalculator {
         Integer crit = 0, warn = 0, info = 0;
         for (AggregateResult a : agg) {
             String s = (String) a.get('sev');
-            Integer c = (Integer) a.get('cnt');
+            Integer c = (Integer) a.get('dcnt');
             if (s == 'Critical') crit = c;
             else if (s == 'Warning') warn = c;
             else if (s == 'Info') info = c;
