@@ -104,9 +104,70 @@ export default class CategoryIssuesModal extends NavigationMixin(LightningElemen
   get hasInfo() { return this.infoCount > 0; }
   get hasAnyIssues() { return this.data?.totalCount > 0; }
 
-  get criticalRows() { return this.decorate(this.data?.critical, 'critical'); }
-  get warningRows() { return this.decorate(this.data?.warning, 'warning'); }
-  get infoRows() { return this.decorate(this.data?.info, 'info'); }
+  // Phase 24w — group flat per-record findings by detectorId so the
+  // list reads "Products missing tax rule — 79 records" expandable,
+  // rather than 79 near-identical rows. The expand state is per-
+  // detector; collapsing all by default keeps the panel scannable.
+  @track expandedDetectors = new Set();
+
+  get criticalGroups() { return this.groupByDetector(this.data?.critical, 'critical'); }
+  get warningGroups() { return this.groupByDetector(this.data?.warning, 'warning'); }
+  get infoGroups()    { return this.groupByDetector(this.data?.info,    'info'); }
+
+  groupByDetector(rows, severityKey) {
+    if (!rows || rows.length === 0) return [];
+    const order = []; // preserve first-seen order (already severity-sorted by Apex)
+    const map = new Map();
+    for (const r of rows) {
+      const id = r.detectorId || '(unknown)';
+      if (!map.has(id)) {
+        order.push(id);
+        map.set(id, {
+          detectorId: id,
+          displayTitle: this.stripQuotedName(r.title || id),
+          description: r.description || '',
+          severityKey,
+          rows: [],
+          totalGap: 0,
+        });
+      }
+      const g = map.get(id);
+      g.rows.push(r);
+      g.totalGap += (r.gapUsd || 0);
+    }
+    return order.map((id) => {
+      const g = map.get(id);
+      const expanded = this.expandedDetectors.has(id);
+      return {
+        ...g,
+        count: g.rows.length,
+        impactLabel: this.buildGroupImpact(g),
+        isExpanded: expanded,
+        chevronIcon: expanded ? 'utility:chevrondown' : 'utility:chevronright',
+        iconWrapClass: `op-cim__row-icon-wrap op-cim__row-icon-wrap--${severityKey}`,
+        iconName: severityKey === 'critical' ? 'utility:error'
+                : severityKey === 'warning'  ? 'utility:warning'
+                : 'utility:info',
+        iconClass: `op-cim__row-icon op-cim__row-icon--${severityKey}`,
+        decoratedRows: expanded ? this.decorate(g.rows, severityKey) : [],
+      };
+    });
+  }
+
+  // "Product \"Exterior Camera\" missing tax rule" → "Product missing tax rule"
+  // Keeps the detector's verb, drops the per-record name. Falls back to
+  // the original title when there's nothing to strip.
+  stripQuotedName(title) {
+    if (!title) return '';
+    const stripped = title.replace(/\s*"[^"]*"\s*/g, ' ').replace(/\s+/g, ' ').trim();
+    return stripped || title;
+  }
+
+  buildGroupImpact(g) {
+    const parts = [`${g.rows.length} record${g.rows.length === 1 ? '' : 's'} affected`];
+    if (g.totalGap > 0) parts.push(`Est. ${this.fmtMoney(g.totalGap)} at risk`);
+    return parts.join(' · ');
+  }
 
   decorate(rows, severityKey) {
     if (!rows) return [];
@@ -132,6 +193,15 @@ export default class CategoryIssuesModal extends NavigationMixin(LightningElemen
       parts.push(`Est. ${this.fmtMoney(r.gapUsd)} at risk`);
     }
     return parts.join(' · ');
+  }
+
+  handleToggleGroup(e) {
+    const id = e.currentTarget.dataset.detectorId;
+    if (!id) return;
+    if (this.expandedDetectors.has(id)) this.expandedDetectors.delete(id);
+    else this.expandedDetectors.add(id);
+    // Force reactive recompute by replacing the Set reference.
+    this.expandedDetectors = new Set(this.expandedDetectors);
   }
 
   fmtMoney(n) {
