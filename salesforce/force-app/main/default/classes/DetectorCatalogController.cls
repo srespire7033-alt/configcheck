@@ -132,12 +132,39 @@ public with sharing class DetectorCatalogController {
      * irrelevant so this always returns true.
      */
     public static Boolean surfaceAvailable(String detectorId, Boolean isRemote) {
-        if (isRemote == true) return true;
+        // Backward-compat: no Named Credential context → preserve the
+        // pre-24z behavior (always allow on remote). Callers with a
+        // Named Credential should use the 3-arg overload below.
+        return surfaceAvailable(detectorId, isRemote, null);
+    }
+
+    /**
+     * Phase 24z — Surface gate, schema-aware on both sides.
+     *
+     * Before: remote scans skipped the gate entirely, so ARM-001 fired
+     * against vanilla DE orgs that didn't have ProductSellingModel,
+     * inflating the critical count with false positives. Now: when the
+     * caller supplies the Named Credential, we probe the remote org's
+     * /sobjects/ describe (once per scan, cached) and gate the detector
+     * on the actual remote schema.
+     *
+     * Fail-open semantics: if the probe errors (auth, network, 403, etc.)
+     * we let the detector run — better to surface a maybe-irrelevant
+     * finding than silently hide a real one.
+     */
+    public static Boolean surfaceAvailable(String detectorId, Boolean isRemote, String namedCredentialName) {
         String raw = getRequiredSurface(detectorId);
         if (String.isBlank(raw)) return true;
         for (String tok : raw.split(';')) {
             String t = tok.trim();
-            if (String.isNotBlank(t) && SchemaUtil.hasObject(t)) return true;
+            if (String.isBlank(t)) continue;
+            if (isRemote == true) {
+                // No Named Credential → preserve legacy fail-open.
+                if (String.isBlank(namedCredentialName)) return true;
+                if (OrgQueryService.remoteSObjectExists(namedCredentialName, t)) return true;
+            } else {
+                if (SchemaUtil.hasObject(t)) return true;
+            }
         }
         return false;
     }

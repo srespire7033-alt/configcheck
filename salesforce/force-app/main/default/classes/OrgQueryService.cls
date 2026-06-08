@@ -30,6 +30,81 @@ public with sharing class OrgQueryService {
     public class OrgQueryException extends Exception {}
 
     /**
+     * Phase 24z — Remote schema probe cache.
+     *
+     * Keyed by Named Credential name → Set of SObject API names present
+     * on that remote org. Loaded lazily with a single GET to
+     * /services/data/v60.0/sobjects/ and pinned for the rest of the
+     * transaction so 200+ detector gating checks share one callout.
+     *
+     * A null value (vs an empty Set) is the "probe failed" sentinel —
+     * callers treat it as "don't know, allow the detector to run rather
+     * than silently hide it" to preserve current behavior on auth/network
+     * issues. A non-null empty Set means "probe succeeded but org has no
+     * SObjects we recognize" (effectively never, but valid).
+     */
+    @TestVisible private static Map<String, Set<String>> remoteSObjectCache = new Map<String, Set<String>>();
+
+    /**
+     * Phase 24z — Returns the Set of SObject API names exposed by the
+     * remote org behind the given Named Credential, or null if the
+     * probe failed. Cached per-transaction. Caller should treat null as
+     * "fail open" (don't gate detectors out).
+     */
+    public static Set<String> getRemoteSObjectNames(String namedCredentialName) {
+        if (String.isBlank(namedCredentialName)) return null;
+        if (remoteSObjectCache.containsKey(namedCredentialName)) {
+            return remoteSObjectCache.get(namedCredentialName);
+        }
+        Set<String> names = null;
+        try {
+            HttpRequest req = new HttpRequest();
+            req.setEndpoint('callout:' + namedCredentialName + '/services/data/' + API_VERSION + '/sobjects/');
+            req.setMethod('GET');
+            req.setHeader('Accept', 'application/json');
+            req.setTimeout(CALLOUT_TIMEOUT_MS);
+            HttpResponse res = new Http().send(req);
+            if (res.getStatusCode() == 200) {
+                names = new Set<String>();
+                Map<String, Object> body = (Map<String, Object>) JSON.deserializeUntyped(res.getBody());
+                Object sobjs = body.get('sobjects');
+                if (sobjs instanceof List<Object>) {
+                    for (Object o : (List<Object>) sobjs) {
+                        if (o instanceof Map<String, Object>) {
+                            Object n = ((Map<String, Object>) o).get('name');
+                            if (n instanceof String && String.isNotBlank((String) n)) {
+                                names.add((String) n);
+                            }
+                        }
+                    }
+                }
+            } else {
+                System.debug(LoggingLevel.WARN,
+                    '[OrgPrism] Schema probe HTTP ' + res.getStatusCode() + ' on ' + namedCredentialName);
+            }
+        } catch (Exception e) {
+            System.debug(LoggingLevel.WARN,
+                '[OrgPrism] Schema probe failed for ' + namedCredentialName + ': ' + e.getMessage());
+        }
+        remoteSObjectCache.put(namedCredentialName, names);
+        return names;
+    }
+
+    /**
+     * Phase 24z — Does the remote org have this SObject? Null cred or
+     * blank objName → true (no surface requirement to gate on). Probe
+     * failure → true (fail open — surface a detector we're unsure about
+     * rather than silently hide it). Probe succeeded + name absent → false.
+     */
+    public static Boolean remoteSObjectExists(String namedCredentialName, String objName) {
+        if (String.isBlank(objName)) return true;
+        if (String.isBlank(namedCredentialName)) return true;
+        Set<String> names = getRemoteSObjectNames(namedCredentialName);
+        if (names == null) return true; // probe failed → fail open
+        return names.contains(objName);
+    }
+
+    /**
      * Run a SOQL query. Returns List<Map<String, Object>> regardless
      * of mode. Nested relationship fields are themselves Maps (recursive).
      */

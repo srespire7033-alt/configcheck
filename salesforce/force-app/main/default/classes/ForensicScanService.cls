@@ -23,6 +23,16 @@ public with sharing class ForensicScanService {
 
     /** Registry of detectors. Keep in sync as new detectors are added. */
     private static List<IDetector> getDetectorsFor(String productType, Boolean isRemote) {
+        return getDetectorsFor(productType, isRemote, null);
+    }
+
+    /**
+     * Phase 24z — Overload that takes the remote org's Named Credential
+     * so the surface gate can probe the *actual* remote schema rather
+     * than fail-open on every remote scan. namedCredentialName == null
+     * preserves the pre-24z fail-open behavior (e.g. local scans, tests).
+     */
+    private static List<IDetector> getDetectorsFor(String productType, Boolean isRemote, String namedCredentialName) {
         List<IDetector> all = new List<IDetector> {
             // v1.0 — the 5 originally-ported detectors
             new REN001RenewalUpliftDetector(),
@@ -132,7 +142,7 @@ public with sharing class ForensicScanService {
                 if (cat.IsActive__c == false) continue;
                 if (!DetectorCatalogController.appliesTo(did, productType)) continue;
                 // Phase 22a-0 — skip when required surface absent in host org.
-                if (!DetectorCatalogController.surfaceAvailable(did, isRemote)) {
+                if (!DetectorCatalogController.surfaceAvailable(did, isRemote, namedCredentialName)) {
                     System.debug(LoggingLevel.INFO,
                         '[OrgPrism] Skip ' + did + ' — required surface not in host org schema.');
                     continue;
@@ -321,7 +331,10 @@ public with sharing class ForensicScanService {
             DetectorContext ctx = new DetectorContext(
                 scanId, UserInfo.getDefaultCurrency(), productType,
                 connectedOrgId, namedCredentialName);
-            List<IDetector> all = getDetectorsFor(productType, true);
+            // Phase 24z — pass namedCredentialName so the surface gate
+            // can probe the remote org's actual schema rather than
+            // fail-open on every detector.
+            List<IDetector> all = getDetectorsFor(productType, true, namedCredentialName);
 
             if (Test.isRunningTest()) {
                 // Test.startTest/stopTest only allows one Queueable level, so
@@ -449,7 +462,7 @@ public with sharing class ForensicScanService {
         // per scan so the per-finding lookup is O(1).
         Set<String> suppressed = loadSuppressionKeys();
 
-        for (IDetector d : getDetectorsFor(productType, ctx.isRemote())) {
+        for (IDetector d : getDetectorsFor(productType, ctx.isRemote(), ctx.namedCredentialName)) {
             try {
                 List<DetectorResult> results = d.run(ctx);
                 // Phase 24q — apply per-org overrides before persist:

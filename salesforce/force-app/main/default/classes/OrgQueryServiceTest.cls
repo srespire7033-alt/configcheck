@@ -17,6 +17,66 @@ private class OrgQueryServiceTest {
         }
     }
 
+    // ── Phase 24z — Remote schema probe ──────────────────────────────
+
+    public class SObjectsMock implements HttpCalloutMock {
+        public Integer status;
+        public String body;
+        public SObjectsMock(Integer s, String b) { this.status = s; this.body = b; }
+        public HttpResponse respond(HttpRequest req) {
+            HttpResponse r = new HttpResponse();
+            r.setStatusCode(this.status);
+            r.setBody(this.body);
+            return r;
+        }
+    }
+
+    @isTest
+    static void remoteSObjectExists_blankInputs_returnTrue() {
+        // No callout — short-circuits to true.
+        System.assertEquals(true, OrgQueryService.remoteSObjectExists(null, 'Account'));
+        System.assertEquals(true, OrgQueryService.remoteSObjectExists('NC', null));
+        System.assertEquals(true, OrgQueryService.remoteSObjectExists('NC', ''));
+    }
+
+    @isTest
+    static void remoteSObjectExists_probeSucceeds_returnsTrueForKnownFalseForUnknown() {
+        // Mock /sobjects/ response listing Account + Product2 only.
+        String body = '{"sobjects":[{"name":"Account"},{"name":"Product2"},{"name":"Pricebook2"}]}';
+        Test.setMock(HttpCalloutMock.class, new SObjectsMock(200, body));
+        Test.startTest();
+        Boolean accountExists = OrgQueryService.remoteSObjectExists('TestCred24z', 'Account');
+        Boolean armExists = OrgQueryService.remoteSObjectExists('TestCred24z', 'ProductSellingModel');
+        Test.stopTest();
+        System.assertEquals(true, accountExists, 'Account is in the probe response');
+        System.assertEquals(false, armExists,
+            'ProductSellingModel absent → detector should be gated out');
+    }
+
+    @isTest
+    static void remoteSObjectExists_probeFails_failsOpen() {
+        // 500 → cache stores null → fail-open (true) so we don't silently
+        // hide detectors when the auth/network probe breaks.
+        Test.setMock(HttpCalloutMock.class, new SObjectsMock(500, ''));
+        Test.startTest();
+        Boolean res = OrgQueryService.remoteSObjectExists('BrokenCred24z', 'Account');
+        Test.stopTest();
+        System.assertEquals(true, res, 'Probe failure should fail open, not gate');
+    }
+
+    @isTest
+    static void getRemoteSObjectNames_cachedAcrossCalls() {
+        String body = '{"sobjects":[{"name":"Account"}]}';
+        Test.setMock(HttpCalloutMock.class, new SObjectsMock(200, body));
+        Test.startTest();
+        Set<String> first = OrgQueryService.getRemoteSObjectNames('CacheCred24z');
+        Set<String> second = OrgQueryService.getRemoteSObjectNames('CacheCred24z');
+        Test.stopTest();
+        System.assert(first != null && first.contains('Account'));
+        // Second call returned from cache — same Set instance, no second callout.
+        System.assertEquals(first, second);
+    }
+
     @isTest
     static void isSchemaVarianceError_matchesKnownPatterns() {
         System.assert(OrgQueryService.isSchemaVarianceError(
