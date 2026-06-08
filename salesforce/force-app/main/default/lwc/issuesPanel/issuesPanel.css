@@ -210,10 +210,15 @@
 }
 .op-tip__row-affected {
   display: flex;
-  align-items: center;
+  align-items: center; /* horizontal-axis alignment of label + chevron inside this row */
+  align-self: start;   /* Phase 24y-F-v2 — explicit override; keeps the right-side
+                          chip pinned to the TOP of the grid cell even when the row
+                          expands. Belt-and-suspenders alongside align-items:start
+                          on .op-tip__row in case a higher-specificity rule wins. */
   justify-content: flex-end;
   gap: 4px;
   text-align: right;
+  padding-top: 2px;
 }
 .op-tip__row-affected-val {
   font-size: 12px;
