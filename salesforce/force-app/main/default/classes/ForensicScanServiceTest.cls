@@ -42,6 +42,41 @@ private class ForensicScanServiceTest {
     }
 
     @isTest
+    static void startRemoteScan_rejectsOrgWithNoRevenueCloud() {
+        // Phase 24z-E — when the Connected Org's auto-detected
+        // ProductType is 'None' (vanilla DE, no CPQ/Billing/ARM),
+        // we refuse to start the scan with a clear AuraHandledException
+        // rather than burning detector tx on guaranteed false positives.
+        ConnectedOrg__c co = new ConnectedOrg__c(
+            Name = 'Vanilla DE Test',
+            NamedCredentialName__c = 'NC_VANILLA_TEST',
+            InstanceUrl__c = 'https://test.my.salesforce.com',
+            Status__c = 'Connected',
+            ProductType__c = 'None'
+        );
+        insert co;
+
+        Boolean threw = false;
+        String message = null;
+        try {
+            Test.startTest();
+            ForensicScanService.startRemoteScan('CPQ', co.Id);
+            Test.stopTest();
+        } catch (AuraHandledException e) {
+            threw = true;
+            message = e.getMessage();
+        } catch (Exception e) {
+            // AuraHandledException sometimes wraps; accept any throw
+            // here — the contract is "refuses to start", not the exact
+            // exception type.
+            threw = true;
+            message = e.getMessage();
+        }
+        System.assertEquals(true, threw,
+            'Scan must be refused for ProductType=None');
+    }
+
+    @isTest
     static void detectorContext_storesAndRetrievesSnapshots() {
         DetectorContext ctx = new DetectorContext(null, 'USD', 'CPQ');
 

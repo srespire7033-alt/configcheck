@@ -260,6 +260,18 @@ public with sharing class ForensicScanService {
             if (String.isBlank(namedCredentialName)) {
                 throw new AuraHandledException('Connected Org has no Named Credential configured');
             }
+            // Phase 24z-E — refuse to scan orgs with no Revenue Cloud
+            // package installed. testConnection (RemoteOrgService) auto-
+            // populates ProductType__c via the schema probe at connect
+            // time; a value of "None" means none of CPQ/Billing/ARM was
+            // detected, so there's literally nothing for the detector
+            // suite to find. Saves 200+ detector executions plus the
+            // false-positive cleanup work on the UI side.
+            if (cos[0].ProductType__c == 'None') {
+                throw new AuraHandledException(
+                    'No Revenue Cloud package detected on this org (CPQ / Billing / ARM). ' +
+                    'Nothing to scan. Re-run Test Connection if you recently installed a package.');
+            }
             // Phase 22m — auto-derive productType from the Connected Org so
             // ARM detectors don't leak into CPQ-typed scans (and vice-versa).
             // FS-0047 saw ARM-001/002b/037 fire on a CPQ scan because the

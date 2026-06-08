@@ -229,6 +229,19 @@ public with sharing class RemoteOrgService {
                 row.RemoteOrgName__c = remoteName;
                 row.LastConnectedAt__c = System.now();
                 row.LastError__c = null;
+                // Phase 24z-E — auto-detect installed Revenue Cloud package
+                // at connect time so we know upfront whether this org is
+                // scannable (CPQ / CPQ+Billing / Billing / ARM) or has
+                // nothing relevant installed ("None"). Probe is cached so
+                // a subsequent scan in the same tx reuses it for free.
+                // Detection failure (null) leaves the existing value alone.
+                try {
+                    String detected = OrgQueryService.detectInstalledProductType(row.NamedCredentialName__c);
+                    if (String.isNotBlank(detected)) row.ProductType__c = detected;
+                } catch (Exception detEx) {
+                    System.debug(LoggingLevel.WARN,
+                        '[OrgPrism] ProductType auto-detect failed: ' + detEx.getMessage());
+                }
                 saveRow(row);
                 result.ok = true;
                 result.remoteOrgId = remoteId;

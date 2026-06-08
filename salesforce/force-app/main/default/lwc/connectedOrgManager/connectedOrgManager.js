@@ -144,28 +144,41 @@ export default class ConnectedOrgManager extends NavigationMixin(LightningElemen
 
       const isScanning = this.scanningId === r.id;
       const isConnected = r.status === 'Connected';
+      // Phase 24z-E — orgs with no Revenue Cloud package installed
+      // are "not scannable". Run Scan is disabled; card shows a neutral
+      // pill. Phase 24z-A/B/C/D already make the data layer correct,
+      // but blocking the button stops users from kicking off scans that
+      // can't possibly find anything.
+      const isNotScannable = r.productType === 'None';
+      const cannotScan = !isConnected || isScanning || isNotScannable;
+      const scanTooltip = isNotScannable
+        ? 'No Revenue Cloud package detected (CPQ / Billing / ARM). Nothing to scan.'
+        : (isConnected ? 'Run a full OrgPrism scan against this remote org'
+                       : 'Test connection first');
 
       return {
         ...r,
-        productChips: chips,
-        stripeStyle,
-        scoreDisplay,
-        scoreClass,
-        deltaDisplay,
+        productChips: isNotScannable ? ['No Revenue Cloud'] : chips,
+        stripeStyle: isNotScannable ? STRIPE.DEFAULT : stripeStyle,
+        scoreDisplay: isNotScannable ? '—' : scoreDisplay,
+        scoreClass: isNotScannable ? 'op-co__score op-co__score--none' : scoreClass,
+        deltaDisplay: isNotScannable ? 'Not applicable' : deltaDisplay,
         deltaClass,
-        hasLastScan: Boolean(r.lastScanAt),
+        hasLastScan: !isNotScannable && Boolean(r.lastScanAt),
         lastScanAgo: fmtAgo(r.lastScanAt),
         isScanning,
         isTesting: this.testingId === r.id,
-        cannotScan: !isConnected || isScanning,
+        isNotScannable,
+        cannotScan,
         cannotOpen: !r.latestScanId,
-        scanBtnLabel: isScanning ? 'Scanning…' : 'Run Scan',
+        scanBtnLabel: isNotScannable ? 'Not Scannable'
+                     : isScanning ? 'Scanning…' : 'Run Scan',
         scanStageText: isScanning ? this.scanStage : '',
         showScanProgress: isScanning,
-        scanTooltip: isConnected ? 'Run a full OrgPrism scan against this remote org' : 'Test connection first',
+        scanTooltip,
         testBtnLabel: this.testingId === r.id ? 'Testing…' : 'Test Connection',
         showError: r.status === 'Auth Failed' || r.status === 'Unreachable',
-        statusShort: r.status,
+        statusShort: isNotScannable ? 'No Revenue Cloud' : r.status,
       };
     });
   }
