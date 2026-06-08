@@ -79,3 +79,11 @@ salesforce/.sfdx/
 
 # Excel lock/temp files
 ~$*.xlsx
+
+# Generated catalog/report artifacts (regenerated from source on demand)
+reports/OrgPrism_Detector_Catalog.xlsx
+
+# Local helper scripts used to backfill catalog metadata (kept local)
+scripts/backfill-long-descriptions.*
+scripts/long_descriptions_data.*
+scripts/py-to-js-data.*
