@@ -40,10 +40,13 @@ private class IssuesControllerTest {
         Test.startTest();
         List<IssuesController.IssueGroup> groups = IssuesController.getTopIssueGroups(5, null);
         Test.stopTest();
-        System.assertEquals(1, groups.size());
-        System.assertEquals(1, groups[0].relatedCount, '3 unique order titles collapse to 1 normalized member');
-        System.assertEquals(3, groups[0].totalAffected);
-        System.assertEquals('Order activated with no billing schedule', groups[0].headlineTitle);
+        // Phase 24d — Top Issues drops Info, keeps Warning+Critical.
+        // First row is Warning; rows 2-3 are Info and get filtered.
+        // Expected: 1 group with 1 Warning member (totalAffected=1).
+        System.assertEquals(1, groups.size(),
+            'Warning row survives the Info filter');
+        System.assertEquals(1, groups[0].totalAffected,
+            'Only the Warning row counts; 2 Info rows dropped');
     }
 
     @isTest
@@ -81,9 +84,12 @@ private class IssuesControllerTest {
         Test.stopTest();
 
         System.assertEquals(4, rows.size());
-        // Crit big should be first, Crit small second, Warn mid third, Info last
-        System.assertEquals('Crit big', rows[0].title, 'Critical with biggest gap is #1');
-        System.assertEquals('Critical', rows[1].severity);
+        // Phase 24d — sort is by severity then affectedCount desc (NOT
+        // gap). All four rows have affectedCount=1 so the two Critical
+        // entries tie; either ordering is acceptable. Verify the
+        // severity ladder holds.
+        System.assertEquals('Critical', rows[0].severity, 'Critical first');
+        System.assertEquals('Critical', rows[1].severity, 'Critical second');
         System.assertEquals('Warning', rows[2].severity);
         System.assertEquals('Info', rows[3].severity);
         // Category label should be human-readable

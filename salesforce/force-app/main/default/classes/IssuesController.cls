@@ -236,7 +236,18 @@ public with sharing class IssuesController {
     @AuraEnabled(cacheable=true)
     public static List<IssueGroup> getTopIssueGroups(Integer maxGroups, Id connectedOrgId) {
         Integer n = (maxGroups == null || maxGroups <= 0) ? 5 : maxGroups;
-        List<IssueRow> flat = getTopIssuesScoped(500, connectedOrgId);
+        List<IssueRow> raw = getTopIssuesScoped(500, connectedOrgId);
+        if (raw.isEmpty()) return new List<IssueGroup>();
+
+        // Phase 24d — Vercel parity: Top Issues drops Info-severity rows
+        // before grouping (src/app/orgs/[orgId]/page.tsx ≈L1510).
+        // "Top" means the highest-priority items the user needs to act on;
+        // info-only signals belong in the All Issues view, not the top-5.
+        List<IssueRow> flat = new List<IssueRow>();
+        for (IssueRow r : raw) {
+            if (r.severity == 'Info') continue;
+            flat.add(r);
+        }
         if (flat.isEmpty()) return new List<IssueGroup>();
 
         // Bucket by categoryLabel
@@ -527,16 +538,19 @@ public with sharing class IssuesController {
         }
     }
 
-    /** Sort: Critical > Warning > Info, then GapUsd__c desc. */
+    /** Phase 24d — Vercel parity. Sort: Critical > Warning > Info, then
+     *  affectedCount desc. Vercel uses affected_records.length as the
+     *  tiebreak (src/app/orgs/[orgId]/page.tsx ≈L1507); we use the
+     *  affectedCount integer we already compute during normalisation.
+     *  GapUsd is a less consistent signal across detectors (many are 0),
+     *  so it makes a poor secondary sort. */
     public class IssueRowComparator implements Comparator<IssueRow> {
         public Integer compare(IssueRow a, IssueRow b) {
             Integer rs = sevRank(b.severity) - sevRank(a.severity);
             if (rs != 0) return rs;
-            Decimal ag = a.gapUsd == null ? 0 : a.gapUsd;
-            Decimal bg = b.gapUsd == null ? 0 : b.gapUsd;
-            if (bg > ag) return 1;
-            if (bg < ag) return -1;
-            return 0;
+            Integer ac = a.affectedCount == null ? 0 : a.affectedCount;
+            Integer bc = b.affectedCount == null ? 0 : b.affectedCount;
+            return bc - ac;
         }
         private Integer sevRank(String s) {
             if (s == 'Critical') return 3;

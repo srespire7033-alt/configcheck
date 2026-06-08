@@ -7,22 +7,25 @@
 private class HealthScoreCalculatorTest {
 
     @isTest
-    static void compute_appliesSqrtCurve() {
-        // 13 crit + 5 warn + 5 info → raw 29 → 4·sqrt(29) ≈ 21.5 → 78
-        System.assertEquals(78, HealthScoreCalculator.compute(13, 5, 5));
+    static void compute_appliesLinearPenalty() {
+        // Phase 24c — Vercel linear: 13·2 + 5·0.5 + 5·0.1 = 29 → 100-29 = 71
+        System.assertEquals(71, HealthScoreCalculator.compute(13, 5, 5));
     }
 
     @isTest
-    static void compute_messyOrgStaysAboveZero() {
+    static void compute_messyOrgClampsToFloor() {
+        // 100 crit alone = 200 penalty, capped at 300 → score 0. That's
+        // the intended Vercel behavior: a wrecked org reads 0.
         Integer score = HealthScoreCalculator.compute(100, 100, 100);
-        System.assert(score > 0, 'Should not clamp to 0 — got ' + score);
-        System.assert(score < 50, 'Should still indicate "broken" — got ' + score);
+        System.assertEquals(0, score, 'Penalty 250 (capped 300) → floor 0');
     }
 
     @isTest
     static void compute_capPreventsRunawayPenalty() {
         Integer score = HealthScoreCalculator.compute(1000, 1000, 1000);
-        System.assert(score >= 28 && score <= 33, 'Expected floor ~30, got ' + score);
+        // Penalty 2600 → capped 300 → score 0. Cap still prevents
+        // negative scores; just lands at 0 vs ~30 under the old sqrt.
+        System.assertEquals(0, score);
     }
 
     @isTest
@@ -37,8 +40,8 @@ private class HealthScoreCalculatorTest {
 
     @isTest
     static void compute_fallsBackWhenFormulaMissing() {
-        // 5 crit + 2 warn = raw 11 → 4·sqrt(11) ≈ 13.3 → 86
-        System.assertEquals(86, HealthScoreCalculator.computeWithFormula(
+        // Phase 24c — linear: 5·2 + 2·0.5 = 11 → 100-11 = 89
+        System.assertEquals(89, HealthScoreCalculator.computeWithFormula(
             'NonExistentFormula', 5, 2, 0
         ));
     }
@@ -67,8 +70,9 @@ private class HealthScoreCalculatorTest {
             SELECT HealthScore__c, CategoryScoresJson__c
             FROM ForensicScan__c WHERE Id = :scan.Id
         ];
-        // Headline: 2 crit + 1 warn → raw 4.5 → penalty 4·sqrt(4.5) ≈ 8.49 → 91
-        System.assertEquals(91, after.HealthScore__c);
+        // Phase 24c — linear: 2·2 + 1·0.5 = 4.5 → 100-4.5 = 95.5,
+        // intValue() truncates → 95.
+        System.assertEquals(95, after.HealthScore__c);
         System.assert(String.isNotBlank(after.CategoryScoresJson__c),
             'CategoryScoresJson__c should be populated');
         Map<String, Object> parsed = (Map<String, Object>)

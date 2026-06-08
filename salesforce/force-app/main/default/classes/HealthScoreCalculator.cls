@@ -100,14 +100,22 @@ public with sharing class HealthScoreCalculator {
 
     public static Integer computeWithFormula(String formulaDevName,
                                               Integer critical, Integer warning, Integer info) {
+        // Phase 24c — Vercel-parity linear penalty model.
+        // Vercel src/lib/analysis/engine.ts:calculateOverallScoreFromIssues:
+        //   penalty = critical × 2.0 + warning × 0.5 + info × 0.1
+        //   score   = clamp(100 - penalty, 0, 100)
+        // The Curve_Coefficient__c stays in the mdt for backwards-compat
+        // but we no longer apply sqrt — that was a Phase 22d compression
+        // hack that diverged from Vercel. Penalty cap stays as a safety
+        // net for pathological orgs (otherwise a 100k-finding org would
+        // still show 0 either way; cap exists for non-monotonic UX).
         Decimal[] p = paramsFor(formulaDevName);
         Decimal c = (critical != null ? critical : 0);
         Decimal wn = (warning != null ? warning : 0);
         Decimal i = (info != null ? info : 0);
-        Decimal raw = (c * p[0]) + (wn * p[1]) + (i * p[2]);
-        if (raw < 0) raw = 0;
-        if (raw > p[3]) raw = p[3];
-        Decimal penalty = p[4] * Decimal.valueOf(Math.sqrt(raw.doubleValue()));
+        Decimal penalty = (c * p[0]) + (wn * p[1]) + (i * p[2]);
+        if (penalty < 0) penalty = 0;
+        if (penalty > p[3]) penalty = p[3];
         Decimal score = 100 - penalty;
         if (score < 0) score = 0;
         if (score > 100) score = 100;
