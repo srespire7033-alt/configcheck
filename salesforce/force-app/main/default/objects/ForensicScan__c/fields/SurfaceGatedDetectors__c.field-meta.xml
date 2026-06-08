@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>SurfaceGatedDetectors__c</fullName>
+    <label>Surface-Gated Detectors</label>
+    <description>Phase 24z-C — Serialized JSON list of detector IDs that were skipped during this scan because their RequiredSurface__c SObjects were not present on the target org (e.g. ARM-001 skipped when ProductSellingModel doesn't exist on a vanilla DE org). Surfaces the previously-silent gating decision so consultants can confirm "those detectors weren't run, this score reflects only what's installed" rather than wonder whether they passed.</description>
+    <type>LongTextArea</type>
+    <length>32768</length>
+    <visibleLines>5</visibleLines>
+</CustomField>

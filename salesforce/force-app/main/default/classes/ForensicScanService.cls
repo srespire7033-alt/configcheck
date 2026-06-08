@@ -32,6 +32,15 @@ public with sharing class ForensicScanService {
      * than fail-open on every remote scan. namedCredentialName == null
      * preserves the pre-24z fail-open behavior (e.g. local scans, tests).
      */
+    /**
+     * Phase 24z-C — surface-gated detector audit set. Each remote scan's
+     * RemoteScanRunner / RemoteScanFinalizer / local runDetectorsAndFinalize
+     * shares one Set per Apex tx; finalize serializes it into the scan
+     * record's SurfaceGatedDetectors__c so consultants can confirm
+     * "this score reflects only the detectors that ran".
+     */
+    @TestVisible private static Set<String> surfaceGatedThisTx = new Set<String>();
+
     private static List<IDetector> getDetectorsFor(String productType, Boolean isRemote, String namedCredentialName) {
         List<IDetector> all = new List<IDetector> {
             // v1.0 — the 5 originally-ported detectors
@@ -144,7 +153,8 @@ public with sharing class ForensicScanService {
                 // Phase 22a-0 — skip when required surface absent in host org.
                 if (!DetectorCatalogController.surfaceAvailable(did, isRemote, namedCredentialName)) {
                     System.debug(LoggingLevel.INFO,
-                        '[OrgPrism] Skip ' + did + ' — required surface not in host org schema.');
+                        '[OrgPrism] Skip ' + did + ' — required surface not in target org schema.');
+                    surfaceGatedThisTx.add(did);
                     continue;
                 }
                 applicable.add(d);
@@ -548,6 +558,9 @@ public with sharing class ForensicScanService {
         scan.CompletedAt__c = System.now();
         scan.TotalLeakageUsd__c = totalLeakage;
         scan.FindingCount__c = findingCount;
+        // Phase 24z-C — audit which detectors were surface-gated this tx.
+        scan.SurfaceGatedDetectors__c = surfaceGatedThisTx.isEmpty()
+            ? null : JSON.serialize(new List<String>(surfaceGatedThisTx));
         update scan;
 
         // Compute + persist the health score AFTER findings are
@@ -666,12 +679,17 @@ public with sharing class ForensicScanService {
             SELECT ErrorMessage__c FROM ForensicScan__c
             WHERE Id = :scanId LIMIT 1
         ];
+        // Phase 24z-C — persist the set of detectors that were
+        // surface-gated this tx so consultants can confirm scope.
+        String gatedJson = surfaceGatedThisTx.isEmpty()
+            ? null : JSON.serialize(new List<String>(surfaceGatedThisTx));
         update new ForensicScan__c(
             Id = scanId,
             Status__c = (scan.ErrorMessage__c != null) ? 'Partial' : 'Completed',
             CompletedAt__c = System.now(),
             TotalLeakageUsd__c = totalLeakage,
-            FindingCount__c = findingCount
+            FindingCount__c = findingCount,
+            SurfaceGatedDetectors__c = gatedJson
         );
 
         try { HealthScoreCalculator.computeAndStore(scanId); }
