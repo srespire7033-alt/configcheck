@@ -48,9 +48,14 @@ public with sharing class ArmRateCardProcedureChecksBundle implements IDetector 
             // (older RC releases may not have RateCardEntry as a separate
             // queryable type). Remote scans always attempt; local scans
             // still benefit from the hasObject pre-gate.
+            // Phase 23z-6 — use minimal universal field set. RateCard
+            // schema varies across releases; EffectiveFrom + EffectiveTo
+            // are present in all versions we've seen. evaluateARM021/023
+            // now infer "active" from the effective window when IsActive
+            // isn't returned (it'll be null in the row map).
             rateCards = (ctx.isRemote() || SchemaUtil.hasObject('RateCard'))
                 ? OrgQueryService.queryWithFallback(ctx,
-                    'SELECT Id, Name, IsActive, EffectiveEndDate FROM RateCard LIMIT 5000', null)
+                    'SELECT Id, Name, EffectiveFrom, EffectiveTo FROM RateCard LIMIT 5000', null)
                 : new List<Map<String, Object>>();
             rateCardEntries = (ctx.isRemote() || SchemaUtil.hasObject('RateCardEntry'))
                 ? OrgQueryService.queryWithFallback(ctx,
@@ -91,9 +96,23 @@ public with sharing class ArmRateCardProcedureChecksBundle implements IDetector 
             Object cid = e.get('RateCardId');
             if (cid != null) cardsWithEntries.add((Id) cid);
         }
+        // Phase 23z-6 — some orgs don't surface RateCard.IsActive in
+        // describe (it may be a system field or behind a flag). Fall back
+        // to checking EffectiveFrom <= today < EffectiveTo (or no end).
+        Date today = Date.today();
         List<SourceRecord> bad = new List<SourceRecord>();
         for (Map<String, Object> c : cards) {
-            if (!Boolean.valueOf(c.get('IsActive'))) continue;
+            Boolean isActive;
+            Object iaRaw = c.get('IsActive');
+            if (iaRaw != null) {
+                isActive = Boolean.valueOf(iaRaw);
+            } else {
+                Date eFrom = parseD(c.get('EffectiveFrom'));
+                Date eTo   = parseD(c.get('EffectiveTo'));
+                isActive = (eFrom == null || !(eFrom > today))
+                        && (eTo   == null || !(eTo   < today));
+            }
+            if (!isActive) continue;
             if (cardsWithEntries.contains((Id) c.get('Id'))) continue;
             bad.add(new SourceRecord('RateCard', (Id) c.get('Id'), (String) c.get('Name')));
         }
@@ -135,8 +154,15 @@ public with sharing class ArmRateCardProcedureChecksBundle implements IDetector 
         Date td = Date.today();
         List<SourceRecord> bad = new List<SourceRecord>();
         for (Map<String, Object> c : cards) {
-            if (!Boolean.valueOf(c.get('IsActive'))) continue;
+            // Phase 23z-6 — IsActive may be null when the org's RC version
+            // doesn't expose it; treat as active when null and infer from
+            // effective window.
+            Object iaRaw = c.get('IsActive');
+            Boolean isActive = iaRaw == null ? true : Boolean.valueOf(iaRaw);
+            if (!isActive) continue;
+            // Older RC: EffectiveEndDate; newer RC: EffectiveTo.
             Date ed = parseD(c.get('EffectiveEndDate'));
+            if (ed == null) ed = parseD(c.get('EffectiveTo'));
             if (ed == null || !(ed < td)) continue;
             bad.add(new SourceRecord('RateCard', (Id) c.get('Id'), (String) c.get('Name') + ' (ended ' + ed + ')'));
         }
