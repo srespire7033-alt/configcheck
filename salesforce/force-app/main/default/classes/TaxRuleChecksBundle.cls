@@ -65,21 +65,26 @@ public with sharing class TaxRuleChecksBundle implements IDetector {
 
     @TestVisible
     static List<DetectorResult> evaluateTR001(List<Map<String, Object>> products) {
-        List<SourceRecord> bad = new List<SourceRecord>();
+        // Phase 24c — emit one finding PER affected product (Vercel parity).
+        // Was: 1 summary finding with all bad records in supportingRecords.
+        // Now: each product with a null tax rule produces its own finding,
+        // so the dashboard severity count reflects the true blast radius.
+        List<DetectorResult> results = new List<DetectorResult>();
+        String sev = DetectorCatalogController.getSeverity('TR-001', 'Critical');
         for (Map<String, Object> p : products) {
             if (p.get('blng__TaxRule__c') != null) continue;
-            bad.add(prodRef(p));
+            SourceRecord sr = prodRef(p);
+            DetectorResult dr = new DetectorResult();
+            dr.detectorId = 'TR-001';
+            dr.severity = sev;
+            dr.gapUsd = 2000;
+            dr.recoverabilityScore = 0.85;
+            dr.title = 'Product "' + sr.name + '" missing tax rule';
+            dr.description = 'Active product has no tax rule. Tax won\'t be calculated on quote lines or invoices that include it.';
+            dr.primaryRecord = sr;
+            results.add(dr);
         }
-        if (bad.isEmpty()) return new List<DetectorResult>();
-        DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'TR-001'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Critical'); dr.gapUsd = bad.size() * 2000;
-        dr.recoverabilityScore = 0.85;
-        dr.title = 'Active products missing tax rule';
-        dr.description = bad.size() + ' active product(s) have no tax rule. Tax won\'t be calculated.';
-        dr.primaryRecord = bad[0];
-        Integer cap = Math.min(50, bad.size());
-        for (Integer i = 1; i < cap; i++) dr.supportingRecords.add(bad[i]);
-        return new List<DetectorResult>{ dr };
+        return results;
     }
 
     @TestVisible

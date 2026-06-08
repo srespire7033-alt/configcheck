@@ -59,21 +59,21 @@ public with sharing class GlRuleChecksBundle implements IDetector {
 
     @TestVisible
     static List<DetectorResult> evaluateGL001(List<Map<String, Object>> treatments) {
-        List<SourceRecord> bad = new List<SourceRecord>();
+        // Phase 24c — per-record emission (Vercel parity).
+        List<DetectorResult> results = new List<DetectorResult>();
+        String sev = DetectorCatalogController.getSeverity('GL-001', 'Critical');
         for (Map<String, Object> t : treatments) {
             if (!isActive(t)) continue;
             if (t.get('blng__CreditGLAccount__c') != null || t.get('blng__DebitGLAccount__c') != null) continue;
-            bad.add(trtRef(t));
+            SourceRecord sr = trtRef(t);
+            DetectorResult dr = new DetectorResult();
+            dr.detectorId = 'GL-001'; dr.severity = sev; dr.gapUsd = 0; dr.recoverabilityScore = 0.85;
+            dr.title = 'GL treatment "' + sr.name + '" has no GL accounts mapped';
+            dr.description = 'Active GL treatment has neither credit nor debit GL accounts. Journal entries can\'t post.';
+            dr.primaryRecord = sr;
+            results.add(dr);
         }
-        if (bad.isEmpty()) return new List<DetectorResult>();
-        DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'GL-001'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Critical'); dr.gapUsd = 0; dr.recoverabilityScore = 0.85;
-        dr.title = 'GL treatments with no GL accounts';
-        dr.description = bad.size() + ' active GL treatment(s) have neither credit nor debit GL accounts mapped.';
-        dr.primaryRecord = bad[0];
-        Integer cap = Math.min(50, bad.size());
-        for (Integer i = 1; i < cap; i++) dr.supportingRecords.add(bad[i]);
-        return new List<DetectorResult>{ dr };
+        return results;
     }
 
     @TestVisible
