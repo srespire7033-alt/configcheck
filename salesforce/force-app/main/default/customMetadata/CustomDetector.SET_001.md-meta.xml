@@ -18,4 +18,8 @@
     <values><field>Effort__c</field><value xsi:type="xsd:string">low</value></values>
     <values><field>RecoverabilityScore__c</field><value xsi:type="xsd:double">1.0</value></values>
     <values><field>Severity__c</field><value xsi:type="xsd:string">Critical</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: SBQQ__GeneralSettings__c records where SBQQ__TriggerDisabled__c = true.
+Why it matters: ALL CPQ managed-package triggers are disabled — quote calc, subscription creation, renewal logic, and order activation all stop working. A complete CPQ outage that can persist for days if nobody notices.
+Suppress a finding: only during a known maintenance window of &lt; 24 hours.
+Disable the detector: never. This is one of the most-critical org-level checks.</value></values>
 </CustomMetadata>

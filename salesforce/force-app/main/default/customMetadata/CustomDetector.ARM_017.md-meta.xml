@@ -18,4 +18,8 @@
     <values><field>Effort__c</field><value xsi:type="xsd:string">low</value></values>
     <values><field>RecoverabilityScore__c</field><value xsi:type="xsd:double">0.95</value></values>
     <values><field>Severity__c</field><value xsi:type="xsd:string">Critical</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: PriceAdjustmentTier records where LowerBound exceeds UpperBound.
+Why it matters: The tier can never match any quantity — the adjustment silently never fires. Reps and admins assume tier pricing is active when it isn&apos;t.
+Suppress a finding: never; correct the bounds.
+Disable the detector: leave on.</value></values>
 </CustomMetadata>

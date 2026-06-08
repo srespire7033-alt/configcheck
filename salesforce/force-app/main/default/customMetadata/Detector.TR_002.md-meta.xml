@@ -12,4 +12,8 @@
     <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
     <values><field>RequiredSurface__c</field><value xsi:type="xsd:string">blng__TaxRule__c;Product2</value></values>
     <values><field>Severity__c</field><value xsi:type="xsd:string">Critical</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: Active Product2 records whose blng__TaxRule__c reference is inactive.
+Why it matters: Tax calculation falls back to defaults or fails entirely — you either under-charge tax (audit exposure) or block invoice generation. Customers see wrong tax lines on first invoice.
+Suppress a finding: during a planned rule cutover.
+Disable the detector: only if you don&apos;t use Salesforce Billing tax. Most should leave this on.</value></values>
 </CustomMetadata>

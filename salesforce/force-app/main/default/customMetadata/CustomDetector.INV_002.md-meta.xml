@@ -18,4 +18,8 @@
     <values><field>Effort__c</field><value xsi:type="xsd:string">low</value></values>
     <values><field>RecoverabilityScore__c</field><value xsi:type="xsd:double">0.7</value></values>
     <values><field>Severity__c</field><value xsi:type="xsd:string">Warning</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: blng__Invoice__c records in Posted status with TotalAmount = 0.
+Why it matters: Posted $0 invoices clutter customer histories, may indicate duplicate or erroneous generation, and confuse AR aging reports. Often a sign of a billing-rule bug that didn&apos;t catch zero-line invoices before posting.
+Suppress a finding: when $0 invoices are legitimately issued (e.g. credit memo offset).
+Disable the detector: only when $0 posted invoices are expected. Most should leave this on.</value></values>
 </CustomMetadata>

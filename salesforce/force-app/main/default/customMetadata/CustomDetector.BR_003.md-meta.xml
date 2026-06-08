@@ -18,4 +18,8 @@
     <values><field>Effort__c</field><value xsi:type="xsd:string">low</value></values>
     <values><field>RecoverabilityScore__c</field><value xsi:type="xsd:double">1.0</value></values>
     <values><field>Severity__c</field><value xsi:type="xsd:string">Info</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: blng__BillingRule__c records that no Product2 references.
+Why it matters: Cleanup signal — orphan rules clutter the catalog and obscure which rules are actually live. Often the residue of product retirements that didn&apos;t clean up linked rules.
+Suppress a finding: for rules intentionally pre-staged for a future product line.
+Disable the detector: leave on for hygiene.</value></values>
 </CustomMetadata>

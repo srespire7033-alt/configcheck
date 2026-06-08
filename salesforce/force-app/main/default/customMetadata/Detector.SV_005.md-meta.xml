@@ -12,4 +12,8 @@
     <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
     <values><field>RequiredSurface__c</field><value xsi:type="xsd:string">SBQQ__SummaryVariable__c</value></values>
     <values><field>Severity__c</field><value xsi:type="xsd:string">Critical</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: Composite summary variables where one or more operand variables are missing.
+Why it matters: The composite computes against null or zero where a real number was expected. Downstream pricing math comes out wrong by exactly the missing operand&apos;s value.
+Suppress a finding: never; broken composites should be fixed.
+Disable the detector: leave on.</value></values>
 </CustomMetadata>

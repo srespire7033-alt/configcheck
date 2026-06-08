@@ -12,4 +12,8 @@
     <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
     <values><field>RequiredSurface__c</field><value xsi:type="xsd:string">SBQQ__ProductOption__c</value></values>
     <values><field>Severity__c</field><value xsi:type="xsd:string">Info</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: Bundles with 5+ options where no SBQQ__OptionGroup__c is used to group them.
+Why it matters: Sales reps face a flat list of 5+ checkboxes with no visual grouping — configuration errors spike, deal velocity slows, and complex bundles get under-configured because reps miss options.
+Suppress a finding: when the bundle is intentionally simple and option groups would add unnecessary clicks for a small option set.
+Disable the detector: only if your bundles are uniformly small (&lt;5 options). Most orgs with complex bundles should leave this on.</value></values>
 </CustomMetadata>

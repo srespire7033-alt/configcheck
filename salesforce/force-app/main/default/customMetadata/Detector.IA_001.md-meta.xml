@@ -12,4 +12,8 @@
     <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
     <values><field>RequiredSurface__c</field><value xsi:type="xsd:string">SBQQ__PriceRule__c</value></values>
     <values><field>Severity__c</field><value xsi:type="xsd:string">Warning</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: Chains of SBQQ__PriceRule__c records where one rule&apos;s output field is another&apos;s input — a dependency chain.
+Why it matters: Long chains amplify calculation time exponentially. CPQ recalcs cascade, and complex quotes can hit governor limits or timeouts. Sales experiences 10+ second quote opens.
+Suppress a finding: when the chain is short and the performance has been benchmarked acceptable.
+Disable the detector: only if your pricing logic is intentionally rule-chained. Most should leave this on for performance awareness.</value></values>
 </CustomMetadata>

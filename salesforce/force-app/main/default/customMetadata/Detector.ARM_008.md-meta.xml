@@ -12,4 +12,8 @@
     <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
     <values><field>RequiredSurface__c</field><value xsi:type="xsd:string">DecisionTable</value></values>
     <values><field>Severity__c</field><value xsi:type="xsd:string">Warning</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: DecisionTable records whose Status is anything other than &apos;Active&apos; (Draft, Inactive, etc).
+Why it matters: ARM pricing procedures route through decision tables; non-active tables get skipped at runtime, so pricing branches you think are wired up silently fall through to defaults. Customers see fallback prices rather than the negotiated tier.
+Suppress a finding: for decision tables intentionally parked in Draft pending a contract negotiation that finance hasn&apos;t signed off on yet.
+Disable the detector: only if your ARM org uses pricing procedures without decision tables — rare; most Revenue Cloud configurations rely on them for tiered pricing.</value></values>
 </CustomMetadata>

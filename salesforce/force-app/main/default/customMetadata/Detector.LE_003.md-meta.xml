@@ -12,4 +12,8 @@
     <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
     <values><field>RequiredSurface__c</field><value xsi:type="xsd:string">blng__LegalEntity__c</value></values>
     <values><field>Severity__c</field><value xsi:type="xsd:string">Warning</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: Orgs where every blng__LegalEntity__c has IsActive = false.
+Why it matters: Billing can&apos;t invoice at all — every entity is dark. A total stoppage, usually a botched migration or environment-refresh.
+Suppress a finding: only in sandbox environments where this is intentional.
+Disable the detector: only in non-production. Most prod orgs should leave this on.</value></values>
 </CustomMetadata>

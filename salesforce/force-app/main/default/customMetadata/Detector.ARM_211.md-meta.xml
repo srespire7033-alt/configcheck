@@ -12,4 +12,8 @@
     <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
     <values><field>RequiredSurface__c</field><value xsi:type="xsd:string">DocumentClause</value></values>
     <values><field>Severity__c</field><value xsi:type="xsd:string">Critical</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: Multiple DocumentClause records marked as &quot;Main&quot; within the same DocumentClauseSet and language.
+Why it matters: Document generation can only use one main clause — others sit dormant. The CLM team thinks the new clause is live but the system uses the original.
+Suppress a finding: only during a documented main-clause migration.
+Disable the detector: leave on.</value></values>
 </CustomMetadata>

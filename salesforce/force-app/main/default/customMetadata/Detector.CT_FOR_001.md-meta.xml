@@ -12,4 +12,8 @@
     <values><field>Effort__c</field><value xsi:type="xsd:string">medium</value></values>
     <values><field>IsActive__c</field><value xsi:type="xsd:boolean">true</value></values>
     <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: SBQQ__ContractedPrice__c records past their expiration date that are still applying to new quotes.
+Why it matters: Customers continue to get the old (typically lower) negotiated price after the contract should have rolled to standard pricing. Compounding revenue leakage that grows monthly.
+Suppress a finding: when the contract was extended verbally and the date update is pending.
+Disable the detector: only if expired contracted prices are intentionally honored. Most should leave this on.</value></values>
 </CustomMetadata>

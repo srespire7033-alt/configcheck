@@ -12,4 +12,8 @@
     <values><field>Effort__c</field><value xsi:type="xsd:string">medium</value></values>
     <values><field>IsActive__c</field><value xsi:type="xsd:boolean">true</value></values>
     <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: Renewal quotes whose total contract value is materially lower than the prior-term value (uplift suppressed).
+Why it matters: Direct renewal-year revenue leakage — pricing uplift the contract calls for didn&apos;t apply, and you&apos;re billing the customer at the old rate. Often caused by missing or misconfigured renewal rules.
+Suppress a finding: when a contract explicitly waives uplift (multi-year fixed price). Document the contract clause.
+Disable the detector: only if your renewal pricing is intentionally flat. Most should leave this on.</value></values>
 </CustomMetadata>

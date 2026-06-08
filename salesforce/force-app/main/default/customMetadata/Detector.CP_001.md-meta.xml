@@ -12,4 +12,8 @@
     <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
     <values><field>RequiredSurface__c</field><value xsi:type="xsd:string">SBQQ__ContractedPrice__c</value></values>
     <values><field>Severity__c</field><value xsi:type="xsd:string">Warning</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: SBQQ__ContractedPrice__c records that are expired, point to inactive products, or have zero/null prices.
+Why it matters: Stale contracted prices either keep overriding standard pricing (locked-in low prices that should have rolled off — direct revenue leakage) or fail to apply at all when reps expect them. Both cause customer disputes.
+Suppress a finding: when a contract is intentionally held open at $0 as a contractual placeholder pending true-up.
+Disable the detector: only if your org doesn&apos;t use SBQQ__ContractedPrice__c. Most CPQ orgs should leave this on.</value></values>
 </CustomMetadata>

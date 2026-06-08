@@ -12,4 +12,8 @@
     <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
     <values><field>RequiredSurface__c</field><value xsi:type="xsd:string">SBQQ__SummaryVariable__c</value></values>
     <values><field>Severity__c</field><value xsi:type="xsd:string">Info</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: SBQQ__SummaryVariable__c records with IsActive = false but still referenced by active rules.
+Why it matters: Rules reference an inactive variable — at runtime they read default or null and silently miscalculate. Particularly insidious because the rule itself looks healthy.
+Suppress a finding: never; reactivate or unwire.
+Disable the detector: leave on.</value></values>
 </CustomMetadata>

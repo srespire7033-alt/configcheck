@@ -12,4 +12,8 @@
     <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
     <values><field>RequiredSurface__c</field><value xsi:type="xsd:string">SBQQ__ProductRule__c</value></values>
     <values><field>Severity__c</field><value xsi:type="xsd:string">Critical</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: Active Selection rules where one adds a product that another removes (or vice versa).
+Why it matters: Rules fight each other — the configurator adds and removes the same product depending on evaluation order. Reps see flickering or stuck products and can&apos;t tell what&apos;s going on.
+Suppress a finding: when the conflicting rules apply to mutually-exclusive segments.
+Disable the detector: only when selection rules are not used. Most should leave this on.</value></values>
 </CustomMetadata>

@@ -12,4 +12,8 @@
     <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
     <values><field>RequiredSurface__c</field><value xsi:type="xsd:string">SBQQ__DiscountSchedule__c</value></values>
     <values><field>Severity__c</field><value xsi:type="xsd:string">Info</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: SBQQ__DiscountSchedule__c records with no SBQQ__DiscountTier__c child rows.
+Why it matters: An empty schedule applies no discount — the rep links it expecting a tier-based discount, customer gets full list price. Quiet revenue leakage that surfaces only when the rep manually checks margins.
+Suppress a finding: for schedules pending a tier rebuild that admins know about and have scheduled.
+Disable the detector: only if your org keeps empty schedules as deliberate templates. Most should leave this on.</value></values>
 </CustomMetadata>

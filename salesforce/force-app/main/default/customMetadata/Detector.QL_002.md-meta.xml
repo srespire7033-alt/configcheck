@@ -12,4 +12,8 @@
     <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
     <values><field>RequiredSurface__c</field><value xsi:type="xsd:string">SBQQ__QuoteLine__c</value></values>
     <values><field>Severity__c</field><value xsi:type="xsd:string">Critical</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: SBQQ__QuoteLine__c records where NetTotal differs materially from NetPrice × Quantity.
+Why it matters: The math is broken — usually a price rule overwrote one field without recalculating the other. The invoice will show one amount, the quote PDF another, and the customer catches the inconsistency.
+Suppress a finding: when manual NetTotal overrides are explicitly allowed in your business model.
+Disable the detector: only if intentional discrepancies are normal. Most should leave this on.</value></values>
 </CustomMetadata>

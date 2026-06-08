@@ -18,4 +18,8 @@
     <values><field>Effort__c</field><value xsi:type="xsd:string">low</value></values>
     <values><field>RecoverabilityScore__c</field><value xsi:type="xsd:double">0.9</value></values>
     <values><field>Severity__c</field><value xsi:type="xsd:string">Warning</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: Active UsageResource records with UnitOfMeasureClassId null.
+Why it matters: Without a UoM class, meter readings can&apos;t normalize — usage data lands raw and aggregates wrong, breaking billing for usage-priced products.
+Suppress a finding: never; fix the link.
+Disable the detector: leave on.</value></values>
 </CustomMetadata>

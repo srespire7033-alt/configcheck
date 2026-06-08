@@ -12,4 +12,8 @@
     <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
     <values><field>RequiredSurface__c</field><value xsi:type="xsd:string">blng__BillingRule__c</value></values>
     <values><field>Severity__c</field><value xsi:type="xsd:string">Critical</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: Active Product2 records whose blng__BillingRule__c points to an inactive billing rule.
+Why it matters: Invoices for these products fail to generate or generate with the wrong cadence. Either you don&apos;t bill the customer (lost revenue) or you bill on the wrong schedule (customer dispute and AR cleanup).
+Suppress a finding: for products in a planned cutover from one billing rule to another, where the inactive rule is the old one and the new rule is pending deployment.
+Disable the detector: only if your org doesn&apos;t use Salesforce Billing. Most billing customers should leave this on.</value></values>
 </CustomMetadata>

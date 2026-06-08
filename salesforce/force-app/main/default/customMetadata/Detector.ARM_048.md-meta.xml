@@ -12,4 +12,8 @@
     <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
     <values><field>RequiredSurface__c</field><value xsi:type="xsd:string">ProductFulfillmentScenario</value></values>
     <values><field>Severity__c</field><value xsi:type="xsd:string">Warning</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: ProductFulfillmentScenario records whose Status is anything other than Active.
+Why it matters: Inactive scenarios can&apos;t orchestrate provisioning — orders for products linked to this scenario activate but no provisioning fires. Customer pays, doesn&apos;t get service.
+Suppress a finding: for scenarios genuinely paused for maintenance.
+Disable the detector: leave on.</value></values>
 </CustomMetadata>

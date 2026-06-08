@@ -12,4 +12,8 @@
     <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
     <values><field>RequiredSurface__c</field><value xsi:type="xsd:string">SBQQ__GeneralSettings__c</value></values>
     <values><field>Severity__c</field><value xsi:type="xsd:string">Warning</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: SBQQ__GeneralSettings__c records where SBQQ__RenewalModel__c is null.
+Why it matters: Renewal generation falls back to an unspecified default that may not match your business model — renewal quotes generate with wrong structures, wrong pricing references, or fail entirely.
+Suppress a finding: only during a controlled migration between renewal models.
+Disable the detector: leave on for any org using CPQ renewals.</value></values>
 </CustomMetadata>

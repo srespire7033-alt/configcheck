@@ -12,4 +12,8 @@
     <values><field>Effort__c</field><value xsi:type="xsd:string">low</value></values>
     <values><field>IsActive__c</field><value xsi:type="xsd:boolean">true</value></values>
     <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: Renewal SBQQ__Quote__c records still in Draft status after the originating contract&apos;s end date.
+Why it matters: A draft renewal past contract end means no active subscription, no recognized revenue, and a customer technically out-of-contract. Operational and revenue risk simultaneously.
+Suppress a finding: when a documented customer pause / renegotiation is in flight.
+Disable the detector: only when draft renewals past contract end are expected. Most should leave this on.</value></values>
 </CustomMetadata>

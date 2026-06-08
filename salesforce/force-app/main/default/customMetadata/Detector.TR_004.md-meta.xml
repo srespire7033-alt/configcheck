@@ -12,4 +12,8 @@
     <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
     <values><field>RequiredSurface__c</field><value xsi:type="xsd:string">blng__TaxRule__c</value></values>
     <values><field>Severity__c</field><value xsi:type="xsd:string">Info</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: blng__TaxRule__c records where blng__Active__c = false.
+Why it matters: Cleanup signal — inactive tax rules clutter the catalog. They don&apos;t fire, but they slow down admin work and complicate audits.
+Suppress a finding: for rules intentionally kept for audit retention.
+Disable the detector: leave on for hygiene.</value></values>
 </CustomMetadata>

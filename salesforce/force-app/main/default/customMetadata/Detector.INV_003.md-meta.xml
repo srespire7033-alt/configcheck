@@ -12,4 +12,8 @@
     <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
     <values><field>RequiredSurface__c</field><value xsi:type="xsd:string">blng__CreditNote__c</value></values>
     <values><field>Severity__c</field><value xsi:type="xsd:string">Warning</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: blng__CreditNote__c records with a remaining unallocated balance.
+Why it matters: Credit notes that aren&apos;t applied to invoices misrepresent customer AR balances — finance shows artificially high outstanding receivables. Customers also dispute when they paid against a credit that &quot;disappeared&quot;.
+Suppress a finding: for credit notes intentionally held open pending future invoice allocation.
+Disable the detector: only if your billing process doesn&apos;t use credit notes. Most should leave this on.</value></values>
 </CustomMetadata>

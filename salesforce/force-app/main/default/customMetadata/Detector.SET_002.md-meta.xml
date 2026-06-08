@@ -12,4 +12,8 @@
     <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
     <values><field>RequiredSurface__c</field><value xsi:type="xsd:string">SBQQ__GeneralSettings__c</value></values>
     <values><field>Severity__c</field><value xsi:type="xsd:string">Info</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: Orgs where SBQQ__GeneralSettings__c shows a custom QCP is active.
+Why it matters: Informational — QCP customizes calculation logic and can mask or amplify other detectors. Admins need to know one is active to investigate calc anomalies.
+Suppress a finding: always acceptable; this is a signal, not a defect.
+Disable the detector: appropriate if QCP usage is documented and stable. Most should leave on for visibility.</value></values>
 </CustomMetadata>

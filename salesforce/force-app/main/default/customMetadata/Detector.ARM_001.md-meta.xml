@@ -12,4 +12,8 @@
     <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
     <values><field>RequiredSurface__c</field><value xsi:type="xsd:string">Product2;ProductSellingModelOption</value></values>
     <values><field>Severity__c</field><value xsi:type="xsd:string">Critical</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: Active Product2 records used in ARM that have no linked ProductSellingModel via ProductSellingModelOption.
+Why it matters: ARM products without a selling model can&apos;t price — they fail at quote line creation or fall to defaults that don&apos;t match the customer&apos;s contract terms. The catalog looks complete but products are unsellable through ARM.
+Suppress a finding: for products intentionally restricted to legacy CPQ flow.
+Disable the detector: only if your org runs ARM alongside legacy CPQ and some products are CPQ-only. Otherwise leave on.</value></values>
 </CustomMetadata>

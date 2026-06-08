@@ -12,4 +12,8 @@
     <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
     <values><field>RequiredSurface__c</field><value xsi:type="xsd:string">SBQQ__ProductOption__c</value></values>
     <values><field>Severity__c</field><value xsi:type="xsd:string">Critical</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: Bundles where some options have SBQQ__SubscriptionType__c = Evergreen and others = Renewable.
+Why it matters: Renewal cycles fracture — the renewal quote generates two separate flows for one logical bundle. Customers see split renewal dates, and the CSM has to manually reconcile. Often becomes a revenue-leakage source as one half slips past its renewal window.
+Suppress a finding: when the mixed model is intentional (e.g. perpetual core + renewable add-on services).
+Disable the detector: only if your business model deliberately mixes subscription types within bundles. Most orgs should leave this on.</value></values>
 </CustomMetadata>

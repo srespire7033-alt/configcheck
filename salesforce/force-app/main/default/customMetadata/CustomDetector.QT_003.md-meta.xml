@@ -18,4 +18,8 @@
     <values><field>Effort__c</field><value xsi:type="xsd:string">low</value></values>
     <values><field>RecoverabilityScore__c</field><value xsi:type="xsd:double">0.95</value></values>
     <values><field>Severity__c</field><value xsi:type="xsd:string">Warning</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: SBQQ__QuoteTemplate__c records that have no SBQQ__TemplateSection__c children.
+Why it matters: Generating a document from this template produces an empty PDF — customer-facing collateral comes out blank. Embarrassing if it reaches the customer; deal-blocking if it doesn&apos;t render at all.
+Suppress a finding: for templates intentionally held empty pre-build.
+Disable the detector: leave on.</value></values>
 </CustomMetadata>

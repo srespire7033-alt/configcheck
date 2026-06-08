@@ -18,4 +18,8 @@
     <values><field>Effort__c</field><value xsi:type="xsd:string">low</value></values>
     <values><field>RecoverabilityScore__c</field><value xsi:type="xsd:double">0.85</value></values>
     <values><field>Severity__c</field><value xsi:type="xsd:string">Warning</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: SBQQ__Subscription__c records where SBQQ__NetPrice__c is null or zero.
+Why it matters: Subscriptions priced at $0 either reflect intentional free service or a pricing-pipeline failure that left the line unpriced. Either way, revenue isn&apos;t recognizing for these subscriptions.
+Suppress a finding: when the $0 is genuinely intentional (free trial converted to paid pending price-set).
+Disable the detector: only when $0 subs are common. Most should leave this on.</value></values>
 </CustomMetadata>

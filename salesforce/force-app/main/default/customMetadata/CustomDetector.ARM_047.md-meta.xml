@@ -18,4 +18,8 @@
     <values><field>Effort__c</field><value xsi:type="xsd:string">low</value></values>
     <values><field>RecoverabilityScore__c</field><value xsi:type="xsd:double">0.9</value></values>
     <values><field>Severity__c</field><value xsi:type="xsd:string">Warning</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: Active FulfillmentTaskAssignmentRule records with AssignedToId null.
+Why it matters: Tasks created by these rules have no owner — they route to org defaults and often go unassigned. Provisioning steps stall in nobody&apos;s queue.
+Suppress a finding: when default routing is intentional.
+Disable the detector: leave on.</value></values>
 </CustomMetadata>

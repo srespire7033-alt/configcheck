@@ -12,4 +12,8 @@
     <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
     <values><field>RequiredSurface__c</field><value xsi:type="xsd:string">Product2;PricebookEntry</value></values>
     <values><field>Severity__c</field><value xsi:type="xsd:string">Critical</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: Active ARM products with no active pricing path (no rate card entry, no contract item price, no PBE).
+Why it matters: The product can&apos;t be priced through any mechanism. Reps trying to quote it either error or get $0. Looks active in the catalog but is functionally invisible.
+Suppress a finding: for placeholder products held for future pricing.
+Disable the detector: only in non-ARM orgs. Most ARM orgs should leave this on.</value></values>
 </CustomMetadata>

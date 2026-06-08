@@ -12,4 +12,8 @@
     <values><field>Effort__c</field><value xsi:type="xsd:string">medium</value></values>
     <values><field>IsActive__c</field><value xsi:type="xsd:boolean">true</value></values>
     <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: Order line vs Quote line variances on new-business deals — total amounts disagree above tolerance.
+Why it matters: What sales sold and what billing invoices differ — customers dispute, finance has to reconcile, and one side or the other is wrong by real money on every divergent deal.
+Suppress a finding: when the divergence reflects an approved post-quote adjustment.
+Disable the detector: only if Q↔O variance is expected. Most should leave this on.</value></values>
 </CustomMetadata>

@@ -12,4 +12,8 @@
     <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
     <values><field>RequiredSurface__c</field><value xsi:type="xsd:string">AttributeBasedAdjRule;PriceAdjustmentSchedule</value></values>
     <values><field>Severity__c</field><value xsi:type="xsd:string">Critical</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: AttributeBasedAdj records whose date window falls outside the parent PriceAdjustmentSchedule&apos;s window.
+Why it matters: The attribute adjustment never engages — pricing falls back to defaults. Customers see standard pricing where attribute-based adjustments should have applied.
+Suppress a finding: never; align the windows.
+Disable the detector: leave on.</value></values>
 </CustomMetadata>

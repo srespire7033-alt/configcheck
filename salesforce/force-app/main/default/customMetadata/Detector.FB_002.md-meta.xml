@@ -12,4 +12,8 @@
     <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
     <values><field>RequiredSurface__c</field><value xsi:type="xsd:string">blng__FinancePeriod__c</value></values>
     <values><field>Severity__c</field><value xsi:type="xsd:string">Critical</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: Gaps in the date ranges of consecutive blng__FinancePeriod__c records on the same finance book.
+Why it matters: Postings whose date falls in a gap have nowhere to land — they fail or land in a suspense bucket. Auditors flag period gaps as a material control weakness.
+Suppress a finding: only when a gap is deliberate (company was dormant, no postings expected) and documented for audit.
+Disable the detector: only if your org accepts period gaps by design. Most orgs should leave this on.</value></values>
 </CustomMetadata>

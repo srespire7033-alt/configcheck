@@ -12,4 +12,8 @@
     <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
     <values><field>RequiredSurface__c</field><value xsi:type="xsd:string">DocumentClause</value></values>
     <values><field>Severity__c</field><value xsi:type="xsd:string">Critical</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: DocumentClause records with Status = Active but Content null or blank.
+Why it matters: Active empty clauses render blank in generated documents — contracts go to customers with missing terms. Legal exposure and customer trust risk.
+Suppress a finding: never; fill in the content.
+Disable the detector: leave on if CLM is in use.</value></values>
 </CustomMetadata>

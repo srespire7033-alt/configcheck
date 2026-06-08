@@ -12,4 +12,8 @@
     <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
     <values><field>RequiredSurface__c</field><value xsi:type="xsd:string">SBQQ__ConfigurationAttribute__c</value></values>
     <values><field>Severity__c</field><value xsi:type="xsd:string">Info</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: SBQQ__ConfigurationAttribute__c records where SBQQ__Required__c = true but SBQQ__DefaultField__c is null.
+Why it matters: Reps hit a required field with no prefill — they must guess or look up the value, which slows quote velocity and increases data-entry error rates. Reduces the field&apos;s intended automation value.
+Suppress a finding: when the field is genuinely customer-specific and no sensible default exists (legal entity name, contract reference number).
+Disable the detector: only if your config attributes are intentionally all manual. Most orgs should leave this on.</value></values>
 </CustomMetadata>

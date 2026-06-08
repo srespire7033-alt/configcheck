@@ -12,4 +12,8 @@
     <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
     <values><field>RequiredSurface__c</field><value xsi:type="xsd:string">PricebookEntry;ProductSellingModelOption</value></values>
     <values><field>Severity__c</field><value xsi:type="xsd:string">Critical</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: PricebookEntry records linked to a ProductSellingModel where no matching ProductSellingModelOption exists for the product.
+Why it matters: The PBE references a pricing path that doesn&apos;t apply — pricing lookups fall back to defaults or fail. Silent pricing inconsistency.
+Suppress a finding: never; fix or remove the PBE.
+Disable the detector: leave on.</value></values>
 </CustomMetadata>

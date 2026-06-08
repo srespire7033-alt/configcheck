@@ -12,4 +12,8 @@
     <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
     <values><field>RequiredSurface__c</field><value xsi:type="xsd:string">SBQQ__Subscription__c</value></values>
     <values><field>Severity__c</field><value xsi:type="xsd:string">Critical</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: SBQQ__Subscription__c records with SBQQ__Contract__c null.
+Why it matters: Orphan subscriptions don&apos;t appear in renewal cycles — the renewal engine looks at contracts, finds these subs aren&apos;t attached, and skips them. Result: missed renewals, lost ARR.
+Suppress a finding: during a migration window where the contract link is pending bulk update.
+Disable the detector: leave on.</value></values>
 </CustomMetadata>

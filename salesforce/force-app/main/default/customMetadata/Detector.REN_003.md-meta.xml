@@ -12,4 +12,8 @@
     <values><field>Effort__c</field><value xsi:type="xsd:string">low</value></values>
     <values><field>IsActive__c</field><value xsi:type="xsd:boolean">true</value></values>
     <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: Open renewal opportunities whose close date is past the originating contract&apos;s end date.
+Why it matters: The renewal is slipping — the contract has ended and there&apos;s still no closed deal. Risk of customer churn or revenue gap between contract end and renewal start.
+Suppress a finding: when a customer-confirmed renewal extension is in flight.
+Disable the detector: only if renewal pipeline lives outside Opportunity. Most should leave this on.</value></values>
 </CustomMetadata>

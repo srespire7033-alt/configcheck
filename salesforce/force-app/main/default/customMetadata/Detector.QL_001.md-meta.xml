@@ -12,4 +12,8 @@
     <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
     <values><field>RequiredSurface__c</field><value xsi:type="xsd:string">SBQQ__QuoteLine__c</value></values>
     <values><field>Severity__c</field><value xsi:type="xsd:string">Critical</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: SBQQ__QuoteLine__c records where Quantity &gt; 0 and ListPrice &gt; 0 but NetPrice is null or zero.
+Why it matters: Lines that should price but don&apos;t represent direct revenue leakage — the customer gets the product for free. Usually caused by a misconfigured price rule or QCP override that zeroed the field.
+Suppress a finding: when the $0 is genuinely intentional (free trial line, gifted add-on).
+Disable the detector: only if $0 lines are normal. Most should leave this on.</value></values>
 </CustomMetadata>

@@ -12,4 +12,8 @@
     <values><field>Effort__c</field><value xsi:type="xsd:string">low</value></values>
     <values><field>IsActive__c</field><value xsi:type="xsd:boolean">true</value></values>
     <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: Quote lines that should have required approval (above discount or amount thresholds) but completed without an approval trail.
+Why it matters: Either the approval matrix has a gap, or someone bypassed it. Either way, deals are closing without the controls finance and legal expected to exist.
+Suppress a finding: for documented executive overrides.
+Disable the detector: only if you don&apos;t use formal approval thresholds. Most should leave this on.</value></values>
 </CustomMetadata>

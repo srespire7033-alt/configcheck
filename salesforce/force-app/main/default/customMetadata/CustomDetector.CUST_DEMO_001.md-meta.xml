@@ -15,4 +15,8 @@
     <values><field>RealizedUsdField__c</field><value xsi:type="xsd:string"></value></values>
     <values><field>IsActive__c</field><value xsi:type="xsd:boolean">false</value></values>
     <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: The 3 most recently-created Account records (demo SOQL).
+Why it matters: This is a demonstration Custom Detector shipped with OrgPrism so admins can see how the SOQL-driven detector pattern works end-to-end. It has no business meaning by itself.
+Suppress a finding: any time — these are just sample records.
+Disable the detector: after you&apos;ve walked through the Setup flow once and understand how Custom Detectors work. Most orgs should disable this in production.</value></values>
 </CustomMetadata>

@@ -12,4 +12,8 @@
     <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
     <values><field>RequiredSurface__c</field><value xsi:type="xsd:string">AttributeDefinition;AttributePicklistValue</value></values>
     <values><field>Severity__c</field><value xsi:type="xsd:string">Critical</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: Active AttributeDefinition records of picklist type with no AttributePicklistValue children.
+Why it matters: The picklist has no options — reps configuring the product see an empty dropdown and can&apos;t proceed. Configurator stalls.
+Suppress a finding: for attributes intentionally awaiting picklist load.
+Disable the detector: leave on.</value></values>
 </CustomMetadata>

@@ -12,4 +12,8 @@
     <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
     <values><field>RequiredSurface__c</field><value xsi:type="xsd:string">blng__Invoice__c</value></values>
     <values><field>Severity__c</field><value xsi:type="xsd:string">Info</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: Invoices significantly past their due date that remain in Posted status.
+Why it matters: Aged AR accumulates silently — collections doesn&apos;t escalate, the customer relationship drifts, and bad-debt write-offs are sprung at month-end. Often a sign of missing dunning automation.
+Suppress a finding: when the invoice is in active dispute and accounts have agreed to hold collections.
+Disable the detector: only if your AR aging is tracked outside Billing. Most should leave this on.</value></values>
 </CustomMetadata>

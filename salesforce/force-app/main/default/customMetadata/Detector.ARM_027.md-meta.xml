@@ -12,4 +12,8 @@
     <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
     <values><field>RequiredSurface__c</field><value xsi:type="xsd:string">ExpressionSet</value></values>
     <values><field>Severity__c</field><value xsi:type="xsd:string">Info</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: Multiple ExpressionSet records marked active for the same UsageType (typically Pricing).
+Why it matters: ARM doesn&apos;t know which procedure to run — it picks one and the others sit dormant. Admins debugging pricing find the &quot;wrong&quot; procedure in use.
+Suppress a finding: when the multiplicity is intentional and routing logic disambiguates at runtime.
+Disable the detector: leave on.</value></values>
 </CustomMetadata>

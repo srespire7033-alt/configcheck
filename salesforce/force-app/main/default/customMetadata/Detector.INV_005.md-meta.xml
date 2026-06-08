@@ -12,4 +12,8 @@
     <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
     <values><field>RequiredSurface__c</field><value xsi:type="xsd:string">blng__Invoice__c</value></values>
     <values><field>Severity__c</field><value xsi:type="xsd:string">Critical</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: Posted blng__Invoice__c records with no blng__LegalEntity__c set.
+Why it matters: Invoices without a legal entity can&apos;t be reliably routed to the right tax jurisdiction, currency, or remit-to address. Compliance risk on cross-border billing.
+Suppress a finding: during a planned legal-entity backfill exercise.
+Disable the detector: only if your org operates as a single legal entity and the field is intentionally blank. Most should leave this on.</value></values>
 </CustomMetadata>

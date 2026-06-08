@@ -12,4 +12,8 @@
     <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
     <values><field>RequiredSurface__c</field><value xsi:type="xsd:string">ProductCategoryProduct;ProductCategory</value></values>
     <values><field>Severity__c</field><value xsi:type="xsd:string">Info</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: Active products linked to an inactive ProductCategory.
+Why it matters: Products appear in the catalog but the category they belong to is invisible — reps can&apos;t navigate to them via category browse, and category-based pricing rules can&apos;t find them.
+Suppress a finding: during a planned category restructure.
+Disable the detector: leave on for hygiene.</value></values>
 </CustomMetadata>

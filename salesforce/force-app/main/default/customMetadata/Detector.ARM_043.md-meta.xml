@@ -12,4 +12,8 @@
     <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
     <values><field>RequiredSurface__c</field><value xsi:type="xsd:string">ProductUsageGrant</value></values>
     <values><field>Severity__c</field><value xsi:type="xsd:string">Critical</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: ProductUsageGrant records where EffectiveStartDate is after EffectiveEndDate.
+Why it matters: Date reversal — the grant never fires (window is impossible). Customers don&apos;t get the entitlement they paid for.
+Suppress a finding: never; fix the dates.
+Disable the detector: leave on.</value></values>
 </CustomMetadata>

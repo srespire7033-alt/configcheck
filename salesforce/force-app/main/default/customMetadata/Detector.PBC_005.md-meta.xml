@@ -12,4 +12,8 @@
     <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
     <values><field>RequiredSurface__c</field><value xsi:type="xsd:string">blng__BillingRule__c</value></values>
     <values><field>Severity__c</field><value xsi:type="xsd:string">Warning</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: Active products with SBQQ__ChargeType__c = Recurring but no SBQQ__BillingFrequency__c.
+Why it matters: A recurring product without billing frequency invoices on an undefined cadence — usually defaults to monthly even when the customer expects annual. Invoice disputes follow.
+Suppress a finding: when the frequency is intentionally derived from the subscription term at order time.
+Disable the detector: only if billing frequency lives elsewhere. Most should leave this on.</value></values>
 </CustomMetadata>

@@ -12,4 +12,8 @@
     <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
     <values><field>RequiredSurface__c</field><value xsi:type="xsd:string">SBQQ__DiscountSchedule__c</value></values>
     <values><field>Severity__c</field><value xsi:type="xsd:string">Critical</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: SBQQ__DiscountTier__c records on the same schedule with overlapping LowerBound/UpperBound ranges.
+Why it matters: When tiers overlap, CPQ resolves the ambiguity inconsistently — the same quantity gets a different discount on different calculations. Customers compare quotes and catch the inconsistency before sales does.
+Suppress a finding: when overlaps are intentional and a deterministic tiebreaker rule exists upstream.
+Disable the detector: only if your org doesn&apos;t use SBQQ__DiscountSchedule__c. Most CPQ orgs should leave this on.</value></values>
 </CustomMetadata>

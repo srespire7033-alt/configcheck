@@ -18,4 +18,8 @@
     <values><field>Effort__c</field><value xsi:type="xsd:string">low</value></values>
     <values><field>RecoverabilityScore__c</field><value xsi:type="xsd:double">1.0</value></values>
     <values><field>Severity__c</field><value xsi:type="xsd:string">Info</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: Asset records in Active status whose CurrentLifecycleEndDate is in the past.
+Why it matters: Assets past their lifecycle end keep billing — customers pay for service that should have ended. Or, if billing already stopped but the asset&apos;s still Active, downstream reporting shows wrong revenue.
+Suppress a finding: when an extension is in flight.
+Disable the detector: leave on.</value></values>
 </CustomMetadata>

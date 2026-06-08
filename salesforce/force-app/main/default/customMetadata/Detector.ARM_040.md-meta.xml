@@ -12,4 +12,8 @@
     <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
     <values><field>RequiredSurface__c</field><value xsi:type="xsd:string">UnitOfMeasureClass</value></values>
     <values><field>Severity__c</field><value xsi:type="xsd:string">Warning</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: Active UnitOfMeasureClass records with DefaultUomId null.
+Why it matters: Usage records can&apos;t convert correctly — meter readings come in as raw values without normalization to the class default. Reporting and billing aggregate inconsistent units.
+Suppress a finding: when single-unit classes don&apos;t need a default.
+Disable the detector: leave on.</value></values>
 </CustomMetadata>

@@ -12,4 +12,8 @@
     <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
     <values><field>RequiredSurface__c</field><value xsi:type="xsd:string">SBQQ__ContractedPrice__c</value></values>
     <values><field>Severity__c</field><value xsi:type="xsd:string">Critical</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: SBQQ__ContractedPrice__c records with both SBQQ__EffectiveDate__c and SBQQ__ExpirationDate__c null.
+Why it matters: Contracted prices with no date constraints apply indefinitely and override standard pricing forever. Customers stay locked at an old negotiated rate well past when uplift should have kicked in — compounding revenue leakage.
+Suppress a finding: when the dateless arrangement reflects a genuine evergreen contract clause.
+Disable the detector: only when dateless contracted prices are by design. Most should leave this on.</value></values>
 </CustomMetadata>

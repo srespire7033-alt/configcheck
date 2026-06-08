@@ -12,4 +12,8 @@
     <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
     <values><field>RequiredSurface__c</field><value xsi:type="xsd:string">SBQQ__QuoteLine__c</value></values>
     <values><field>Severity__c</field><value xsi:type="xsd:string">Warning</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: SBQQ__QuoteLine__c records with negative SBQQ__NetTotal__c.
+Why it matters: A negative line on a quote either reflects an unintended credit or a math bug. Either way it goes to the customer as a credit they didn&apos;t expect, and the deal P&amp;L is wrong.
+Suppress a finding: when the negative line is an intentional credit/rebate captured as a quote line.
+Disable the detector: only when credits-via-quote-lines are normal. Most should leave this on.</value></values>
 </CustomMetadata>

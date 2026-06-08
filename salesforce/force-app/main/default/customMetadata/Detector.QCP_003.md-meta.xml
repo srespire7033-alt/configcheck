@@ -12,4 +12,8 @@
     <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
     <values><field>RequiredSurface__c</field><value xsi:type="xsd:string">SBQQ__CustomScript__c</value></values>
     <values><field>Severity__c</field><value xsi:type="xsd:string">Warning</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: QCP scripts whose SBQQ__Code__c exceeds a length threshold or shows signs of heavy nested logic.
+Why it matters: Heavy QCPs are the #1 cause of CPQ governor-limit errors. Once script complexity passes a threshold, large quotes start failing intermittently in ways that are hard to reproduce.
+Suppress a finding: when the script has been profiled and optimized within budget.
+Disable the detector: only when QCP optimization is actively managed. Most should leave this on.</value></values>
 </CustomMetadata>

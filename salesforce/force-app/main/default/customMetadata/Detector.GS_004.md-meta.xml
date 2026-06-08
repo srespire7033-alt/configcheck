@@ -12,4 +12,8 @@
     <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
     <values><field>RequiredSurface__c</field><value xsi:type="xsd:string">SBQQ__GuidedSellingProcess__c</value></values>
     <values><field>Severity__c</field><value xsi:type="xsd:string">Warning</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: Guided-selling processes where the ratio of outputs to inputs is unusually low.
+Why it matters: A wizard with many prompts but few outputs is over-asking the rep — survey fatigue, abandoned flows, and reps bypassing the tool. Indicates the design needs trimming.
+Suppress a finding: when the process is intentionally heavy on discovery questions for a complex sale.
+Disable the detector: only if your guided selling flows are deliberately discovery-heavy. Most should leave this on.</value></values>
 </CustomMetadata>

@@ -12,4 +12,8 @@
     <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
     <values><field>RequiredSurface__c</field><value xsi:type="xsd:string">ProductSellingModel</value></values>
     <values><field>Severity__c</field><value xsi:type="xsd:string">Warning</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: Active ProductSellingModel records of Term type with PricingTerm null or zero.
+Why it matters: Without PricingTerm, ARM can&apos;t calculate proration — mid-term deals bill incorrectly, usually under-billing the customer for the partial period.
+Suppress a finding: for term models intentionally non-prorated.
+Disable the detector: only when proration isn&apos;t used. Most should leave this on.</value></values>
 </CustomMetadata>

@@ -12,4 +12,8 @@
     <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
     <values><field>RequiredSurface__c</field><value xsi:type="xsd:string">SBQQ__ProductOption__c</value></values>
     <values><field>Severity__c</field><value xsi:type="xsd:string">Critical</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: SBQQ__ProductOption__c records flagged Required where the underlying product has no PricebookEntry on the active pricebook.
+Why it matters: A required option that can&apos;t be priced either errors at quote time or ships at $0 — revenue leakage. The customer gets the component but you don&apos;t bill for it.
+Suppress a finding: when the required option is genuinely a no-charge inclusion (free training, included shipping) and the missing PBE is intentional.
+Disable the detector: only if your org uses contracted prices or rate cards exclusively, not pricebooks. Most CPQ orgs should leave this on.</value></values>
 </CustomMetadata>

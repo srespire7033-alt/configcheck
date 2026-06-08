@@ -12,4 +12,8 @@
     <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
     <values><field>RequiredSurface__c</field><value xsi:type="xsd:string">AssetRelationship</value></values>
     <values><field>Severity__c</field><value xsi:type="xsd:string">Warning</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: AssetRelationship records pointing to a parent or child Asset that no longer exists.
+Why it matters: Orphan relationships break asset hierarchy navigation and renewal lookups — renewals miss related assets, amendments don&apos;t propagate.
+Suppress a finding: never; fix the references.
+Disable the detector: leave on.</value></values>
 </CustomMetadata>

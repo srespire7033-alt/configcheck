@@ -18,4 +18,8 @@
     <values><field>Effort__c</field><value xsi:type="xsd:string">low</value></values>
     <values><field>RecoverabilityScore__c</field><value xsi:type="xsd:double">1.0</value></values>
     <values><field>Severity__c</field><value xsi:type="xsd:string">Info</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: Active AttributeBasedAdjRule records whose EffectiveEndDate is in the past.
+Why it matters: The rule continues to apply because it wasn&apos;t deactivated after expiring. Promotional discounts that should have rolled off keep applying — direct revenue leakage.
+Suppress a finding: when the date is being intentionally extended pending an update.
+Disable the detector: leave on.</value></values>
 </CustomMetadata>

@@ -18,4 +18,8 @@
     <values><field>Effort__c</field><value xsi:type="xsd:string">low</value></values>
     <values><field>RecoverabilityScore__c</field><value xsi:type="xsd:double">1.0</value></values>
     <values><field>Severity__c</field><value xsi:type="xsd:string">Info</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: CostBookEntry records with Cost null or zero.
+Why it matters: Margin reports compute against zero or null cost — every product shows 100% margin in reporting. Strategic pricing decisions based on false data.
+Suppress a finding: when cost is genuinely zero (internal allocations).
+Disable the detector: leave on.</value></values>
 </CustomMetadata>

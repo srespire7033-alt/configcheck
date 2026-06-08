@@ -12,4 +12,8 @@
     <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
     <values><field>RequiredSurface__c</field><value xsi:type="xsd:string">SBQQ__CustomScript__c</value></values>
     <values><field>Severity__c</field><value xsi:type="xsd:string">Critical</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: SBQQ__CustomScript__c records where SBQQ__Code__c is null.
+Why it matters: An empty custom script does nothing — CPQ invokes it (the Quote Calculator Plugin hook) but no logic runs. Admins assume their QCP is live; it silently does nothing.
+Suppress a finding: never; populate or delete.
+Disable the detector: only if your org doesn&apos;t use QCP. Most should leave this on.</value></values>
 </CustomMetadata>

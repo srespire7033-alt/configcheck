@@ -12,4 +12,8 @@
     <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
     <values><field>RequiredSurface__c</field><value xsi:type="xsd:string">PriceAdjustmentTier;PriceAdjustmentSchedule</value></values>
     <values><field>Severity__c</field><value xsi:type="xsd:string">Critical</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: PriceAdjustmentTier records whose effective dates fall outside their parent PriceAdjustmentSchedule&apos;s date range.
+Why it matters: The tier never fires — schedules check parent dates first. Admins assume the tier is live but it&apos;s silently dormant.
+Suppress a finding: never; align the dates.
+Disable the detector: leave on.</value></values>
 </CustomMetadata>

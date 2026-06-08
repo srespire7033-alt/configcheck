@@ -12,4 +12,8 @@
     <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
     <values><field>RequiredSurface__c</field><value xsi:type="xsd:string">SBQQ__GuidedSellingProcess__c</value></values>
     <values><field>Severity__c</field><value xsi:type="xsd:string">Critical</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: Active guided-selling processes with no output mappings (SBQQ__ProcessOutput__c).
+Why it matters: The rep answers the wizard but the answers go nowhere — no products get filtered or recommended. The flow looks like it worked; the resulting quote is empty.
+Suppress a finding: when the process exists purely to capture data for analytics without driving product selection.
+Disable the detector: only if your guided selling intentionally runs without outputs. Most should leave this on.</value></values>
 </CustomMetadata>

@@ -12,4 +12,8 @@
     <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
     <values><field>RequiredSurface__c</field><value xsi:type="xsd:string">RateCard</value></values>
     <values><field>Severity__c</field><value xsi:type="xsd:string">Info</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: RateCard records still active (or null IsActive) with EffectiveTo or EffectiveEndDate in the past.
+Why it matters: Expired rate cards continue to apply because they weren&apos;t deactivated. Customers keep getting old pricing that should have rolled to current rates. Compounding revenue leakage.
+Suppress a finding: when an extension is in flight pending update.
+Disable the detector: leave on.</value></values>
 </CustomMetadata>

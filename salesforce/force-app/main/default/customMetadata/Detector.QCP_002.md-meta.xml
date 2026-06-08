@@ -12,4 +12,8 @@
     <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
     <values><field>RequiredSurface__c</field><value xsi:type="xsd:string">SBQQ__CustomScript__c</value></values>
     <values><field>Severity__c</field><value xsi:type="xsd:string">Warning</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: SBQQ__CustomScript__c records with SBQQ__Code__c set but SBQQ__TranspiledCode__c null.
+Why it matters: The QCP can&apos;t execute — Salesforce runs the transpiled output, and without it the calculator runs default logic. The admin thinks the script is live; production silently ignores it.
+Suppress a finding: only when the missing transpile is part of an in-flight deployment.
+Disable the detector: only if your org doesn&apos;t use QCP. Most CPQ orgs that use it should leave this on.</value></values>
 </CustomMetadata>

@@ -12,4 +12,8 @@
     <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
     <values><field>RequiredSurface__c</field><value xsi:type="xsd:string">Asset;AssetStatePeriod</value></values>
     <values><field>Severity__c</field><value xsi:type="xsd:string">Warning</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: Asset records in Active status with no AssetStatePeriod child records.
+Why it matters: Asset has no state history — billing schedule, lifecycle events, and amendment logic all depend on state periods. Missing periods cause silent billing failures.
+Suppress a finding: during a documented data migration window.
+Disable the detector: leave on.</value></values>
 </CustomMetadata>

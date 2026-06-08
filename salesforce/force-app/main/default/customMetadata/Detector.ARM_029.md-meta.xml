@@ -12,4 +12,8 @@
     <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
     <values><field>RequiredSurface__c</field><value xsi:type="xsd:string">DecisionTable</value></values>
     <values><field>Severity__c</field><value xsi:type="xsd:string">Warning</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: Orgs where every DecisionTable has Status = Draft (none Active).
+Why it matters: ARM pricing relies on decision tables; if all are Draft, no pricing branches engage and quotes fall to defaults. Critical operational gap.
+Suppress a finding: never — activate at least one if ARM pricing is meant to work.
+Disable the detector: only if decision tables aren&apos;t part of your ARM setup.</value></values>
 </CustomMetadata>

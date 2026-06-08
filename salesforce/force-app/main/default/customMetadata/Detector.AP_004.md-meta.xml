@@ -12,4 +12,8 @@
     <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
     <values><field>RequiredSurface__c</field><value xsi:type="xsd:string">Product2</value></values>
     <values><field>Severity__c</field><value xsi:type="xsd:string">Warning</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: Active Product2 records with SBQQ__ChargeType__c = &apos;Recurring&apos; but no SBQQ__BillingFrequency__c.
+Why it matters: CPQ can&apos;t determine how often to bill — the subscription either fails to schedule or defaults to monthly when the customer expects annual. Invoice disputes follow on the first cycle.
+Suppress a finding: when the frequency is intentionally derived from contract term at order time.
+Disable the detector: only if your billing frequency lives in a custom field. Most CPQ+Billing orgs should leave this on.</value></values>
 </CustomMetadata>

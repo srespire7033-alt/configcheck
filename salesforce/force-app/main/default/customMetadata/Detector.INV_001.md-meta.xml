@@ -12,4 +12,8 @@
     <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
     <values><field>RequiredSurface__c</field><value xsi:type="xsd:string">blng__Invoice__c</value></values>
     <values><field>Severity__c</field><value xsi:type="xsd:string">Warning</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: blng__Invoice__c records in Draft status whose CreatedDate is more than 30 days ago.
+Why it matters: Draft invoices that linger represent revenue not yet recognized and AR not yet tracked. Finance loses visibility into the real pipeline of billings and customers don&apos;t see invoices for work delivered.
+Suppress a finding: for invoices intentionally held in Draft pending a contractual sign-off.
+Disable the detector: only when long-held drafts are normal. Most should leave this on.</value></values>
 </CustomMetadata>

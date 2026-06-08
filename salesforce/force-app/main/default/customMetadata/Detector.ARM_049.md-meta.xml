@@ -12,4 +12,8 @@
     <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
     <values><field>RequiredSurface__c</field><value xsi:type="xsd:string">CostBook;CostBookEntry</value></values>
     <values><field>Severity__c</field><value xsi:type="xsd:string">Warning</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: Active CostBook records with no CostBookEntry children.
+Why it matters: No costs means no margin data — every product appears to have 100% margin in reporting. Strategic pricing decisions made on bad data.
+Suppress a finding: for cost books being newly populated.
+Disable the detector: leave on.</value></values>
 </CustomMetadata>

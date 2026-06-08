@@ -12,4 +12,8 @@
     <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
     <values><field>RequiredSurface__c</field><value xsi:type="xsd:string">SBQQ__PriceRule__c</value></values>
     <values><field>Severity__c</field><value xsi:type="xsd:string">Warning</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: Active SBQQ__PriceRule__c records with no conditions and no actions.
+Why it matters: The rule consumes calculation cycles for zero benefit. Pure dead weight that slows quotes and adds maintenance debt.
+Suppress a finding: when the rule is intentionally a scaffold awaiting completion.
+Disable the detector: leave on for hygiene.</value></values>
 </CustomMetadata>

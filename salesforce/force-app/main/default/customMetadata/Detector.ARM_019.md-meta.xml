@@ -12,4 +12,8 @@
     <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
     <values><field>RequiredSurface__c</field><value xsi:type="xsd:string">ProductSellingModelOption</value></values>
     <values><field>Severity__c</field><value xsi:type="xsd:string">Warning</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: Multiple ProductSellingModelOption records linking the same product to the same selling model.
+Why it matters: Duplicate selling-model links cause ambiguous pricing-path lookups — ARM may apply the model twice or pick inconsistently. Surfaces as flaky pricing.
+Suppress a finding: never; dedupe the links.
+Disable the detector: leave on.</value></values>
 </CustomMetadata>

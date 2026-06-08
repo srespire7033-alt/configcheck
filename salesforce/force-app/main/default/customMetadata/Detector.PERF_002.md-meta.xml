@@ -12,4 +12,8 @@
     <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
     <values><field>RequiredSurface__c</field><value xsi:type="xsd:string">SBQQ__ProductRule__c</value></values>
     <values><field>Severity__c</field><value xsi:type="xsd:string">Warning</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: Active SBQQ__ProductRule__c counts above a healthy threshold.
+Why it matters: Similar to PERF-001 but for product rules — they fire during configuration and slow the configurator UI. Too many means slow opens and rep frustration.
+Suppress a finding: when warranted by genuine product complexity.
+Disable the detector: only if you&apos;ve engineered around it. Most should leave this on.</value></values>
 </CustomMetadata>

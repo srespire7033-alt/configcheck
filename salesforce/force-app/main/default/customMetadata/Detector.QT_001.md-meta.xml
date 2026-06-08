@@ -12,4 +12,8 @@
     <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
     <values><field>RequiredSurface__c</field><value xsi:type="xsd:string">SBQQ__QuoteTemplate__c</value></values>
     <values><field>Severity__c</field><value xsi:type="xsd:string">Warning</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: Orgs with no SBQQ__QuoteTemplate__c marked Default = true.
+Why it matters: Reps generating a quote PDF get an &quot;no default template&quot; error and have to pick manually each time. Inconsistent customer-facing documents and slower quote velocity.
+Suppress a finding: only if your org generates documents through a custom integration.
+Disable the detector: only when CPQ templates are intentionally not used. Most should leave this on.</value></values>
 </CustomMetadata>

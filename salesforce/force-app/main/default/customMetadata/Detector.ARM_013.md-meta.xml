@@ -12,4 +12,8 @@
     <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
     <values><field>RequiredSurface__c</field><value xsi:type="xsd:string">ProductRelatedComponent</value></values>
     <values><field>Severity__c</field><value xsi:type="xsd:string">Critical</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: ProductRelatedComponent records where MinQuantity exceeds MaxQuantity.
+Why it matters: The bundle can&apos;t configure — ARM enforces an impossible range. Sales rep hits an error during configuration and the deal stalls until an admin fixes the bounds.
+Suppress a finding: never; this is always a data-entry mistake.
+Disable the detector: only when ARM bundles aren&apos;t used.</value></values>
 </CustomMetadata>

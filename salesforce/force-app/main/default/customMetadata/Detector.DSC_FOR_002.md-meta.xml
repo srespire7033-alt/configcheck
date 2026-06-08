@@ -12,4 +12,8 @@
     <values><field>Effort__c</field><value xsi:type="xsd:string">medium</value></values>
     <values><field>IsActive__c</field><value xsi:type="xsd:boolean">true</value></values>
     <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: Quote lines where stacked discounts (volume + promo + manual) sum past the configured discount-cap policy.
+Why it matters: Reps stack discounts past approval thresholds — margin disappears one approved discount at a time. Often slips past because each individual discount looks reasonable.
+Suppress a finding: for executive-approved strategic deals where the cap was waived.
+Disable the detector: only if your org has no discount cap policy. Most should leave this on.</value></values>
 </CustomMetadata>

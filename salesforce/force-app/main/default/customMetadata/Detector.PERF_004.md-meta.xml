@@ -12,4 +12,8 @@
     <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
     <values><field>RequiredSurface__c</field><value xsi:type="xsd:string">SBQQ__SummaryVariable__c</value></values>
     <values><field>Severity__c</field><value xsi:type="xsd:string">Info</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: Active SBQQ__SummaryVariable__c counts above a healthy threshold.
+Why it matters: Each summary variable runs at calculation time. Many variables compound; quotes slow and recalc CPU costs climb.
+Suppress a finding: when the count reflects genuine complexity.
+Disable the detector: only when you&apos;ve moved heavy aggregation off summary variables. Most should leave this on.</value></values>
 </CustomMetadata>

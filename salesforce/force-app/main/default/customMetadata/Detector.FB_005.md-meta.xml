@@ -12,4 +12,8 @@
     <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
     <values><field>RequiredSurface__c</field><value xsi:type="xsd:string">blng__FinancePeriod__c</value></values>
     <values><field>Severity__c</field><value xsi:type="xsd:string">Warning</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: blng__FinancePeriod__c records from prior fiscal years where blng__Status__c is still Open.
+Why it matters: Open prior-year periods let backdated entries post into closed reporting — auditors flag this as a SOX control failure. Numbers in prior-year reports can shift after they&apos;ve been signed off.
+Suppress a finding: while an audit-sanctioned restatement is mid-flight.
+Disable the detector: only if your org has no SOX or audit requirements. Most should leave this on.</value></values>
 </CustomMetadata>

@@ -12,4 +12,8 @@
     <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
     <values><field>RequiredSurface__c</field><value xsi:type="xsd:string">BillingPolicy</value></values>
     <values><field>Severity__c</field><value xsi:type="xsd:string">Critical</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: Active BillingPolicy records whose default BillingTreatment is inactive or null.
+Why it matters: Invoices defaulting to this billing policy can&apos;t determine treatment — they fail or fall to org defaults that misroute revenue.
+Suppress a finding: during planned policy cutovers.
+Disable the detector: leave on.</value></values>
 </CustomMetadata>

@@ -12,4 +12,8 @@
     <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
     <values><field>RequiredSurface__c</field><value xsi:type="xsd:string">blng__GLTreatment__c</value></values>
     <values><field>Severity__c</field><value xsi:type="xsd:string">Warning</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: blng__GLTreatment__c records where one of credit or debit GL account is mapped but the other is null.
+Why it matters: The double-entry posting can&apos;t balance — one side has nowhere to land. Postings either error or end up in a suspense account that finance has to manually reconcile.
+Suppress a finding: rare — almost always a half-finished configuration.
+Disable the detector: only if your GL framework intentionally posts single-sided entries. Most should leave this on.</value></values>
 </CustomMetadata>

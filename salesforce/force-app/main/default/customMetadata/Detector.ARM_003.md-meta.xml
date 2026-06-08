@@ -12,4 +12,8 @@
     <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
     <values><field>RequiredSurface__c</field><value xsi:type="xsd:string">PriceAdjustmentTier;PriceAdjustmentSchedule</value></values>
     <values><field>Severity__c</field><value xsi:type="xsd:string">Warning</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: PriceAdjustmentTier records on the same schedule with overlapping LowerBound/UpperBound ranges.
+Why it matters: Overlapping tiers cause nondeterministic pricing — the same quantity gets different adjustments on different runs. ARM picks one tier inconsistently.
+Suppress a finding: when overlaps are intentional and a tiebreaker exists elsewhere.
+Disable the detector: most ARM orgs should leave this on.</value></values>
 </CustomMetadata>

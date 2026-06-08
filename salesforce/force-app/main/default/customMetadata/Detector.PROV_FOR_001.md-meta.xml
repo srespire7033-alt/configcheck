@@ -12,4 +12,8 @@
     <values><field>Effort__c</field><value xsi:type="xsd:string">high</value></values>
     <values><field>IsActive__c</field><value xsi:type="xsd:boolean">true</value></values>
     <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: Assets in a provisioned/active state whose linked subscription has no billing schedule.
+Why it matters: You&apos;re delivering service the customer isn&apos;t being billed for. Pure revenue leakage that compounds every billing cycle the asset stays live.
+Suppress a finding: when the provisioning is genuinely free (pilot, sample).
+Disable the detector: only if asset-to-billing alignment is intentional disconnected. Most should leave this on.</value></values>
 </CustomMetadata>

@@ -12,4 +12,8 @@
     <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
     <values><field>RequiredSurface__c</field><value xsi:type="xsd:string">SBQQ__PriceRule__c</value></values>
     <values><field>Severity__c</field><value xsi:type="xsd:string">Info</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: A composite complexity score combining rule count, product count, and quote-line averages above a threshold.
+Why it matters: Above the threshold, multiple performance dimensions stack — slow quotes, slow recalcs, and high admin maintenance cost. Predicts customer-felt slowness.
+Suppress a finding: when the score reflects mature, validated production complexity.
+Disable the detector: leave on as a holistic early-warning unless your org is intentionally complex.</value></values>
 </CustomMetadata>

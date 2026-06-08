@@ -12,4 +12,8 @@
     <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
     <values><field>RequiredSurface__c</field><value xsi:type="xsd:string">SBQQ__PriceRule__c</value></values>
     <values><field>Severity__c</field><value xsi:type="xsd:string">Info</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: Inactive SBQQ__PriceRule__c / SBQQ__ProductRule__c records lingering in the catalog (potential cleanup candidates).
+Why it matters: Inactive rules accumulate over years, complicate audits, and slow admin work — even though they don&apos;t execute, they fill search results and complicate change management.
+Suppress a finding: when rules are intentionally kept for audit retention.
+Disable the detector: leave on as a hygiene signal.</value></values>
 </CustomMetadata>

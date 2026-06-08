@@ -12,4 +12,8 @@
     <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
     <values><field>RequiredSurface__c</field><value xsi:type="xsd:string">Product2</value></values>
     <values><field>Severity__c</field><value xsi:type="xsd:string">Info</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: Orgs that use multiple SBQQ__PricingMethod__c values (Block + List + Cost + PercentOfTotal) extensively.
+Why it matters: Informational — high method diversity correlates with hard-to-maintain pricing logic and admin confusion. Surface for review during pricing governance.
+Suppress a finding: when method diversity is intentional and well-governed.
+Disable the detector: leave on as a signal.</value></values>
 </CustomMetadata>

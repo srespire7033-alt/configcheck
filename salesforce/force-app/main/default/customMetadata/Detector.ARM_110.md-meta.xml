@@ -12,4 +12,8 @@
     <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
     <values><field>RequiredSurface__c</field><value xsi:type="xsd:string">ProductQualification</value></values>
     <values><field>Severity__c</field><value xsi:type="xsd:string">Critical</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: ProductQualification records where IsQualified = true and EffectiveToDate is in the past.
+Why it matters: Customers still classified as qualified for offers/pricing that should have expired — they get prices or eligibility they no longer earn. Margin and contract-integrity risk.
+Suppress a finding: during a documented re-qualification window.
+Disable the detector: leave on.</value></values>
 </CustomMetadata>

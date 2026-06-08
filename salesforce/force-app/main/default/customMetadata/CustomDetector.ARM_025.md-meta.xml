@@ -18,4 +18,8 @@
     <values><field>Effort__c</field><value xsi:type="xsd:string">low</value></values>
     <values><field>RecoverabilityScore__c</field><value xsi:type="xsd:double">0.9</value></values>
     <values><field>Severity__c</field><value xsi:type="xsd:string">Warning</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: Active AttributeDefinition records where IsRequired = true but DefaultValue is null or blank.
+Why it matters: Reps hit a required field with no prefill — they guess, look up, or skip. Quote velocity slows and data quality degrades because reps make up values to get past the block.
+Suppress a finding: when the field is genuinely customer-specific and no default exists.
+Disable the detector: only when required-without-default is intentional. Most should leave this on.</value></values>
 </CustomMetadata>

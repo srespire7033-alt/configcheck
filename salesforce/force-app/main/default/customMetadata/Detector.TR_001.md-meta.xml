@@ -12,4 +12,8 @@
     <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
     <values><field>RequiredSurface__c</field><value xsi:type="xsd:string">blng__TaxRule__c;Product2</value></values>
     <values><field>Severity__c</field><value xsi:type="xsd:string">Critical</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: Active Product2 records whose blng__TaxRule__c lookup is null.
+Why it matters: Without a tax rule the billing engine cannot calculate tax on quote lines or invoices that include this product. You either under-bill the customer (lost revenue) or block invoice generation (operational stall) — and you risk tax-jurisdiction non-compliance on audit.
+Suppress a finding: when a specific product is genuinely tax-exempt (registered charity SKU, government-only contract). Note the exemption reason and dismiss that one row.
+Disable the detector: only if your business model is 100% tax-exempt across every SKU AND you&apos;ve set blng__TaxableYesNo__c = No on every active product. Most orgs should leave this on.</value></values>
 </CustomMetadata>

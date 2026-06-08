@@ -12,4 +12,8 @@
     <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
     <values><field>RequiredSurface__c</field><value xsi:type="xsd:string">SBQQ__DiscountSchedule__c</value></values>
     <values><field>Severity__c</field><value xsi:type="xsd:string">Warning</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: SBQQ__DiscountTier__c records with negative discount percentages (effectively surcharges).
+Why it matters: A negative tier raises the price instead of lowering it. Almost always a data-entry sign error that goes unnoticed because reps don&apos;t expect to find surcharges on a &quot;discount&quot; schedule.
+Suppress a finding: when the surcharge is intentional and the schedule label communicates it clearly (penalty pricing, premium tier).
+Disable the detector: only if your org genuinely uses discount schedules for surcharges. Most should leave this on.</value></values>
 </CustomMetadata>

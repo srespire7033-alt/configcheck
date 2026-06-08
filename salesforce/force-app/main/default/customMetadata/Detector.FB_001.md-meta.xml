@@ -12,4 +12,8 @@
     <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
     <values><field>RequiredSurface__c</field><value xsi:type="xsd:string">blng__FinanceBook__c</value></values>
     <values><field>Severity__c</field><value xsi:type="xsd:string">Critical</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: Active blng__FinanceBook__c records with no blng__FinancePeriod__c covering today&apos;s date.
+Why it matters: Postings dated today can&apos;t find an open period — they either reject (operational stall during month-end) or post to a default bucket that finance has to reconcile manually. Catastrophic during close week.
+Suppress a finding: only during a brief planned cutover between fiscal years where overlap is being managed manually.
+Disable the detector: only if your org doesn&apos;t use Salesforce Billing finance books. Most billing customers should leave this on.</value></values>
 </CustomMetadata>

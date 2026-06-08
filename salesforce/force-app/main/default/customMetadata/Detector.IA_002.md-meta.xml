@@ -12,4 +12,8 @@
     <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
     <values><field>RequiredSurface__c</field><value xsi:type="xsd:string">SBQQ__PriceRule__c</value></values>
     <values><field>Severity__c</field><value xsi:type="xsd:string">Warning</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: Multiple active price rules whose target field is the same on the same SObject.
+Why it matters: Order-of-operations sensitivity — whichever rule fires last wins, and changes to evaluation order silently shift prices. Often the source of mystery price changes after admin updates.
+Suppress a finding: when the rules are explicitly sequenced and the dependency is documented.
+Disable the detector: only if your pricing architecture intentionally layers rules on the same field. Most should leave this on.</value></values>
 </CustomMetadata>

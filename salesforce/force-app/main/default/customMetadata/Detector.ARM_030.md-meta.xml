@@ -12,4 +12,8 @@
     <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
     <values><field>RequiredSurface__c</field><value xsi:type="xsd:string">ContextDefinition</value></values>
     <values><field>Severity__c</field><value xsi:type="xsd:string">Warning</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: Orgs with no ContextDefinition records marked active.
+Why it matters: ARM context-driven features (attribute-based pricing, contextual eligibility) can&apos;t engage without an active context. Surfaces as missing or wrong product configurations.
+Suppress a finding: only if context is not used.
+Disable the detector: only when ContextDefinition is intentionally unused.</value></values>
 </CustomMetadata>

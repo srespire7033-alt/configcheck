@@ -12,4 +12,8 @@
     <values><field>Effort__c</field><value xsi:type="xsd:string">high</value></values>
     <values><field>IsActive__c</field><value xsi:type="xsd:boolean">true</value></values>
     <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: MDQ (Multi-Dimensional Quoting) segments on the same product where per-segment prices show illegal swings (e.g. drops without explanation).
+Why it matters: MDQ pricing inconsistencies mean year-2 of a contract bills at a lower rate than year-1 with no business justification. Customer-facing surprise and revenue loss.
+Suppress a finding: when the swing reflects a documented ramped or step-down deal structure.
+Disable the detector: only if your org doesn&apos;t use MDQ. Most should leave this on.</value></values>
 </CustomMetadata>

@@ -12,4 +12,8 @@
     <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
     <values><field>RequiredSurface__c</field><value xsi:type="xsd:string">SBQQ__ProductOption__c</value></values>
     <values><field>Severity__c</field><value xsi:type="xsd:string">Warning</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: SBQQ__ProductOption__c records where SBQQ__MinQuantity__c exceeds SBQQ__MaxQuantity__c.
+Why it matters: The bundle becomes unconfigurable — CPQ tries to enforce a quantity range that can never be satisfied. The sales rep hits an error mid-configuration and the deal stalls until an admin fixes the bounds.
+Suppress a finding: essentially never — this is always a data entry mistake. Dismiss only if you&apos;ve confirmed the bounds will be corrected as part of a planned bulk update.
+Disable the detector: only if your org doesn&apos;t use bundles. Most CPQ orgs should leave this on.</value></values>
 </CustomMetadata>

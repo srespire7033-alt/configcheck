@@ -18,4 +18,8 @@
     <values><field>Effort__c</field><value xsi:type="xsd:string">low</value></values>
     <values><field>RecoverabilityScore__c</field><value xsi:type="xsd:double">1.0</value></values>
     <values><field>Severity__c</field><value xsi:type="xsd:string">Info</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: SBQQ__GeneralSettings__c records where SBQQ__SubscriptionTermUnit__c is null.
+Why it matters: CPQ defaults to Month — if your business runs on annual terms, every quote calculates with monthly multipliers and the numbers come out wrong. Subtle but pervasive pricing miscalc.
+Suppress a finding: when the default Month explicitly matches your model.
+Disable the detector: leave on for any org where the term unit isn&apos;t explicitly Month.</value></values>
 </CustomMetadata>

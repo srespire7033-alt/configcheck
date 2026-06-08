@@ -12,4 +12,8 @@
     <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
     <values><field>RequiredSurface__c</field><value xsi:type="xsd:string">BillingMilestonePlan;BillingMilestonePlanItem</value></values>
     <values><field>Severity__c</field><value xsi:type="xsd:string">Critical</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: Active MilestonePlan records with no MilestonePlanItem children, or with all items pointing to inactive treatments.
+Why it matters: Milestone billing can&apos;t fire — milestones come due but nothing invoices. Direct revenue stop on milestone-based deals.
+Suppress a finding: during a documented milestone restructure.
+Disable the detector: leave on if you use milestone billing.</value></values>
 </CustomMetadata>

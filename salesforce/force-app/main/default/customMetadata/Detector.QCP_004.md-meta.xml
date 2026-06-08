@@ -12,4 +12,8 @@
     <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
     <values><field>RequiredSurface__c</field><value xsi:type="xsd:string">SBQQ__CustomScript__c</value></values>
     <values><field>Severity__c</field><value xsi:type="xsd:string">Info</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: Multiple SBQQ__CustomScript__c records active simultaneously where only one should be the Quote Calculator Plugin.
+Why it matters: Only one QCP can be live at a time — extra active scripts confuse admins about which actually fires. Behavior depends on the org setting and not the script status.
+Suppress a finding: when the extra active scripts are for non-QCP purposes (e.g. utility scripts referenced from rules).
+Disable the detector: only when you&apos;ve validated the setup. Most should leave this on.</value></values>
 </CustomMetadata>

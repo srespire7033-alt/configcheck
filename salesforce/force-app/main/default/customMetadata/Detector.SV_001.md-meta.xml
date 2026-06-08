@@ -12,4 +12,8 @@
     <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
     <values><field>RequiredSurface__c</field><value xsi:type="xsd:string">SBQQ__SummaryVariable__c</value></values>
     <values><field>Severity__c</field><value xsi:type="xsd:string">Warning</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: SBQQ__SummaryVariable__c records not referenced by any active price rule, product rule, or quote-template field.
+Why it matters: Each variable consumes calculation cycles even when unused — they slow every quote. Cleanup signal that compounds significantly when 50+ exist.
+Suppress a finding: when the variable is intentionally pre-staged for an upcoming rule rollout.
+Disable the detector: leave on for hygiene.</value></values>
 </CustomMetadata>

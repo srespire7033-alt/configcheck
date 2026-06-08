@@ -18,4 +18,8 @@
     <values><field>Effort__c</field><value xsi:type="xsd:string">low</value></values>
     <values><field>RecoverabilityScore__c</field><value xsi:type="xsd:double">0.85</value></values>
     <values><field>Severity__c</field><value xsi:type="xsd:string">Critical</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: Active blng__GLTreatment__c records that have neither a credit nor debit GL account mapped.
+Why it matters: Billing entries posted against this treatment cannot route to a GL account, so revenue, AR, and deferred-revenue postings either fail silently or land in the org&apos;s default suspense account. Month-end close shows unmapped entries that finance has to chase down manually.
+Suppress a finding: when a treatment is intentionally a holding placeholder (e.g. mid-migration cutover from one GL framework to another). Note the cutover date and dismiss.
+Disable the detector: only if your org uses Billing without integrated GL routing — rare; most orgs that use Billing post to GL.</value></values>
 </CustomMetadata>

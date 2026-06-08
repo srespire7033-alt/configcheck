@@ -18,4 +18,8 @@
     <values><field>Effort__c</field><value xsi:type="xsd:string">low</value></values>
     <values><field>RecoverabilityScore__c</field><value xsi:type="xsd:double">0.95</value></values>
     <values><field>Severity__c</field><value xsi:type="xsd:string">Critical</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: SBQQ__ConfigurationAttribute__c records where SBQQ__Required__c = true AND SBQQ__Hidden__c = true.
+Why it matters: A required field that&apos;s also hidden creates an impossible-to-configure product — reps can&apos;t see the field, so they can&apos;t fill it, so they can&apos;t proceed past validation. Configuration blocks entirely.
+Suppress a finding: never; this is always a misconfiguration.
+Disable the detector: leave on for any org using configuration attributes.</value></values>
 </CustomMetadata>

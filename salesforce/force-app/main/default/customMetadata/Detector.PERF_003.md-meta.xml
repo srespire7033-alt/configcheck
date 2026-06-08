@@ -12,4 +12,8 @@
     <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
     <values><field>RequiredSurface__c</field><value xsi:type="xsd:string">SBQQ__QuoteLine__c</value></values>
     <values><field>Severity__c</field><value xsi:type="xsd:string">Warning</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: The average count of quote lines per SBQQ__Quote__c exceeds a healthy threshold.
+Why it matters: Very large carts hit CPQ governor limits at calc time, fail to save, or take minutes to recalc. Sales loses confidence in the tool for enterprise deals.
+Suppress a finding: when the org genuinely sells large bills of material and infrastructure is sized for it.
+Disable the detector: only if quote sizes are intentionally large by design.</value></values>
 </CustomMetadata>

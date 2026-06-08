@@ -12,4 +12,8 @@
     <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
     <values><field>RequiredSurface__c</field><value xsi:type="xsd:string">Product2;ProductRelatedComponent</value></values>
     <values><field>Severity__c</field><value xsi:type="xsd:string">Critical</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: Bundle parent Product2 records (with bundle ConfigurationType) that have no ProductRelatedComponent children.
+Why it matters: An empty bundle adds nothing at quote time — sales sees a wrapper SKU with no configurable parts. Often abandoned bundle migrations.
+Suppress a finding: for placeholder bundles awaiting components.
+Disable the detector: only in orgs without bundles. Most should leave this on.</value></values>
 </CustomMetadata>

@@ -12,4 +12,8 @@
     <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
     <values><field>RequiredSurface__c</field><value xsi:type="xsd:string">ProductRelatedComponent;Product2</value></values>
     <values><field>Severity__c</field><value xsi:type="xsd:string">Info</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: Bundle parent Product2 records with IsActive = false that still have active ProductRelatedComponent children.
+Why it matters: Orphaned bundle structure clutters reporting and confuses admins. The inactive parent can&apos;t sell, but the live components imply it should — sign of incomplete deactivation.
+Suppress a finding: during a planned bundle inactivation window.
+Disable the detector: leave on for hygiene.</value></values>
 </CustomMetadata>

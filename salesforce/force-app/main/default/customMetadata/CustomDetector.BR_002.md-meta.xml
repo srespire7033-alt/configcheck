@@ -18,4 +18,8 @@
     <values><field>Effort__c</field><value xsi:type="xsd:string">low</value></values>
     <values><field>RecoverabilityScore__c</field><value xsi:type="xsd:double">0.85</value></values>
     <values><field>Severity__c</field><value xsi:type="xsd:string">Critical</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: Active blng__BillingRule__c records that aren&apos;t referenced by any blng__GLTreatment__c (via blng__GLRule__c).
+Why it matters: Revenue billed against this rule won&apos;t post to the general ledger. Month-end close shows unposted entries that finance has to chase down manually, and revenue recognition lags reality.
+Suppress a finding: when the rule is intentionally limited to non-GL billing (e.g. internal allocations).
+Disable the detector: only if your org doesn&apos;t post Billing to GL. Most should leave this on.</value></values>
 </CustomMetadata>

@@ -18,4 +18,8 @@
     <values><field>Effort__c</field><value xsi:type="xsd:string">low</value></values>
     <values><field>RecoverabilityScore__c</field><value xsi:type="xsd:double">1.0</value></values>
     <values><field>Severity__c</field><value xsi:type="xsd:string">Info</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: Contract records in Activated or Active status whose EndDate is in the past.
+Why it matters: Expired contracts still flagged active mean revenue keeps recognizing against a contract that&apos;s legally over. Customer is out-of-contract; legal exposure plus revenue misstatement.
+Suppress a finding: when a renewal is mid-flight and the gap is documented.
+Disable the detector: leave on.</value></values>
 </CustomMetadata>

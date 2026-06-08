@@ -18,4 +18,8 @@
     <values><field>Effort__c</field><value xsi:type="xsd:string">low</value></values>
     <values><field>RecoverabilityScore__c</field><value xsi:type="xsd:double">0.95</value></values>
     <values><field>Severity__c</field><value xsi:type="xsd:string">Critical</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: Pricebook2 records where IsStandard = true AND IsActive = false.
+Why it matters: The Standard Pricebook must be active for opportunity products and many CPQ/ARM flows. An inactive standard pricebook breaks opportunity-line-item creation across the org — a near-total CPQ stop.
+Suppress a finding: never — reactivate immediately.
+Disable the detector: never.</value></values>
 </CustomMetadata>

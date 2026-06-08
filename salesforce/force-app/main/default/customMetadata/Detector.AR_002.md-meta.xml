@@ -12,4 +12,8 @@
     <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
     <values><field>RequiredSurface__c</field><value xsi:type="xsd:string">SBQQ__ApprovalRule__c</value></values>
     <values><field>Severity__c</field><value xsi:type="xsd:string">Warning</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: Active SBQQ__ApprovalRule__c records that have no SBQQ__ApprovalCondition__c child rows.
+Why it matters: An approval rule with no conditions matches every quote and routes everything for approval. Sales reps get blocked on routine deals, approvers drown in noise, and the legitimate approval signal gets ignored.
+Suppress a finding: when a rule is intentionally a global gate (e.g. a temporary blanket freeze during fiscal year-end). Note the policy reason and dismiss.
+Disable the detector: only if your org doesn&apos;t use SBQQ__ApprovalRule__c at all (Advanced Approvals only). Most CPQ orgs should leave this on.</value></values>
 </CustomMetadata>

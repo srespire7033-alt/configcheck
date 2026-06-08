@@ -12,4 +12,8 @@
     <values><field>Effort__c</field><value xsi:type="xsd:string">medium</value></values>
     <values><field>IsActive__c</field><value xsi:type="xsd:boolean">true</value></values>
     <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: Order line vs Quote line variance on amendment deals (same as ORD-FOR-002 but on amendment scenarios).
+Why it matters: Amendments are where Q↔O variance most often slips through — partial swaps, mid-term changes, and complex proration produce mismatches. Direct revenue leakage at amendment time.
+Suppress a finding: when the variance is approved and documented.
+Disable the detector: only if you don&apos;t process amendments. Most should leave this on.</value></values>
 </CustomMetadata>

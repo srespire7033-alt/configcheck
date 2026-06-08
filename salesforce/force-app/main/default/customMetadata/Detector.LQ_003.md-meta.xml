@@ -12,4 +12,8 @@
     <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
     <values><field>RequiredSurface__c</field><value xsi:type="xsd:string">SBQQ__ProductRule__c</value></values>
     <values><field>Severity__c</field><value xsi:type="xsd:string">Warning</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: SBQQ__ProductRule__c selection actions whose target product is null.
+Why it matters: The rule fires but acts on nothing — admins think they&apos;ve configured an auto-add or auto-remove, but no product moves. Silent functional failure.
+Suppress a finding: when the rule was intentionally disconnected pending product retirement.
+Disable the detector: only if your product rules don&apos;t use selection actions. Most should leave this on.</value></values>
 </CustomMetadata>

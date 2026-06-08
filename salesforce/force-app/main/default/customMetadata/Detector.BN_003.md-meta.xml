@@ -12,4 +12,8 @@
     <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
     <values><field>RequiredSurface__c</field><value xsi:type="xsd:string">SBQQ__ProductOption__c</value></values>
     <values><field>Severity__c</field><value xsi:type="xsd:string">Warning</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: Bundle hierarchies nested more than 3 levels deep (bundle of bundles of bundles).
+Why it matters: Deep nesting catastrophically slows configurator load times, complicates pricing rule evaluation, and is a leading cause of CPQ governor-limit errors on large quotes. Customers experience 10+ second waits when configuring.
+Suppress a finding: when a complex telecom or industrial bundle genuinely requires deep nesting and the performance impact has been validated as acceptable.
+Disable the detector: only if your business model genuinely requires multi-level bundling (rare). Most orgs should leave this on.</value></values>
 </CustomMetadata>

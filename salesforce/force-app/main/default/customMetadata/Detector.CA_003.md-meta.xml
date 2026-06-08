@@ -12,4 +12,8 @@
     <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
     <values><field>RequiredSurface__c</field><value xsi:type="xsd:string">SBQQ__ConfigurationAttribute__c</value></values>
     <values><field>Severity__c</field><value xsi:type="xsd:string">Warning</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: Multiple SBQQ__ConfigurationAttribute__c records on the same product feature with identical Name values.
+Why it matters: Pricing rules looking up the attribute by name find ambiguous matches — pricing fires inconsistently across quotes. Sales sees the same product priced differently on different days.
+Suppress a finding: when the duplicates intentionally serve different display contexts (e.g. variations across pricebooks) and downstream lookups use a more specific key.
+Disable the detector: only if your org has formal naming-collision handling at the rule layer. Most should leave this on.</value></values>
 </CustomMetadata>

@@ -12,4 +12,8 @@
     <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
     <values><field>RequiredSurface__c</field><value xsi:type="xsd:string">Product2</value></values>
     <values><field>Severity__c</field><value xsi:type="xsd:string">Warning</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: Active products with SBQQ__PricingMethod__c = &apos;PercentOfTotal&apos; that aren&apos;t part of any bundle.
+Why it matters: Percent-of-total products need a parent total to compute against — outside a bundle they have no anchor and price at $0. Customers buy them &quot;for free&quot;.
+Suppress a finding: when the product is intentionally a placeholder pending bundle assignment.
+Disable the detector: only if percent-of-total isn&apos;t used. Most CPQ orgs should leave this on.</value></values>
 </CustomMetadata>

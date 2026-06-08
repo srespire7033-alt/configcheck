@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>LongDescription__c</fullName>
+    <label>Long Description</label>
+    <description>Admin-facing prose for this detector. Four lines: what it finds; why it matters; when to suppress a single finding; when to disable the detector entirely. Distinct from DescriptionTemplate__c which is the per-finding user-facing text.</description>
+    <type>LongTextArea</type>
+    <length>1024</length>
+    <visibleLines>6</visibleLines>
+    <fieldManageability>SubscriberControlled</fieldManageability>
+</CustomField>

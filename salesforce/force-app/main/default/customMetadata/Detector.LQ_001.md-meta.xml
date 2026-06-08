@@ -12,4 +12,8 @@
     <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
     <values><field>RequiredSurface__c</field><value xsi:type="xsd:string">SBQQ__PriceRule__c</value></values>
     <values><field>Severity__c</field><value xsi:type="xsd:string">Critical</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: SBQQ__LookupQuery__c records missing match-field or matching-field configuration.
+Why it matters: A price rule lookup with incomplete config returns no rows — the rule fires but pulls nothing, so the intended pricing logic silently does nothing. Hidden behind &quot;everything looks fine in Setup&quot;.
+Suppress a finding: for placeholders mid-build.
+Disable the detector: only if your rules don&apos;t use SBQQ__LookupQuery__c. Most should leave this on.</value></values>
 </CustomMetadata>

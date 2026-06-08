@@ -12,4 +12,8 @@
     <values><field>Effort__c</field><value xsi:type="xsd:string">high</value></values>
     <values><field>IsActive__c</field><value xsi:type="xsd:boolean">true</value></values>
     <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: Assets marked Terminated mid-contract where no corresponding credit memo or refund exists.
+Why it matters: The customer terminated service but you&apos;re still billing — or you owe them a credit you haven&apos;t issued. Either way, customer satisfaction risk plus AR/revenue misstatement.
+Suppress a finding: when the termination is contractually no-credit (e.g. customer breach).
+Disable the detector: only if your org doesn&apos;t track assets. Most should leave this on.</value></values>
 </CustomMetadata>

@@ -12,4 +12,8 @@
     <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
     <values><field>RequiredSurface__c</field><value xsi:type="xsd:string">RateCard;RateCardEntry</value></values>
     <values><field>Severity__c</field><value xsi:type="xsd:string">Warning</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: Active RateCard records with no RateCardEntry children.
+Why it matters: The rate card applies no pricing — products linked to it default or error. Looks live in setup but pricing is dark.
+Suppress a finding: for newly-created cards pending bulk entry load.
+Disable the detector: leave on.</value></values>
 </CustomMetadata>

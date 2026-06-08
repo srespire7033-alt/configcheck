@@ -12,4 +12,8 @@
     <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
     <values><field>RequiredSurface__c</field><value xsi:type="xsd:string">SBQQ__ProductRule__c</value></values>
     <values><field>Severity__c</field><value xsi:type="xsd:string">Warning</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: Validation/Alert rules where SBQQ__ConditionsMet__c is null or blank.
+Why it matters: The rule fires unpredictably — validation/alert messages either spam every configuration or never fire when expected. Reps either ignore alerts as noise or miss critical errors.
+Suppress a finding: only for rules in active rework with planned correction.
+Disable the detector: only when no validation rules use ConditionsMet. Most should leave this on.</value></values>
 </CustomMetadata>

@@ -12,4 +12,8 @@
     <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
     <values><field>RequiredSurface__c</field><value xsi:type="xsd:string">SBQQ__ApprovalRule__c</value></values>
     <values><field>Severity__c</field><value xsi:type="xsd:string">Warning</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: Multiple active SBQQ__ApprovalRule__c records sharing the same SBQQ__EvaluationOrder__c value.
+Why it matters: When two rules tie on evaluation order, CPQ picks one nondeterministically. The same quote can route to different approvers on different sessions, and audit trails become impossible to defend.
+Suppress a finding: when ties are intentional because the rules apply to mutually-exclusive products/segments and the order doesn&apos;t affect outcomes. Document the segmentation and dismiss.
+Disable the detector: only if your approval flow is entirely on Advanced Approvals chains. Most orgs should leave this on.</value></values>
 </CustomMetadata>

@@ -12,4 +12,8 @@
     <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
     <values><field>RequiredSurface__c</field><value xsi:type="xsd:string">ProductSellingModelOption;ProductSellingModel</value></values>
     <values><field>Severity__c</field><value xsi:type="xsd:string">Warning</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: Active ProductRelatedComponent records pointing to a child product whose selling model is inactive.
+Why it matters: The option appears in the bundle but can&apos;t price — picks fail at configuration time. The bundle UI shows the option but adding it errors.
+Suppress a finding: never — fix the reference.
+Disable the detector: leave on.</value></values>
 </CustomMetadata>

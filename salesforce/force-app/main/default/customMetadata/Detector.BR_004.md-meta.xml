@@ -12,4 +12,8 @@
     <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
     <values><field>RequiredSurface__c</field><value xsi:type="xsd:string">blng__BillingRule__c</value></values>
     <values><field>Severity__c</field><value xsi:type="xsd:string">Warning</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: Multiple blng__BillingRule__c records sharing the same Name value.
+Why it matters: Admins picking a billing rule from a lookup see ambiguous duplicates and frequently assign the wrong one. The mistake doesn&apos;t surface until invoices generate against a different schedule than expected.
+Suppress a finding: when duplicates are intentional copies for different legal entities or currencies and the team has a naming convention to disambiguate at runtime.
+Disable the detector: only if your org uses unique short codes elsewhere and naming collisions are acceptable. Most orgs should leave this on.</value></values>
 </CustomMetadata>

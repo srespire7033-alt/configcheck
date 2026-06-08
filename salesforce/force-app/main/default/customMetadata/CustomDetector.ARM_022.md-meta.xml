@@ -18,4 +18,8 @@
     <values><field>Effort__c</field><value xsi:type="xsd:string">low</value></values>
     <values><field>RecoverabilityScore__c</field><value xsi:type="xsd:double">0.9</value></values>
     <values><field>Severity__c</field><value xsi:type="xsd:string">Warning</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: RateCardEntry records with Price null or zero.
+Why it matters: Entries with no price produce no revenue — products linked to this rate card sell at $0 (or fail to price entirely). Direct margin loss on every line.
+Suppress a finding: when the $0 is genuinely intentional (free tier, sample).
+Disable the detector: leave on.</value></values>
 </CustomMetadata>

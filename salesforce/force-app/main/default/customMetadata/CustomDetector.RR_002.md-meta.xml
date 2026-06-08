@@ -18,4 +18,8 @@
     <values><field>Effort__c</field><value xsi:type="xsd:string">low</value></values>
     <values><field>RecoverabilityScore__c</field><value xsi:type="xsd:double">0.9</value></values>
     <values><field>Severity__c</field><value xsi:type="xsd:string">Warning</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: Active blng__RevenueRecognitionRule__c records with blng__CreateRevenueSchedule__c null.
+Why it matters: Without an explicit Create Revenue Schedule value, revenue may not schedule correctly — recognition either fires immediately when it shouldn&apos;t or never fires when it should. ASC 606 / IFRS 15 risk.
+Suppress a finding: never; set the value explicitly.
+Disable the detector: leave on when using Salesforce Billing rev rec.</value></values>
 </CustomMetadata>

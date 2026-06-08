@@ -12,4 +12,8 @@
     <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
     <values><field>RequiredSurface__c</field><value xsi:type="xsd:string">blng__FinancePeriod__c</value></values>
     <values><field>Severity__c</field><value xsi:type="xsd:string">Info</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: blng__FinancePeriod__c records whose end date is in the past but Status is still Open.
+Why it matters: Backdated postings can drift into prior periods, breaking reporting integrity and prior-period sign-offs. Finance close becomes a moving target.
+Suppress a finding: for periods awaiting a final close pass after late entries.
+Disable the detector: only if your org doesn&apos;t enforce period close discipline. Most should leave this on.</value></values>
 </CustomMetadata>

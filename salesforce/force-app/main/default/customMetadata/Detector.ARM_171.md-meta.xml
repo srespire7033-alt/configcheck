@@ -12,4 +12,8 @@
     <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
     <values><field>RequiredSurface__c</field><value xsi:type="xsd:string">FulfillmentStepDependencyDef</value></values>
     <values><field>Severity__c</field><value xsi:type="xsd:string">Critical</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: FulfillmentStepDependencyDef records with null target step or where step depends on itself.
+Why it matters: Orchestration can&apos;t resolve the dependency graph — fulfillment flows hang or skip steps. Customer&apos;s order activates but provisioning never finishes.
+Suppress a finding: never; fix the references.
+Disable the detector: leave on.</value></values>
 </CustomMetadata>
