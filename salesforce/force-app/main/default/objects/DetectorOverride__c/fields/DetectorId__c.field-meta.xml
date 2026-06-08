@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>DetectorId__c</fullName>
+    <label>Detector Id</label>
+    <description>Detector ID this override targets (e.g. TR-001, ARM-008). Matches Detector__mdt.DetectorId__c.</description>
+    <length>40</length>
+    <required>true</required>
+    <type>Text</type>
+    <unique>false</unique>
+</CustomField>

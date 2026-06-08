@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomObject xmlns="http://soap.sforce.com/2006/04/metadata">
+    <actionOverrides>
+        <actionName>Accept</actionName>
+        <type>Default</type>
+    </actionOverrides>
+    <allowInChatterGroups>false</allowInChatterGroups>
+    <compactLayoutAssignment>SYSTEM</compactLayoutAssignment>
+    <deploymentStatus>Deployed</deploymentStatus>
+    <description>Per-org override of a Detector__mdt or CustomDetector__mdt severity / on-off. Phase 24q — lets a customer mark TR-001 as "Not Applicable" for an org that uses an external tax engine, or demote PBC-001 to Info for an org that doesn't use Salesforce Billing. Scan-time resolution: override wins over catalog default.</description>
+    <enableActivities>false</enableActivities>
+    <enableBulkApi>true</enableBulkApi>
+    <enableFeeds>false</enableFeeds>
+    <enableHistory>false</enableHistory>
+    <enableLicensing>false</enableLicensing>
+    <enableReports>true</enableReports>
+    <enableSearch>true</enableSearch>
+    <enableSharing>true</enableSharing>
+    <enableStreamingApi>true</enableStreamingApi>
+    <externalSharingModel>ControlledByParent</externalSharingModel>
+    <label>Detector Override</label>
+    <nameField>
+        <displayFormat>OVR-{00000}</displayFormat>
+        <label>Override Name</label>
+        <type>AutoNumber</type>
+    </nameField>
+    <pluralLabel>Detector Overrides</pluralLabel>
+    <searchLayouts/>
+    <sharingModel>ControlledByParent</sharingModel>
+    <visibility>Public</visibility>
+</CustomObject>

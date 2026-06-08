@@ -452,6 +452,11 @@ public with sharing class ForensicScanService {
         for (IDetector d : getDetectorsFor(productType, ctx.isRemote())) {
             try {
                 List<DetectorResult> results = d.run(ctx);
+                // Phase 24q — apply per-org overrides before persist:
+                // "Not Applicable" results are dropped, severity is
+                // rewritten when an override is set. No-op for local
+                // scans (connectedOrgId == null).
+                results = DetectorOverrideService.applyOverrides(results, connectedOrgId);
                 for (DetectorResult r : results) {
                     if (isSuppressed(suppressed, r)) continue;
                     findings.add(toFindingRecord(scan.Id, r));
@@ -474,7 +479,10 @@ public with sharing class ForensicScanService {
         // coded detectors. The service is internally try/catch'd per
         // detector so one bad SOQL never tanks the scan.
         try {
-            for (DetectorResult r : CustomDetectorService.runAll(ctx)) {
+            // Phase 24q — overrides apply to CustomDetector results too.
+            List<DetectorResult> customResults = DetectorOverrideService.applyOverrides(
+                CustomDetectorService.runAll(ctx), connectedOrgId);
+            for (DetectorResult r : customResults) {
                 if (isSuppressed(suppressed, r)) continue;
                 findings.add(toFindingRecord(scan.Id, r));
                 totalLeakage += (r.gapUsd != null) ? r.gapUsd : 0;
@@ -557,7 +565,10 @@ public with sharing class ForensicScanService {
         String chunkErr = null;
         for (IDetector d : chunk) {
             try {
-                for (DetectorResult r : d.run(ctx)) {
+                // Phase 24q — per-org overrides applied per chunk.
+                List<DetectorResult> results = DetectorOverrideService.applyOverrides(
+                    d.run(ctx), ctx.connectedOrgId);
+                for (DetectorResult r : results) {
                     if (isSuppressed(suppressed, r)) continue;
                     findings.add(toFindingRecord(scanId, r));
                 }
@@ -602,7 +613,10 @@ public with sharing class ForensicScanService {
 
         // Tier 2 — self-service detectors. May make callouts.
         try {
-            for (DetectorResult r : CustomDetectorService.runAll(ctx)) {
+            // Phase 24q — per-org overrides on CustomDetector results too.
+            List<DetectorResult> customResults = DetectorOverrideService.applyOverrides(
+                CustomDetectorService.runAll(ctx), ctx.connectedOrgId);
+            for (DetectorResult r : customResults) {
                 if (isSuppressed(suppressed, r)) continue;
                 findings.add(toFindingRecord(scanId, r));
             }

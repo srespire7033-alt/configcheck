@@ -1,0 +1,91 @@
+<template>
+  <div class="op-do">
+    <header class="op-do__header">
+      <h2 class="op-do__title">Detector Overrides</h2>
+      <p class="op-do__sub">Tune which detectors fire for this org and at what severity. Catalog default is used until you set an override here.</p>
+    </header>
+
+    <div class="op-do__toolbar">
+      <lightning-input
+        type="search"
+        label="Filter"
+        variant="label-hidden"
+        placeholder="Filter by detector id, label, or category…"
+        value={filter}
+        onchange={handleFilter}
+        class="op-do__filter"
+      ></lightning-input>
+      <lightning-button
+        variant="brand"
+        label={saveLabel}
+        disabled={isSaveDisabled}
+        onclick={handleSave}
+      ></lightning-button>
+    </div>
+
+    <template lwc:if={loading}>
+      <div class="op-do__loading"><lightning-spinner alternative-text="Loading"></lightning-spinner></div>
+    </template>
+
+    <template lwc:elseif={isEmpty}>
+      <div class="op-do__empty">No detectors in catalog. Deploy the Detector__mdt records first.</div>
+    </template>
+
+    <template lwc:else>
+      <table class="op-do__table">
+        <thead>
+          <tr>
+            <th>Detector</th>
+            <th>Category</th>
+            <th>Default</th>
+            <th>Override</th>
+            <th>Active</th>
+            <th>Notes</th>
+          </tr>
+        </thead>
+        <tbody>
+          <template for:each={filteredRows} for:item="r">
+            <tr key={r.detectorId}>
+              <td>
+                <div class="op-do__det-id">{r.detectorId}</div>
+                <div class="op-do__det-label">{r.label}</div>
+              </td>
+              <td><span class="op-do__cat">{r.category}</span></td>
+              <td><span class="op-do__sev">{r.defaultSeverity}</span></td>
+              <td>
+                <lightning-combobox
+                  variant="label-hidden"
+                  label="Override"
+                  data-detector-id={r.detectorId}
+                  value={r.overrideSeverityValue}
+                  options={severityOptions}
+                  onchange={handleSeverityChange}
+                ></lightning-combobox>
+              </td>
+              <td>
+                <lightning-input
+                  type="toggle"
+                  variant="label-hidden"
+                  label="Active"
+                  data-detector-id={r.detectorId}
+                  checked={r.isActiveValue}
+                  onchange={handleActiveChange}
+                ></lightning-input>
+              </td>
+              <td>
+                <lightning-input
+                  variant="label-hidden"
+                  label="Notes"
+                  data-detector-id={r.detectorId}
+                  value={r.notes}
+                  placeholder="Why? (optional)"
+                  onchange={handleNotesChange}
+                ></lightning-input>
+              </td>
+            </tr>
+          </template>
+        </tbody>
+      </table>
+    </template>
+  </div>
+</template>

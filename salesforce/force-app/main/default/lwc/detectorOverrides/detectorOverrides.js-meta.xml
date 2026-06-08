@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<LightningComponentBundle xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>62.0</apiVersion>
+    <isExposed>true</isExposed>
+    <masterLabel>Detector Overrides</masterLabel>
+    <description>Per-org detector severity / on-off configuration for the host org and any connected target orgs.</description>
+    <targets>
+        <target>lightning__AppPage</target>
+        <target>lightning__RecordPage</target>
+        <target>lightning__HomePage</target>
+    </targets>
+    <targetConfigs>
+        <targetConfig targets="lightning__RecordPage">
+            <objects>
+                <object>ConnectedOrg__c</object>
+            </objects>
+        </targetConfig>
+        <targetConfig targets="lightning__AppPage,lightning__HomePage">
+            <property name="connectedOrgId" type="String" label="Connected Org Id" description="Pass an explicit ConnectedOrg__c record id when not on a record page."/>
+        </targetConfig>
+    </targetConfigs>
+</LightningComponentBundle>

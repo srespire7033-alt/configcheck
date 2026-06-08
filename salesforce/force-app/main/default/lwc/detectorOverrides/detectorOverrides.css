@@ -1,0 +1,47 @@
+.op-do {
+  padding: 16px;
+  font-family: var(--op-font-body, 'Salesforce Sans', Arial, sans-serif);
+}
+.op-do__header { margin-bottom: 12px; }
+.op-do__title { margin: 0; font-size: 18px; font-weight: 600; color: #111827; }
+.op-do__sub { margin: 4px 0 0; font-size: 12px; color: #6b7280; }
+.op-do__toolbar {
+  display: flex;
+  gap: 12px;
+  align-items: flex-end;
+  margin-bottom: 12px;
+}
+.op-do__filter { flex: 1; }
+.op-do__loading { padding: 40px; display: flex; justify-content: center; }
+.op-do__empty { padding: 24px; color: #6b7280; font-size: 13px; }
+
+.op-do__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.op-do__table th,
+.op-do__table td {
+  text-align: left;
+  padding: 8px 10px;
+  border-bottom: 1px solid #e5e7eb;
+  vertical-align: middle;
+}
+.op-do__table th {
+  font-weight: 600;
+  color: #374151;
+  background: #f9fafb;
+  position: sticky;
+  top: 0;
+}
+.op-do__det-id { font-weight: 600; color: #111827; }
+.op-do__det-label { color: #6b7280; font-size: 11px; }
+.op-do__cat,
+.op-do__sev {
+  display: inline-block;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: #f3f4f6;
+  color: #374151;
+  font-size: 11px;
+}
