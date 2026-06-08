@@ -225,7 +225,7 @@ public with sharing class DetectorCatalogController {
             SELECT DeveloperName, DetectorId__c, Label__c, Category__c, AppliesTo__c,
                    CriticalThresholdUsd__c, WarningThresholdUsd__c,
                    RecoverabilityScore__c, Effort__c, IsActive__c, Version__c,
-                   RequiredSurface__c, Severity__c, LongDescription__c
+                   RequiredSurface__c, Severity__c, LongDescription__c, ActionHeadline__c
             FROM Detector__mdt
         ]) {
             if (String.isNotBlank(m.DetectorId__c)) cache.put(m.DetectorId__c, m);

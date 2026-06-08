@@ -16,4 +16,5 @@
 Why it matters: The product can&apos;t be added to opportunities or quotes — sales tries to add it and gets a &quot;not on this pricebook&quot; error. Looks active in the catalog but is unsellable.
 Suppress a finding: for products intentionally restricted from sale (asset-only, internal-use SKUs).
 Disable the detector: only if your org uses contracted prices or rate cards exclusively. Most CPQ orgs should leave this on.</value></values>
+    <values><field>ActionHeadline__c</field><value xsi:type="xsd:string">Add PricebookEntry for {N} active products</value></values>
 </CustomMetadata>

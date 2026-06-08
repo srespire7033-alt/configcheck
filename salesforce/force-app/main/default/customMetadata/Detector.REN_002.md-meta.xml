@@ -16,4 +16,5 @@
 Why it matters: Renewals at less than current list silently lock in below-market pricing for another full term. Compounds across many customers into significant ARR drag.
 Suppress a finding: when the below-list price reflects an approved strategic discount.
 Disable the detector: only if discounts at renewal are expected default. Most should leave this on.</value></values>
+    <values><field>ActionHeadline__c</field><value xsi:type="xsd:string">Review {N} renewals priced below list</value></values>
 </CustomMetadata>

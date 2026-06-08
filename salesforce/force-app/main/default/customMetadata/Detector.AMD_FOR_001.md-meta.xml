@@ -16,4 +16,5 @@
 Why it matters: The amendment has no clear start — subscription proration calculates against the wrong baseline, billing schedules drift, and the customer&apos;s invoice for the amendment period comes out wrong. Quiet revenue leakage on every amended deal.
 Suppress a finding: when the amendment is genuinely effective immediately and the team has documented that convention.
 Disable the detector: only if your org doesn&apos;t use CPQ amendments. Most should leave this on.</value></values>
+    <values><field>ActionHeadline__c</field><value xsi:type="xsd:string">Set effective dates on {N} amendments</value></values>
 </CustomMetadata>

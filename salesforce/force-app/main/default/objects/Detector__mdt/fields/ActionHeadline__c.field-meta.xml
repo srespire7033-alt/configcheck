@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>ActionHeadline__c</fullName>
+    <label>Action Headline</label>
+    <description>Imperative one-line used on the Top Issues card instead of the per-record finding title. "Set tax rules on {N} active products" reads as a directive; the per-record title "Product 'Creativity Suite' missing tax rule" reads as a description. {N} interpolates to the affected count at render time. Leave blank to fall back to the existing per-record title.</description>
+    <type>Text</type>
+    <length>120</length>
+    <fieldManageability>SubscriberControlled</fieldManageability>
+</CustomField>

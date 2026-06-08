@@ -16,4 +16,5 @@
 Why it matters: Tax calculation falls back to defaults or fails entirely — you either under-charge tax (audit exposure) or block invoice generation. Customers see wrong tax lines on first invoice.
 Suppress a finding: during a planned rule cutover.
 Disable the detector: only if you don&apos;t use Salesforce Billing tax. Most should leave this on.</value></values>
+    <values><field>ActionHeadline__c</field><value xsi:type="xsd:string">Activate or reassign tax rules for {N} active products</value></values>
 </CustomMetadata>

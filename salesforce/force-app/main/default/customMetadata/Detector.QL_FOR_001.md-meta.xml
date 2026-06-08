@@ -17,4 +17,5 @@ Why it matters: Required components shipped at $0 — the bundle was sold withou
 Suppress a finding: when the option is intentionally inclusive (bundled in the parent&apos;s price by design).
 Disable the detector: only if your bundle pricing intentionally zeroes required components. Most should leave this on.</value></values>
     <values><field>Severity__c</field><value xsi:type="xsd:string">Critical</value></values>
+    <values><field>ActionHeadline__c</field><value xsi:type="xsd:string">Set prices on {N} required bundle options</value></values>
 </CustomMetadata>

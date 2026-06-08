@@ -16,4 +16,5 @@
 Why it matters: Roll-up reports and product grouping by family lose data — pipeline reports show the customer-facing products but miss the family categorization that finance uses for revenue segmentation.
 Suppress a finding: for products intentionally without a family classification.
 Disable the detector: only when Family isn&apos;t used. Most should leave this on.</value></values>
+    <values><field>ActionHeadline__c</field><value xsi:type="xsd:string">Set Family on {N} active products</value></values>
 </CustomMetadata>

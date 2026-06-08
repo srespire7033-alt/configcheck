@@ -16,4 +16,5 @@
 Why it matters: Quote PDFs render blank product lines, AppExchange product browsers show no detail, AI-summary tools (and the salesperson reading the quote) have no context to explain what the customer is buying. Hurts deal close rates and reflects poorly in customer-facing docs.
 Suppress a finding: for internal-only SKUs (cost-allocation products, license-management dummy SKUs) that never appear on a customer quote. Note the internal-use reason and dismiss.
 Disable the detector: only if your org sells highly-templated SKUs where Description is intentionally derived from another field, or if every sales motion is verbal/in-person and PDFs are never used.</value></values>
+    <values><field>ActionHeadline__c</field><value xsi:type="xsd:string">Add descriptions to {N} active products</value></values>
 </CustomMetadata>

@@ -16,4 +16,5 @@
 Why it matters: A won deal with no quote can&apos;t generate a contract, subscription, or invoice — revenue is recognized in CRM but never moves to billing. Common after manual won-deal updates that bypass the quote-to-order flow.
 Suppress a finding: when the deal closes outside CPQ (e.g. legacy contract migration).
 Disable the detector: only if quotes are intentionally optional. Most should leave this on.</value></values>
+    <values><field>ActionHeadline__c</field><value xsi:type="xsd:string">Review {N} opportunities with governance gaps</value></values>
 </CustomMetadata>

@@ -16,4 +16,5 @@
 Why it matters: Direct renewal-year revenue leakage — pricing uplift the contract calls for didn&apos;t apply, and you&apos;re billing the customer at the old rate. Often caused by missing or misconfigured renewal rules.
 Suppress a finding: when a contract explicitly waives uplift (multi-year fixed price). Document the contract clause.
 Disable the detector: only if your renewal pricing is intentionally flat. Most should leave this on.</value></values>
+    <values><field>ActionHeadline__c</field><value xsi:type="xsd:string">Reconcile uplift on {N} renewal quotes</value></values>
 </CustomMetadata>

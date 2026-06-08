@@ -16,4 +16,5 @@
 Why it matters: Billing entries posted against this treatment cannot route to a GL account, so revenue, AR, and deferred-revenue postings either fail silently or land in the org&apos;s default suspense account. Month-end close shows unmapped entries that finance has to chase down manually.
 Suppress a finding: when a treatment is intentionally a holding placeholder (e.g. mid-migration cutover from one GL framework to another). Note the cutover date and dismiss.
 Disable the detector: only if your org uses Billing without integrated GL routing — rare; most orgs that use Billing post to GL.</value></values>
+    <values><field>ActionHeadline__c</field><value xsi:type="xsd:string">Map GL accounts on {N} active GL treatments</value></values>
 </CustomMetadata>

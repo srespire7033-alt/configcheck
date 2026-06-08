@@ -335,7 +335,18 @@ public with sharing class IssuesController {
             g.relatedCount = members.size();
             g.totalGapUsd = gapByCat.containsKey(cat) ? gapByCat.get(cat) : 0;
             g.primaryFindingId = members.isEmpty() ? null : members[0].id;
-            g.headlineTitle = members[0].title;
+            // Phase 24y-C — prefer the detector-level imperative when
+            // the catalog defines one. "Set tax rules on 17 active
+            // products" reads as a directive vs the per-record
+            // diagnostic title. {N} interpolates affectedCount.
+            String actionHeadline = null;
+            if (!members.isEmpty() && members[0].detectorId != null) {
+                Detector__mdt det = DetectorCatalogController.getRecord(members[0].detectorId);
+                if (det != null && String.isNotBlank(det.ActionHeadline__c)) {
+                    actionHeadline = det.ActionHeadline__c.replace('{N}', String.valueOf(totalAffected));
+                }
+            }
+            g.headlineTitle = actionHeadline != null ? actionHeadline : members[0].title;
             g.headlineDescription = members[0].description;
             g.members = members;
             // Phase 24y-B — trend counts.

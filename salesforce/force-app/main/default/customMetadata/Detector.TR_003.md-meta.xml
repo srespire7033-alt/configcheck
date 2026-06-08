@@ -16,4 +16,5 @@
 Why it matters: Products using this rule don&apos;t have tax applied — you under-charge tax (audit exposure) and customers may dispute later true-ups when the error is caught.
 Suppress a finding: for rules genuinely covering tax-exempt scenarios.
 Disable the detector: only if tax exemption is the norm in your business. Most should leave this on.</value></values>
+    <values><field>ActionHeadline__c</field><value xsi:type="xsd:string">Set Taxable=Yes on {N} active tax rules</value></values>
 </CustomMetadata>

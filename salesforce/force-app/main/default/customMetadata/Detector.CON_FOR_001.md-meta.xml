@@ -16,4 +16,5 @@
 Why it matters: The contract is technically live but has no active subscriptions producing revenue — likely a missed expiration or renewal. Hidden churn.
 Suppress a finding: when a renewal is mid-flight and the gap is expected.
 Disable the detector: only if your model permits dormant contracts. Most should leave this on.</value></values>
+    <values><field>ActionHeadline__c</field><value xsi:type="xsd:string">Review {N} contracts with governance gaps</value></values>
 </CustomMetadata>

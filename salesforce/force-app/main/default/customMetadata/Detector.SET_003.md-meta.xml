@@ -16,4 +16,5 @@
 Why it matters: Renewal generation falls back to an unspecified default that may not match your business model — renewal quotes generate with wrong structures, wrong pricing references, or fail entirely.
 Suppress a finding: only during a controlled migration between renewal models.
 Disable the detector: leave on for any org using CPQ renewals.</value></values>
+    <values><field>ActionHeadline__c</field><value xsi:type="xsd:string">Configure CPQ Renewal Model</value></values>
 </CustomMetadata>

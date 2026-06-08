@@ -16,4 +16,5 @@
 Why it matters: The default template can&apos;t be used because it&apos;s not deployed — reps trying to generate the standard quote PDF either error or fall back to nothing. Operational stop on customer-facing documents.
 Suppress a finding: never; deploy the template.
 Disable the detector: leave on.</value></values>
+    <values><field>ActionHeadline__c</field><value xsi:type="xsd:string">Promote {N} default templates to Deployed</value></values>
 </CustomMetadata>

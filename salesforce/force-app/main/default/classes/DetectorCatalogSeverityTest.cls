@@ -3,12 +3,16 @@ private class DetectorCatalogSeverityTest {
 
     @isTest
     static void getSeverity_returnsCatalogValueWhenSet() {
-        // Phase 24a backfilled the catalog from Vercel. TR-001 is Critical.
+        // Phase 24a backfilled severity from Vercel. Phase 24p demoted
+        // TR-001 from Critical to Warning (it's a config-state issue,
+        // not an active workflow block — orgs using external tax
+        // engines have null tax rules by design). Test now asserts
+        // we pick up Warning from the catalog over the Info fallback.
         Test.startTest();
         String sev = DetectorCatalogController.getSeverity('TR-001', 'Info');
         Test.stopTest();
-        System.assertEquals('Critical', sev,
-            'TR-001 should pick up Critical from catalog, not the Info fallback');
+        System.assertEquals('Warning', sev,
+            'TR-001 should pick up Warning from catalog, not the Info fallback');
     }
 
     @isTest

@@ -17,4 +17,5 @@ Why it matters: Reps stack discounts past approval thresholds — margin disappe
 Suppress a finding: for executive-approved strategic deals where the cap was waived.
 Disable the detector: only if your org has no discount cap policy. Most should leave this on.</value></values>
     <values><field>Severity__c</field><value xsi:type="xsd:string">Critical</value></values>
+    <values><field>ActionHeadline__c</field><value xsi:type="xsd:string">Review {N} quotes exceeding discount cap</value></values>
 </CustomMetadata>

@@ -17,4 +17,5 @@ Why it matters: The customer pays the promo price after the promo period — dir
 Suppress a finding: when the customer has a documented promo extension.
 Disable the detector: only if promos don&apos;t expire in your model. Most should leave this on.</value></values>
     <values><field>Severity__c</field><value xsi:type="xsd:string">Critical</value></values>
+    <values><field>ActionHeadline__c</field><value xsi:type="xsd:string">Roll off promo discounts on {N} active subscriptions</value></values>
 </CustomMetadata>

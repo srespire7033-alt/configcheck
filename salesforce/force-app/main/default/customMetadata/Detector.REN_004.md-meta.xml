@@ -16,4 +16,5 @@
 Why it matters: A draft renewal past contract end means no active subscription, no recognized revenue, and a customer technically out-of-contract. Operational and revenue risk simultaneously.
 Suppress a finding: when a documented customer pause / renegotiation is in flight.
 Disable the detector: only when draft renewals past contract end are expected. Most should leave this on.</value></values>
+    <values><field>ActionHeadline__c</field><value xsi:type="xsd:string">Activate {N} stuck draft renewals</value></values>
 </CustomMetadata>

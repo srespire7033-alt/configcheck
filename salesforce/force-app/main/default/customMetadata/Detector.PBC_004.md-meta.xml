@@ -16,4 +16,5 @@
 Why it matters: CPQ can&apos;t determine the billing cadence — invoicing falls back to defaults that may not match the customer&apos;s contract. Subscription products may invoice once instead of monthly.
 Suppress a finding: for internal-only SKUs (cost allocation, license placeholders).
 Disable the detector: only if your charge type lives in a custom field. Most should leave this on.</value></values>
+    <values><field>ActionHeadline__c</field><value xsi:type="xsd:string">Assign rev rec treatment to {N} active products</value></values>
 </CustomMetadata>

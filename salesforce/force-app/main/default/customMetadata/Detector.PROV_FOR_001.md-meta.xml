@@ -16,4 +16,5 @@
 Why it matters: You&apos;re delivering service the customer isn&apos;t being billed for. Pure revenue leakage that compounds every billing cycle the asset stays live.
 Suppress a finding: when the provisioning is genuinely free (pilot, sample).
 Disable the detector: only if asset-to-billing alignment is intentional disconnected. Most should leave this on.</value></values>
+    <values><field>ActionHeadline__c</field><value xsi:type="xsd:string">Provision {N} active subscriptions missing assets</value></values>
 </CustomMetadata>

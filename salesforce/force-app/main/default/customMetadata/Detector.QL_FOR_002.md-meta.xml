@@ -16,4 +16,5 @@
 Why it matters: Either the approval matrix has a gap, or someone bypassed it. Either way, deals are closing without the controls finance and legal expected to exist.
 Suppress a finding: for documented executive overrides.
 Disable the detector: only if you don&apos;t use formal approval thresholds. Most should leave this on.</value></values>
+    <values><field>ActionHeadline__c</field><value xsi:type="xsd:string">Review {N} quote lines that skipped approval</value></values>
 </CustomMetadata>

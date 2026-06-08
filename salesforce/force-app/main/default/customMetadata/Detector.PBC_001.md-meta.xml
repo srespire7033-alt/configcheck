@@ -16,4 +16,5 @@
 Why it matters: Active products without a billing rule can&apos;t generate invoices — sales sells them, the order activates, but no bill ever comes out. Pure revenue stop on every unit sold.
 Suppress a finding: for products intentionally non-billable (free samples, internal cost allocations).
 Disable the detector: only when products without billing rules are normal. Most billing orgs should leave this on.</value></values>
+    <values><field>ActionHeadline__c</field><value xsi:type="xsd:string">Assign billing rules to {N} active products</value></values>
 </CustomMetadata>

@@ -16,4 +16,5 @@
 Why it matters: Tax can&apos;t be computed on quote lines or invoices for these products. You either under-bill (no tax collected, exposure on audit) or block invoicing — and the customer experiences a tax-line surprise on the first invoice.
 Suppress a finding: for genuinely tax-exempt SKUs where blng__TaxableYesNo__c is set to No.
 Disable the detector: only if your business model is 100% tax-exempt. Most should leave this on.</value></values>
+    <values><field>ActionHeadline__c</field><value xsi:type="xsd:string">Set tax rules on {N} active products</value></values>
 </CustomMetadata>

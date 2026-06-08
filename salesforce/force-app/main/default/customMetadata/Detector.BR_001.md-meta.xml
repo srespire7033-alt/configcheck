@@ -16,4 +16,5 @@
 Why it matters: Invoices for these products fail to generate or generate with the wrong cadence. Either you don&apos;t bill the customer (lost revenue) or you bill on the wrong schedule (customer dispute and AR cleanup).
 Suppress a finding: for products in a planned cutover from one billing rule to another, where the inactive rule is the old one and the new rule is pending deployment.
 Disable the detector: only if your org doesn&apos;t use Salesforce Billing. Most billing customers should leave this on.</value></values>
+    <values><field>ActionHeadline__c</field><value xsi:type="xsd:string">Activate or reassign billing rules for {N} active products</value></values>
 </CustomMetadata>

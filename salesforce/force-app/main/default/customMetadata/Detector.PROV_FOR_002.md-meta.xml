@@ -16,4 +16,5 @@
 Why it matters: The subscription is billing but the org has no Asset record — provisioning, renewal, and amendment flows all depend on Asset. Missing Assets mean broken renewal lookups and asset-based pricing failures.
 Suppress a finding: for subscriptions intentionally tracked without Assets.
 Disable the detector: only if your model doesn&apos;t use Assets. Most should leave this on.</value></values>
+    <values><field>ActionHeadline__c</field><value xsi:type="xsd:string">Provision assets for {N} active subscriptions</value></values>
 </CustomMetadata>

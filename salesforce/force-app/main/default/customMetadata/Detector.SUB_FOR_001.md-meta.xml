@@ -16,4 +16,5 @@
 Why it matters: Subscription quantities silently changed mid-term — the customer is paying for a different amount than the contract says. Usually data-load or integration drift.
 Suppress a finding: when a documented manual adjustment exists.
 Disable the detector: only if quantity drift is normal in your operations. Most should leave this on.</value></values>
+    <values><field>ActionHeadline__c</field><value xsi:type="xsd:string">Resolve {N} subscription gaps</value></values>
 </CustomMetadata>

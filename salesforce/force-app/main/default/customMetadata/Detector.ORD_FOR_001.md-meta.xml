@@ -16,4 +16,5 @@
 Why it matters: The order is live but no schedule means no invoices generate — silent revenue stoppage. Often caused by missing billing rule on a product within the order.
 Suppress a finding: when the order is intentionally non-billable (free pilot, demo).
 Disable the detector: only if you don&apos;t use Salesforce Billing. Most should leave this on.</value></values>
+    <values><field>ActionHeadline__c</field><value xsi:type="xsd:string">Generate billing schedules for {N} activated orders</value></values>
 </CustomMetadata>

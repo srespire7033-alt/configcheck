@@ -16,4 +16,5 @@
 Why it matters: Without a rev rec rule, revenue can&apos;t recognize on the proper schedule — it either recognizes immediately (wrong for subscription products) or never (wrong for one-time fees). ASC 606 / IFRS 15 compliance breaks on every affected sale.
 Suppress a finding: for products intentionally outside rev rec (free, internal).
 Disable the detector: only when rev rec is intentionally manual. Most should leave this on.</value></values>
+    <values><field>ActionHeadline__c</field><value xsi:type="xsd:string">Assign revenue recognition rules to {N} active products</value></values>
 </CustomMetadata>

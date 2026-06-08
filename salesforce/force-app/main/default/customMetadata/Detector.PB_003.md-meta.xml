@@ -16,4 +16,5 @@
 Why it matters: SKU-based integrations (ERP, fulfillment, inventory) can&apos;t reference the product — orders activate but downstream systems can&apos;t process them. Reports grouped by product code show gaps.
 Suppress a finding: for products intentionally identified by ID only (one-of-a-kind custom items).
 Disable the detector: only when ProductCode isn&apos;t used in your stack. Most should leave this on.</value></values>
+    <values><field>ActionHeadline__c</field><value xsi:type="xsd:string">Set ProductCode on {N} active products</value></values>
 </CustomMetadata>

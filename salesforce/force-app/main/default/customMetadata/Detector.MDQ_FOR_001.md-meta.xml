@@ -16,4 +16,5 @@
 Why it matters: MDQ pricing inconsistencies mean year-2 of a contract bills at a lower rate than year-1 with no business justification. Customer-facing surprise and revenue loss.
 Suppress a finding: when the swing reflects a documented ramped or step-down deal structure.
 Disable the detector: only if your org doesn&apos;t use MDQ. Most should leave this on.</value></values>
+    <values><field>ActionHeadline__c</field><value xsi:type="xsd:string">Align MDQ segment pricing on {N} subscriptions</value></values>
 </CustomMetadata>

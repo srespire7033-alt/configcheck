@@ -16,4 +16,5 @@
 Why it matters: Revenue billed against this rule won&apos;t post to the general ledger. Month-end close shows unposted entries that finance has to chase down manually, and revenue recognition lags reality.
 Suppress a finding: when the rule is intentionally limited to non-GL billing (e.g. internal allocations).
 Disable the detector: only if your org doesn&apos;t post Billing to GL. Most should leave this on.</value></values>
+    <values><field>ActionHeadline__c</field><value xsi:type="xsd:string">Add GL treatments to {N} active billing rules</value></values>
 </CustomMetadata>

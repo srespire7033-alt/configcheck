@@ -17,4 +17,5 @@ Why it matters: What sales sold and what billing invoices differ — customers d
 Suppress a finding: when the divergence reflects an approved post-quote adjustment.
 Disable the detector: only if Q↔O variance is expected. Most should leave this on.</value></values>
     <values><field>Severity__c</field><value xsi:type="xsd:string">Critical</value></values>
+    <values><field>ActionHeadline__c</field><value xsi:type="xsd:string">Reconcile {N} new-business quotes with orders</value></values>
 </CustomMetadata>
