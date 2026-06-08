@@ -78,7 +78,7 @@ public with sharing class ArmBillingPolicyChecksBundle implements IDetector {
         }
         if (bad.isEmpty()) return new List<DetectorResult>();
         DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'ARM-192'; dr.severity = 'Critical'; dr.gapUsd = 0; dr.recoverabilityScore = 0.95;
+        dr.detectorId = 'ARM-192'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Critical'); dr.gapUsd = 0; dr.recoverabilityScore = 0.95;
         dr.title = bad.size() + ' active milestone plan(s) with no items or inactive default treatment';
         dr.description = 'Milestone plans must have at least one item AND an Active DefaultBillingTreatment.';
         dr.primaryRecord = bad[0];
@@ -106,7 +106,7 @@ public with sharing class ArmBillingPolicyChecksBundle implements IDetector {
         }
         if (bad.isEmpty()) return new List<DetectorResult>();
         DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'ARM-190'; dr.severity = 'Critical'; dr.gapUsd = 0; dr.recoverabilityScore = 0.95;
+        dr.detectorId = 'ARM-190'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Critical'); dr.gapUsd = 0; dr.recoverabilityScore = 0.95;
         dr.title = bad.size() + ' active billing polic(ies) without active default treatment';
         dr.description = 'Default-selection policies need an active DefaultBillingTreatment.';
         dr.primaryRecord = bad[0];
@@ -129,7 +129,7 @@ public with sharing class ArmBillingPolicyChecksBundle implements IDetector {
         }
         if (bad.isEmpty()) return new List<DetectorResult>();
         DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'ARM-191'; dr.severity = 'Critical'; dr.gapUsd = 0; dr.recoverabilityScore = 0.95;
+        dr.detectorId = 'ARM-191'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Critical'); dr.gapUsd = 0; dr.recoverabilityScore = 0.95;
         dr.title = bad.size() + ' active billing arrangement(s) without lines';
         dr.description = 'Arrangements without lines cannot generate invoices.';
         dr.primaryRecord = bad[0];
@@ -147,7 +147,7 @@ public with sharing class ArmBillingPolicyChecksBundle implements IDetector {
         }
         if (orgDefaults.size() <= 1) return new List<DetectorResult>();
         DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'ARM-193'; dr.severity = 'Critical'; dr.gapUsd = 0; dr.recoverabilityScore = 0.95;
+        dr.detectorId = 'ARM-193'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Critical'); dr.gapUsd = 0; dr.recoverabilityScore = 0.95;
         dr.title = orgDefaults.size() + ' active org-default payment retry rule sets';
         dr.description = 'Only one PaymentRetryRuleSet should be both Active and IsOrgDefault.';
         dr.primaryRecord = new SourceRecord('PaymentRetryRuleSet', (Id) orgDefaults[0].get('Id'),

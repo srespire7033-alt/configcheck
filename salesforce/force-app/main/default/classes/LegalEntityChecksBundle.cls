@@ -54,7 +54,7 @@ public with sharing class LegalEntityChecksBundle implements IDetector {
     static List<DetectorResult> evaluateLE001(List<Map<String, Object>> rows) {
         if (!rows.isEmpty()) return new List<DetectorResult>();
         DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'LE-001'; dr.severity = 'Critical'; dr.gapUsd = 0; dr.recoverabilityScore = 0.95;
+        dr.detectorId = 'LE-001'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Critical'); dr.gapUsd = 0; dr.recoverabilityScore = 0.95;
         dr.title = 'No legal entity defined';
         dr.description = 'No legal entities found in this org. Required for invoice generation and tax compliance.';
         return new List<DetectorResult>{ dr };
@@ -72,7 +72,7 @@ public with sharing class LegalEntityChecksBundle implements IDetector {
         }
         if (bad.isEmpty()) return new List<DetectorResult>();
         DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'LE-002'; dr.severity = 'Warning'; dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
+        dr.detectorId = 'LE-002'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Warning'); dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
         dr.title = 'Legal entities with incomplete address';
         dr.description = bad.size() + ' active legal entity(ies) missing street, city, or country.';
         dr.primaryRecord = bad[0];
@@ -85,7 +85,7 @@ public with sharing class LegalEntityChecksBundle implements IDetector {
         if (rows.isEmpty()) return new List<DetectorResult>(); // LE-001 covers this
         for (Map<String, Object> le : rows) if (isActive(le)) return new List<DetectorResult>();
         DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'LE-003'; dr.severity = 'Critical'; dr.gapUsd = 0; dr.recoverabilityScore = 0.95;
+        dr.detectorId = 'LE-003'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Critical'); dr.gapUsd = 0; dr.recoverabilityScore = 0.95;
         dr.title = 'All legal entities are inactive';
         dr.description = 'All ' + rows.size() + ' legal entity(ies) in this org are inactive. At least one must be active.';
         dr.primaryRecord = ref(rows[0]);
@@ -102,7 +102,7 @@ public with sharing class LegalEntityChecksBundle implements IDetector {
         Integer sampleCap = Math.min(5, actives.size());
         for (Integer i = 0; i < sampleCap; i++) sample.add('"' + (String) actives[i].get('Name') + '"');
         DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'LE-004'; dr.severity = 'Info'; dr.gapUsd = 0; dr.recoverabilityScore = 1.0;
+        dr.detectorId = 'LE-004'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Info'); dr.gapUsd = 0; dr.recoverabilityScore = 1.0;
         dr.title = actives.size() + ' active legal entities';
         dr.description = 'This org has ' + actives.size() + ' active legal entities: ' + String.join(sample, ', ') +
             (actives.size() > 5 ? ' and ' + (actives.size() - 5) + ' more.' : '.');

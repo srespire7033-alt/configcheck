@@ -142,7 +142,7 @@ public with sharing class CON001NoActiveSubsDetector implements IDetector {
 
         DetectorResult r = new DetectorResult();
         r.detectorId = 'CON-FOR-001';
-        r.severity = 'Warning';
+        r.severity = DetectorCatalogController.getSeverity(r.detectorId, 'Warning');
         r.entitledUsd = 0;
         r.realizedUsd = 0;
         r.computeGap();

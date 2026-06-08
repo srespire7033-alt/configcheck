@@ -72,7 +72,7 @@ public with sharing class CustomScriptChecksBundle implements IDetector {
             if (!String.isBlank(code(s))) continue;
             String type = s.containsKey('SBQQ__Type__c') ? String.valueOf(s.get('SBQQ__Type__c')) : 'Unknown';
             DetectorResult dr = new DetectorResult();
-            dr.detectorId = 'QCP-001'; dr.severity = 'Critical'; dr.gapUsd = 0; dr.recoverabilityScore = 1.0;
+            dr.detectorId = 'QCP-001'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Critical'); dr.gapUsd = 0; dr.recoverabilityScore = 1.0;
             dr.title = 'Custom script "' + (String) s.get('Name') + '" has no code';
             dr.description = '"' + (String) s.get('Name') + '" (Type: ' + (type == null ? 'Unknown' : type) + ') exists but contains no code.';
             dr.primaryRecord = ref(s);
@@ -90,7 +90,7 @@ public with sharing class CustomScriptChecksBundle implements IDetector {
             Object t = s.get('SBQQ__TranspiledCode__c');
             if (t != null && !String.isBlank(String.valueOf(t))) continue;
             DetectorResult dr = new DetectorResult();
-            dr.detectorId = 'QCP-002'; dr.severity = 'Warning'; dr.gapUsd = 0; dr.recoverabilityScore = 0.95;
+            dr.detectorId = 'QCP-002'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Warning'); dr.gapUsd = 0; dr.recoverabilityScore = 0.95;
             dr.title = 'Custom script "' + (String) s.get('Name') + '" missing transpiled code';
             dr.description = '"' + (String) s.get('Name') + '" has source code but no transpiled version. CPQ may not be able to execute it.';
             dr.primaryRecord = ref(s);
@@ -117,7 +117,7 @@ public with sharing class CustomScriptChecksBundle implements IDetector {
             if (consoles > 5) warnings.add(consoles + ' console statements — debug code left in production');
             if (warnings.isEmpty()) continue;
             DetectorResult dr = new DetectorResult();
-            dr.detectorId = 'QCP-003'; dr.severity = 'Warning'; dr.gapUsd = 0; dr.recoverabilityScore = 0.85;
+            dr.detectorId = 'QCP-003'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Warning'); dr.gapUsd = 0; dr.recoverabilityScore = 0.85;
             dr.title = 'Performance concerns in "' + (String) s.get('Name') + '"';
             dr.description = '"' + (String) s.get('Name') + '" has potential performance issues: ' + String.join(warnings, '; ') + '.';
             dr.primaryRecord = ref(s);
@@ -144,7 +144,7 @@ public with sharing class CustomScriptChecksBundle implements IDetector {
         List<String> names = new List<String>();
         for (Map<String, Object> s : qcps) names.add('"' + (String) s.get('Name') + '"');
         DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'QCP-004'; dr.severity = 'Info'; dr.gapUsd = 0; dr.recoverabilityScore = 1.0;
+        dr.detectorId = 'QCP-004'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Info'); dr.gapUsd = 0; dr.recoverabilityScore = 1.0;
         dr.title = qcps.size() + ' Quote Calculator Plugin scripts found';
         dr.description = 'There are ' + qcps.size() + ' QCP script records: ' + String.join(names, ', ') +
             '. CPQ only uses one active QCP — multiple records create confusion about which code is running.';

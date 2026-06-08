@@ -92,7 +92,7 @@ public with sharing class DiscountScheduleChecksBundle implements IDetector {
                     if (aLo < bHi && bLo < aHi) {
                         DetectorResult r = new DetectorResult();
                         r.detectorId = 'DS-001';
-                        r.severity = 'Critical';
+                        r.severity = DetectorCatalogController.getSeverity(r.detectorId, 'Critical');
                         r.gapUsd = 0;
                         r.recoverabilityScore = 0.9;
                         r.title = 'Overlapping discount tiers in "' + (String) sched.get('Name') + '"';
@@ -127,7 +127,7 @@ public with sharing class DiscountScheduleChecksBundle implements IDetector {
                 if (curHi >= nextLo) continue;
                 DetectorResult r = new DetectorResult();
                 r.detectorId = 'DS-002';
-                r.severity = 'Warning';
+                r.severity = DetectorCatalogController.getSeverity(r.detectorId, 'Warning');
                 r.gapUsd = 0;
                 r.recoverabilityScore = 0.9;
                 r.title = 'Discount tier gap in "' + (String) sched.get('Name') + '"';
@@ -153,7 +153,7 @@ public with sharing class DiscountScheduleChecksBundle implements IDetector {
                 if (d == null || d >= 0) continue;
                 DetectorResult r = new DetectorResult();
                 r.detectorId = 'DS-003';
-                r.severity = 'Warning';
+                r.severity = DetectorCatalogController.getSeverity(r.detectorId, 'Warning');
                 r.gapUsd = 0;
                 r.recoverabilityScore = 0.95;
                 r.title = 'Negative discount in "' + (String) sched.get('Name') + '"';
@@ -180,7 +180,7 @@ public with sharing class DiscountScheduleChecksBundle implements IDetector {
         for (SourceRecord sr : empties) names.add('"' + sr.name + '"');
         DetectorResult r = new DetectorResult();
         r.detectorId = 'DS-004';
-        r.severity = 'Info';
+        r.severity = DetectorCatalogController.getSeverity(r.detectorId, 'Info');
         r.gapUsd = 0;
         r.recoverabilityScore = 1.0;
         r.title = empties.size() + ' discount schedule(s) with no tiers';

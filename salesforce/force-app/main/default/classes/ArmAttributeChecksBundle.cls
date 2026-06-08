@@ -77,7 +77,7 @@ public with sharing class ArmAttributeChecksBundle implements IDetector {
         }
         if (bad.isEmpty()) return new List<DetectorResult>();
         DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'ARM-004'; dr.severity = 'Warning'; dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
+        dr.detectorId = 'ARM-004'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Warning'); dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
         dr.title = bad.size() + ' attribute rule(s) without effective dates';
         dr.description = 'Rules without effective dates fire indefinitely — silent revenue leakage risk.';
         dr.primaryRecord = bad[0];
@@ -102,7 +102,7 @@ public with sharing class ArmAttributeChecksBundle implements IDetector {
         }
         if (bad.isEmpty()) return new List<DetectorResult>();
         DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'ARM-024'; dr.severity = 'Critical'; dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
+        dr.detectorId = 'ARM-024'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Critical'); dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
         dr.title = bad.size() + ' picklist attribute(s) with no values';
         dr.description = 'Picklist attributes without AttributePicklistValue rows cannot be selected at runtime.';
         dr.primaryRecord = bad[0];
@@ -122,7 +122,7 @@ public with sharing class ArmAttributeChecksBundle implements IDetector {
         }
         if (bad.isEmpty()) return new List<DetectorResult>();
         DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'ARM-025'; dr.severity = 'Warning'; dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
+        dr.detectorId = 'ARM-025'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Warning'); dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
         dr.title = bad.size() + ' required attribute(s) without default value';
         dr.description = 'Required attributes should have a default to avoid blocking sales reps.';
         dr.primaryRecord = bad[0];
@@ -144,7 +144,7 @@ public with sharing class ArmAttributeChecksBundle implements IDetector {
         }
         if (bad.isEmpty()) return new List<DetectorResult>();
         DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'ARM-026'; dr.severity = 'Warning'; dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
+        dr.detectorId = 'ARM-026'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Warning'); dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
         dr.title = bad.size() + ' active attribute(s) in inactive categor(ies)';
         dr.description = 'Active attribute definitions belong to deactivated AttributeCategory records.';
         dr.primaryRecord = bad[0];

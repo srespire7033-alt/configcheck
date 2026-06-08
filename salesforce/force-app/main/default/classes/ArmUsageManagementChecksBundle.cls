@@ -63,7 +63,7 @@ public with sharing class ArmUsageManagementChecksBundle implements IDetector {
         }
         if (bad.isEmpty()) return new List<DetectorResult>();
         DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'ARM-040'; dr.severity = 'Warning'; dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
+        dr.detectorId = 'ARM-040'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Warning'); dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
         dr.title = bad.size() + ' UoM class(es) without default unit';
         dr.description = 'Without a default UoM, usage records may not convert correctly.';
         dr.primaryRecord = bad[0];
@@ -81,7 +81,7 @@ public with sharing class ArmUsageManagementChecksBundle implements IDetector {
         }
         if (bad.isEmpty()) return new List<DetectorResult>();
         DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'ARM-041'; dr.severity = 'Warning'; dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
+        dr.detectorId = 'ARM-041'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Warning'); dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
         dr.title = bad.size() + ' usage resource(s) not Active';
         dr.description = 'Inactive resources cannot accept usage events.';
         dr.primaryRecord = bad[0];
@@ -102,7 +102,7 @@ public with sharing class ArmUsageManagementChecksBundle implements IDetector {
         }
         if (bad.isEmpty()) return new List<DetectorResult>();
         DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'ARM-042'; dr.severity = 'Info'; dr.gapUsd = 0; dr.recoverabilityScore = 1.0;
+        dr.detectorId = 'ARM-042'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Info'); dr.gapUsd = 0; dr.recoverabilityScore = 1.0;
         dr.title = bad.size() + ' expired usage grant(s) still active';
         dr.description = 'Deactivate expired grants to avoid silent overage.';
         dr.primaryRecord = bad[0];
@@ -122,7 +122,7 @@ public with sharing class ArmUsageManagementChecksBundle implements IDetector {
         }
         if (bad.isEmpty()) return new List<DetectorResult>();
         DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'ARM-043'; dr.severity = 'Critical'; dr.gapUsd = 0; dr.recoverabilityScore = 0.95;
+        dr.detectorId = 'ARM-043'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Critical'); dr.gapUsd = 0; dr.recoverabilityScore = 0.95;
         dr.title = bad.size() + ' usage grant(s) with reversed dates';
         dr.description = 'EffectiveStartDate is after EffectiveEndDate.';
         dr.primaryRecord = bad[0];
@@ -140,7 +140,7 @@ public with sharing class ArmUsageManagementChecksBundle implements IDetector {
         }
         if (bad.isEmpty()) return new List<DetectorResult>();
         DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'ARM-044'; dr.severity = 'Warning'; dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
+        dr.detectorId = 'ARM-044'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Warning'); dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
         dr.title = bad.size() + ' active usage resource(s) missing UoM class';
         dr.description = 'Usage resources need a UnitOfMeasureClass to normalize meter readings.';
         dr.primaryRecord = bad[0];

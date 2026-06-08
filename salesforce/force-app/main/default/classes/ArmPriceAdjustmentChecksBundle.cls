@@ -105,7 +105,7 @@ public with sharing class ArmPriceAdjustmentChecksBundle implements IDetector {
                 nameById.containsKey(pid) ? nameById.get(pid) : 'Schedule'));
         }
         DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'ARM-003'; dr.severity = 'Warning'; dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
+        dr.detectorId = 'ARM-003'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Warning'); dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
         dr.title = bad.size() + ' schedule(s) with overlapping tiers';
         dr.description = 'Overlapping quantity ranges cause ambiguous discount application.';
         dr.primaryRecord = bad[0];
@@ -146,7 +146,7 @@ public with sharing class ArmPriceAdjustmentChecksBundle implements IDetector {
         }
         if (bad.isEmpty()) return new List<DetectorResult>();
         DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'ARM-016'; dr.severity = 'Warning'; dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
+        dr.detectorId = 'ARM-016'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Warning'); dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
         dr.title = bad.size() + ' active price schedule(s) with no tiers';
         dr.description = 'Schedules without tier rows produce no adjustment at runtime.';
         dr.primaryRecord = bad[0];
@@ -171,7 +171,7 @@ public with sharing class ArmPriceAdjustmentChecksBundle implements IDetector {
         }
         if (bad.isEmpty()) return new List<DetectorResult>();
         DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'ARM-017'; dr.severity = 'Critical'; dr.gapUsd = 0; dr.recoverabilityScore = 0.95;
+        dr.detectorId = 'ARM-017'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Critical'); dr.gapUsd = 0; dr.recoverabilityScore = 0.95;
         dr.title = bad.size() + ' tier(s) with reversed quantity bounds';
         dr.description = 'LowerBound exceeds UpperBound — the tier can never match.';
         dr.primaryRecord = bad[0];
@@ -192,7 +192,7 @@ public with sharing class ArmPriceAdjustmentChecksBundle implements IDetector {
         }
         if (bad.isEmpty()) return new List<DetectorResult>();
         DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'ARM-020'; dr.severity = 'Info'; dr.gapUsd = 0; dr.recoverabilityScore = 1.0;
+        dr.detectorId = 'ARM-020'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Info'); dr.gapUsd = 0; dr.recoverabilityScore = 1.0;
         dr.title = bad.size() + ' attribute rule(s) past their end date';
         dr.description = 'These rules continue to apply because they were not deactivated after expiring.';
         dr.primaryRecord = bad[0];

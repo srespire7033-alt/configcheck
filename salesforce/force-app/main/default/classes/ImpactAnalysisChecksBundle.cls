@@ -191,7 +191,7 @@ public with sharing class ImpactAnalysisChecksBundle implements IDetector {
         List<String> sorted = new List<String>(overlap);
         sorted.sort();
         DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'IA-003'; dr.severity = 'Warning'; dr.gapUsd = 0; dr.recoverabilityScore = 0.8;
+        dr.detectorId = 'IA-003'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Warning'); dr.gapUsd = 0; dr.recoverabilityScore = 0.8;
         dr.title = 'Discount schedules and price rules both modify ' + String.join(sorted, ', ');
         dr.description = dsCount + ' discount schedule(s) exist, and active price rules also target ' +
             String.join(sorted, ', ') + '. Calculator evaluation sequence determines precedence.';
@@ -210,7 +210,7 @@ public with sharing class ImpactAnalysisChecksBundle implements IDetector {
         }
         if (bad.isEmpty()) return new List<DetectorResult>();
         DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'IA-004'; dr.severity = 'Warning'; dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
+        dr.detectorId = 'IA-004'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Warning'); dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
         dr.title = bad.size() + ' contracted price(s) linked to inactive products';
         dr.description = bad.size() + ' contracted price(s) attached to inactive products. These prices will never apply.';
         Integer cap = Math.min(10, bad.size());
@@ -245,7 +245,7 @@ public with sharing class ImpactAnalysisChecksBundle implements IDetector {
                 if (!hasOverlap(writesBy.get(ai), readsBy.get(bi))) continue;
                 if (!hasOverlap(writesBy.get(bi), readsBy.get(ai))) continue;
                 DetectorResult dr = new DetectorResult();
-                dr.detectorId = 'IA-005'; dr.severity = 'Critical'; dr.gapUsd = 0; dr.recoverabilityScore = 0.7;
+                dr.detectorId = 'IA-005'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Critical'); dr.gapUsd = 0; dr.recoverabilityScore = 0.7;
                 dr.title = 'Circular dependency: "' + (String) active[i].get('Name') + '" ↔ "' + (String) active[j].get('Name') + '"';
                 dr.description = '"' + (String) active[i].get('Name') + '" and "' + (String) active[j].get('Name') +
                     '" have a circular dependency — each writes a field the other reads.';
@@ -270,7 +270,7 @@ public with sharing class ImpactAnalysisChecksBundle implements IDetector {
         Integer total = activePR + activePRD + activeSV;
         if (total < 20) return new List<DetectorResult>();
         DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'IA-006'; dr.severity = 'Info'; dr.gapUsd = 0; dr.recoverabilityScore = 0.8;
+        dr.detectorId = 'IA-006'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Info'); dr.gapUsd = 0; dr.recoverabilityScore = 0.8;
         dr.title = 'High complexity: ' + total + ' active rules and variables';
         dr.description = activePR + ' active price rules, ' + activePRD + ' active product rules, ' +
             activeSV + ' active summary variables (' + total + ' total).';

@@ -93,7 +93,7 @@ public with sharing class ArmCatalogChecksBundle implements IDetector {
         }
         if (bad.isEmpty()) return new List<DetectorResult>();
         DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'ARM-001'; dr.severity = 'Critical'; dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
+        dr.detectorId = 'ARM-001'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Critical'); dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
         dr.title = bad.size() + ' active product(s) have no selling model';
         dr.description = 'Sales reps will see configuration or runtime errors when trying to quote these products.';
         dr.primaryRecord = bad[0];
@@ -117,7 +117,7 @@ public with sharing class ArmCatalogChecksBundle implements IDetector {
         }
         if (bad.isEmpty()) return new List<DetectorResult>();
         DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'ARM-002b'; dr.severity = 'Critical'; dr.gapUsd = 0; dr.recoverabilityScore = 0.85;
+        dr.detectorId = 'ARM-002b'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Critical'); dr.gapUsd = 0; dr.recoverabilityScore = 0.85;
         dr.title = bad.size() + ' active product(s) with no pricing path';
         dr.description = 'These products have no active PricebookEntry. They cannot be priced on a quote.';
         dr.primaryRecord = bad[0];
@@ -160,7 +160,7 @@ public with sharing class ArmCatalogChecksBundle implements IDetector {
         }
         if (bad.isEmpty()) return new List<DetectorResult>();
         DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'ARM-010'; dr.severity = 'Info'; dr.gapUsd = 0; dr.recoverabilityScore = 1.0;
+        dr.detectorId = 'ARM-010'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Info'); dr.gapUsd = 0; dr.recoverabilityScore = 1.0;
         dr.title = bad.size() + ' active product(s) in inactive categor(ies)';
         dr.description = 'Active products are assigned to inactive product categories.';
         dr.primaryRecord = bad[0];
@@ -184,7 +184,7 @@ public with sharing class ArmCatalogChecksBundle implements IDetector {
         }
         if (bad.isEmpty()) return new List<DetectorResult>();
         DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'ARM-018'; dr.severity = 'Info'; dr.gapUsd = 0; dr.recoverabilityScore = 1.0;
+        dr.detectorId = 'ARM-018'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Info'); dr.gapUsd = 0; dr.recoverabilityScore = 1.0;
         dr.title = bad.size() + ' active product(s) without category assignment';
         dr.description = 'Products without categories are harder to discover and report on.';
         dr.primaryRecord = bad[0];

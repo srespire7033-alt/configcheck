@@ -100,7 +100,7 @@ public with sharing class SummaryVariableChecksBundle implements IDetector {
 
         DetectorResult r = new DetectorResult();
         r.detectorId = 'SV-001';
-        r.severity = 'Warning';
+        r.severity = DetectorCatalogController.getSeverity(r.detectorId, 'Warning');
         r.gapUsd = 0;
         r.recoverabilityScore = 0.9;
         r.title = orphaned.size() + ' summary variable(s) not used by any rule';
@@ -156,7 +156,7 @@ public with sharing class SummaryVariableChecksBundle implements IDetector {
             if (missing.isEmpty()) continue;
             DetectorResult r = new DetectorResult();
             r.detectorId = 'SV-002';
-            r.severity = 'Critical';
+            r.severity = DetectorCatalogController.getSeverity(r.detectorId, 'Critical');
             r.gapUsd = 0;
             r.recoverabilityScore = 0.95;
             r.title = 'Summary variable "' + (String) v.get('Name') + '" missing ' + String.join(missing, ', ');
@@ -191,7 +191,7 @@ public with sharing class SummaryVariableChecksBundle implements IDetector {
             String[] parts = key.split('\\|');
             DetectorResult r = new DetectorResult();
             r.detectorId = 'SV-003';
-            r.severity = 'Warning';
+            r.severity = DetectorCatalogController.getSeverity(r.detectorId, 'Warning');
             r.gapUsd = 0;
             r.recoverabilityScore = 0.85;
             r.title = bucket.size() + ' duplicate summary variables computing ' + parts[0] + '(' + parts[1] + ')';
@@ -225,7 +225,7 @@ public with sharing class SummaryVariableChecksBundle implements IDetector {
             if (!hasOperator) missing.add('Operator');
             DetectorResult r = new DetectorResult();
             r.detectorId = 'SV-004';
-            r.severity = 'Warning';
+            r.severity = DetectorCatalogController.getSeverity(r.detectorId, 'Warning');
             r.gapUsd = 0;
             r.recoverabilityScore = 0.9;
             r.title = 'Summary variable "' + (String) v.get('Name') + '" has incomplete filter';
@@ -250,7 +250,7 @@ public with sharing class SummaryVariableChecksBundle implements IDetector {
             String missing = hasCombine ? 'Composite Operator' : 'Combine With (second variable)';
             DetectorResult r = new DetectorResult();
             r.detectorId = 'SV-005';
-            r.severity = 'Critical';
+            r.severity = DetectorCatalogController.getSeverity(r.detectorId, 'Critical');
             r.gapUsd = 0;
             r.recoverabilityScore = 0.95;
             r.title = 'Composite variable "' + (String) v.get('Name') + '" missing ' + missing;
@@ -278,7 +278,7 @@ public with sharing class SummaryVariableChecksBundle implements IDetector {
         for (Integer i = 0; i < sampleCap; i++) nameSample.add('"' + (String) inactives[i].get('Name') + '"');
         DetectorResult r = new DetectorResult();
         r.detectorId = 'SV-006';
-        r.severity = 'Info';
+        r.severity = DetectorCatalogController.getSeverity(r.detectorId, 'Info');
         r.gapUsd = 0;
         r.recoverabilityScore = 1.0;
         r.title = n + ' inactive summary variable(s)';

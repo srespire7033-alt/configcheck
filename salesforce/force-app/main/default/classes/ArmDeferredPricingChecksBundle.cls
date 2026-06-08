@@ -104,7 +104,7 @@ public with sharing class ArmDeferredPricingChecksBundle implements IDetector {
         }
         if (bad.isEmpty()) return new List<DetectorResult>();
         DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'ARM-131'; dr.severity = 'Critical'; dr.gapUsd = 0; dr.recoverabilityScore = 0.95;
+        dr.detectorId = 'ARM-131'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Critical'); dr.gapUsd = 0; dr.recoverabilityScore = 0.95;
         dr.title = bad.size() + ' attribute adjustment(s) outside parent schedule window';
         dr.description = 'Rule effective dates extend past the parent PriceAdjustmentSchedule\'s window.';
         dr.primaryRecord = bad[0];
@@ -142,7 +142,7 @@ public with sharing class ArmDeferredPricingChecksBundle implements IDetector {
         }
         if (bad.isEmpty()) return new List<DetectorResult>();
         DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'ARM-130'; dr.severity = 'Critical'; dr.gapUsd = 0; dr.recoverabilityScore = 0.95;
+        dr.detectorId = 'ARM-130'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Critical'); dr.gapUsd = 0; dr.recoverabilityScore = 0.95;
         dr.title = bad.size() + ' price adjustment tier(s) outside parent schedule date range';
         dr.description = 'Tier effective dates extend past the parent schedule\'s effective window.';
         dr.primaryRecord = bad[0];
@@ -170,7 +170,7 @@ public with sharing class ArmDeferredPricingChecksBundle implements IDetector {
         }
         if (bad.isEmpty()) return new List<DetectorResult>();
         DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'ARM-132'; dr.severity = 'Critical'; dr.gapUsd = 0; dr.recoverabilityScore = 0.95;
+        dr.detectorId = 'ARM-132'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Critical'); dr.gapUsd = 0; dr.recoverabilityScore = 0.95;
         dr.title = bad.size() + ' pricebook entry/entries reference selling model with no matching option';
         dr.description = 'These PBEs name a ProductSellingModel that has no matching ProductSellingModelOption.';
         dr.primaryRecord = bad[0];

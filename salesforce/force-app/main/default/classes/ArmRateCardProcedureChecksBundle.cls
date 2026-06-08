@@ -118,7 +118,7 @@ public with sharing class ArmRateCardProcedureChecksBundle implements IDetector 
         }
         if (bad.isEmpty()) return new List<DetectorResult>();
         DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'ARM-021'; dr.severity = 'Warning'; dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
+        dr.detectorId = 'ARM-021'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Warning'); dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
         dr.title = bad.size() + ' active rate card(s) with no entries';
         dr.description = 'Rate cards without entries cannot price anything.';
         dr.primaryRecord = bad[0];
@@ -141,7 +141,7 @@ public with sharing class ArmRateCardProcedureChecksBundle implements IDetector 
         }
         if (bad.isEmpty()) return new List<DetectorResult>();
         DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'ARM-022'; dr.severity = 'Warning'; dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
+        dr.detectorId = 'ARM-022'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Warning'); dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
         dr.title = bad.size() + ' rate card entry(s) with no price';
         dr.description = 'Entries with null or zero price will not produce revenue.';
         dr.primaryRecord = bad[0];
@@ -168,7 +168,7 @@ public with sharing class ArmRateCardProcedureChecksBundle implements IDetector 
         }
         if (bad.isEmpty()) return new List<DetectorResult>();
         DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'ARM-023'; dr.severity = 'Info'; dr.gapUsd = 0; dr.recoverabilityScore = 1.0;
+        dr.detectorId = 'ARM-023'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Info'); dr.gapUsd = 0; dr.recoverabilityScore = 1.0;
         dr.title = bad.size() + ' rate card(s) past end date but active';
         dr.description = 'Deactivate rate cards once they expire.';
         dr.primaryRecord = bad[0];
@@ -187,7 +187,7 @@ public with sharing class ArmRateCardProcedureChecksBundle implements IDetector 
         }
         if (bad.isEmpty()) return new List<DetectorResult>();
         DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'ARM-006'; dr.severity = 'Warning'; dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
+        dr.detectorId = 'ARM-006'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Warning'); dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
         dr.title = bad.size() + ' pricing procedure(s) without UsageType';
         dr.description = 'ExpressionSet records without UsageType won\'t route to the pricing engine.';
         dr.primaryRecord = bad[0];
@@ -203,7 +203,7 @@ public with sharing class ArmRateCardProcedureChecksBundle implements IDetector 
         }
         if (pricing.size() <= 1) return new List<DetectorResult>();
         DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'ARM-027'; dr.severity = 'Info'; dr.gapUsd = 0; dr.recoverabilityScore = 1.0;
+        dr.detectorId = 'ARM-027'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Info'); dr.gapUsd = 0; dr.recoverabilityScore = 1.0;
         dr.title = pricing.size() + ' pricing procedures defined';
         dr.description = 'Multiple active pricing procedures may produce non-deterministic results.';
         dr.primaryRecord = new SourceRecord('ExpressionSet', (Id) pricing[0].get('Id'),
@@ -225,7 +225,7 @@ public with sharing class ArmRateCardProcedureChecksBundle implements IDetector 
         }
         if (bad.isEmpty()) return new List<DetectorResult>();
         DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'ARM-008'; dr.severity = 'Warning'; dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
+        dr.detectorId = 'ARM-008'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Warning'); dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
         dr.title = bad.size() + ' decision table(s) not Active';
         dr.description = 'Decision tables in Draft/Inactive status will not be evaluated by the engine.';
         dr.primaryRecord = bad[0];
@@ -238,7 +238,7 @@ public with sharing class ArmRateCardProcedureChecksBundle implements IDetector 
         if (dts.isEmpty()) return new List<DetectorResult>();
         for (Map<String, Object> d : dts) if (String.valueOf(d.get('Status')) == 'Active') return new List<DetectorResult>();
         DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'ARM-029'; dr.severity = 'Warning'; dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
+        dr.detectorId = 'ARM-029'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Warning'); dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
         dr.title = dts.size() + ' decision table(s) — none active';
         dr.description = 'Every decision table in this org is Draft/Inactive. Pricing/eligibility logic will be skipped.';
         dr.primaryRecord = new SourceRecord('DecisionTable', (Id) dts[0].get('Id'), String.valueOf(dts[0].get('MasterLabel')));

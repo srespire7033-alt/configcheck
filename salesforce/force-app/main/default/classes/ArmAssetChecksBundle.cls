@@ -65,7 +65,7 @@ public with sharing class ArmAssetChecksBundle implements IDetector {
         }
         if (bad.isEmpty()) return new List<DetectorResult>();
         DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'ARM-031'; dr.severity = 'Warning'; dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
+        dr.detectorId = 'ARM-031'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Warning'); dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
         dr.title = bad.size() + ' active asset(s) without state period';
         dr.description = 'Assets in active state should have at least one AssetStatePeriod row for revenue accounting.';
         dr.primaryRecord = bad[0];
@@ -87,7 +87,7 @@ public with sharing class ArmAssetChecksBundle implements IDetector {
         }
         if (bad.isEmpty()) return new List<DetectorResult>();
         DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'ARM-032'; dr.severity = 'Info'; dr.gapUsd = 0; dr.recoverabilityScore = 1.0;
+        dr.detectorId = 'ARM-032'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Info'); dr.gapUsd = 0; dr.recoverabilityScore = 1.0;
         dr.title = bad.size() + ' active asset(s) past lifecycle end date';
         dr.description = 'These assets should be moved to a terminal state or have their dates extended.';
         dr.primaryRecord = bad[0];
@@ -114,7 +114,7 @@ public with sharing class ArmAssetChecksBundle implements IDetector {
         }
         if (bad.isEmpty()) return new List<DetectorResult>();
         DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'ARM-033'; dr.severity = 'Warning'; dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
+        dr.detectorId = 'ARM-033'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Warning'); dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
         dr.title = bad.size() + ' orphan asset relationship(s)';
         dr.description = 'AssetRelationship rows point to null or terminal-status assets.';
         dr.primaryRecord = bad[0];
@@ -140,7 +140,7 @@ public with sharing class ArmAssetChecksBundle implements IDetector {
         }
         if (bad.isEmpty()) return new List<DetectorResult>();
         DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'ARM-034'; dr.severity = 'Critical'; dr.gapUsd = 0; dr.recoverabilityScore = 0.95;
+        dr.detectorId = 'ARM-034'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Critical'); dr.gapUsd = 0; dr.recoverabilityScore = 0.95;
         dr.title = bad.size() + ' asset(s) with multiple current state periods';
         dr.description = 'Each asset should have exactly one IsCurrent=true AssetStatePeriod at a time.';
         dr.primaryRecord = bad[0];
@@ -161,7 +161,7 @@ public with sharing class ArmAssetChecksBundle implements IDetector {
         }
         if (bad.isEmpty()) return new List<DetectorResult>();
         DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'ARM-035'; dr.severity = 'Info'; dr.gapUsd = 0; dr.recoverabilityScore = 1.0;
+        dr.detectorId = 'ARM-035'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Info'); dr.gapUsd = 0; dr.recoverabilityScore = 1.0;
         dr.title = bad.size() + ' current asset state period(s) with zero quantity';
         dr.description = 'Current state periods with null/zero quantity may indicate billing-schedule issues.';
         dr.primaryRecord = bad[0];

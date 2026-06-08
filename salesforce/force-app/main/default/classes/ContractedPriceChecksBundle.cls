@@ -130,7 +130,7 @@ public with sharing class ContractedPriceChecksBundle implements IDetector {
             String title, String descr, String impact, String rec, Decimal revImpact) {
         DetectorResult r = new DetectorResult();
         r.detectorId = 'CP-001';
-        r.severity = 'Warning';
+        r.severity = DetectorCatalogController.getSeverity(r.detectorId, 'Warning');
         r.gapUsd = (revImpact != null) ? revImpact : 0;
         r.recoverabilityScore = 0.85;
         r.title = title;
@@ -154,7 +154,7 @@ public with sharing class ContractedPriceChecksBundle implements IDetector {
         if (noDate.isEmpty()) return new List<DetectorResult>();
         DetectorResult r = new DetectorResult();
         r.detectorId = 'CP-002';
-        r.severity = 'Critical';
+        r.severity = DetectorCatalogController.getSeverity(r.detectorId, 'Critical');
         r.gapUsd = 0;
         r.recoverabilityScore = 0.9;
         r.title = noDate.size() + ' contracted price(s) without effective or expiration date';
@@ -178,7 +178,7 @@ public with sharing class ContractedPriceChecksBundle implements IDetector {
         if (noSource.isEmpty()) return new List<DetectorResult>();
         DetectorResult r = new DetectorResult();
         r.detectorId = 'CP-003';
-        r.severity = 'Info';
+        r.severity = DetectorCatalogController.getSeverity(r.detectorId, 'Info');
         r.gapUsd = 0;
         r.recoverabilityScore = 1.0;
         r.title = noSource.size() + ' contracted price(s) without source quote line';

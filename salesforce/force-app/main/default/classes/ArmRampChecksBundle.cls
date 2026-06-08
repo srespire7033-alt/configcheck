@@ -55,7 +55,7 @@ public with sharing class ArmRampChecksBundle implements IDetector {
         }
         if (bad.isEmpty()) return new List<DetectorResult>();
         DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'ARM-120'; dr.severity = 'Critical'; dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
+        dr.detectorId = 'ARM-120'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Critical'); dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
         dr.title = bad.size() + ' ramp segment(s) without selling model';
         dr.description = 'Non-FreeTrial ramp segments require a ProductSellingModelId.';
         dr.primaryRecord = bad[0];
@@ -76,7 +76,7 @@ public with sharing class ArmRampChecksBundle implements IDetector {
         }
         if (bad.isEmpty()) return new List<DetectorResult>();
         DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'ARM-121'; dr.severity = 'Critical'; dr.gapUsd = 0; dr.recoverabilityScore = 0.95;
+        dr.detectorId = 'ARM-121'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Critical'); dr.gapUsd = 0; dr.recoverabilityScore = 0.95;
         dr.title = bad.size() + ' FreeTrial ramp(s) missing TrialDuration/DurationType';
         dr.description = 'FreeTrial segments must specify duration to provision correctly.';
         dr.primaryRecord = bad[0];
@@ -103,7 +103,7 @@ public with sharing class ArmRampChecksBundle implements IDetector {
         }
         if (bad.isEmpty()) return new List<DetectorResult>();
         DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'ARM-122'; dr.severity = 'Warning'; dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
+        dr.detectorId = 'ARM-122'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Warning'); dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
         dr.title = bad.size() + ' overlapping custom ramp segment(s) on same product';
         dr.description = 'Multiple Custom ramp segments share the same (Product, SellingModel) pair.';
         dr.primaryRecord = bad[0];

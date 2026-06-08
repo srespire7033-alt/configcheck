@@ -85,7 +85,7 @@ public with sharing class GuidedSellingChecksBundle implements IDetector {
             Integer c = inputCounts.containsKey((Id) p.get('Id')) ? inputCounts.get((Id) p.get('Id')) : 0;
             if (c > 0) continue;
             DetectorResult dr = new DetectorResult();
-            dr.detectorId = 'GS-001'; dr.severity = 'Critical'; dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
+            dr.detectorId = 'GS-001'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Critical'); dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
             dr.title = 'Guided selling "' + (String) p.get('Name') + '" has no input questions';
             dr.description = '"' + (String) p.get('Name') + '" is active but has no inputs. The wizard will show an empty page.';
             dr.primaryRecord = ref(p);
@@ -102,7 +102,7 @@ public with sharing class GuidedSellingChecksBundle implements IDetector {
             Integer c = outputCounts.containsKey((Id) p.get('Id')) ? outputCounts.get((Id) p.get('Id')) : 0;
             if (c > 0) continue;
             DetectorResult dr = new DetectorResult();
-            dr.detectorId = 'GS-002'; dr.severity = 'Critical'; dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
+            dr.detectorId = 'GS-002'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Critical'); dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
             dr.title = 'Guided selling "' + (String) p.get('Name') + '" has no product outputs';
             dr.description = '"' + (String) p.get('Name') + '" is active but has no outputs. Users go through the wizard and get no recommendations.';
             dr.primaryRecord = ref(p);
@@ -119,7 +119,7 @@ public with sharing class GuidedSellingChecksBundle implements IDetector {
         List<String> names = new List<String>();
         for (Map<String, Object> p : inactives) names.add('"' + (String) p.get('Name') + '"');
         DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'GS-003'; dr.severity = 'Info'; dr.gapUsd = 0; dr.recoverabilityScore = 1.0;
+        dr.detectorId = 'GS-003'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Info'); dr.gapUsd = 0; dr.recoverabilityScore = 1.0;
         dr.title = inactives.size() + ' inactive guided selling process(es)';
         dr.description = String.join(names, ', ') + (inactives.size() == 1 ? ' is' : ' are') + ' not active.';
         dr.primaryRecord = ref(inactives[0]);
@@ -137,7 +137,7 @@ public with sharing class GuidedSellingChecksBundle implements IDetector {
             Integer oc = outputCounts.containsKey((Id) p.get('Id')) ? outputCounts.get((Id) p.get('Id')) : 0;
             if (!(ic >= 5 && oc > 0 && oc <= 1)) continue;
             DetectorResult dr = new DetectorResult();
-            dr.detectorId = 'GS-004'; dr.severity = 'Warning'; dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
+            dr.detectorId = 'GS-004'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Warning'); dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
             dr.title = 'Guided selling "' + (String) p.get('Name') + '" has ' + ic + ' inputs but only ' + oc + ' output';
             dr.description = '"' + (String) p.get('Name') + '" asks ' + ic + ' questions but only maps to ' + oc + ' product output(s).';
             dr.primaryRecord = ref(p);

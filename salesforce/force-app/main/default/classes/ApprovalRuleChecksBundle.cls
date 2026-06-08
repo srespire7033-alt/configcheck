@@ -72,7 +72,7 @@ public with sharing class ApprovalRuleChecksBundle implements IDetector {
             Object af = r.get('SBQQ__ApproverField__c');
             if (af != null && !String.isBlank(String.valueOf(af))) continue;
             DetectorResult dr = new DetectorResult();
-            dr.detectorId = 'AR-001'; dr.severity = 'Critical'; dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
+            dr.detectorId = 'AR-001'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Critical'); dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
             dr.title = 'Approval rule "' + (String) r.get('Name') + '" has no approver';
             dr.description = '"' + (String) r.get('Name') + '" is active but has neither Approver nor Approver Field. Quotes hitting this rule will have no one to approve them.';
             dr.primaryRecord = ref(r);
@@ -88,7 +88,7 @@ public with sharing class ApprovalRuleChecksBundle implements IDetector {
             if (!isActive(r)) continue;
             if (conditionCountOf(r) > 0) continue;
             DetectorResult dr = new DetectorResult();
-            dr.detectorId = 'AR-002'; dr.severity = 'Warning'; dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
+            dr.detectorId = 'AR-002'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Warning'); dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
             dr.title = 'Approval rule "' + (String) r.get('Name') + '" has no conditions';
             dr.description = '"' + (String) r.get('Name') + '" is active but has no conditions. Every quote may trigger this rule regardless of criteria.';
             dr.primaryRecord = ref(r);
@@ -115,7 +115,7 @@ public with sharing class ApprovalRuleChecksBundle implements IDetector {
             List<String> names = new List<String>();
             for (Map<String, Object> r : bucket) names.add('"' + (String) r.get('Name') + '"');
             DetectorResult dr = new DetectorResult();
-            dr.detectorId = 'AR-003'; dr.severity = 'Warning'; dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
+            dr.detectorId = 'AR-003'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Warning'); dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
             dr.title = bucket.size() + ' approval rules share evaluation order ' + evalOrder;
             dr.description = 'Rules ' + String.join(names, ', ') + ' all have evaluation order ' + evalOrder + '. Execution sequence is unpredictable.';
             dr.primaryRecord = ref(bucket[0]);
@@ -135,7 +135,7 @@ public with sharing class ApprovalRuleChecksBundle implements IDetector {
             Object cm = r.get('SBQQ__ConditionsMet__c');
             if (cm != null && !String.isBlank(String.valueOf(cm))) continue;
             DetectorResult dr = new DetectorResult();
-            dr.detectorId = 'AR-004'; dr.severity = 'Warning'; dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
+            dr.detectorId = 'AR-004'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Warning'); dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
             dr.title = 'Approval rule "' + (String) r.get('Name') + '" missing Conditions Met logic';
             dr.description = '"' + (String) r.get('Name') + '" has ' + condCount + ' condition(s) but Conditions Met is not set ("All" or "Any").';
             dr.primaryRecord = ref(r);
@@ -153,7 +153,7 @@ public with sharing class ApprovalRuleChecksBundle implements IDetector {
         Integer sampleCap = Math.min(5, inactives.size());
         for (Integer i = 0; i < sampleCap; i++) sample.add('"' + (String) inactives[i].get('Name') + '"');
         DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'AR-005'; dr.severity = 'Info'; dr.gapUsd = 0; dr.recoverabilityScore = 1.0;
+        dr.detectorId = 'AR-005'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Info'); dr.gapUsd = 0; dr.recoverabilityScore = 1.0;
         dr.title = inactives.size() + ' inactive approval rule(s)';
         dr.description = inactives.size() + ' approval rule(s) are deactivated: ' + String.join(sample, ', ') +
             (inactives.size() > 5 ? ' and ' + (inactives.size() - 5) + ' more.' : '.');

@@ -92,7 +92,7 @@ public with sharing class QuoteLineChecksBundle implements IDetector {
         }
         if (bad.isEmpty()) return new List<DetectorResult>();
         DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'QL-001'; dr.severity = 'Critical'; dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
+        dr.detectorId = 'QL-001'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Critical'); dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
         dr.title = bad.size() + ' quote line(s) with zero NetPrice';
         dr.description = bad.size() + ' quote line(s) across ' + quoteIds.size() +
             ' quote(s) have Quantity > 0 and ListPrice > 0 but NetPrice = $0. Likely revenue leakage from misconfigured price rules.';
@@ -120,7 +120,7 @@ public with sharing class QuoteLineChecksBundle implements IDetector {
         if (bad.isEmpty()) return new List<DetectorResult>();
         Map<String, Object> ex = bad[0];
         DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'QL-002'; dr.severity = 'Critical'; dr.gapUsd = 0; dr.recoverabilityScore = 0.85;
+        dr.detectorId = 'QL-002'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Critical'); dr.gapUsd = 0; dr.recoverabilityScore = 0.85;
         dr.title = bad.size() + ' quote line(s) with calculation mismatch';
         dr.description = 'NetTotal does not equal NetPrice × Quantity on ' + bad.size() + ' line(s). Example: "' +
             productName(ex) + '" has NetPrice ' + num(ex, 'SBQQ__NetPrice__c') + ' × Qty ' +
@@ -140,7 +140,7 @@ public with sharing class QuoteLineChecksBundle implements IDetector {
         }
         if (bad.isEmpty()) return new List<DetectorResult>();
         DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'QL-003'; dr.severity = 'Warning'; dr.gapUsd = 0; dr.recoverabilityScore = 0.8;
+        dr.detectorId = 'QL-003'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Warning'); dr.gapUsd = 0; dr.recoverabilityScore = 0.8;
         dr.title = bad.size() + ' quote line(s) with negative totals';
         dr.description = bad.size() + ' quote lines have negative NetTotal values. May indicate credits or over-discounting.';
         dr.primaryRecord = ref(bad[0]);
@@ -162,7 +162,7 @@ public with sharing class QuoteLineChecksBundle implements IDetector {
         }
         if (bad.isEmpty()) return new List<DetectorResult>();
         DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'QL-004'; dr.severity = 'Info'; dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
+        dr.detectorId = 'QL-004'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Info'); dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
         dr.title = bad.size() + ' quote line(s) with >50% discount';
         dr.description = bad.size() + ' quote line(s) have an effective discount exceeding 50% of list price.';
         dr.primaryRecord = ref(bad[0]);
@@ -186,7 +186,7 @@ public with sharing class QuoteLineChecksBundle implements IDetector {
         }
         if (!discountConflicts.isEmpty()) {
             DetectorResult dr = new DetectorResult();
-            dr.detectorId = 'TF-001'; dr.severity = 'Warning'; dr.gapUsd = discountConflicts.size() * 50;
+            dr.detectorId = 'TF-001'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Warning'); dr.gapUsd = discountConflicts.size() * 50;
             dr.recoverabilityScore = 0.85;
             dr.title = discountConflicts.size() + ' quote line(s) have both Discount and Additional Discount set';
             dr.description = 'Both SBQQ__Discount__c and SBQQ__AdditionalDiscount__c populated on ' + discountConflicts.size() +
@@ -198,7 +198,7 @@ public with sharing class QuoteLineChecksBundle implements IDetector {
         }
         if (!upliftConflicts.isEmpty()) {
             DetectorResult dr = new DetectorResult();
-            dr.detectorId = 'TF-001'; dr.severity = 'Warning'; dr.gapUsd = 0; dr.recoverabilityScore = 0.85;
+            dr.detectorId = 'TF-001'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Warning'); dr.gapUsd = 0; dr.recoverabilityScore = 0.85;
             dr.title = upliftConflicts.size() + ' quote line(s) have both Uplift % and Uplift Amount set';
             dr.description = 'Both percentage and flat uplift populated on ' + upliftConflicts.size() +
                 ' line(s). Renewal pricing may be inflated.';

@@ -66,7 +66,7 @@ public with sharing class ArmPriceBookChecksBundle implements IDetector {
         }
         if (currencies.isEmpty()) return new List<DetectorResult>();
         DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'ARM-007'; dr.severity = 'Info'; dr.gapUsd = 0; dr.recoverabilityScore = 1.0;
+        dr.detectorId = 'ARM-007'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Info'); dr.gapUsd = 0; dr.recoverabilityScore = 1.0;
         dr.title = currencies.size() + ' currency/currencies with multiple active price books';
         dr.description = 'Multiple custom price books per currency complicate quoting routing.';
         dr.primaryRecord = books2[0];
@@ -81,7 +81,7 @@ public with sharing class ArmPriceBookChecksBundle implements IDetector {
             if (!Boolean.valueOf(b.get('IsStandard'))) continue;
             if (Boolean.valueOf(b.get('IsActive'))) return new List<DetectorResult>();
             DetectorResult dr = new DetectorResult();
-            dr.detectorId = 'ARM-028'; dr.severity = 'Critical'; dr.gapUsd = 0; dr.recoverabilityScore = 0.95;
+            dr.detectorId = 'ARM-028'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Critical'); dr.gapUsd = 0; dr.recoverabilityScore = 0.95;
             dr.title = 'Standard pricebook is inactive';
             dr.description = 'The Standard Pricebook must be Active for opportunity products + many CPQ flows.';
             dr.primaryRecord = new SourceRecord('Pricebook2', (Id) b.get('Id'), (String) b.get('Name'));

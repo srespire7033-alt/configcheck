@@ -85,7 +85,7 @@ public with sharing class ArmSellingModelChecksBundle implements IDetector {
         }
         if (bad.isEmpty()) return new List<DetectorResult>();
         DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'ARM-002'; dr.severity = 'Critical'; dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
+        dr.detectorId = 'ARM-002'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Critical'); dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
         dr.title = bad.size() + ' recurring selling model(s) missing billing frequency';
         dr.description = 'Term/Evergreen selling models require SellingFrequencyId for billing schedule generation.';
         dr.primaryRecord = bad[0];
@@ -106,7 +106,7 @@ public with sharing class ArmSellingModelChecksBundle implements IDetector {
         }
         if (bad.isEmpty()) return new List<DetectorResult>();
         DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'ARM-011'; dr.severity = 'Warning'; dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
+        dr.detectorId = 'ARM-011'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Warning'); dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
         dr.title = bad.size() + ' term selling model(s) missing pricing term';
         dr.description = 'PricingTerm is required to calculate proration on term-based selling models.';
         dr.primaryRecord = bad[0];
@@ -132,7 +132,7 @@ public with sharing class ArmSellingModelChecksBundle implements IDetector {
         }
         if (bad.isEmpty()) return new List<DetectorResult>();
         DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'ARM-012'; dr.severity = 'Warning'; dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
+        dr.detectorId = 'ARM-012'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Warning'); dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
         dr.title = bad.size() + ' active option(s) point at an inactive selling model';
         dr.description = 'Quoting these options will fail because their selling model is deactivated.';
         dr.primaryRecord = bad[0];
@@ -161,7 +161,7 @@ public with sharing class ArmSellingModelChecksBundle implements IDetector {
         }
         if (bad.isEmpty()) return new List<DetectorResult>();
         DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'ARM-019'; dr.severity = 'Warning'; dr.gapUsd = 0; dr.recoverabilityScore = 0.95;
+        dr.detectorId = 'ARM-019'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Warning'); dr.gapUsd = 0; dr.recoverabilityScore = 0.95;
         dr.title = bad.size() + ' duplicate selling-model option record(s)';
         dr.description = 'Multiple active options exist for the same (Product, SellingModel) pair.';
         dr.primaryRecord = bad[0];
@@ -201,7 +201,7 @@ public with sharing class ArmSellingModelChecksBundle implements IDetector {
                 nameById.containsKey(mid) ? nameById.get(mid) : 'Draft model'));
         }
         DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'ARM-133'; dr.severity = 'Warning'; dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
+        dr.detectorId = 'ARM-133'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Warning'); dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
         dr.title = bad.size() + ' draft selling model(s) referenced by active records';
         dr.description = 'Selling models in Draft status should not be wired into active options or pricebook entries.';
         dr.primaryRecord = bad[0];

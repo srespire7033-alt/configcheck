@@ -67,7 +67,7 @@ public with sharing class SubscriptionChecksBundle implements IDetector {
         }
         if (bad.isEmpty()) return new List<DetectorResult>();
         DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'SR-001'; dr.severity = 'Warning'; dr.gapUsd = bad.size() * 100;
+        dr.detectorId = 'SR-001'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Warning'); dr.gapUsd = bad.size() * 100;
         dr.recoverabilityScore = 0.85;
         dr.title = bad.size() + ' subscription(s) with zero or missing net price';
         dr.description = bad.size() + ' subscription record(s) have zero or null SBQQ__NetPrice__c. May be intentional free, or pricing not applied.';
@@ -87,7 +87,7 @@ public with sharing class SubscriptionChecksBundle implements IDetector {
         }
         if (bad.isEmpty()) return new List<DetectorResult>();
         DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'SR-002'; dr.severity = 'Warning'; dr.gapUsd = 0; dr.recoverabilityScore = 0.85;
+        dr.detectorId = 'SR-002'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Warning'); dr.gapUsd = 0; dr.recoverabilityScore = 0.85;
         dr.title = bad.size() + ' subscription(s) missing prorate multiplier';
         dr.description = bad.size() + ' subscription(s) have null or zero SBQQ__ProrateMultiplier__c. Co-termed renewals will miscalculate.';
         dr.primaryRecord = ref(bad[0]);
@@ -105,7 +105,7 @@ public with sharing class SubscriptionChecksBundle implements IDetector {
         }
         if (bad.isEmpty()) return new List<DetectorResult>();
         DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'SR-003'; dr.severity = 'Critical'; dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
+        dr.detectorId = 'SR-003'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Critical'); dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
         dr.title = bad.size() + ' subscription(s) without contract reference';
         dr.description = bad.size() + ' subscription(s) have null SBQQ__Contract__c. Orphaned — will not appear in renewals.';
         dr.primaryRecord = ref(bad[0]);
@@ -123,7 +123,7 @@ public with sharing class SubscriptionChecksBundle implements IDetector {
         }
         if (bad.isEmpty()) return new List<DetectorResult>();
         DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'SR-004'; dr.severity = 'Info'; dr.gapUsd = 0; dr.recoverabilityScore = 1.0;
+        dr.detectorId = 'SR-004'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Info'); dr.gapUsd = 0; dr.recoverabilityScore = 1.0;
         dr.title = bad.size() + ' subscription(s) with quantity > 1,000';
         dr.description = bad.size() + ' subscription(s) have unusually high quantities. May be seat-based licensing or data entry errors.';
         dr.primaryRecord = ref(bad[0]);

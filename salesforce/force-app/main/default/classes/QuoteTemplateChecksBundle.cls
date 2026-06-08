@@ -71,7 +71,7 @@ public with sharing class QuoteTemplateChecksBundle implements IDetector {
         if (tmpls.isEmpty()) return new List<DetectorResult>();
         for (Map<String, Object> t : tmpls) if (isDefault(t)) return new List<DetectorResult>();
         DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'QT-001'; dr.severity = 'Warning'; dr.gapUsd = 0; dr.recoverabilityScore = 0.95;
+        dr.detectorId = 'QT-001'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Warning'); dr.gapUsd = 0; dr.recoverabilityScore = 0.95;
         dr.title = 'No default quote template set';
         dr.description = 'There are ' + tmpls.size() + ' quote template(s) but none is marked as Default. Users must manually select a template every time.';
         dr.primaryRecord = ref(tmpls[0]);
@@ -91,7 +91,7 @@ public with sharing class QuoteTemplateChecksBundle implements IDetector {
         List<String> names = new List<String>();
         for (Map<String, Object> t : nonActive) names.add('"' + (String) t.get('Name') + '" (' + status(t) + ')');
         DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'QT-002'; dr.severity = 'Info'; dr.gapUsd = 0; dr.recoverabilityScore = 1.0;
+        dr.detectorId = 'QT-002'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Info'); dr.gapUsd = 0; dr.recoverabilityScore = 1.0;
         dr.title = nonActive.size() + ' non-active quote template(s)';
         dr.description = String.join(names, ', ') + (nonActive.size() == 1 ? ' is' : ' are') + ' not in Deployed status.';
         dr.primaryRecord = ref(nonActive[0]);
@@ -106,7 +106,7 @@ public with sharing class QuoteTemplateChecksBundle implements IDetector {
         for (Map<String, Object> t : tmpls) {
             if (sectionsOf(t) > 0) continue;
             DetectorResult dr = new DetectorResult();
-            dr.detectorId = 'QT-003'; dr.severity = 'Warning'; dr.gapUsd = 0; dr.recoverabilityScore = 0.95;
+            dr.detectorId = 'QT-003'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Warning'); dr.gapUsd = 0; dr.recoverabilityScore = 0.95;
             dr.title = 'Quote template "' + (String) t.get('Name') + '" has no sections';
             dr.description = '"' + (String) t.get('Name') + '" has no template sections configured. Generated documents will be empty.';
             dr.primaryRecord = ref(t);
@@ -123,7 +123,7 @@ public with sharing class QuoteTemplateChecksBundle implements IDetector {
         List<String> names = new List<String>();
         for (Map<String, Object> t : defaults) names.add('"' + (String) t.get('Name') + '"');
         DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'QT-004'; dr.severity = 'Warning'; dr.gapUsd = 0; dr.recoverabilityScore = 0.95;
+        dr.detectorId = 'QT-004'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Warning'); dr.gapUsd = 0; dr.recoverabilityScore = 0.95;
         dr.title = defaults.size() + ' templates marked as default';
         dr.description = String.join(names, ', ') + ' are all marked as Default. Only one template should be the default.';
         dr.primaryRecord = ref(defaults[0]);
@@ -139,7 +139,7 @@ public with sharing class QuoteTemplateChecksBundle implements IDetector {
             String st = status(t);
             if (st == null || st == 'Deployed') continue;
             DetectorResult dr = new DetectorResult();
-            dr.detectorId = 'QT-005'; dr.severity = 'Critical'; dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
+            dr.detectorId = 'QT-005'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Critical'); dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
             dr.title = 'Default template "' + (String) t.get('Name') + '" is ' + st;
             dr.description = '"' + (String) t.get('Name') + '" is marked as Default but its status is "' + st + '" instead of "Deployed". Users cannot generate documents.';
             dr.primaryRecord = ref(t);

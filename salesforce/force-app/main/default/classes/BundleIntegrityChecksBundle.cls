@@ -133,7 +133,7 @@ public with sharing class BundleIntegrityChecksBundle implements IDetector {
             if (bundlesWithOptions.contains(pid)) continue;
             DetectorResult r = new DetectorResult();
             r.detectorId = 'BN-001';
-            r.severity = 'Critical';
+            r.severity = DetectorCatalogController.getSeverity(r.detectorId, 'Critical');
             r.gapUsd = 0;
             r.recoverabilityScore = 0.95;
             r.title = 'Empty bundle "' + (String) p.get('Name') + '"';
@@ -163,7 +163,7 @@ public with sharing class BundleIntegrityChecksBundle implements IDetector {
             if (String.isBlank(childName)) childName = 'Unknown Product';
             DetectorResult r = new DetectorResult();
             r.detectorId = 'BN-002';
-            r.severity = 'Warning';
+            r.severity = DetectorCatalogController.getSeverity(r.detectorId, 'Warning');
             r.gapUsd = 0;
             r.recoverabilityScore = 0.95;
             r.title = 'Option quantity mismatch on "' + childName + '"';
@@ -206,7 +206,7 @@ public with sharing class BundleIntegrityChecksBundle implements IDetector {
             String name = nameById.containsKey(parent) ? nameById.get(parent) : String.valueOf(parent);
             DetectorResult r = new DetectorResult();
             r.detectorId = 'BN-003';
-            r.severity = 'Warning';
+            r.severity = DetectorCatalogController.getSeverity(r.detectorId, 'Warning');
             r.gapUsd = 0;
             r.recoverabilityScore = 0.7;
             r.title = 'Bundle "' + name + '" nested ' + depth + ' levels deep';
@@ -262,7 +262,7 @@ public with sharing class BundleIntegrityChecksBundle implements IDetector {
             if (String.isBlank(childName)) childName = 'Unknown Product';
             DetectorResult r = new DetectorResult();
             r.detectorId = 'BN-004';
-            r.severity = 'Critical';
+            r.severity = DetectorCatalogController.getSeverity(r.detectorId, 'Critical');
             r.gapUsd = 0;
             r.recoverabilityScore = 0.95;
             r.title = 'Required option "' + childName + '" has no price book entry';
@@ -299,7 +299,7 @@ public with sharing class BundleIntegrityChecksBundle implements IDetector {
             if (String.isBlank(parentName)) parentName = String.valueOf(pid);
             DetectorResult r = new DetectorResult();
             r.detectorId = 'BN-005';
-            r.severity = 'Info';
+            r.severity = DetectorCatalogController.getSeverity(r.detectorId, 'Info');
             r.gapUsd = 0;
             r.recoverabilityScore = 1.0;
             r.title = 'Bundle "' + parentName + '" has ' + opts.size() + ' options without feature grouping';
@@ -351,7 +351,7 @@ public with sharing class BundleIntegrityChecksBundle implements IDetector {
             List<String> renSample = sample3(renByBundle.get(pid));
             DetectorResult r = new DetectorResult();
             r.detectorId = 'BN-006';
-            r.severity = 'Critical';
+            r.severity = DetectorCatalogController.getSeverity(r.detectorId, 'Critical');
             r.gapUsd = 0;
             r.recoverabilityScore = 0.8;
             r.title = 'Bundle "' + name + '" mixes Evergreen and Renewable subscriptions';

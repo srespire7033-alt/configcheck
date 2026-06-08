@@ -98,7 +98,7 @@ public with sharing class FinanceBookChecksBundle implements IDetector {
             }
             if (hasOpenCurrent) continue;
             DetectorResult dr = new DetectorResult();
-            dr.detectorId = 'FB-001'; dr.severity = 'Critical'; dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
+            dr.detectorId = 'FB-001'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Critical'); dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
             dr.title = 'No open finance period for current date in "' + (String) book.get('Name') + '"';
             dr.description = 'Finance book "' + (String) book.get('Name') +
                 '" has no open period covering today (' + todayDate + '). Invoice posting will be blocked.';
@@ -128,7 +128,7 @@ public with sharing class FinanceBookChecksBundle implements IDetector {
             if (gaps.isEmpty()) continue;
             String bookName = bookNameById.containsKey(bookId) ? bookNameById.get(bookId) : String.valueOf(bookId);
             DetectorResult dr = new DetectorResult();
-            dr.detectorId = 'FB-002'; dr.severity = 'Critical'; dr.gapUsd = 0; dr.recoverabilityScore = 0.85;
+            dr.detectorId = 'FB-002'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Critical'); dr.gapUsd = 0; dr.recoverabilityScore = 0.85;
             dr.title = 'Finance period gaps in "' + bookName + '"';
             List<String> gapSample = new List<String>();
             Integer cap = Math.min(3, gaps.size());
@@ -160,7 +160,7 @@ public with sharing class FinanceBookChecksBundle implements IDetector {
             if (!overlapFound) continue;
             String bookName = bookNameById.containsKey(bookId) ? bookNameById.get(bookId) : String.valueOf(bookId);
             DetectorResult dr = new DetectorResult();
-            dr.detectorId = 'FB-003'; dr.severity = 'Critical'; dr.gapUsd = 0; dr.recoverabilityScore = 0.85;
+            dr.detectorId = 'FB-003'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Critical'); dr.gapUsd = 0; dr.recoverabilityScore = 0.85;
             dr.title = 'Overlapping finance periods in "' + bookName + '"';
             dr.description = 'Overlapping finance periods detected in "' + bookName + '". Transactions may be double-posted.';
             dr.primaryRecord = new SourceRecord('blng__FinanceBook__c', bookId, bookName);
@@ -213,7 +213,7 @@ public with sharing class FinanceBookChecksBundle implements IDetector {
         }
         if (bad.isEmpty()) return new List<DetectorResult>();
         DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'FB-004'; dr.severity = 'Critical'; dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
+        dr.detectorId = 'FB-004'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Critical'); dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
         dr.title = 'Active finance books with no periods';
         dr.description = bad.size() + ' active finance book(s) have no finance periods defined. No transactions can be posted.';
         dr.primaryRecord = bad[0];
@@ -235,7 +235,7 @@ public with sharing class FinanceBookChecksBundle implements IDetector {
         }
         if (bad.isEmpty()) return new List<DetectorResult>();
         DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'FB-005'; dr.severity = 'Warning'; dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
+        dr.detectorId = 'FB-005'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Warning'); dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
         dr.title = 'Old finance periods still open';
         dr.description = bad.size() + ' finance period(s) from prior fiscal years remain open. Close after year-end reconciliation.';
         dr.primaryRecord = bad[0];
@@ -248,7 +248,7 @@ public with sharing class FinanceBookChecksBundle implements IDetector {
     static List<DetectorResult> evaluateFB006(List<Map<String, Object>> books) {
         if (books.isEmpty()) {
             DetectorResult dr = new DetectorResult();
-            dr.detectorId = 'FB-006'; dr.severity = 'Critical'; dr.gapUsd = 0; dr.recoverabilityScore = 0.95;
+            dr.detectorId = 'FB-006'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Critical'); dr.gapUsd = 0; dr.recoverabilityScore = 0.95;
             dr.title = 'No finance books found';
             dr.description = 'No finance books exist in this org. Required for billing and revenue recognition.';
             return new List<DetectorResult>{ dr };
@@ -257,7 +257,7 @@ public with sharing class FinanceBookChecksBundle implements IDetector {
         for (Map<String, Object> b : books) if (isActive(b)) activeCount++;
         if (activeCount > 0) return new List<DetectorResult>();
         DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'FB-006'; dr.severity = 'Critical'; dr.gapUsd = 0; dr.recoverabilityScore = 0.95;
+        dr.detectorId = 'FB-006'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Critical'); dr.gapUsd = 0; dr.recoverabilityScore = 0.95;
         dr.title = 'No active finance books';
         dr.description = 'All ' + books.size() + ' finance book(s) are inactive. At least one must be active.';
         dr.primaryRecord = bookRef(books[0]);
@@ -277,7 +277,7 @@ public with sharing class FinanceBookChecksBundle implements IDetector {
         }
         if (bad.isEmpty()) return new List<DetectorResult>();
         DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'FB-007'; dr.severity = 'Info'; dr.gapUsd = 0; dr.recoverabilityScore = 1.0;
+        dr.detectorId = 'FB-007'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Info'); dr.gapUsd = 0; dr.recoverabilityScore = 1.0;
         dr.title = bad.size() + ' finance period(s) past end date still open';
         dr.description = bad.size() + ' finance period(s) have ended but remain open. Best practice: close after reconciliation.';
         dr.primaryRecord = bad[0];

@@ -135,7 +135,7 @@ public with sharing class ProductRuleChecksBundle implements IDetector {
 
             DetectorResult r = new DetectorResult();
             r.detectorId = 'PRD-001';
-            r.severity = 'Critical';
+            r.severity = DetectorCatalogController.getSeverity(r.detectorId, 'Critical');
             r.gapUsd = 0;
             r.recoverabilityScore = 0.9;
             r.title = 'Conflicting selection rules detected';
@@ -174,7 +174,7 @@ public with sharing class ProductRuleChecksBundle implements IDetector {
             for (Map<String, Object> rule : bucket) names.add('"' + (String) rule.get('Name') + '"');
             DetectorResult r = new DetectorResult();
             r.detectorId = 'PRD-002';
-            r.severity = 'Warning';
+            r.severity = DetectorCatalogController.getSeverity(r.detectorId, 'Warning');
             r.gapUsd = 0;
             r.recoverabilityScore = 0.9;
             r.title = bucket.size() + ' ' + parts[0] + ' rules share evaluation order ' + parts[1];
@@ -200,7 +200,7 @@ public with sharing class ProductRuleChecksBundle implements IDetector {
             if (actionCount > 0 || errCondCount > 0) continue;
             DetectorResult r = new DetectorResult();
             r.detectorId = 'PRD-003';
-            r.severity = 'Warning';
+            r.severity = DetectorCatalogController.getSeverity(r.detectorId, 'Warning');
             r.gapUsd = 0;
             r.recoverabilityScore = 0.95;
             r.title = 'Product Rule "' + (String) rule.get('Name') + '" has no conditions or actions';
@@ -230,7 +230,7 @@ public with sharing class ProductRuleChecksBundle implements IDetector {
             if (!String.isBlank(cmStr)) continue;
             DetectorResult r = new DetectorResult();
             r.detectorId = 'PRD-004';
-            r.severity = 'Warning';
+            r.severity = DetectorCatalogController.getSeverity(r.detectorId, 'Warning');
             r.gapUsd = 0;
             r.recoverabilityScore = 0.9;
             r.title = t + ' rule "' + (String) rule.get('Name') + '" missing condition logic';
@@ -302,7 +302,7 @@ public with sharing class ProductRuleChecksBundle implements IDetector {
             if (missingProductActions.isEmpty()) continue;
             DetectorResult r = new DetectorResult();
             r.detectorId = 'LQ-003';
-            r.severity = 'Warning';
+            r.severity = DetectorCatalogController.getSeverity(r.detectorId, 'Warning');
             r.gapUsd = 0;
             r.recoverabilityScore = 0.9;
             String firstType = (String) missingProductActions[0].get('SBQQ__Type__c');
@@ -336,7 +336,7 @@ public with sharing class ProductRuleChecksBundle implements IDetector {
                 String actType = (String) act.get('SBQQ__Type__c');
                 DetectorResult r = new DetectorResult();
                 r.detectorId = 'LQ-004';
-                r.severity = 'Warning';
+                r.severity = DetectorCatalogController.getSeverity(r.detectorId, 'Warning');
                 r.gapUsd = 0;
                 r.recoverabilityScore = 0.9;
                 r.title = 'Selection rule targets inactive product "' + productName + '"';
@@ -366,7 +366,7 @@ public with sharing class ProductRuleChecksBundle implements IDetector {
         for (Map<String, Object> rule : missingOrder) {
             DetectorResult r = new DetectorResult();
             r.detectorId = 'LQ-005';
-            r.severity = 'Info';
+            r.severity = DetectorCatalogController.getSeverity(r.detectorId, 'Info');
             r.gapUsd = 0;
             r.recoverabilityScore = 1.0;
             r.title = 'Selection rule "' + (String) rule.get('Name') + '" has no evaluation order';

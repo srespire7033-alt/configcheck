@@ -85,7 +85,7 @@ public with sharing class AMD001NoEffectiveDateDetector implements IDetector {
 
         DetectorResult r = new DetectorResult();
         r.detectorId = 'AMD-FOR-001';
-        r.severity = 'Warning';
+        r.severity = DetectorCatalogController.getSeverity(r.detectorId, 'Warning');
         r.entitledUsd = netAmount;
         r.realizedUsd = netAmount;
         r.computeGap();

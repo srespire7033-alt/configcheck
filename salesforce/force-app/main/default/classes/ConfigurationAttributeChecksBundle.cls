@@ -85,7 +85,7 @@ public with sharing class ConfigurationAttributeChecksBundle implements IDetecto
             if (!Boolean.valueOf(a.get('SBQQ__Hidden__c'))) continue;
             DetectorResult r = new DetectorResult();
             r.detectorId = 'CA-001';
-            r.severity = 'Critical';
+            r.severity = DetectorCatalogController.getSeverity(r.detectorId, 'Critical');
             r.gapUsd = 0;
             r.recoverabilityScore = 0.95;
             r.title = 'Attribute "' + (String) a.get('Name') + '" is both hidden and required';
@@ -118,7 +118,7 @@ public with sharing class ConfigurationAttributeChecksBundle implements IDetecto
             for (Map<String, Object> a : bad) names.add('"' + (String) a.get('Name') + '"');
             DetectorResult r = new DetectorResult();
             r.detectorId = 'CA-002';
-            r.severity = 'Warning';
+            r.severity = DetectorCatalogController.getSeverity(r.detectorId, 'Warning');
             r.gapUsd = 0;
             r.recoverabilityScore = 0.9;
             r.title = bad.size() + ' attribute(s) on "' + pname + '" missing target field';
@@ -151,7 +151,7 @@ public with sharing class ConfigurationAttributeChecksBundle implements IDetecto
             String attrName = s(bucket[0], 'Name');
             DetectorResult r = new DetectorResult();
             r.detectorId = 'CA-003';
-            r.severity = 'Warning';
+            r.severity = DetectorCatalogController.getSeverity(r.detectorId, 'Warning');
             r.gapUsd = 0;
             r.recoverabilityScore = 0.95;
             r.title = 'Duplicate attribute "' + attrName + '" on "' + pname + '"';
@@ -188,7 +188,7 @@ public with sharing class ConfigurationAttributeChecksBundle implements IDetecto
             for (Map<String, Object> a : bad) names.add('"' + (String) a.get('Name') + '"');
             DetectorResult r = new DetectorResult();
             r.detectorId = 'CA-004';
-            r.severity = 'Info';
+            r.severity = DetectorCatalogController.getSeverity(r.detectorId, 'Info');
             r.gapUsd = 0;
             r.recoverabilityScore = 1.0;
             r.title = bad.size() + ' required attribute(s) on "' + pname + '" without defaults';

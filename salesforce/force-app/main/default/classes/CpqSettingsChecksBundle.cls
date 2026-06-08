@@ -83,7 +83,7 @@ public with sharing class CpqSettingsChecksBundle implements IDetector {
         Object td = settings.get('SBQQ__TriggerDisabled__c');
         if (td == null || Boolean.valueOf(td) == false) return new List<DetectorResult>();
         DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'SET-001'; dr.severity = 'Critical'; dr.gapUsd = 0; dr.recoverabilityScore = 1.0;
+        dr.detectorId = 'SET-001'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Critical'); dr.gapUsd = 0; dr.recoverabilityScore = 1.0;
         dr.title = 'CPQ Triggers are DISABLED';
         dr.description = 'SBQQ__TriggerDisabled__c is set to TRUE. ALL CPQ managed package triggers are disabled. Quotes will not calculate, subscriptions will not be created, renewals will fail.';
         return new List<DetectorResult>{ dr };
@@ -92,7 +92,7 @@ public with sharing class CpqSettingsChecksBundle implements IDetector {
     @TestVisible
     static List<DetectorResult> evaluateSET002() {
         DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'SET-002'; dr.severity = 'Info'; dr.gapUsd = 0; dr.recoverabilityScore = 1.0;
+        dr.detectorId = 'SET-002'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Info'); dr.gapUsd = 0; dr.recoverabilityScore = 1.0;
         dr.title = 'Custom Quote Calculator Plugin is active';
         dr.description = 'A QCP is configured. This JavaScript runs during quote calculation and can override standard pricing logic. Any pricing bug must be investigated against the QCP code first.';
         return new List<DetectorResult>{ dr };
@@ -103,7 +103,7 @@ public with sharing class CpqSettingsChecksBundle implements IDetector {
         Object rm = settings.get('SBQQ__RenewalModel__c');
         if (rm != null && !String.isBlank(String.valueOf(rm))) return new List<DetectorResult>();
         DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'SET-003'; dr.severity = 'Warning'; dr.gapUsd = 0; dr.recoverabilityScore = 0.95;
+        dr.detectorId = 'SET-003'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Warning'); dr.gapUsd = 0; dr.recoverabilityScore = 0.95;
         dr.title = 'CPQ Renewal Model is not configured';
         dr.description = 'SBQQ__RenewalModel__c is not set. Controls how renewal quotes are generated. Without it, CPQ uses an unspecified default that may not match your renewal flow.';
         return new List<DetectorResult>{ dr };
@@ -114,7 +114,7 @@ public with sharing class CpqSettingsChecksBundle implements IDetector {
         Object tu = settings.get('SBQQ__SubscriptionTermUnit__c');
         if (tu != null && !String.isBlank(String.valueOf(tu))) return new List<DetectorResult>();
         DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'SET-004'; dr.severity = 'Info'; dr.gapUsd = 0; dr.recoverabilityScore = 1.0;
+        dr.detectorId = 'SET-004'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Info'); dr.gapUsd = 0; dr.recoverabilityScore = 1.0;
         dr.title = 'Subscription Term Unit is not explicitly set';
         dr.description = 'SBQQ__SubscriptionTermUnit__c is not configured. CPQ defaults to "Month"; should be explicitly set to match your billing model.';
         return new List<DetectorResult>{ dr };

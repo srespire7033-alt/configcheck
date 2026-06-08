@@ -101,7 +101,7 @@ public with sharing class AdvancedPricingChecksBundle implements IDetector {
             if (missing.isEmpty()) continue;
             DetectorResult r = new DetectorResult();
             r.detectorId = 'AP-001';
-            r.severity = 'Critical';
+            r.severity = DetectorCatalogController.getSeverity(r.detectorId, 'Critical');
             r.gapUsd = 0;
             r.recoverabilityScore = 0.9;
             r.title = 'MDQ product "' + (String) p.get('Name') + '" missing ' + String.join(missing, ', ');
@@ -123,7 +123,7 @@ public with sharing class AdvancedPricingChecksBundle implements IDetector {
             if (optionChildIds.contains((Id) p.get('Id'))) continue;
             DetectorResult r = new DetectorResult();
             r.detectorId = 'AP-002';
-            r.severity = 'Warning';
+            r.severity = DetectorCatalogController.getSeverity(r.detectorId, 'Warning');
             r.gapUsd = 0;
             r.recoverabilityScore = 0.9;
             r.title = '"' + (String) p.get('Name') + '" uses Percent of Total but isn\'t a bundle option';
@@ -145,7 +145,7 @@ public with sharing class AdvancedPricingChecksBundle implements IDetector {
             if (pbeProductIds.contains((Id) p.get('Id'))) continue;
             DetectorResult r = new DetectorResult();
             r.detectorId = 'AP-003';
-            r.severity = 'Warning';
+            r.severity = DetectorCatalogController.getSeverity(r.detectorId, 'Warning');
             r.gapUsd = 0;
             r.recoverabilityScore = 0.9;
             r.title = 'Cost-priced product "' + (String) p.get('Name') + '" has no price book entry';
@@ -167,7 +167,7 @@ public with sharing class AdvancedPricingChecksBundle implements IDetector {
             if (!String.isBlank(s(p, 'SBQQ__BillingFrequency__c'))) continue;
             DetectorResult r = new DetectorResult();
             r.detectorId = 'AP-004';
-            r.severity = 'Warning';
+            r.severity = DetectorCatalogController.getSeverity(r.detectorId, 'Warning');
             r.gapUsd = 0;
             r.recoverabilityScore = 0.95;
             r.title = 'Recurring product "' + (String) p.get('Name') + '" has no billing frequency';
@@ -193,7 +193,7 @@ public with sharing class AdvancedPricingChecksBundle implements IDetector {
         sorted.sort();
         DetectorResult r = new DetectorResult();
         r.detectorId = 'AP-005';
-        r.severity = 'Info';
+        r.severity = DetectorCatalogController.getSeverity(r.detectorId, 'Info');
         r.gapUsd = 0;
         r.recoverabilityScore = 1.0;
         r.title = methods.size() + ' pricing methods in use: ' + String.join(sorted, ', ');

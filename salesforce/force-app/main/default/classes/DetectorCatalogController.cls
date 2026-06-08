@@ -65,6 +65,26 @@ public with sharing class DetectorCatalogController {
         return 'Info';
     }
 
+    /**
+     * Phase 24b — Static-severity helper for Vercel alignment.
+     *
+     * Returns the Detector__mdt.Severity__c value (matches Vercel's
+     * authoritative spec). When the catalog doesn't define a severity
+     * (mainly forensic -FOR- detectors that compute it from gapUsd),
+     * returns the provided fallback so caller behavior is unchanged.
+     *
+     * Caller pattern:
+     *   r.severity = DetectorCatalogController.getSeverity(r.detectorId, 'Critical');
+     *
+     * The catalog lookup is per-transaction cached so 200+ calls per
+     * scan have no perf impact.
+     */
+    public static String getSeverity(String detectorId, String fallback) {
+        Detector__mdt m = getRecord(detectorId);
+        if (m != null && String.isNotBlank(m.Severity__c)) return m.Severity__c;
+        return fallback;
+    }
+
     public static Decimal getRecoverability(String detectorId, Decimal defaultScore) {
         Detector__mdt m = getRecord(detectorId);
         return (m != null && m.RecoverabilityScore__c != null) ? m.RecoverabilityScore__c : defaultScore;
@@ -174,7 +194,7 @@ public with sharing class DetectorCatalogController {
             SELECT DeveloperName, DetectorId__c, Label__c, Category__c, AppliesTo__c,
                    CriticalThresholdUsd__c, WarningThresholdUsd__c,
                    RecoverabilityScore__c, Effort__c, IsActive__c, Version__c,
-                   RequiredSurface__c
+                   RequiredSurface__c, Severity__c
             FROM Detector__mdt
         ]) {
             if (String.isNotBlank(m.DetectorId__c)) cache.put(m.DetectorId__c, m);

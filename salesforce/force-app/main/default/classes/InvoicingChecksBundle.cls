@@ -144,7 +144,7 @@ public with sharing class InvoicingChecksBundle implements IDetector {
 
         DetectorResult r = new DetectorResult();
         r.detectorId = 'INV-001';
-        r.severity = 'Warning';
+        r.severity = DetectorCatalogController.getSeverity(r.detectorId, 'Warning');
         r.gapUsd = total;
         r.recoverabilityScore = 0.7;
         r.title = 'Invoices stuck in Draft for 30+ days';
@@ -170,7 +170,7 @@ public with sharing class InvoicingChecksBundle implements IDetector {
         if (zeros.isEmpty()) return new List<DetectorResult>();
         DetectorResult r = new DetectorResult();
         r.detectorId = 'INV-002';
-        r.severity = 'Warning';
+        r.severity = DetectorCatalogController.getSeverity(r.detectorId, 'Warning');
         r.gapUsd = 0;
         r.recoverabilityScore = 0.7;
         r.title = 'Posted invoices with $0 amount';
@@ -193,7 +193,7 @@ public with sharing class InvoicingChecksBundle implements IDetector {
         for (Map<String, Object> c : creditNotes) refs.add(cnRef(c));
         DetectorResult r = new DetectorResult();
         r.detectorId = 'INV-003';
-        r.severity = 'Warning';
+        r.severity = DetectorCatalogController.getSeverity(r.detectorId, 'Warning');
         r.gapUsd = total;
         r.recoverabilityScore = 0.8;
         r.title = 'Credit notes with unallocated balance';
@@ -224,7 +224,7 @@ public with sharing class InvoicingChecksBundle implements IDetector {
         for (Map<String, Object> i : overdue) refs.add(invRef(i));
         DetectorResult r = new DetectorResult();
         r.detectorId = 'INV-004';
-        r.severity = 'Info';
+        r.severity = DetectorCatalogController.getSeverity(r.detectorId, 'Info');
         r.gapUsd = total;
         r.recoverabilityScore = 0.6;
         r.title = 'Significant number of overdue invoices';
@@ -253,7 +253,7 @@ public with sharing class InvoicingChecksBundle implements IDetector {
         if (!hasField || missing.isEmpty()) return new List<DetectorResult>();
         DetectorResult r = new DetectorResult();
         r.detectorId = 'INV-005';
-        r.severity = 'Critical';
+        r.severity = DetectorCatalogController.getSeverity(r.detectorId, 'Critical');
         r.gapUsd = 0;
         r.recoverabilityScore = 0.85;
         r.title = missing.size() + ' posted invoice(s) without legal entity';

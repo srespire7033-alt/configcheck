@@ -67,7 +67,7 @@ public with sharing class GlRuleChecksBundle implements IDetector {
         }
         if (bad.isEmpty()) return new List<DetectorResult>();
         DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'GL-001'; dr.severity = 'Critical'; dr.gapUsd = 0; dr.recoverabilityScore = 0.85;
+        dr.detectorId = 'GL-001'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Critical'); dr.gapUsd = 0; dr.recoverabilityScore = 0.85;
         dr.title = 'GL treatments with no GL accounts';
         dr.description = bad.size() + ' active GL treatment(s) have neither credit nor debit GL accounts mapped.';
         dr.primaryRecord = bad[0];
@@ -91,7 +91,7 @@ public with sharing class GlRuleChecksBundle implements IDetector {
         }
         if (bad.isEmpty()) return new List<DetectorResult>();
         DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'GL-002'; dr.severity = 'Critical'; dr.gapUsd = 0; dr.recoverabilityScore = 0.85;
+        dr.detectorId = 'GL-002'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Critical'); dr.gapUsd = 0; dr.recoverabilityScore = 0.85;
         dr.title = 'GL rules with no treatments';
         dr.description = bad.size() + ' active GL rule(s) have no GL treatments configured.';
         dr.primaryRecord = bad[0];
@@ -113,7 +113,7 @@ public with sharing class GlRuleChecksBundle implements IDetector {
         }
         if (bad.isEmpty()) return new List<DetectorResult>();
         DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'GL-003'; dr.severity = 'Warning'; dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
+        dr.detectorId = 'GL-003'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Warning'); dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
         dr.title = 'Inactive GL treatments on active GL rules';
         dr.description = bad.size() + ' inactive GL treatment(s) exist under active GL rules. Certain transaction types may not post.';
         dr.primaryRecord = bad[0];
@@ -134,7 +134,7 @@ public with sharing class GlRuleChecksBundle implements IDetector {
         }
         if (bad.isEmpty()) return new List<DetectorResult>();
         DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'GL-004'; dr.severity = 'Warning'; dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
+        dr.detectorId = 'GL-004'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Warning'); dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
         dr.title = 'GL treatments with only one account mapped';
         dr.description = bad.size() + ' active GL treatment(s) have only credit OR debit mapped, not both.';
         dr.primaryRecord = bad[0];
@@ -152,7 +152,7 @@ public with sharing class GlRuleChecksBundle implements IDetector {
         Integer sampleCap = Math.min(5, inactives.size());
         for (Integer i = 0; i < sampleCap; i++) sample.add('"' + (String) inactives[i].get('Name') + '"');
         DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'GL-005'; dr.severity = 'Info'; dr.gapUsd = 0; dr.recoverabilityScore = 1.0;
+        dr.detectorId = 'GL-005'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Info'); dr.gapUsd = 0; dr.recoverabilityScore = 1.0;
         dr.title = inactives.size() + ' inactive GL rule(s)';
         dr.description = inactives.size() + ' GL rule(s) are inactive: ' + String.join(sample, ', ') +
             (inactives.size() > 5 ? ' and ' + (inactives.size() - 5) + ' more.' : '.');

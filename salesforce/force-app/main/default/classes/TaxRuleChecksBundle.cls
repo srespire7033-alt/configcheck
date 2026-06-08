@@ -72,7 +72,7 @@ public with sharing class TaxRuleChecksBundle implements IDetector {
         }
         if (bad.isEmpty()) return new List<DetectorResult>();
         DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'TR-001'; dr.severity = 'Critical'; dr.gapUsd = bad.size() * 2000;
+        dr.detectorId = 'TR-001'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Critical'); dr.gapUsd = bad.size() * 2000;
         dr.recoverabilityScore = 0.85;
         dr.title = 'Active products missing tax rule';
         dr.description = bad.size() + ' active product(s) have no tax rule. Tax won\'t be calculated.';
@@ -94,7 +94,7 @@ public with sharing class TaxRuleChecksBundle implements IDetector {
         }
         if (bad.isEmpty()) return new List<DetectorResult>();
         DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'TR-002'; dr.severity = 'Critical'; dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
+        dr.detectorId = 'TR-002'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Critical'); dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
         dr.title = 'Inactive tax rules assigned to active products';
         dr.description = bad.size() + ' active product(s) reference inactive tax rules.';
         dr.primaryRecord = bad[0];
@@ -113,7 +113,7 @@ public with sharing class TaxRuleChecksBundle implements IDetector {
         }
         if (bad.isEmpty()) return new List<DetectorResult>();
         DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'TR-003'; dr.severity = 'Warning'; dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
+        dr.detectorId = 'TR-003'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Warning'); dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
         dr.title = 'Active tax rules not marked as taxable';
         dr.description = bad.size() + ' active tax rule(s) don\'t have Taxable=Yes. Products using these won\'t have tax applied.';
         dr.primaryRecord = bad[0];
@@ -131,7 +131,7 @@ public with sharing class TaxRuleChecksBundle implements IDetector {
         Integer sampleCap = Math.min(5, inactives.size());
         for (Integer i = 0; i < sampleCap; i++) sample.add('"' + (String) inactives[i].get('Name') + '"');
         DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'TR-004'; dr.severity = 'Info'; dr.gapUsd = 0; dr.recoverabilityScore = 1.0;
+        dr.detectorId = 'TR-004'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Info'); dr.gapUsd = 0; dr.recoverabilityScore = 1.0;
         dr.title = inactives.size() + ' inactive tax rule(s)';
         dr.description = inactives.size() + ' tax rule(s) inactive: ' + String.join(sample, ', ') +
             (inactives.size() > 5 ? ' and ' + (inactives.size() - 5) + ' more.' : '.');

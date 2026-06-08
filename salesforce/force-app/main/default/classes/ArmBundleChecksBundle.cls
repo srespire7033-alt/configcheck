@@ -71,7 +71,7 @@ public with sharing class ArmBundleChecksBundle implements IDetector {
         }
         if (bad.isEmpty()) return new List<DetectorResult>();
         DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'ARM-005'; dr.severity = 'Critical'; dr.gapUsd = 0; dr.recoverabilityScore = 0.85;
+        dr.detectorId = 'ARM-005'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Critical'); dr.gapUsd = 0; dr.recoverabilityScore = 0.85;
         dr.title = bad.size() + ' bundle product(s) with no components';
         dr.description = 'Products named/categorized as bundles have no ProductRelatedComponent rows.';
         dr.primaryRecord = bad[0];
@@ -93,7 +93,7 @@ public with sharing class ArmBundleChecksBundle implements IDetector {
         }
         if (bad.isEmpty()) return new List<DetectorResult>();
         DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'ARM-013'; dr.severity = 'Critical'; dr.gapUsd = 0; dr.recoverabilityScore = 0.95;
+        dr.detectorId = 'ARM-013'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Critical'); dr.gapUsd = 0; dr.recoverabilityScore = 0.95;
         dr.title = bad.size() + ' bundle component(s) with impossible quantity range';
         dr.description = 'MinQuantity exceeds MaxQuantity. Configuration will fail at runtime.';
         dr.primaryRecord = bad[0];
@@ -113,7 +113,7 @@ public with sharing class ArmBundleChecksBundle implements IDetector {
         }
         if (bad.isEmpty()) return new List<DetectorResult>();
         DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'ARM-014'; dr.severity = 'Warning'; dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
+        dr.detectorId = 'ARM-014'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Warning'); dr.gapUsd = 0; dr.recoverabilityScore = 0.9;
         dr.title = bad.size() + ' bundle component(s) reference inactive children';
         dr.description = 'These components point to a deactivated Product2 — the bundle will fail validation.';
         dr.primaryRecord = bad[0];
@@ -138,7 +138,7 @@ public with sharing class ArmBundleChecksBundle implements IDetector {
             bad.add(new SourceRecord('Product2', parentId, 'Inactive parent (' + countByParent.get(parentId) + ' components)'));
         }
         DetectorResult dr = new DetectorResult();
-        dr.detectorId = 'ARM-015'; dr.severity = 'Info'; dr.gapUsd = 0; dr.recoverabilityScore = 1.0;
+        dr.detectorId = 'ARM-015'; dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Info'); dr.gapUsd = 0; dr.recoverabilityScore = 1.0;
         dr.title = bad.size() + ' inactive bundle parent(s) still have components defined';
         dr.description = 'Cleanup: deactivated parent products still own ProductRelatedComponent rows.';
         dr.primaryRecord = bad[0];

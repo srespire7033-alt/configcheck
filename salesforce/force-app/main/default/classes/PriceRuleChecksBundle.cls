@@ -162,7 +162,7 @@ public with sharing class PriceRuleChecksBundle implements IDetector {
 
             DetectorResult r = new DetectorResult();
             r.detectorId = 'PR-001';
-            r.severity = 'Critical';
+            r.severity = DetectorCatalogController.getSeverity(r.detectorId, 'Critical');
             r.gapUsd = 0;
             r.recoverabilityScore = 0.9;
             r.title = 'Conflicting Price Rules detected';
@@ -192,7 +192,7 @@ public with sharing class PriceRuleChecksBundle implements IDetector {
 
             DetectorResult r = new DetectorResult();
             r.detectorId = 'PR-002';
-            r.severity = 'Warning';
+            r.severity = DetectorCatalogController.getSeverity(r.detectorId, 'Warning');
             r.gapUsd = 0;
             r.recoverabilityScore = 0.95;
             r.title = 'Price Rule with no ' + which;
@@ -226,7 +226,7 @@ public with sharing class PriceRuleChecksBundle implements IDetector {
             if (bucket.size() < 2) continue;
             DetectorResult r = new DetectorResult();
             r.detectorId = 'PR-003';
-            r.severity = 'Info';
+            r.severity = DetectorCatalogController.getSeverity(r.detectorId, 'Info');
             r.gapUsd = 0;
             r.recoverabilityScore = 0.9;
             r.title = bucket.size() + ' price rules share evaluation order ' + order;
@@ -269,7 +269,7 @@ public with sharing class PriceRuleChecksBundle implements IDetector {
             List<Map<String, Object>> bucket = fieldRules.get(field);
             DetectorResult r = new DetectorResult();
             r.detectorId = 'PR-004';
-            r.severity = 'Warning';
+            r.severity = DetectorCatalogController.getSeverity(r.detectorId, 'Warning');
             r.gapUsd = 0;
             r.recoverabilityScore = 0.85;
             r.title = bucket.size() + ' rules target the same field';
@@ -298,7 +298,7 @@ public with sharing class PriceRuleChecksBundle implements IDetector {
 
         DetectorResult r = new DetectorResult();
         r.detectorId = 'PR-005';
-        r.severity = 'Warning';
+        r.severity = DetectorCatalogController.getSeverity(r.detectorId, 'Warning');
         r.gapUsd = 0;
         r.recoverabilityScore = 0.9;
         r.title = missing.size() + ' price rule(s) missing evaluation order';
@@ -324,7 +324,7 @@ public with sharing class PriceRuleChecksBundle implements IDetector {
             if (anyLookupField) continue;
             DetectorResult r = new DetectorResult();
             r.detectorId = 'LQ-001';
-            r.severity = 'Critical';
+            r.severity = DetectorCatalogController.getSeverity(r.detectorId, 'Critical');
             r.gapUsd = 0;
             r.recoverabilityScore = 0.9;
             r.title = 'Price rule lookup incomplete on "' + (String) rule.get('Name') + '"';
@@ -353,7 +353,7 @@ public with sharing class PriceRuleChecksBundle implements IDetector {
             String firstField = (String) lookups[0].get('SBQQ__SourceLookupField__c');
             DetectorResult r = new DetectorResult();
             r.detectorId = 'LQ-002';
-            r.severity = 'Critical';
+            r.severity = DetectorCatalogController.getSeverity(r.detectorId, 'Critical');
             r.gapUsd = 0;
             r.recoverabilityScore = 0.9;
             r.title = 'Orphaned lookup field on "' + (String) rule.get('Name') + '"';
@@ -395,7 +395,7 @@ public with sharing class PriceRuleChecksBundle implements IDetector {
 
         DetectorResult r = new DetectorResult();
         r.detectorId = 'UA-003';
-        r.severity = 'Info';
+        r.severity = DetectorCatalogController.getSeverity(r.detectorId, 'Info');
         r.gapUsd = 0;
         r.recoverabilityScore = 1.0;
         r.title = totalInactive + ' inactive rules (' + inactivePR + ' price, ' +
