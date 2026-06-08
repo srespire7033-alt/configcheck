@@ -472,6 +472,11 @@
         <editable>true</editable>
     </fieldPermissions>
     <fieldPermissions>
+        <field>ConnectedOrg__c.RemoteOrgName__c</field>
+        <readable>true</readable>
+        <editable>true</editable>
+    </fieldPermissions>
+    <fieldPermissions>
         <field>ConnectedOrg__c.Status__c</field>
         <readable>true</readable>
         <editable>true</editable>
