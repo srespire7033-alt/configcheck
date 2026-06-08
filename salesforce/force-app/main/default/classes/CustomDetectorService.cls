@@ -193,4 +193,92 @@ public with sharing class CustomDetectorService {
     }
 
     public class CustomDetectorException extends Exception {}
+
+    // ─── Phase 24s — Test query from the admin UI ──────────────────
+    //
+    // Admin pastes SOQL into the tester, picks a target org, sees how
+    // many rows the query returns and a preview of the first 5. Same
+    // OrgQueryService path the real scan uses, so what tests passes is
+    // what runs.
+
+    public class TestQueryResult {
+        @AuraEnabled public Integer rowCount;
+        @AuraEnabled public List<String> columns;
+        @AuraEnabled public List<Map<String, Object>> sample;
+        @AuraEnabled public String error;
+    }
+
+    /**
+     * Run a candidate SOQL string against a connected org (or the host
+     * org if connectedOrgId is null) and return the row count + first 5
+     * rows. Read-only — refuses anything that smells like DML.
+     */
+    @AuraEnabled
+    public static TestQueryResult testQuery(String soql, String productType, Id connectedOrgId) {
+        TestQueryResult out = new TestQueryResult();
+        out.rowCount = 0;
+        out.columns = new List<String>();
+        out.sample = new List<Map<String, Object>>();
+        if (String.isBlank(soql)) {
+            out.error = 'Enter a SOQL query first.';
+            return out;
+        }
+        // Strip leading/trailing whitespace and validate read-only.
+        String q = soql.trim();
+        String upper = q.toUpperCase();
+        // Multi-statement and DML keywords blocked. Database.query() can
+        // already only execute SELECT, but the explicit guard gives a
+        // friendlier error and satisfies AppExchange security review.
+        if (q.contains(';')) {
+            out.error = 'Multi-statement queries are not allowed.';
+            return out;
+        }
+        for (String banned : new List<String>{
+            'INSERT ', 'UPDATE ', 'DELETE ', 'UPSERT ', 'MERGE ',
+            'INSERT(', 'UPDATE(', 'DELETE(', 'UPSERT(', 'MERGE('
+        }) {
+            if (upper.contains(banned)) {
+                out.error = 'DML statements are not allowed in detector SOQL.';
+                return out;
+            }
+        }
+        if (!upper.startsWith('SELECT ')) {
+            out.error = 'Query must start with SELECT.';
+            return out;
+        }
+
+        // Resolve Named Credential for remote orgs the same way a scan does.
+        String nc = null;
+        if (connectedOrgId != null) {
+            List<ConnectedOrg__c> co = [
+                SELECT NamedCredentialName__c FROM ConnectedOrg__c
+                WHERE Id = :connectedOrgId LIMIT 1
+            ];
+            if (!co.isEmpty()) nc = co[0].NamedCredentialName__c;
+        }
+        DetectorContext ctx = new DetectorContext(
+            null,
+            UserInfo.getDefaultCurrency(),
+            String.isBlank(productType) ? 'CPQ' : productType,
+            connectedOrgId,
+            nc
+        );
+        List<Map<String, Object>> rows;
+        try {
+            rows = OrgQueryService.query(ctx, q);
+        } catch (Exception e) {
+            out.error = e.getMessage();
+            return out;
+        }
+        if (rows == null) rows = new List<Map<String, Object>>();
+        out.rowCount = rows.size();
+        if (!rows.isEmpty()) {
+            // Columns from the first row's key order — best we can do
+            // without parsing the SOQL SELECT clause.
+            out.columns.addAll(rows[0].keySet());
+            Integer cap = Math.min(5, rows.size());
+            for (Integer i = 0; i < cap; i++) out.sample.add(rows[i]);
+        }
+        return out;
+    }
 }

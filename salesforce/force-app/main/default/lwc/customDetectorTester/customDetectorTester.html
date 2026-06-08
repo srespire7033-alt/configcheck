@@ -1,0 +1,88 @@
+<template>
+  <div class="op-cdt">
+    <header class="op-cdt__header">
+      <h2 class="op-cdt__title">Test Custom Detector Query</h2>
+      <p class="op-cdt__sub">Paste a SOQL string, pick a target, see the rows it would return before you save a CustomDetector__mdt record. Read-only — DML keywords are rejected.</p>
+    </header>
+
+    <lightning-textarea
+      label="SOQL"
+      value={soql}
+      onchange={handleSoqlChange}
+      placeholder="SELECT Id, Name FROM Product2 WHERE IsActive = true AND Description = null"
+      class="op-cdt__soql"
+    ></lightning-textarea>
+
+    <div class="op-cdt__controls">
+      <lightning-combobox
+        label="Product type"
+        value={productType}
+        options={productTypeOptions}
+        onchange={handleProductChange}
+        class="op-cdt__pt"
+      ></lightning-combobox>
+
+      <template lwc:if={recordId}>
+        <div class="op-cdt__target">
+          <span class="op-cdt__target-label">Target</span>
+          <span class="op-cdt__target-value">This connected org</span>
+        </div>
+      </template>
+      <template lwc:else>
+        <lightning-input
+          label="Connected Org Id (optional)"
+          value={connectedOrgIdManual}
+          onchange={handleConnectedOrgChange}
+          placeholder="Leave blank to run on host org"
+          class="op-cdt__nc"
+        ></lightning-input>
+      </template>
+
+      <lightning-button
+        variant="brand"
+        label="Test Query"
+        disabled={isRunDisabled}
+        onclick={handleTest}
+        class="op-cdt__btn"
+      ></lightning-button>
+    </div>
+
+    <template lwc:if={running}>
+      <div class="op-cdt__loading">
+        <lightning-spinner alternative-text="Running query"></lightning-spinner>
+      </div>
+    </template>
+
+    <template lwc:if={error}>
+      <div class="op-cdt__error">
+        <strong>Query failed.</strong> {error}
+      </div>
+    </template>
+
+    <template lwc:if={hasResult}>
+      <div class="op-cdt__result">
+        <div class="op-cdt__result-count">{rowCountLabel}</div>
+        <template lwc:if={hasRows}>
+          <table class="op-cdt__table">
+            <thead>
+              <tr>
+                <template for:each={columnHeaders} for:item="col">
+                  <th key={col.key}>{col.label}</th>
+                </template>
+              </tr>
+            </thead>
+            <tbody>
+              <template for:each={tableRows} for:item="row">
+                <tr key={row.key}>
+                  <template for:each={row.cells} for:item="cell">
+                    <td key={cell.key}>{cell.value}</td>
+                  </template>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </template>
+      </div>
+    </template>
+  </div>
+</template>
