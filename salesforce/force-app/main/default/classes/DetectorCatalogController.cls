@@ -154,6 +154,7 @@ public with sharing class DetectorCatalogController {
         @AuraEnabled public Decimal recoverabilityScore;
         @AuraEnabled public String effort;
         @AuraEnabled public Boolean isActive;
+        @AuraEnabled public String longDescription;
     }
 
     private static CatalogEntry toEntry(Detector__mdt m) {
@@ -167,7 +168,37 @@ public with sharing class DetectorCatalogController {
         e.recoverabilityScore = m.RecoverabilityScore__c;
         e.effort = m.Effort__c;
         e.isActive = m.IsActive__c;
+        e.longDescription = m.LongDescription__c;
         return e;
+    }
+
+    /**
+     * Phase 24o — Admin-facing prose for the finding triage UI.
+     * Prefers CustomDetector__mdt.LongDescription__c when the detector
+     * was migrated (Phase 24f-i), otherwise falls back to Detector__mdt.
+     * Returns null when no description exists (no admin has written one
+     * yet for that detector).
+     */
+    @AuraEnabled(cacheable=true)
+    public static String getLongDescription(String detectorId) {
+        if (String.isBlank(detectorId)) return null;
+        try {
+            List<CustomDetector__mdt> cd = [
+                SELECT LongDescription__c FROM CustomDetector__mdt
+                WHERE DetectorId__c = :detectorId LIMIT 1
+            ];
+            if (!cd.isEmpty() && String.isNotBlank(cd[0].LongDescription__c)) {
+                return cd[0].LongDescription__c;
+            }
+        } catch (Exception e) {
+            // CustomDetector__mdt may not be deployed yet — fall through
+            // to Detector__mdt lookup.
+        }
+        Detector__mdt m = getRecord(detectorId);
+        if (m != null && String.isNotBlank(m.LongDescription__c)) {
+            return m.LongDescription__c;
+        }
+        return null;
     }
 
     public class CatalogEntryComparator implements Comparator<CatalogEntry> {
@@ -194,7 +225,7 @@ public with sharing class DetectorCatalogController {
             SELECT DeveloperName, DetectorId__c, Label__c, Category__c, AppliesTo__c,
                    CriticalThresholdUsd__c, WarningThresholdUsd__c,
                    RecoverabilityScore__c, Effort__c, IsActive__c, Version__c,
-                   RequiredSurface__c, Severity__c
+                   RequiredSurface__c, Severity__c, LongDescription__c
             FROM Detector__mdt
         ]) {
             if (String.isNotBlank(m.DetectorId__c)) cache.put(m.DetectorId__c, m);

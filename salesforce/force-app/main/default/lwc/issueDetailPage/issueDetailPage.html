@@ -45,6 +45,20 @@
         </div>
       </section>
 
+      <!-- About This Check — admin-facing detector context (Phase 24o) -->
+      <template lwc:if={hasLongDescription}>
+        <section class="op-idp__card">
+          <header class="op-idp__card-head">
+            <h2 class="op-idp__card-title">About This Check</h2>
+          </header>
+          <div class="op-idp__card-body">
+            <template for:each={longDescriptionLines} for:item="line">
+              <p key={line.key} class="op-idp__long-desc-line">{line.text}</p>
+            </template>
+          </div>
+        </section>
+      </template>
+
       <!-- Why It Matters -->
       <section class="op-idp__card">
         <header class="op-idp__card-head">

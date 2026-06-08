@@ -194,3 +194,12 @@ textarea:focus-visible,
     transform: none !important;
   }
 }
+
+/* Phase 24o — About This Check (admin-facing 4-line detector description) */
+.op-idp__long-desc-line {
+  margin: 0 0 8px 0;
+  line-height: 1.55;
+}
+.op-idp__long-desc-line:last-child {
+  margin-bottom: 0;
+}

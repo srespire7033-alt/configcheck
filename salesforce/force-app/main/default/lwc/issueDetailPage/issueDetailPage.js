@@ -4,6 +4,7 @@ import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import { refreshApex } from '@salesforce/apex';
 import getIssueDetail from '@salesforce/apex/IssuesController.getIssueDetail';
 import updateStatus from '@salesforce/apex/IssuesController.updateStatus';
+import getLongDescription from '@salesforce/apex/DetectorCatalogController.getLongDescription';
 
 /**
  * Issue Detail Page (full-page).
@@ -49,6 +50,26 @@ export default class IssueDetailPage extends NavigationMixin(LightningElement) {
     } else if (result.error) {
       this.error = result.error.body?.message || result.error.message;
     }
+  }
+
+  // Phase 24o — admin-facing detector description, looked up by
+  // detectorId from the issue. cacheable=true on the Apex side so
+  // we don't refetch on every detail-page open.
+  @wire(getLongDescription, { detectorId: '$data.detectorId' })
+  wireLongDesc({ data }) {
+    this.longDescription = data;
+  }
+
+  get hasLongDescription() { return Boolean(this.longDescription); }
+  // 4-line format ships with literal \n; render as <br>-separated lines
+  // via a getter the template iterates instead of using innerHTML.
+  get longDescriptionLines() {
+    if (!this.longDescription) return [];
+    return this.longDescription
+      .split('\n')
+      .map(t => t.trim())
+      .filter(Boolean)
+      .map((text, i) => ({ key: i, text }));
   }
 
   get isLoading() { return this.loading; }
