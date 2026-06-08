@@ -11,7 +11,7 @@
     <values><field>IsActive__c</field><value xsi:type="xsd:boolean">true</value></values>
     <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
     <values><field>RequiredSurface__c</field><value xsi:type="xsd:string">blng__LegalEntity__c</value></values>
-    <values><field>Severity__c</field><value xsi:type="xsd:string">Critical</value></values>
+    <values><field>Severity__c</field><value xsi:type="xsd:string">Warning</value></values>
     <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: Orgs with zero blng__LegalEntity__c records defined.
 Why it matters: Billing can&apos;t generate invoices with a real remit-to entity. Outbound invoices either fail or default to placeholder values that look unprofessional to customers.
 Suppress a finding: only during initial setup.

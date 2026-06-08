@@ -11,7 +11,7 @@
     <values><field>IsActive__c</field><value xsi:type="xsd:boolean">true</value></values>
     <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
     <values><field>RequiredSurface__c</field><value xsi:type="xsd:string">blng__FinancePeriod__c</value></values>
-    <values><field>Severity__c</field><value xsi:type="xsd:string">Critical</value></values>
+    <values><field>Severity__c</field><value xsi:type="xsd:string">Warning</value></values>
     <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: Overlapping blng__FinancePeriod__c records on the same finance book.
 Why it matters: A posting dated in the overlap matches two periods — Billing picks one nondeterministically, and the same transaction can land in different periods across runs. Reporting becomes unreliable.
 Suppress a finding: only during a tightly-controlled cutover with documented reconciliation steps.

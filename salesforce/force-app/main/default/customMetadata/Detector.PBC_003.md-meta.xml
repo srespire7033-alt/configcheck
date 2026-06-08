@@ -11,7 +11,7 @@
     <values><field>IsActive__c</field><value xsi:type="xsd:boolean">true</value></values>
     <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
     <values><field>RequiredSurface__c</field><value xsi:type="xsd:string">blng__BillingRule__c</value></values>
-    <values><field>Severity__c</field><value xsi:type="xsd:string">Critical</value></values>
+    <values><field>Severity__c</field><value xsi:type="xsd:string">Warning</value></values>
     <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: Active Product2 records with no blng__TaxRule__c assigned.
 Why it matters: Tax can&apos;t be computed on quote lines or invoices for these products. You either under-bill (no tax collected, exposure on audit) or block invoicing — and the customer experiences a tax-line surprise on the first invoice.
 Suppress a finding: for genuinely tax-exempt SKUs where blng__TaxableYesNo__c is set to No.

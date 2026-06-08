@@ -11,7 +11,7 @@
     <values><field>IsActive__c</field><value xsi:type="xsd:boolean">true</value></values>
     <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
     <values><field>RequiredSurface__c</field><value xsi:type="xsd:string">blng__FinanceBook__c</value></values>
-    <values><field>Severity__c</field><value xsi:type="xsd:string">Critical</value></values>
+    <values><field>Severity__c</field><value xsi:type="xsd:string">Warning</value></values>
     <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: Orgs where no blng__FinanceBook__c records are active.
 Why it matters: Billing has no place to post — invoicing fails entirely for any product configured to use finance books. A complete operational stall.
 Suppress a finding: never — this is always a deployment gap. Fix it.
