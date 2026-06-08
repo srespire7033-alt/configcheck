@@ -75,6 +75,13 @@ public with sharing class IssuesController {
         @AuraEnabled public Integer newCount;
         @AuraEnabled public Integer resolvedCount;
         @AuraEnabled public Boolean isFirstScan;
+        // Phase 24y-D — inline bulk actions on Top Issues cards.
+        // findingIds: every raw finding id in this group (the unrolled
+        //   list — feeds RecoveryActionService.bulkStage for "Stage all").
+        // leadDetectorId: the headline member's detectorId — what the
+        //   "Mark not applicable" button targets.
+        @AuraEnabled public List<Id> findingIds;
+        @AuraEnabled public String leadDetectorId;
     }
 
     public class IssueDetailDto {
@@ -349,6 +356,11 @@ public with sharing class IssuesController {
             g.headlineTitle = actionHeadline != null ? actionHeadline : members[0].title;
             g.headlineDescription = members[0].description;
             g.members = members;
+            // Phase 24y-D — inline-action payload.
+            g.leadDetectorId = members.isEmpty() ? null : members[0].detectorId;
+            List<Id> ids = new List<Id>();
+            for (IssueRow r : rows) if (r.id != null) ids.add(r.id);
+            g.findingIds = ids;
             // Phase 24y-B — trend counts.
             g.isFirstScan = isFirstScan;
             Integer newCnt = 0;
@@ -588,6 +600,43 @@ public with sharing class IssuesController {
         s.PrimaryRecordId__c = primaryRecordId;
         s.Reason__c = reason;
         return s;
+    }
+
+    /**
+     * Phase 24y-D — One-click "Mark not applicable" from the Top Issues
+     * card. Creates a DetectorOverride__c row pinning the detector to
+     * "Not Applicable" for the supplied org. Future scans skip this
+     * detector for that org entirely. Returns the created/updated id.
+     *
+     * Idempotent: if an override exists for (org, detector) it's
+     * updated rather than duplicated. Phase 24q ships the same upsert
+     * via DetectorOverrideController.saveOverrides; this wrapper
+     * exists so the Top Issues LWC has a one-call API.
+     */
+    @AuraEnabled
+    public static Id markGroupNotApplicable(Id connectedOrgId, String detectorId, String reason) {
+        if (connectedOrgId == null) {
+            throw new AuraHandledException('connectedOrgId is required (Top Issues runs against a scoped org)');
+        }
+        if (String.isBlank(detectorId)) {
+            throw new AuraHandledException('detectorId is required');
+        }
+        List<DetectorOverride__c> existing = [
+            SELECT Id FROM DetectorOverride__c
+            WHERE ConnectedOrg__c = :connectedOrgId AND DetectorId__c = :detectorId
+            LIMIT 1
+        ];
+        DetectorOverride__c o = existing.isEmpty()
+            ? new DetectorOverride__c(
+                ConnectedOrg__c = connectedOrgId,
+                DetectorId__c = detectorId
+            )
+            : existing[0];
+        o.SeverityOverride__c = 'Not Applicable';
+        o.IsActive__c = true;
+        o.Notes__c = String.isBlank(reason) ? 'Marked from Top Issues card' : reason;
+        upsert o;
+        return o.Id;
     }
 
     /**

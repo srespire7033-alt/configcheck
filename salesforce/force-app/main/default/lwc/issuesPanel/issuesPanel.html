@@ -51,6 +51,25 @@
               </h3>
               <p class="op-tip__row-desc">{r.headlineDescription}</p>
 
+              <div class="op-tip__row-actions">
+                <button
+                  type="button"
+                  class="op-tip__action op-tip__action--primary"
+                  data-key={r.groupKey}
+                  onclick={handleStageAll}
+                  disabled={r.isBusy}
+                >{r.stageLabel}</button>
+                <template lwc:if={r.canMarkNA}>
+                  <button
+                    type="button"
+                    class="op-tip__action op-tip__action--ghost"
+                    data-key={r.groupKey}
+                    onclick={handleMarkNA}
+                    disabled={r.isBusy}
+                  >{r.markNALabel}</button>
+                </template>
+              </div>
+
               <template if:true={r.isExpanded}>
                 <div class="op-tip__members">
                   <template for:each={r.members} for:item="m">

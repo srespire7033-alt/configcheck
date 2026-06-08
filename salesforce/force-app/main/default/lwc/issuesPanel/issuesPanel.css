@@ -246,3 +246,35 @@ textarea:focus-visible,
 .op-tip__trend--down    { background: #d1fae5; color: #065f46; }
 .op-tip__trend--neutral { background: #f3f4f6; color: #6b7280; }
 
+
+/* Phase 24y-D — inline action buttons on Top Issues cards */
+.op-tip__row-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+.op-tip__action {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+.op-tip__action[disabled] { opacity: 0.5; cursor: not-allowed; }
+.op-tip__action--primary {
+  background: #2563eb;
+  color: #fff;
+  border: 1px solid #2563eb;
+}
+.op-tip__action--primary:hover:not([disabled]) { background: #1d4ed8; }
+.op-tip__action--ghost {
+  background: #fff;
+  color: #374151;
+  border: 1px solid #d1d5db;
+}
+.op-tip__action--ghost:hover:not([disabled]) { background: #f3f4f6; border-color: #9ca3af; }
+

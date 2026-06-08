@@ -1,7 +1,10 @@
 import { LightningElement, wire, track } from 'lwc';
 import { CurrentPageReference } from 'lightning/navigation';
 import { refreshApex } from '@salesforce/apex';
+import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import getTopIssueGroups from '@salesforce/apex/IssuesController.getTopIssueGroups';
+import bulkStage from '@salesforce/apex/RecoveryActionService.bulkStage';
+import markGroupNotApplicable from '@salesforce/apex/IssuesController.markGroupNotApplicable';
 
 /**
  * Top Issues to Address — top 5 grouped issue rows.
@@ -18,6 +21,8 @@ export default class IssuesPanel extends LightningElement {
   @track openDetailId = null; // for modal
   /** Phase 22w — scope top-issues rollup to the active Connected Org. */
   @track connectedOrgId = null;
+  /** Phase 24y-D — which group's button is mid-action (disables siblings). */
+  @track busyKey = null;
   wiredResult;
 
   @wire(CurrentPageReference)
@@ -74,10 +79,18 @@ export default class IssuesPanel extends LightningElement {
         trendLabel = '→ no change';
         trendClass = 'op-tip__trend op-tip__trend--neutral';
       }
+      const findingCount = (g.findingIds || []).length;
+      const canStage = findingCount > 0 && !this.busyKey;
+      const canMarkNA = !!g.leadDetectorId && !!this.connectedOrgId && !this.busyKey;
       return {
         ...g,
         trendLabel,
         trendClass,
+        canStage,
+        canMarkNA,
+        stageLabel: `Stage all ${findingCount} fixes`,
+        markNALabel: g.leadDetectorId ? `Mark ${g.leadDetectorId} not applicable` : 'Mark not applicable',
+        isBusy: this.busyKey === g.groupKey,
         rowNumber: idx + 1,
         isExpanded,
         isMulti,
@@ -95,6 +108,68 @@ export default class IssuesPanel extends LightningElement {
           : g.headlineTitle,
       };
     });
+  }
+
+  // ── Phase 24y-D — inline bulk actions on Top Issues cards ──
+  async handleStageAll(e) {
+    e.stopPropagation();
+    const key = e.currentTarget.dataset.key;
+    const g = (this.groups || []).find(x => x.groupKey === key);
+    if (!g || !g.findingIds || g.findingIds.length === 0) return;
+    this.busyKey = key;
+    try {
+      const result = await bulkStage({ findingIds: g.findingIds });
+      const staged = result?.created ?? 0;
+      const skipped = result?.skipped ?? 0;
+      this.dispatchEvent(new ShowToastEvent({
+        title: `${staged} fix${staged === 1 ? '' : 'es'} staged`,
+        message: skipped > 0 ? `${skipped} skipped (already staged or auto-resolved)` : 'See Recovery Queue to approve and commit.',
+        variant: staged > 0 ? 'success' : 'info',
+      }));
+      if (this.wiredResult) await refreshApex(this.wiredResult);
+    } catch (err) {
+      this.dispatchEvent(new ShowToastEvent({
+        title: 'Stage failed',
+        message: err?.body?.message || err?.message || String(err),
+        variant: 'error',
+      }));
+    } finally {
+      this.busyKey = null;
+    }
+  }
+
+  async handleMarkNA(e) {
+    e.stopPropagation();
+    const key = e.currentTarget.dataset.key;
+    const g = (this.groups || []).find(x => x.groupKey === key);
+    if (!g || !g.leadDetectorId || !this.connectedOrgId) return;
+    const reason = window.prompt(
+      `Mark ${g.leadDetectorId} as Not Applicable for this org? Future scans will skip it.\n\nReason (optional, for audit):`,
+      ''
+    );
+    if (reason === null) return; // user cancelled
+    this.busyKey = key;
+    try {
+      await markGroupNotApplicable({
+        connectedOrgId: this.connectedOrgId,
+        detectorId: g.leadDetectorId,
+        reason: reason || 'Marked from Top Issues card',
+      });
+      this.dispatchEvent(new ShowToastEvent({
+        title: `${g.leadDetectorId} marked Not Applicable`,
+        message: 'Next scan will skip this detector for this org. Change in Setup → Custom Metadata Types → Detector Override.',
+        variant: 'success',
+      }));
+      if (this.wiredResult) await refreshApex(this.wiredResult);
+    } catch (err) {
+      this.dispatchEvent(new ShowToastEvent({
+        title: 'Mark Not Applicable failed',
+        message: err?.body?.message || err?.message || String(err),
+        variant: 'error',
+      }));
+    } finally {
+      this.busyKey = null;
+    }
   }
 
   // Phase 24y-A — money formatting shared by Top Issues cards.
