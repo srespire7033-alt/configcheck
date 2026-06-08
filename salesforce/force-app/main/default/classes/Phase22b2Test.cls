@@ -211,7 +211,9 @@ private class Phase22b2Test {
         List<DetectorResult> r = new GlRuleChecksBundle().run(ctx());
         Set<String> fired = new Set<String>();
         for (DetectorResult dr : r) fired.add(dr.detectorId);
-        System.assert(fired.contains('GL-001'), 'GL-001');
+        // Phase 24f — GL-001 migrated to CustomDetector__mdt. Bundle no
+        // longer dispatches it.
+        System.assert(!fired.contains('GL-001'), 'GL-001 migrated to CustomDetector__mdt');
         System.assert(fired.contains('GL-002'), 'GL-002');
         System.assert(fired.contains('GL-003'), 'GL-003');
         System.assert(fired.contains('GL-004'), 'GL-004');

@@ -44,7 +44,8 @@ public with sharing class ApprovalRuleChecksBundle implements IDetector {
         Boolean runAR004 = DetectorCatalogController.isActive('AR-004');
         Boolean runAR005 = DetectorCatalogController.isActive('AR-005');
 
-        if (runAR001) results.addAll(evaluateAR001(rows));
+        // AR-001 migrated to CustomDetector__mdt (Phase 24f pilot).
+        // if (runAR001) results.addAll(evaluateAR001(rows));
         if (runAR002) results.addAll(evaluateAR002(rows));
         if (runAR003) results.addAll(evaluateAR003(rows));
         if (runAR004) results.addAll(evaluateAR004(rows));

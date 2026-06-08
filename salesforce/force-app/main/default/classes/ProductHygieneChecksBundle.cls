@@ -82,7 +82,10 @@ public with sharing class ProductHygieneChecksBundle implements IDetector {
         }
 
         if (DetectorCatalogController.isActive('PB-001')) results.addAll(evaluatePB001(products, pbeProductIds));
-        if (DetectorCatalogController.isActive('PB-002')) results.addAll(evaluatePB002(products));
+        // PB-002 migrated to CustomDetector__mdt (Phase 24f pilot).
+        // Note: the mdt path emits per-record findings (Vercel parity);
+        // old Apex emitted one summary finding. Intentional upgrade.
+        // if (DetectorCatalogController.isActive('PB-002')) results.addAll(evaluatePB002(products));
         if (DetectorCatalogController.isActive('PB-003')) results.addAll(evaluatePB003(products));
         if (DetectorCatalogController.isActive('PB-004')) results.addAll(evaluatePB004(products));
         if (sbqqPresent && DetectorCatalogController.isActive('UA-001')) {

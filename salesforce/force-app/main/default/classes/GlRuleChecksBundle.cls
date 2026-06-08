@@ -41,7 +41,10 @@ public with sharing class GlRuleChecksBundle implements IDetector {
             }
         }
 
-        if (DetectorCatalogController.isActive('GL-001')) results.addAll(evaluateGL001(treatments));
+        // GL-001 migrated to CustomDetector__mdt (Phase 24f pilot). Evaluator
+        // method kept for now as dead code; cleanup follows once the pilot
+        // confirms scan parity for two cycles.
+        // if (DetectorCatalogController.isActive('GL-001')) results.addAll(evaluateGL001(treatments));
         if (DetectorCatalogController.isActive('GL-002')) results.addAll(evaluateGL002(rules, treatments));
         if (DetectorCatalogController.isActive('GL-003')) results.addAll(evaluateGL003(rules, treatments));
         if (DetectorCatalogController.isActive('GL-004')) results.addAll(evaluateGL004(treatments));

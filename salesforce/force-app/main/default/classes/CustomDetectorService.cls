@@ -89,10 +89,18 @@ public with sharing class CustomDetectorService {
             r.realizedUsd = toDecimal(row.get(def.RealizedUsdField__c));
             if (r.realizedUsd == null) r.realizedUsd = 0;
             r.computeGap();
-            // Severity comes from the Detector__mdt catalog so the
-            // thresholds are tunable in one place (Phase 19a).
-            r.severity = DetectorCatalogController.resolveSeverity(
-                def.DetectorId__c, r.gapUsd);
+            // Phase 24f — severity prefers the static catalog value
+            // (Vercel-authoritative per Phase 24b). For -FOR- detectors
+            // whose severity escalates by gapUsd, the catalog leaves
+            // Severity__c null and resolveSeverity wins via the threshold
+            // ladder. getSeverity returns the static value when set and
+            // the supplied fallback otherwise, so detectors that DO want
+            // gap-based escalation can pass null.
+            String staticSev = DetectorCatalogController.getSeverity(
+                def.DetectorId__c, null);
+            r.severity = staticSev != null
+                ? staticSev
+                : DetectorCatalogController.resolveSeverity(def.DetectorId__c, r.gapUsd);
             r.recoverabilityScore = DetectorCatalogController.getRecoverability(
                 def.DetectorId__c, 0.5);
 
