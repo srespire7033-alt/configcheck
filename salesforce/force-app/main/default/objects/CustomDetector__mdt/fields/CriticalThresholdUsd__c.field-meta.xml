@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>CriticalThresholdUsd__c</fullName>
+    <label>Critical Threshold (USD)</label>
+    <description>Findings with gap above this value are marked Critical. Optional — when blank, Severity is static.</description>
+    <type>Number</type>
+    <precision>12</precision>
+    <scale>2</scale>
+    <fieldManageability>SubscriberControlled</fieldManageability>
+</CustomField>

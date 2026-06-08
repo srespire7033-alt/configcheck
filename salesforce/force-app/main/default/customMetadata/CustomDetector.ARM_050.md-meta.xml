@@ -15,4 +15,7 @@
     <values><field>RealizedUsdField__c</field><value xsi:nil="true"/></values>
     <values><field>IsActive__c</field><value xsi:type="xsd:boolean">true</value></values>
     <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
+    <values><field>Effort__c</field><value xsi:type="xsd:string">low</value></values>
+    <values><field>RecoverabilityScore__c</field><value xsi:type="xsd:double">1.0</value></values>
+    <values><field>Severity__c</field><value xsi:type="xsd:string">Info</value></values>
 </CustomMetadata>

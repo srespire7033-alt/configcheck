@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Severity__c</fullName>
+    <label>Severity</label>
+    <description>Critical | Warning | Info. Phase 24j — moved onto CustomDetector__mdt so admins manage the editable detector entirely from one screen. Same semantics as Detector__mdt.Severity__c.</description>
+    <type>Text</type>
+    <length>16</length>
+    <fieldManageability>SubscriberControlled</fieldManageability>
+</CustomField>

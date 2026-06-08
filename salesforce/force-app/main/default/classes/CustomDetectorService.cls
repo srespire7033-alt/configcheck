@@ -38,7 +38,9 @@ public with sharing class CustomDetectorService {
                        SoqlQuery__c, TitleTemplate__c, DescriptionTemplate__c,
                        PrimaryRecordIdField__c, PrimaryRecordType__c,
                        EntitledUsdField__c, RealizedUsdField__c,
-                       IsActive__c, Version__c
+                       IsActive__c, Version__c,
+                       Severity__c, RecoverabilityScore__c, Effort__c,
+                       CriticalThresholdUsd__c, WarningThresholdUsd__c
                 FROM CustomDetector__mdt
                 WHERE IsActive__c = true
             ];
@@ -89,20 +91,25 @@ public with sharing class CustomDetectorService {
             r.realizedUsd = toDecimal(row.get(def.RealizedUsdField__c));
             if (r.realizedUsd == null) r.realizedUsd = 0;
             r.computeGap();
-            // Phase 24f — severity prefers the static catalog value
-            // (Vercel-authoritative per Phase 24b). For -FOR- detectors
-            // whose severity escalates by gapUsd, the catalog leaves
-            // Severity__c null and resolveSeverity wins via the threshold
-            // ladder. getSeverity returns the static value when set and
-            // the supplied fallback otherwise, so detectors that DO want
-            // gap-based escalation can pass null.
-            String staticSev = DetectorCatalogController.getSeverity(
-                def.DetectorId__c, null);
-            r.severity = staticSev != null
-                ? staticSev
-                : DetectorCatalogController.resolveSeverity(def.DetectorId__c, r.gapUsd);
-            r.recoverabilityScore = DetectorCatalogController.getRecoverability(
-                def.DetectorId__c, 0.5);
+            // Phase 24j — severity/recoverability/thresholds now live
+            // directly on CustomDetector__mdt so admins manage the
+            // editable detector from a single screen (the matching
+            // Detector__mdt twin is no longer consulted for these
+            // fields). Behavior matches the Phase 24f resolver:
+            //   if Severity__c is set, use it as the static label;
+            //   otherwise apply the per-row threshold ladder using
+            //   CriticalThresholdUsd__c / WarningThresholdUsd__c, with
+            //   the same defaults the catalog used (10000 / 1000).
+            if (String.isNotBlank(def.Severity__c)) {
+                r.severity = def.Severity__c;
+            } else {
+                Decimal crit = def.CriticalThresholdUsd__c != null ? def.CriticalThresholdUsd__c : 10000;
+                Decimal warn = def.WarningThresholdUsd__c != null ? def.WarningThresholdUsd__c : 1000;
+                Decimal gap = r.gapUsd != null ? r.gapUsd : 0;
+                r.severity = (gap > crit) ? 'Critical' : (gap > warn ? 'Warning' : 'Info');
+            }
+            r.recoverabilityScore = def.RecoverabilityScore__c != null
+                ? def.RecoverabilityScore__c : 0.5;
 
             // Primary record handoff for attribution + recovery queue.
             Object pkValue = row.get(pkField);
