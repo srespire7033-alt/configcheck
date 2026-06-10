@@ -50,8 +50,18 @@
 .op-cim__empty { padding: 30px; font-size: 13px; color: #6b7280; text-align: center; }
 
 .op-cim__body {
-  flex: 1;
+  flex: 1 1 auto;
+  /* Phase 24z — min-height:0 is the flex-shrink unlock. Without it,
+     a flex column child with overflow:auto never actually scrolls
+     because the default min-height:auto forbids shrinking below
+     content size. Bug surfaced on a 15-warning / 80-record CPQ+Billing
+     scan: the modal grew past the viewport instead of scrolling.
+     scrollbar-gutter:stable so content doesn't shift when the bar
+     appears mid-render. */
+  min-height: 0;
   overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-gutter: stable;
   padding: 16px 24px 20px;
 }
 
