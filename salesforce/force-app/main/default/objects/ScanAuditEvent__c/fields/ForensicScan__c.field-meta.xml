@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>ForensicScan__c</fullName>
+    <label>Forensic Scan</label>
+    <description>The scan this event belongs to. Master-detail so events are cleaned up when the scan record is deleted.</description>
+    <referenceTo>ForensicScan__c</referenceTo>
+    <relationshipLabel>Audit Events</relationshipLabel>
+    <relationshipName>AuditEvents</relationshipName>
+    <type>MasterDetail</type>
+    <writeRequiresMasterRead>false</writeRequiresMasterRead>
+    <reparentableMasterDetail>false</reparentableMasterDetail>
+</CustomField>

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>DetectorId__c</fullName>
+    <label>Detector ID</label>
+    <description>The detector or bundle this event relates to (e.g. ARM-001, ORD-FOR-002, ARM-CATALOG-BUNDLE). Blank for non-detector events like probe or finalize.</description>
+    <type>Text</type>
+    <length>50</length>
+    <required>false</required>
+</CustomField>

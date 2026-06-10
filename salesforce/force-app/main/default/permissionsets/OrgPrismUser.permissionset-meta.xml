@@ -152,6 +152,10 @@
         <apexClass>PackageDetector</apexClass>
         <enabled>true</enabled>
     </classAccesses>
+    <classAccesses>
+        <apexClass>AuditLogger</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
     <pageAccesses>
         <apexPage>ExecutiveReport</apexPage>
         <enabled>true</enabled>
@@ -516,6 +520,41 @@
         <readable>true</readable>
         <editable>true</editable>
     </fieldPermissions>
+    <!-- ForensicScan__c master-detail is implicitly required; cannot include in fieldPermissions. -->
+    <fieldPermissions>
+        <field>ScanAuditEvent__c.Severity__c</field>
+        <readable>true</readable>
+        <editable>true</editable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <field>ScanAuditEvent__c.Source__c</field>
+        <readable>true</readable>
+        <editable>true</editable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <field>ScanAuditEvent__c.DetectorId__c</field>
+        <readable>true</readable>
+        <editable>true</editable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <field>ScanAuditEvent__c.Message__c</field>
+        <readable>true</readable>
+        <editable>true</editable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <field>ScanAuditEvent__c.StackTrace__c</field>
+        <readable>true</readable>
+        <editable>true</editable>
+    </fieldPermissions>
+    <objectPermissions>
+        <object>ScanAuditEvent__c</object>
+        <allowCreate>true</allowCreate>
+        <allowRead>true</allowRead>
+        <allowEdit>true</allowEdit>
+        <allowDelete>true</allowDelete>
+        <viewAllRecords>false</viewAllRecords>
+        <modifyAllRecords>false</modifyAllRecords>
+    </objectPermissions>
     <objectPermissions>
         <object>ForensicScan__c</object>
         <allowCreate>true</allowCreate>
