@@ -487,11 +487,18 @@ public with sharing class ForensicScanService {
         for (IDetector d : getDetectorsFor(productType, ctx.isRemote(), ctx.namedCredentialName)) {
             try {
                 List<DetectorResult> results = d.run(ctx);
-                // Phase 24q — apply per-org overrides before persist:
-                // "Not Applicable" results are dropped, severity is
-                // rewritten when an override is set. No-op for local
-                // scans (connectedOrgId == null).
+                // Phase 24q — apply per-org overrides before persist.
                 results = DetectorOverrideService.applyOverrides(results, connectedOrgId);
+                // Phase 24z-G — filter results by sub-detector surface.
+                // Bundles like ArmCatalogChecksBundle run with bundle-level
+                // getDetectorId() ('ARM-CATALOG-BUNDLE') which has no surface
+                // requirement, so the dispatcher-level gate doesn't catch
+                // them. The bundle then internally fires sub-detectors
+                // (ARM-001, ARM-002, ...) that DO have surface requirements
+                // on objects like ProductSellingModelOption. Without this
+                // post-filter, a vanilla DE org gets 17 false-positive
+                // ARM-001 "no selling model" findings every scan.
+                results = filterResultsBySurface(results, ctx);
                 for (DetectorResult r : results) {
                     if (isSuppressed(suppressed, r)) continue;
                     findings.add(toFindingRecord(scan.Id, r));
@@ -606,6 +613,10 @@ public with sharing class ForensicScanService {
                 // Phase 24q — per-org overrides applied per chunk.
                 List<DetectorResult> results = DetectorOverrideService.applyOverrides(
                     d.run(ctx), ctx.connectedOrgId);
+                // Phase 24z-G — sub-detector surface filter (see note in
+                // runDetectorsAndFinalize). Drops results for ARM-001 et al
+                // when the remote target lacks ProductSellingModelOption etc.
+                results = filterResultsBySurface(results, ctx);
                 for (DetectorResult r : results) {
                     if (isSuppressed(suppressed, r)) continue;
                     findings.add(toFindingRecord(scanId, r));
@@ -629,6 +640,76 @@ public with sharing class ForensicScanService {
             if (combined.length() > 30000) combined = combined.substring(0, 30000);
             update new ForensicScan__c(Id = scanId, ErrorMessage__c = combined);
         }
+        // Phase 24z-G — persist this chunk's gated detector IDs onto the
+        // scan record (merged with whatever earlier chunks recorded). The
+        // surfaceGatedThisTx static is per-Apex-tx and doesn't survive
+        // across queueables; finalize would otherwise see an empty set.
+        // Writing here makes the set durable across the chunked pipeline.
+        if (!surfaceGatedThisTx.isEmpty()) {
+            mergeGatedDetectorsIntoScan(scanId, surfaceGatedThisTx);
+        }
+    }
+
+    /**
+     * Phase 24z-G — sub-detector surface filter. Bundles run with their
+     * bundle-level getDetectorId (e.g. 'ARM-CATALOG-BUNDLE') which has no
+     * surface requirement, so dispatcher-level gating misses the inner
+     * ARM-001 / ARM-002 / etc. that DO have surface requirements. This
+     * filters the BUNDLE's emitted results, dropping any whose detectorId
+     * fails the AND-semantic surface check against the target org. Drops
+     * are recorded into surfaceGatedThisTx so finalize can persist them.
+     */
+    @TestVisible
+    private static List<DetectorResult> filterResultsBySurface(
+        List<DetectorResult> results, DetectorContext ctx
+    ) {
+        if (results == null || results.isEmpty()) return results;
+        Boolean isRemote = ctx != null && ctx.isRemote();
+        String namedCred = ctx == null ? null : ctx.namedCredentialName;
+        List<DetectorResult> kept = new List<DetectorResult>();
+        for (DetectorResult r : results) {
+            if (r == null) continue;
+            if (DetectorCatalogController.surfaceAvailable(r.detectorId, isRemote, namedCred)) {
+                kept.add(r);
+            } else {
+                surfaceGatedThisTx.add(r.detectorId);
+            }
+        }
+        return kept;
+    }
+
+    /**
+     * Phase 24z-G — additive write of the gated-detector set onto the
+     * scan record. Reads existing JSON, merges in this tx's contributions,
+     * writes back. Keeps SurfaceGatedDetectors__c accurate across the
+     * chunked remote-scan pipeline.
+     */
+    private static void mergeGatedDetectorsIntoScan(Id scanId, Set<String> contribution) {
+        try {
+            List<ForensicScan__c> rows = [
+                SELECT SurfaceGatedDetectors__c FROM ForensicScan__c
+                WHERE Id = :scanId LIMIT 1
+            ];
+            if (rows.isEmpty()) return;
+            Set<String> existing = new Set<String>();
+            String raw = rows[0].SurfaceGatedDetectors__c;
+            if (String.isNotBlank(raw)) {
+                try {
+                    List<Object> parsed = (List<Object>) JSON.deserializeUntyped(raw);
+                    for (Object o : parsed) if (o instanceof String) existing.add((String) o);
+                } catch (Exception parseEx) {
+                    // Field had unparseable junk — start fresh.
+                }
+            }
+            existing.addAll(contribution);
+            update new ForensicScan__c(
+                Id = scanId,
+                SurfaceGatedDetectors__c = JSON.serialize(new List<String>(existing))
+            );
+        } catch (Exception e) {
+            System.debug(LoggingLevel.WARN,
+                '[OrgPrism] mergeGatedDetectorsIntoScan failed: ' + e.getMessage());
+        }
     }
 
     /**
@@ -648,6 +729,32 @@ public with sharing class ForensicScanService {
             connectedOrgId, namedCredentialName);
         Set<String> suppressed = loadSuppressionKeys();
         List<ForensicFinding__c> findings = new List<ForensicFinding__c>();
+
+        // Phase 24z-F — run the remote schema probe FIRST, while the
+        // callout budget is fresh. CustomDetectorService below may burn
+        // through callouts; if it does, our /sobjects/ probe at the end
+        // of the tx would throw and we'd silently lose the auto-detect
+        // (real bug: FS-0100 ran with the new code but SurfaceGated stayed
+        // null because the probe came after the budget was exhausted).
+        //
+        // Side effect: populates the per-tx schema cache so subsequent
+        // surfaceAvailable calls in this tx see the same data the chunked
+        // runner used. Also rebuilds surfaceGatedThisTx — the static was
+        // populated in earlier RemoteScanRunner txs and is empty here
+        // (per-Apex-tx static, not survivable across queueables).
+        String detectedProductType = null;
+        if (connectedOrgId != null && String.isNotBlank(namedCredentialName)) {
+            try {
+                detectedProductType = OrgQueryService.detectInstalledProductType(namedCredentialName);
+                // Re-populate the surface-gated set by re-running the
+                // applicability filter against the catalog. Cheap — the
+                // probe cache is hot, this is just Set membership work.
+                getDetectorsFor(productType, true, namedCredentialName);
+            } catch (Exception probeEx) {
+                System.debug(LoggingLevel.WARN,
+                    '[OrgPrism] finalize-time probe failed: ' + probeEx.getMessage());
+            }
+        }
 
         // Tier 2 — self-service detectors. May make callouts.
         try {
@@ -691,29 +798,31 @@ public with sharing class ForensicScanService {
             SELECT ErrorMessage__c FROM ForensicScan__c
             WHERE Id = :scanId LIMIT 1
         ];
-        // Phase 24z-C — persist the set of detectors that were
-        // surface-gated this tx so consultants can confirm scope.
-        String gatedJson = surfaceGatedThisTx.isEmpty()
-            ? null : JSON.serialize(new List<String>(surfaceGatedThisTx));
+        // Phase 24z-G — also merge this finalize-tx's gated set onto
+        // the scan record's accumulator (chunks already wrote theirs).
+        // Then leave SurfaceGatedDetectors__c alone in the update below —
+        // it was set additively across the chunked pipeline.
+        if (!surfaceGatedThisTx.isEmpty()) {
+            mergeGatedDetectorsIntoScan(scanId, surfaceGatedThisTx);
+        }
         update new ForensicScan__c(
             Id = scanId,
             Status__c = (scan.ErrorMessage__c != null) ? 'Partial' : 'Completed',
             CompletedAt__c = System.now(),
             TotalLeakageUsd__c = totalLeakage,
-            FindingCount__c = findingCount,
-            SurfaceGatedDetectors__c = gatedJson
+            FindingCount__c = findingCount
         );
 
         // Phase 24z-D — auto-correct ConnectedOrg__c.ProductType__c from
-        // the schema probe we already ran for 24z-A. The user-set value
-        // at registration time is often wrong (Techtorch was tagged ARM
-        // but is vanilla DE). Update only when detected differs and is
-        // non-null — null means probe failed or no recognized package,
-        // in which case we leave the existing value alone.
-        if (connectedOrgId != null && String.isNotBlank(namedCredentialName)) {
-            String detected = OrgQueryService.detectInstalledProductType(namedCredentialName);
-            if (String.isNotBlank(detected) && detected != productType) {
-                update new ConnectedOrg__c(Id = connectedOrgId, ProductType__c = detected);
+        // the schema probe run at the START of this method (24z-F). Update
+        // only when detected differs and is non-null — null means probe
+        // failed, in which case we leave the existing value alone.
+        if (String.isNotBlank(detectedProductType) && detectedProductType != productType) {
+            try {
+                update new ConnectedOrg__c(Id = connectedOrgId, ProductType__c = detectedProductType);
+            } catch (Exception updEx) {
+                System.debug(LoggingLevel.WARN,
+                    '[OrgPrism] ConnectedOrg.ProductType update failed: ' + updEx.getMessage());
             }
         }
 

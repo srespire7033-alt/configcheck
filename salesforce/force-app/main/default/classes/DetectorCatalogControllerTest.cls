@@ -148,15 +148,28 @@ private class DetectorCatalogControllerTest {
     }
 
     @IsTest
-    static void surfaceAvailable_returns_true_when_any_listed_object_present() {
-        // Semicolon-separated — ANY match enables.
-        Detector__mdt mock = new Detector__mdt(
+    static void surfaceAvailable_requires_all_listed_objects() {
+        // Phase 24z-F — semicolon-list = AND, not OR. ARM-001 has
+        // "Product2;ProductSellingModelOption" — needs both because the
+        // SOQL joins across them. OR semantic let ARM-001 fire against
+        // vanilla DE (Product2 alone) → 17 false positives per scan.
+        Detector__mdt missing = new Detector__mdt(
             DetectorId__c = 'MOCK-3', IsActive__c = true,
             RequiredSurface__c = 'NotARealObject__c;Account');
         DetectorCatalogController.primeCacheForTest(
-            new Map<String, Detector__mdt>{ 'MOCK-3' => mock });
+            new Map<String, Detector__mdt>{ 'MOCK-3' => missing });
+        System.assertEquals(false,
+            DetectorCatalogController.surfaceAvailable('MOCK-3', false),
+            'AND semantics: one missing surface must block the detector');
+
+        Detector__mdt allPresent = new Detector__mdt(
+            DetectorId__c = 'MOCK-4', IsActive__c = true,
+            RequiredSurface__c = 'Account;Contact');
+        DetectorCatalogController.primeCacheForTest(
+            new Map<String, Detector__mdt>{ 'MOCK-4' => allPresent });
         System.assertEquals(true,
-            DetectorCatalogController.surfaceAvailable('MOCK-3', false));
+            DetectorCatalogController.surfaceAvailable('MOCK-4', false),
+            'AND semantics: all present should pass');
     }
 
     @IsTest

@@ -155,18 +155,30 @@ public with sharing class DetectorCatalogController {
     public static Boolean surfaceAvailable(String detectorId, Boolean isRemote, String namedCredentialName) {
         String raw = getRequiredSurface(detectorId);
         if (String.isBlank(raw)) return true;
+        // Phase 24z-F — AND semantics, not OR. A detector with
+        // RequiredSurface__c="Product2;ProductSellingModelOption" needs
+        // BOTH objects to function (the SOQL joins/correlates across
+        // them). The previous OR semantic returned true on the first
+        // present token, so ARM-001 fired against orgs that had only
+        // Product2 — 17 false-positive "no selling model" findings on
+        // every vanilla DE scan. All multi-token detectors in the
+        // catalog (verified) are AND-style; none use the list as
+        // alternative-names. Single-token detectors are unaffected.
+        // Legacy fail-open preserved when no Named Credential is
+        // supplied on remote scans.
+        if (isRemote == true && String.isBlank(namedCredentialName)) return true;
         for (String tok : raw.split(';')) {
             String t = tok.trim();
             if (String.isBlank(t)) continue;
+            Boolean exists;
             if (isRemote == true) {
-                // No Named Credential → preserve legacy fail-open.
-                if (String.isBlank(namedCredentialName)) return true;
-                if (OrgQueryService.remoteSObjectExists(namedCredentialName, t)) return true;
+                exists = OrgQueryService.remoteSObjectExists(namedCredentialName, t);
             } else {
-                if (SchemaUtil.hasObject(t)) return true;
+                exists = SchemaUtil.hasObject(t);
             }
+            if (!exists) return false; // any missing surface → skip
         }
-        return false;
+        return true; // all required surfaces present
     }
 
     // ── DTO for LWC consumption ─────────────────────────────────────
