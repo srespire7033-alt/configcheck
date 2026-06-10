@@ -170,7 +170,11 @@ export default class ConnectedOrgManager extends NavigationMixin(LightningElemen
         isTesting: this.testingId === r.id,
         isNotScannable,
         cannotScan,
-        cannotOpen: !r.latestScanId,
+        // Phase 24z-H — Open also disabled for "No Revenue Cloud" orgs.
+        // Past scans against a None-typed org are noise (the gating fixes
+        // landed mid-history). Disable until a real Revenue Cloud package
+        // is installed and a fresh scan can produce meaningful data.
+        cannotOpen: !r.latestScanId || isNotScannable,
         scanBtnLabel: isNotScannable ? 'Not Scannable'
                      : isScanning ? 'Scanning…' : 'Run Scan',
         scanStageText: isScanning ? this.scanStage : '',
