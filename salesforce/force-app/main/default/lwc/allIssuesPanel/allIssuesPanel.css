@@ -131,6 +131,16 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
+  /* Phase 24z — cap height + scroll so large finding lists (80+ records)
+     don't push everything else off the page. Sticky toolbar + listhead
+     stay anchored; only the list scrolls. 64vh leaves room for header,
+     toolbar, bulk-action bar, and a comfortable bottom margin. */
+  max-height: 64vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  /* Reserve gutter so content doesn't shift when the scrollbar appears */
+  scrollbar-gutter: stable;
+  padding-right: 4px;
 }
 .op-aip__row {
   display: grid;

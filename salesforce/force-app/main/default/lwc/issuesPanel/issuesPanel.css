@@ -156,6 +156,13 @@
   display: flex;
   flex-direction: column;
   border-top: 1px solid #f3f4f6;
+  /* Phase 24z — cap height + scroll for groups with many members
+     (e.g. 80 records under one detector). Expansion would otherwise
+     push the next Top Issues card off-screen. */
+  max-height: 50vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-gutter: stable;
 }
 .op-tip__member {
   display: flex;
