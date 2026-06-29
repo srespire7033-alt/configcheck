@@ -293,6 +293,58 @@ private class OrgCapabilityProbeServiceTest {
         System.assertNotEquals(null, reloaded.CapabilityProbedAt__c);
     }
 
+    // ─── Phase 25-B — Aura wrappers ─────────────────────────────────
+
+    @isTest static void getApplicabilitySummary_nullOrg_returnsEmpty() {
+        OrgCapabilityProbeService.ApplicabilitySummary s =
+            OrgCapabilityProbeService.getApplicabilitySummary(null);
+        System.assertEquals(0, s.total);
+        System.assertEquals(0, s.applicable);
+        System.assertEquals(0, s.skipped);
+        System.assertEquals(false, s.profiled);
+    }
+
+    @isTest static void getApplicabilitySummary_withProfile_returnsCountsAndDecisions() {
+        ConnectedOrg__c org = new ConnectedOrg__c(
+            Name = 'Test Summary ' + System.now().getTime(),
+            NamedCredentialName__c = 'Stub_Cred',
+            InstanceUrl__c = 'https://test.example.com',
+            CapabilityProfileJson__c = JSON.serialize(profile(true, false, false, false)),
+            CapabilityProbedAt__c = System.now()
+        );
+        insert org;
+        OrgCapabilityProbeService.ApplicabilitySummary s =
+            OrgCapabilityProbeService.getApplicabilitySummary(org.Id);
+        System.assertEquals(true, s.profiled);
+        System.assert(s.total > 0, 'Active Detector__mdt records should be counted');
+        System.assertEquals(s.total, s.applicable + s.skipped);
+        // sbaa-gated detectors should be in skipped (sbaa=false in profile)
+        if (s.decisions.containsKey('AR-006')) {
+            System.assertEquals(false, s.decisions.get('AR-006').applicable);
+            System.assertNotEquals(null, s.decisions.get('AR-006').reason);
+        }
+    }
+
+    @isTest static void probeNow_nullOrg_throws() {
+        try {
+            OrgCapabilityProbeService.probeNow(null);
+            System.assert(false, 'Should have thrown');
+        } catch (AuraHandledException e) {
+            // Expected
+        }
+    }
+
+    @isTest static void probeNow_unknownOrg_throws() {
+        // Synthesize a fake Id with the ConnectedOrg__c prefix (a0W)
+        Id fakeId = (Id) ('a0W' + '000000000000001');
+        try {
+            OrgCapabilityProbeService.probeNow(fakeId);
+            System.assert(false, 'Should have thrown — org not found');
+        } catch (AuraHandledException e) {
+            // Expected
+        }
+    }
+
     @isTest static void mapOf_handlesNullAndWrongType() {
         System.assertEquals(0, OrgCapabilityProbeService.mapOf(null).size());
         System.assertEquals(0, OrgCapabilityProbeService.mapOf('not a map').size());

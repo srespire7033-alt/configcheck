@@ -6,6 +6,8 @@ import listConnectedOrgsWithScanStats from '@salesforce/apex/RemoteOrgService.li
 import testConnection from '@salesforce/apex/RemoteOrgService.testConnection';
 import startRemoteScan from '@salesforce/apex/ForensicScanService.startRemoteScan';
 import getScanStatus from '@salesforce/apex/ForensicScanService.getScanStatus';
+import probeNow from '@salesforce/apex/OrgCapabilityProbeService.probeNow';
+import getApplicabilitySummary from '@salesforce/apex/OrgCapabilityProbeService.getApplicabilitySummary';
 
 // Color stripe per product type (matches the web mockup gradient look).
 const STRIPE = {
@@ -40,6 +42,10 @@ export default class ConnectedOrgManager extends NavigationMixin(LightningElemen
   @track loading = true;
   @track testingId = null;
   @track scanningId = null;
+  /** Phase 25-B — id of the org being re-probed; drives the spinner state on its Re-probe button. */
+  @track probingId = null;
+  /** Phase 25-B — applicability summary keyed by connectedOrgId. Lazy-fetched on demand. */
+  @track applicabilityById = {};
   /** Phase 22y — live progress text for the card the scan is running
    *  against. Drives the "Connecting…", "Scanning detectors…" status
    *  line beneath the button so the user sees the scan is alive. */
@@ -156,6 +162,20 @@ export default class ConnectedOrgManager extends NavigationMixin(LightningElemen
         : (isConnected ? 'Run a full OrgPrism scan against this remote org'
                        : 'Test connection first');
 
+      // Phase 25-B — capability probe info per row
+      const cap = this.applicabilityById[r.id];
+      const isProbing = this.probingId === r.id;
+      let capabilityLabel = null;
+      if (cap && cap.profiled) {
+        capabilityLabel = `${cap.applicable} of ${cap.total} detectors apply`;
+      } else if (r.capabilityProbedAt) {
+        // Probed but counts not loaded yet (lazy)
+        capabilityLabel = 'Capability profile available';
+      } else if (!isNotScannable && isConnected) {
+        capabilityLabel = 'Not yet probed — run Test Connection or Re-probe';
+      }
+      const probedAtAgo = r.capabilityProbedAt ? fmtAgo(r.capabilityProbedAt) : null;
+
       return {
         ...r,
         productChips: isNotScannable ? ['No Revenue Cloud'] : chips,
@@ -183,6 +203,13 @@ export default class ConnectedOrgManager extends NavigationMixin(LightningElemen
         testBtnLabel: this.testingId === r.id ? 'Testing…' : 'Test Connection',
         showError: r.status === 'Auth Failed' || r.status === 'Unreachable',
         statusShort: isNotScannable ? 'No Revenue Cloud' : r.status,
+        // Phase 25-B — capability probe surfacing
+        capabilityLabel,
+        probedAtAgo,
+        showCapability: Boolean(capabilityLabel) && !isNotScannable,
+        isProbing,
+        probeBtnLabel: isProbing ? 'Probing…' : (r.capabilityProbedAt ? 'Re-probe' : 'Probe'),
+        canProbe: isConnected && !isProbing && !isNotScannable,
       };
     });
   }
@@ -218,6 +245,55 @@ export default class ConnectedOrgManager extends NavigationMixin(LightningElemen
     const id = event.currentTarget.dataset.id;
     if (!id || this.scanningId) return;
     await this._runScan(id);
+  }
+
+  /**
+   * Phase 25-B — Re-probe the target org's schema capability. Calls
+   * OrgCapabilityProbeService.probeNow, which writes back to the
+   * ConnectedOrg__c record's CapabilityProfileJson__c. We then refresh
+   * the wired list (picks up the new CapabilityProbedAt__c) and cache
+   * the returned summary so the row shows "X of N detectors apply".
+   */
+  async handleProbe(event) {
+    const id = event.currentTarget.dataset.id;
+    if (!id || this.probingId) return;
+    this.probingId = id;
+    try {
+      const summary = await probeNow({ connectedOrgId: id });
+      // Persist counts in the cache so viewRows can read them
+      this.applicabilityById = { ...this.applicabilityById, [id]: summary };
+      this.dispatchEvent(new ShowToastEvent({
+        title: 'Capability probe complete',
+        message: `${summary.applicable} of ${summary.total} detectors apply on this org`,
+        variant: 'success',
+      }));
+      // Pick up the fresh CapabilityProbedAt__c on the row
+      await refreshApex(this.wiredResult);
+    } catch (e) {
+      this.dispatchEvent(new ShowToastEvent({
+        title: 'Probe failed',
+        message: e.body?.message || e.message || 'Unknown error',
+        variant: 'error',
+      }));
+    } finally {
+      this.probingId = null;
+    }
+  }
+
+  /**
+   * Phase 25-B — On-demand load of an existing profile's applicability
+   * summary so the row can show the count without re-probing. Called
+   * by the template hover or button-mouseover handler in a follow-up.
+   * Currently exposed so future surfaces (catalog grey-out) can call it.
+   */
+  async loadApplicabilityFor(id) {
+    if (!id || this.applicabilityById[id]) return;
+    try {
+      const summary = await getApplicabilitySummary({ connectedOrgId: id });
+      this.applicabilityById = { ...this.applicabilityById, [id]: summary };
+    } catch {
+      // Non-fatal — UI just shows the timestamp without the count
+    }
   }
 
   async handleScanAll() {

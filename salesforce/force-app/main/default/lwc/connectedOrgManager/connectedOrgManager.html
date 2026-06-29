@@ -161,6 +161,17 @@
               </button>
             </div>
 
+            <!-- Phase 25-B — capability probe status -->
+            <template if:true={r.showCapability}>
+              <div class="op-co__card-capability">
+                <lightning-icon icon-name="utility:check" size="xx-small" class="op-co__cap-icon"></lightning-icon>
+                <span class="op-co__cap-label">{r.capabilityLabel}</span>
+                <template if:true={r.probedAtAgo}>
+                  <span class="op-co__cap-time"> · probed {r.probedAtAgo}</span>
+                </template>
+              </div>
+            </template>
+
             <!-- secondary actions -->
             <div class="op-co__card-foot">
               <button
@@ -171,6 +182,17 @@
               >
                 <lightning-icon icon-name="utility:connected_apps" size="xx-small" class="op-co__link-icon"></lightning-icon>
                 {r.testBtnLabel}
+              </button>
+              <button
+                class="op-co__link-btn"
+                data-id={r.id}
+                onclick={handleProbe}
+                disabled={r.isProbing}
+                if:true={r.canProbe}
+                title="Refresh schema capability profile so the catalog knows which detectors will fire on this org"
+              >
+                <lightning-icon icon-name="utility:scan" size="xx-small" class="op-co__link-icon"></lightning-icon>
+                {r.probeBtnLabel}
               </button>
               <template if:true={r.showError}>
                 <span class="op-co__card-foot-error" title={r.lastError}>⚠ {r.statusShort}</span>

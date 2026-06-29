@@ -38,6 +38,8 @@ public with sharing class RemoteOrgService {
         @AuraEnabled public String remoteOrgId;
         @AuraEnabled public Datetime lastConnectedAt;
         @AuraEnabled public String lastError;
+        // Phase 25-B — capability probe timestamp. Null = never probed.
+        @AuraEnabled public Datetime capabilityProbedAt;
 
         // Enriched scan stats (populated by listConnectedOrgsWithScanStats only).
         @AuraEnabled public Id latestScanId;
@@ -55,7 +57,7 @@ public with sharing class RemoteOrgService {
         List<ConnectedOrgDto> out = new List<ConnectedOrgDto>();
         for (ConnectedOrg__c c : [
             SELECT Id, Name, RemoteOrgName__c, InstanceUrl__c, NamedCredentialName__c, OrgType__c, ProductType__c,
-                   Status__c, RemoteOrgId__c, LastConnectedAt__c, LastError__c
+                   Status__c, RemoteOrgId__c, LastConnectedAt__c, LastError__c, CapabilityProbedAt__c
             FROM ConnectedOrg__c
             WITH SECURITY_ENFORCED
             ORDER BY Name ASC
@@ -76,6 +78,7 @@ public with sharing class RemoteOrgService {
             d.remoteOrgId = c.RemoteOrgId__c;
             d.lastConnectedAt = c.LastConnectedAt__c;
             d.lastError = c.LastError__c;
+            d.capabilityProbedAt = c.CapabilityProbedAt__c;
             out.add(d);
         }
         return out;

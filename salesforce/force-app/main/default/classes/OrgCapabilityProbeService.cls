@@ -164,11 +164,22 @@ public with sharing class OrgCapabilityProbeService {
         }
     }
 
-    /** DTO returned by isApplicable() — applicability decision + reason. */
+    /** DTO returned by isApplicable() — applicability decision + reason.
+     *  Fields are @AuraEnabled so LWCs can read the map values directly. */
     public class Applicability {
-        public Boolean applicable;
-        public String reason;
+        @AuraEnabled public Boolean applicable;
+        @AuraEnabled public String reason;
         public Applicability(Boolean a, String r) { this.applicable = a; this.reason = r; }
+    }
+
+    /** Phase 25-B — LWC-shaped summary for the pre-scan banner + catalog grey-out. */
+    public class ApplicabilitySummary {
+        @AuraEnabled public Integer total;
+        @AuraEnabled public Integer applicable;
+        @AuraEnabled public Integer skipped;
+        @AuraEnabled public Boolean profiled;          // false when org has never been probed
+        @AuraEnabled public Datetime probedAt;
+        @AuraEnabled public Map<String, Applicability> decisions;
     }
 
     /**
@@ -273,6 +284,66 @@ public with sharing class OrgCapabilityProbeService {
             result.put(d.DetectorId__c, isApplicable(profile, d.DetectorId__c));
         }
         return result;
+    }
+
+    /**
+     * Phase 25-B — LWC entry-point. Same payload as
+     * getApplicabilityFor() but wrapped in an LWC-friendly DTO with
+     * pre-computed counts. cacheable=true because the decisions are
+     * pure functions of (profile, active detectors) and both are
+     * stable within a session.
+     */
+    @AuraEnabled(cacheable=true)
+    public static ApplicabilitySummary getApplicabilitySummary(Id connectedOrgId) {
+        ApplicabilitySummary dto = new ApplicabilitySummary();
+        dto.total = 0;
+        dto.applicable = 0;
+        dto.skipped = 0;
+        dto.profiled = false;
+        dto.decisions = new Map<String, Applicability>();
+        if (connectedOrgId == null) return dto;
+
+        List<ConnectedOrg__c> rows = [
+            SELECT Id, CapabilityProfileJson__c, CapabilityProbedAt__c
+            FROM ConnectedOrg__c WHERE Id = :connectedOrgId LIMIT 1
+        ];
+        if (rows.isEmpty()) return dto;
+        dto.profiled = String.isNotBlank(rows[0].CapabilityProfileJson__c);
+        dto.probedAt = rows[0].CapabilityProbedAt__c;
+
+        dto.decisions = getApplicabilityFor(connectedOrgId);
+        for (Applicability a : dto.decisions.values()) {
+            dto.total++;
+            if (a.applicable) dto.applicable++;
+            else dto.skipped++;
+        }
+        return dto;
+    }
+
+    /**
+     * Phase 25-B — Imperative LWC action: probe (or re-probe) a target
+     * org now. Returns the count summary so the LWC can refresh its UI
+     * after the probe completes. Not cacheable — this is a write.
+     */
+    @AuraEnabled
+    public static ApplicabilitySummary probeNow(Id connectedOrgId) {
+        if (connectedOrgId == null) {
+            throw new AuraHandledException('connectedOrgId is required');
+        }
+        List<ConnectedOrg__c> rows = [
+            SELECT Id, NamedCredentialName__c FROM ConnectedOrg__c
+            WHERE Id = :connectedOrgId LIMIT 1
+        ];
+        if (rows.isEmpty()) {
+            throw new AuraHandledException('Connected Org not found: ' + connectedOrgId);
+        }
+        try {
+            probe(rows[0]);
+        } catch (Exception e) {
+            throw new AuraHandledException('Probe failed: ' + e.getMessage());
+        }
+        // Re-query to pick up the freshly persisted JSON.
+        return getApplicabilitySummary(connectedOrgId);
     }
 
     @TestVisible
