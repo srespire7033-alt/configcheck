@@ -4,7 +4,7 @@
     <protected>false</protected>
     <values><field>DetectorId__c</field><value xsi:type="xsd:string">TR-002</value></values>
     <values><field>Label__c</field><value xsi:type="xsd:string">Active products use inactive tax rule</value></values>
-    <values><field>Category__c</field><value xsi:type="xsd:string">leakage</value></values>
+    <values><field>Category__c</field><value xsi:type="xsd:string">revenue_leakage</value></values>
     <values><field>AppliesTo__c</field><value xsi:type="xsd:string">CPQ+Billing;ARM</value></values>
     <values><field>RecoverabilityScore__c</field><value xsi:type="xsd:double">0.9</value></values>
     <values><field>Effort__c</field><value xsi:type="xsd:string">low</value></values>

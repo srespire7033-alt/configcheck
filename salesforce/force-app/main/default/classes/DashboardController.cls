@@ -37,8 +37,8 @@ public with sharing class DashboardController {
         @AuraEnabled public Integer healthScore;          // 0-100 from ScoreFormula__mdt
         // Phase 22e — Per-category bucket sub-scores. Categories absent
         // from the map have no findings → treat as 100 in the UI. Keys
-        // are detector Category__c values (e.g. "leakage", "governance",
-        // "arm_billing_policies"). Read from ForensicScan__c.CategoryScoresJson__c
+        // are detector Category__c values (e.g. "revenue_leakage", "governance",
+        // "pricing"). Read from ForensicScan__c.CategoryScoresJson__c
         // (live-computed for legacy scans without the persisted JSON).
         @AuraEnabled public Map<String, Integer> categoryScores;
         @AuraEnabled public List<TopFinding> topFindings;

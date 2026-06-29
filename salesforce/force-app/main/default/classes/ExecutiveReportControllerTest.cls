@@ -107,7 +107,7 @@ private class ExecutiveReportControllerTest {
             StartedAt__c = System.now(), CompletedAt__c = System.now(),
             TotalLeakageUsd__c = 50000, FindingCount__c = 4,
             HealthScore__c = 52,
-            CategoryScoresJson__c = '{"revenue_leakage":80,"pricing":64,"leakage":55,"governance":0}'
+            CategoryScoresJson__c = '{"revenue_leakage":80,"pricing":64,"governance":0}'
         );
         insert scan;
 
@@ -115,15 +115,15 @@ private class ExecutiveReportControllerTest {
         ExecutiveReportController ctrl = new ExecutiveReportController();
         System.assertEquals(52, ctrl.healthScore);
         System.assertEquals('warn', ctrl.healthTone, '52 should be warn (50-79)');
-        System.assertEquals(4, ctrl.categoryScores.size());
+        System.assertEquals(3, ctrl.categoryScores.size());
         // First entry should be the WORST (governance, 0) per ascending sort
         System.assertEquals('governance', ctrl.categoryScores[0].key);
         System.assertEquals(0, ctrl.categoryScores[0].score);
         System.assertEquals('bad', ctrl.categoryScores[0].tone);
         // Last entry should be the BEST (revenue_leakage, 80)
-        System.assertEquals('revenue_leakage', ctrl.categoryScores[3].key);
-        System.assertEquals('good', ctrl.categoryScores[3].tone);
-        System.assertEquals('Revenue Leakage', ctrl.categoryScores[3].label,
+        System.assertEquals('revenue_leakage', ctrl.categoryScores[2].key);
+        System.assertEquals('good', ctrl.categoryScores[2].tone);
+        System.assertEquals('Revenue Leakage', ctrl.categoryScores[2].label,
             'Friendly label should Title-Case underscored keys');
     }
 
