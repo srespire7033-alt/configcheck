@@ -54,7 +54,6 @@ public with sharing class ForensicScanService {
             new OPP001ClosedWonNoQuoteDetector(),
             new OPP002ClosedWonZeroDollarDetector(),
             new CON001NoActiveSubsDetector(),
-            new CON002OrphanContractDetector(),
             // Phase 10 batch B — renewal pipeline
             new REN003ExpiredQuoteNoRenewalDetector(),
             new REN004StuckDraftRenewalDetector(),

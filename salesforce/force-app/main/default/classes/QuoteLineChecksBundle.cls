@@ -8,7 +8,7 @@
  *   QL-005 — NetPrice has sub-cent precision (>2 decimals) — historical
  *           decimal-precision drift, source of SF↔downstream mismatches
  *   QL-006 — Amendment QL price drifted &gt;5% from the originating sold
- *           price (SBQQ__OriginalQuoteLine__r.SBQQ__NetPrice__c) —
+ *           price (SBQQ__Source__r.SBQQ__NetPrice__c) —
  *           pricebook-rollover-on-amendment signal
  *   TF-001 — Both Discount + AdditionalDiscount populated; both Uplift + UpliftAmount (warning, up to 2 findings)
  *
@@ -33,17 +33,21 @@ public with sharing class QuoteLineChecksBundle implements IDetector {
                 System.debug(LoggingLevel.INFO, '[OrgPrism Skip] QL-BUNDLE: SBQQ__QuoteLine__c not present.');
                 return results;
             }
-            Boolean hasUplift = SchemaUtil.hasField('SBQQ__QuoteLine__c', 'SBQQ__Uplift__c');
-            Boolean hasUpliftAmt = SchemaUtil.hasField('SBQQ__QuoteLine__c', 'SBQQ__UpliftAmount__c');
-            Boolean hasAddDisc = SchemaUtil.hasField('SBQQ__QuoteLine__c', 'SBQQ__AdditionalDiscount__c');
-            Boolean hasOrigQL = SchemaUtil.hasField('SBQQ__QuoteLine__c', 'SBQQ__OriginalQuoteLine__c');
+            // For remote scans, the host org's schema is irrelevant — we
+            // assume the target has the optional fields and let the SOQL
+            // either succeed or fall into the try/catch on field-not-found.
+            Boolean remote = ctx.isRemote();
+            Boolean hasUplift = remote || SchemaUtil.hasField('SBQQ__QuoteLine__c', 'SBQQ__Uplift__c');
+            Boolean hasUpliftAmt = remote || SchemaUtil.hasField('SBQQ__QuoteLine__c', 'SBQQ__UpliftAmount__c');
+            Boolean hasAddDisc = remote || SchemaUtil.hasField('SBQQ__QuoteLine__c', 'SBQQ__AdditionalDiscount__c');
+            Boolean hasSource = remote || SchemaUtil.hasField('SBQQ__QuoteLine__c', 'SBQQ__Source__c');
             String soql = 'SELECT Id, Name, SBQQ__NetPrice__c, SBQQ__ListPrice__c, ' +
                 'SBQQ__Quantity__c, SBQQ__NetTotal__c, SBQQ__Discount__c, ' +
                 'SBQQ__Quote__c, SBQQ__Product__c, SBQQ__Product__r.Name' +
                 (hasAddDisc ? ', SBQQ__AdditionalDiscount__c' : '') +
                 (hasUplift ? ', SBQQ__Uplift__c' : '') +
                 (hasUpliftAmt ? ', SBQQ__UpliftAmount__c' : '') +
-                (hasOrigQL ? ', SBQQ__OriginalQuoteLine__c, SBQQ__OriginalQuoteLine__r.SBQQ__NetPrice__c, SBQQ__OriginalQuoteLine__r.Name' : '') +
+                (hasSource ? ', SBQQ__Source__c, SBQQ__Source__r.SBQQ__NetPrice__c, SBQQ__Source__r.Name' : '') +
                 ' FROM SBQQ__QuoteLine__c LIMIT 10000';
             try { rows = OrgQueryService.query(ctx, soql); }
             catch (Exception e) {
@@ -223,21 +227,21 @@ public with sharing class QuoteLineChecksBundle implements IDetector {
     // sold price. PP-07 / PP-71 / PP-188 signature: amendments pull current
     // pricebook list price (or zero-out-and-rebuild from current PBE)
     // instead of preserving the originally negotiated price. Detected by
-    // comparing SBQQ__NetPrice__c to SBQQ__OriginalQuoteLine__r.SBQQ__NetPrice__c.
+    // comparing SBQQ__NetPrice__c to SBQQ__Source__r.SBQQ__NetPrice__c.
     // A small delta is expected (uplift); >5% absolute means the original
     // price was replaced, not adjusted.
     @TestVisible
     static List<DetectorResult> evaluateQL006(List<Map<String, Object>> rows) {
         List<Map<String, Object>> bad = new List<Map<String, Object>>();
         for (Map<String, Object> r : rows) {
-            Object origRef = r.get('SBQQ__OriginalQuoteLine__c');
-            if (origRef == null) continue;
+            Object srcRef = r.get('SBQQ__Source__c');
+            if (srcRef == null) continue;
             Decimal currentNp = num(r, 'SBQQ__NetPrice__c');
             if (currentNp == null) continue;
-            Object orig = r.get('SBQQ__OriginalQuoteLine__r');
-            if (!(orig instanceof Map<String, Object>)) continue;
-            Map<String, Object> origMap = (Map<String, Object>) orig;
-            Object originalNpRaw = origMap.get('SBQQ__NetPrice__c');
+            Object src = r.get('SBQQ__Source__r');
+            if (!(src instanceof Map<String, Object>)) continue;
+            Map<String, Object> srcMap = (Map<String, Object>) src;
+            Object originalNpRaw = srcMap.get('SBQQ__NetPrice__c');
             if (originalNpRaw == null) continue;
             Decimal originalNp = Decimal.valueOf(String.valueOf(originalNpRaw));
             if (originalNp == 0) continue;
@@ -249,17 +253,17 @@ public with sharing class QuoteLineChecksBundle implements IDetector {
         Map<String, Object> ex = bad[0];
         Decimal exCurrent = num(ex, 'SBQQ__NetPrice__c');
         Decimal exOriginal = Decimal.valueOf(String.valueOf(
-            ((Map<String, Object>) ex.get('SBQQ__OriginalQuoteLine__r')).get('SBQQ__NetPrice__c')));
+            ((Map<String, Object>) ex.get('SBQQ__Source__r')).get('SBQQ__NetPrice__c')));
         Decimal exDeltaPct = ((exCurrent - exOriginal) / exOriginal.abs() * 100).setScale(1, System.RoundingMode.HALF_UP);
         DetectorResult dr = new DetectorResult();
         dr.detectorId = 'QL-006';
         dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Warning');
         dr.gapUsd = 0;
         dr.recoverabilityScore = 0.75;
-        dr.title = bad.size() + ' amendment line(s) with >5% price drift from original';
-        dr.description = bad.size() + ' SBQQ__QuoteLine__c records linked via SBQQ__OriginalQuoteLine__c ' +
-            'have NetPrice values more than 5% off the originating sold price. ' +
-            'Example: "' + productName(ex) + '" sold at ' + exOriginal +
+        dr.title = bad.size() + ' amendment line(s) with >5% price drift from source';
+        dr.description = bad.size() + ' SBQQ__QuoteLine__c records linked via SBQQ__Source__c ' +
+            'have NetPrice values more than 5% off the originating quote line. ' +
+            'Example: "' + productName(ex) + '" sourced at ' + exOriginal +
             ', now ' + exCurrent + ' (' + exDeltaPct + '%). Common cause: the amendment ' +
             'flow pulled current pricebook list price instead of preserving the original ' +
             'negotiated price, producing billing kickbacks and customer disputes. Verify ' +

@@ -14,6 +14,8 @@ public with sharing class ApprovalRuleChecksBundle implements IDetector {
     @TestVisible static List<Map<String, Object>> testStubRows;
     /** Phase 25+ — Map<ruleId, recentApprovalCount> for AR-006. */
     @TestVisible static Map<Id, Integer> testStubApprovalCounts;
+    /** Phase 25+ — override package resolution under testStubRows. Default 'SBQQ'. */
+    @TestVisible static String testStubPackage;
 
     public String getDetectorId() { return 'AR-BUNDLE'; }
     public String getLabel() { return 'Approval Rule health checks'; }
@@ -27,7 +29,7 @@ public with sharing class ApprovalRuleChecksBundle implements IDetector {
         String pkg;
         if (testStubRows != null) {
             rows = testStubRows;
-            pkg = 'SBQQ';
+            pkg = (testStubPackage != null) ? testStubPackage : 'SBQQ';
         } else {
             pkg = resolveApprovalPackage(ctx);
             if (pkg == null) {
@@ -56,7 +58,7 @@ public with sharing class ApprovalRuleChecksBundle implements IDetector {
         if (runAR003 && pkg == 'SBQQ') results.addAll(evaluateAR003(rows));
         if (runAR004) results.addAll(evaluateAR004(rows, pkg));
         if (runAR005) results.addAll(evaluateAR005(rows, pkg));
-        if (runAR006) {
+        if (runAR006 && pkg == 'sbaa') {
             Map<Id, Integer> approvalCounts = (testStubApprovalCounts != null)
                 ? testStubApprovalCounts
                 : fetchApprovalCounts(ctx, rows, pkg);
@@ -65,10 +67,13 @@ public with sharing class ApprovalRuleChecksBundle implements IDetector {
         return results;
     }
 
-    /** Fetch count of sbaa__Approval__c / SBQQ__Approval__c per rule
-     *  created in the last 90 days. Empty map on any failure. */
+    /** Fetch count of sbaa__Approval__c records per rule created in
+     *  the last 90 days. sbaa-only (SBQQ legacy approvals don't have a
+     *  dedicated object — they live on ProcessInstance, queried separately
+     *  if we want to extend later). Empty map on any failure. */
     static Map<Id, Integer> fetchApprovalCounts(DetectorContext ctx, List<Map<String, Object>> rules, String pkg) {
         Map<Id, Integer> out = new Map<Id, Integer>();
+        if (pkg != 'sbaa') return out;  // AR-006 sbaa-only — skip on legacy SBQQ approvals
         if (rules == null || rules.isEmpty()) return out;
         Set<Id> ruleIds = new Set<Id>();
         for (Map<String, Object> r : rules) {
@@ -78,15 +83,12 @@ public with sharing class ApprovalRuleChecksBundle implements IDetector {
         if (ruleIds.isEmpty()) return out;
         List<String> quoted = new List<String>();
         for (Id id : ruleIds) quoted.add('\'' + String.valueOf(id) + '\'');
-        // sbaa: sbaa__Approval__c.sbaa__ApprovalRule__c
-        // SBQQ: SBQQ__Approval__c.SBQQ__ApprovalRule__c
-        String approvalObj = pkg + '__Approval__c';
-        String ruleField = pkg + '__ApprovalRule__c';
-        String soql = 'SELECT ' + ruleField + ' ruleId, COUNT(Id) cnt ' +
-            'FROM ' + approvalObj + ' ' +
-            'WHERE ' + ruleField + ' IN (' + String.join(quoted, ',') + ') ' +
+        // sbaa__Approval__c.sbaa__Rule__c is the lookup to sbaa__ApprovalRule__c.
+        String soql = 'SELECT sbaa__Rule__c ruleId, COUNT(Id) cnt ' +
+            'FROM sbaa__Approval__c ' +
+            'WHERE sbaa__Rule__c IN (' + String.join(quoted, ',') + ') ' +
             '  AND CreatedDate = LAST_N_DAYS:90 ' +
-            'GROUP BY ' + ruleField;
+            'GROUP BY sbaa__Rule__c';
         try {
             for (Map<String, Object> agg : OrgQueryService.query(ctx, soql)) {
                 Object rid = agg.get('ruleId');
@@ -295,7 +297,7 @@ public with sharing class ApprovalRuleChecksBundle implements IDetector {
             dr.recoverabilityScore = 0.7;
             dr.title = 'Approval rule "' + (String) r.get('Name') + '" never invoked in 90 days';
             dr.description = '"' + (String) r.get('Name') + '" is active and has existed for ' +
-                ageDays + ' days, but no ' + pkg + '__Approval__c records have been created against ' +
+                ageDays + ' days, but no sbaa__Approval__c records have been created against ' +
                 'it in the last 90 days. Either the rule conditions never match real quotes (dead ' +
                 'rule), the approval matrix routes around it, or the deal desk gate is silently ' +
                 'broken. Verify the rule fires against a representative quote.';

@@ -85,10 +85,6 @@
         <enabled>true</enabled>
     </classAccesses>
     <classAccesses>
-        <apexClass>CON002OrphanContractDetector</apexClass>
-        <enabled>true</enabled>
-    </classAccesses>
-    <classAccesses>
         <apexClass>QL001BundleZeroPriceDetector</apexClass>
         <enabled>true</enabled>
     </classAccesses>

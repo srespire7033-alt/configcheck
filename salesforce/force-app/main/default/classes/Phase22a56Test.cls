@@ -116,10 +116,12 @@ private class Phase22a56Test {
                 'CreatedDate' => Datetime.now().addDays(-180) }
         };
         ApprovalRuleChecksBundle.testStubApprovalCounts = new Map<Id, Integer>();
+        ApprovalRuleChecksBundle.testStubPackage = 'sbaa';  // AR-006 gates on sbaa pkg
         ApprovalRuleChecksBundle b = new ApprovalRuleChecksBundle();
         List<DetectorResult> r = b.run(new DetectorContext(null, 'USD', 'CPQ'));
         ApprovalRuleChecksBundle.testStubRows = null;
         ApprovalRuleChecksBundle.testStubApprovalCounts = null;
+        ApprovalRuleChecksBundle.testStubPackage = null;
         Boolean found = false;
         for (DetectorResult dr : r) if (dr.detectorId == 'AR-006') { found = true; break; }
         System.assert(found, 'AR-006 should fire via bundle path with empty stub counts');
@@ -283,8 +285,8 @@ private class Phase22a56Test {
         Id origId = qlId();
         Map<String, Object> q = new Map<String, Object>{
             'Id' => qlId(), 'Name' => 'L', 'SBQQ__NetPrice__c' => 150,
-            'SBQQ__OriginalQuoteLine__c' => origId,
-            'SBQQ__OriginalQuoteLine__r' => new Map<String, Object>{
+            'SBQQ__Source__c' => origId,
+            'SBQQ__Source__r' => new Map<String, Object>{
                 'Id' => origId, 'Name' => 'ORIG', 'SBQQ__NetPrice__c' => 100
             }
         };
@@ -296,8 +298,8 @@ private class Phase22a56Test {
         Id origId = qlId();
         Map<String, Object> q = new Map<String, Object>{
             'Id' => qlId(), 'Name' => 'L', 'SBQQ__NetPrice__c' => 103,
-            'SBQQ__OriginalQuoteLine__c' => origId,
-            'SBQQ__OriginalQuoteLine__r' => new Map<String, Object>{
+            'SBQQ__Source__c' => origId,
+            'SBQQ__Source__r' => new Map<String, Object>{
                 'Id' => origId, 'SBQQ__NetPrice__c' => 100
             }
         };
@@ -306,7 +308,7 @@ private class Phase22a56Test {
     }
     @IsTest static void ql006_no_original_skipped() {
         Map<String, Object> q = new Map<String, Object>{ 'Id' => qlId(), 'Name' => 'L',
-            'SBQQ__NetPrice__c' => 999, 'SBQQ__OriginalQuoteLine__c' => null };
+            'SBQQ__NetPrice__c' => 999, 'SBQQ__Source__c' => null };
         System.assertEquals(0, QuoteLineChecksBundle.evaluateQL006(new List<Map<String, Object>>{ q }).size(),
             'New-business quote lines (no original) should not flag');
     }
@@ -314,8 +316,8 @@ private class Phase22a56Test {
         Id origId = qlId();
         Map<String, Object> q = new Map<String, Object>{
             'Id' => qlId(), 'Name' => 'L', 'SBQQ__NetPrice__c' => 100,
-            'SBQQ__OriginalQuoteLine__c' => origId,
-            'SBQQ__OriginalQuoteLine__r' => new Map<String, Object>{
+            'SBQQ__Source__c' => origId,
+            'SBQQ__Source__r' => new Map<String, Object>{
                 'Id' => origId, 'SBQQ__NetPrice__c' => 0
             }
         };
@@ -326,8 +328,8 @@ private class Phase22a56Test {
         Id origId = qlId();
         Map<String, Object> q = new Map<String, Object>{
             'Id' => qlId(), 'Name' => 'L', 'SBQQ__NetPrice__c' => 50,
-            'SBQQ__OriginalQuoteLine__c' => origId,
-            'SBQQ__OriginalQuoteLine__r' => new Map<String, Object>{
+            'SBQQ__Source__c' => origId,
+            'SBQQ__Source__r' => new Map<String, Object>{
                 'Id' => origId, 'Name' => 'ORIG', 'SBQQ__NetPrice__c' => 100
             }
         };

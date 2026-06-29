@@ -14,7 +14,7 @@
     <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
     <values><field>RequiredSurface__c</field><value xsi:type="xsd:string">SBQQ__QuoteLine__c</value></values>
     <values><field>Severity__c</field><value xsi:type="xsd:string">Warning</value></values>
-    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: SBQQ__QuoteLine__c records linked to a prior line via SBQQ__OriginalQuoteLine__c whose current SBQQ__NetPrice__c is more than 5% off the original line&apos;s NetPrice.
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: SBQQ__QuoteLine__c records linked to a prior line via SBQQ__Source__c whose current SBQQ__NetPrice__c is more than 5% off the original line&apos;s NetPrice.
 Why it matters: This is the upstream signature of Q-to-O variance on amendments (ORD-FOR-003). The amendment flow pulled current pricebook list price instead of preserving the originally negotiated price. Downstream effects: billing kickbacks, customer disputes, accounting rework, and credit memos. The original negotiation is lost on every amendment unless the price is manually corrected back.
 Suppress a finding: when the price delta represents a deliberate uplift, mid-term repricing, or contracted adjustment. Note the reason and dismiss.
 Disable the detector: only if your business intentionally re-prices on every amendment.</value></values>
