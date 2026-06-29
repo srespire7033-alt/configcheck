@@ -5,9 +5,14 @@
  *   QL-002 — NetTotal calculation mismatch (critical)
  *   QL-003 — Negative NetTotal (warning)
  *   QL-004 — >50% effective discount (info)
+ *   QL-005 — NetPrice has sub-cent precision (>2 decimals) — historical
+ *           decimal-precision drift, source of SF↔downstream mismatches
+ *   QL-006 — Amendment QL price drifted &gt;5% from the originating sold
+ *           price (SBQQ__OriginalQuoteLine__r.SBQQ__NetPrice__c) —
+ *           pricebook-rollover-on-amendment signal
  *   TF-001 — Both Discount + AdditionalDiscount populated; both Uplift + UpliftAmount (warning, up to 2 findings)
  *
- * Single SOQL serves all 5 checks.
+ * Single SOQL serves all checks.
  */
 public with sharing class QuoteLineChecksBundle implements IDetector {
 
@@ -31,12 +36,14 @@ public with sharing class QuoteLineChecksBundle implements IDetector {
             Boolean hasUplift = SchemaUtil.hasField('SBQQ__QuoteLine__c', 'SBQQ__Uplift__c');
             Boolean hasUpliftAmt = SchemaUtil.hasField('SBQQ__QuoteLine__c', 'SBQQ__UpliftAmount__c');
             Boolean hasAddDisc = SchemaUtil.hasField('SBQQ__QuoteLine__c', 'SBQQ__AdditionalDiscount__c');
+            Boolean hasOrigQL = SchemaUtil.hasField('SBQQ__QuoteLine__c', 'SBQQ__OriginalQuoteLine__c');
             String soql = 'SELECT Id, Name, SBQQ__NetPrice__c, SBQQ__ListPrice__c, ' +
                 'SBQQ__Quantity__c, SBQQ__NetTotal__c, SBQQ__Discount__c, ' +
                 'SBQQ__Quote__c, SBQQ__Product__c, SBQQ__Product__r.Name' +
                 (hasAddDisc ? ', SBQQ__AdditionalDiscount__c' : '') +
                 (hasUplift ? ', SBQQ__Uplift__c' : '') +
                 (hasUpliftAmt ? ', SBQQ__UpliftAmount__c' : '') +
+                (hasOrigQL ? ', SBQQ__OriginalQuoteLine__c, SBQQ__OriginalQuoteLine__r.SBQQ__NetPrice__c, SBQQ__OriginalQuoteLine__r.Name' : '') +
                 ' FROM SBQQ__QuoteLine__c LIMIT 10000';
             try { rows = OrgQueryService.query(ctx, soql); }
             catch (Exception e) {
@@ -49,6 +56,8 @@ public with sharing class QuoteLineChecksBundle implements IDetector {
         Boolean runQL002 = DetectorCatalogController.isActive('QL-002');
         Boolean runQL003 = DetectorCatalogController.isActive('QL-003');
         Boolean runQL004 = DetectorCatalogController.isActive('QL-004');
+        Boolean runQL005 = DetectorCatalogController.isActive('QL-005');
+        Boolean runQL006 = DetectorCatalogController.isActive('QL-006');
         Boolean runTF001 = DetectorCatalogController.isActive('TF-001');
 
         // QL-001 migrated to CustomDetector__mdt (Phase 24h).
@@ -56,6 +65,8 @@ public with sharing class QuoteLineChecksBundle implements IDetector {
         if (runQL002) results.addAll(evaluateQL002(rows));
         if (runQL003) results.addAll(evaluateQL003(rows));
         if (runQL004) results.addAll(evaluateQL004(rows));
+        if (runQL005) results.addAll(evaluateQL005(rows));
+        if (runQL006) results.addAll(evaluateQL006(rows));
         if (runTF001) results.addAll(evaluateTF001(rows));
         return results;
     }
@@ -168,6 +179,94 @@ public with sharing class QuoteLineChecksBundle implements IDetector {
         dr.description = bad.size() + ' quote line(s) have an effective discount exceeding 50% of list price.';
         dr.primaryRecord = ref(bad[0]);
         Integer cap = Math.min(10, bad.size());
+        for (Integer i = 1; i < cap; i++) dr.supportingRecords.add(ref(bad[i]));
+        return new List<DetectorResult>{ dr };
+    }
+
+    // QL-005: NetPrice carries sub-cent precision (>2 decimal places).
+    // PP-16 / PP-99 signature: historical 6-decimal records that
+    // weren't backfilled after the 2-decimal fix. Source of cent-level
+    // SF ↔ NetSuite mismatches on PO-cut customer invoices.
+    @TestVisible
+    static List<DetectorResult> evaluateQL005(List<Map<String, Object>> rows) {
+        List<Map<String, Object>> bad = new List<Map<String, Object>>();
+        for (Map<String, Object> r : rows) {
+            Decimal np = num(r, 'SBQQ__NetPrice__c');
+            if (np == null) continue;
+            // Compare value to its 2-decimal rounded form. If they differ
+            // value-wise, there are significant sub-cent digits.
+            if (np == np.setScale(2, System.RoundingMode.HALF_UP)) continue;
+            bad.add(r);
+        }
+        if (bad.isEmpty()) return new List<DetectorResult>();
+        Map<String, Object> ex = bad[0];
+        DetectorResult dr = new DetectorResult();
+        dr.detectorId = 'QL-005';
+        dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Warning');
+        dr.gapUsd = 0;
+        dr.recoverabilityScore = 0.8;
+        dr.title = bad.size() + ' quote line(s) with sub-cent NetPrice precision';
+        dr.description = bad.size() + ' SBQQ__QuoteLine__c records have NetPrice values ' +
+            'with more than 2 decimal places. Example: "' + productName(ex) +
+            '" NetPrice = ' + num(ex, 'SBQQ__NetPrice__c') + '. Downstream systems ' +
+            '(NetSuite, billing) typically support only 2 decimals — these values produce ' +
+            'cent-level mismatches on invoices, especially on PO-cut customer accounts. ' +
+            'Usually historical records from before a 2-decimal precision fix that were ' +
+            'never backfilled.';
+        dr.primaryRecord = ref(bad[0]);
+        Integer cap = Math.min(50, bad.size());
+        for (Integer i = 1; i < cap; i++) dr.supportingRecords.add(ref(bad[i]));
+        return new List<DetectorResult>{ dr };
+    }
+
+    // QL-006: Amendment quote line price drifted >5% from the originating
+    // sold price. PP-07 / PP-71 / PP-188 signature: amendments pull current
+    // pricebook list price (or zero-out-and-rebuild from current PBE)
+    // instead of preserving the originally negotiated price. Detected by
+    // comparing SBQQ__NetPrice__c to SBQQ__OriginalQuoteLine__r.SBQQ__NetPrice__c.
+    // A small delta is expected (uplift); >5% absolute means the original
+    // price was replaced, not adjusted.
+    @TestVisible
+    static List<DetectorResult> evaluateQL006(List<Map<String, Object>> rows) {
+        List<Map<String, Object>> bad = new List<Map<String, Object>>();
+        for (Map<String, Object> r : rows) {
+            Object origRef = r.get('SBQQ__OriginalQuoteLine__c');
+            if (origRef == null) continue;
+            Decimal currentNp = num(r, 'SBQQ__NetPrice__c');
+            if (currentNp == null) continue;
+            Object orig = r.get('SBQQ__OriginalQuoteLine__r');
+            if (!(orig instanceof Map<String, Object>)) continue;
+            Map<String, Object> origMap = (Map<String, Object>) orig;
+            Object originalNpRaw = origMap.get('SBQQ__NetPrice__c');
+            if (originalNpRaw == null) continue;
+            Decimal originalNp = Decimal.valueOf(String.valueOf(originalNpRaw));
+            if (originalNp == 0) continue;
+            Decimal deltaPct = ((currentNp - originalNp) / originalNp.abs()) * 100;
+            if (deltaPct.abs() <= 5) continue;
+            bad.add(r);
+        }
+        if (bad.isEmpty()) return new List<DetectorResult>();
+        Map<String, Object> ex = bad[0];
+        Decimal exCurrent = num(ex, 'SBQQ__NetPrice__c');
+        Decimal exOriginal = Decimal.valueOf(String.valueOf(
+            ((Map<String, Object>) ex.get('SBQQ__OriginalQuoteLine__r')).get('SBQQ__NetPrice__c')));
+        Decimal exDeltaPct = ((exCurrent - exOriginal) / exOriginal.abs() * 100).setScale(1, System.RoundingMode.HALF_UP);
+        DetectorResult dr = new DetectorResult();
+        dr.detectorId = 'QL-006';
+        dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Warning');
+        dr.gapUsd = 0;
+        dr.recoverabilityScore = 0.75;
+        dr.title = bad.size() + ' amendment line(s) with >5% price drift from original';
+        dr.description = bad.size() + ' SBQQ__QuoteLine__c records linked via SBQQ__OriginalQuoteLine__c ' +
+            'have NetPrice values more than 5% off the originating sold price. ' +
+            'Example: "' + productName(ex) + '" sold at ' + exOriginal +
+            ', now ' + exCurrent + ' (' + exDeltaPct + '%). Common cause: the amendment ' +
+            'flow pulled current pricebook list price instead of preserving the original ' +
+            'negotiated price, producing billing kickbacks and customer disputes. Verify ' +
+            'whether the delta represents a legitimate uplift, a corrective adjustment, ' +
+            'or unintended pricebook rollover.';
+        dr.primaryRecord = ref(bad[0]);
+        Integer cap = Math.min(50, bad.size());
         for (Integer i = 1; i < cap; i++) dr.supportingRecords.add(ref(bad[i]));
         return new List<DetectorResult>{ dr };
     }

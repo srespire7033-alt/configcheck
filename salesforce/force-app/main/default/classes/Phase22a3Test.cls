@@ -309,7 +309,10 @@ private class Phase22a3Test {
         List<DetectorResult> out = ConfigurationAttributeChecksBundle.evaluateCA001(
             new List<Map<String, Object>>{ attr });
         System.assertEquals(1, out.size());
-        System.assertEquals('Critical', out[0].severity);
+        // Severity comes from Detector__mdt.CA_001 / CustomDetector__mdt.CA_001
+        // (Warning). The detector defaults to Critical if no record is found
+        // but the metadata overrides — test follows the configured value.
+        System.assertEquals('Warning', out[0].severity);
     }
 
     @IsTest

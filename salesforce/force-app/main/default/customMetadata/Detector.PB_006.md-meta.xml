@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomMetadata xmlns="http://soap.sforce.com/2006/04/metadata" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" fqn="Detector__mdt.PB_006">
+    <label>PB-006</label>
+    <protected>false</protected>
+    <values><field>DetectorId__c</field><value xsi:type="xsd:string">PB-006</value></values>
+    <values><field>Label__c</field><value xsi:type="xsd:string">Soft-retired SKU still IsActive=true (naming-only retirement)</value></values>
+    <values><field>Category__c</field><value xsi:type="xsd:string">governance</value></values>
+    <values><field>AppliesTo__c</field><value xsi:type="xsd:string">CPQ;CPQ+Billing;ARM</value></values>
+    <values><field>CriticalThresholdUsd__c</field><value xsi:type="xsd:double">0</value></values>
+    <values><field>WarningThresholdUsd__c</field><value xsi:type="xsd:double">0</value></values>
+    <values><field>RecoverabilityScore__c</field><value xsi:type="xsd:double">0.85</value></values>
+    <values><field>Effort__c</field><value xsi:type="xsd:string">low</value></values>
+    <values><field>IsActive__c</field><value xsi:type="xsd:boolean">true</value></values>
+    <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
+    <values><field>Severity__c</field><value xsi:type="xsd:string">Warning</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: Product2 records where IsActive=true AND Name contains one of: "Renewal Only", "Legacy", "Deprecated", "Retired", "Obsolete", "Do Not Sell" (case-insensitive).
+Why it matters: Soft-retirement by naming convention is the most common shadow-governance pattern: the team agrees "this SKU is dead" but no system flag enforces it. New deals can still pick up these products via search/picklist, CSMs apply them to amendments where they fail at pricebook lookup, and product hierarchy reporting double-counts them as live revenue. Flip IsActive=false or formalize a proper retirement workflow with a system-level Status field.
+Suppress a finding: when the naming is informational only and the product is intentionally still sellable.
+Disable the detector: only if your business genuinely uses these labels for active products (rare — these strings are nearly always retirement markers).</value></values>
+    <values><field>ActionHeadline__c</field><value xsi:type="xsd:string">Retire or rename {N} soft-retired-but-active products</value></values>
+</CustomMetadata>

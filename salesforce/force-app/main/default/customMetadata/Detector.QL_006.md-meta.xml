@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomMetadata xmlns="http://soap.sforce.com/2006/04/metadata" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" fqn="Detector__mdt.QL_006">
+    <label>QL-006</label>
+    <protected>false</protected>
+    <values><field>DetectorId__c</field><value xsi:type="xsd:string">QL-006</value></values>
+    <values><field>Label__c</field><value xsi:type="xsd:string">Amendment price drift from original sold price</value></values>
+    <values><field>Category__c</field><value xsi:type="xsd:string">revenue_leakage</value></values>
+    <values><field>AppliesTo__c</field><value xsi:type="xsd:string">CPQ;CPQ+Billing</value></values>
+    <values><field>CriticalThresholdUsd__c</field><value xsi:type="xsd:double">0</value></values>
+    <values><field>WarningThresholdUsd__c</field><value xsi:type="xsd:double">0</value></values>
+    <values><field>RecoverabilityScore__c</field><value xsi:type="xsd:double">0.75</value></values>
+    <values><field>Effort__c</field><value xsi:type="xsd:string">medium</value></values>
+    <values><field>IsActive__c</field><value xsi:type="xsd:boolean">true</value></values>
+    <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
+    <values><field>RequiredSurface__c</field><value xsi:type="xsd:string">SBQQ__QuoteLine__c</value></values>
+    <values><field>Severity__c</field><value xsi:type="xsd:string">Warning</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: SBQQ__QuoteLine__c records linked to a prior line via SBQQ__OriginalQuoteLine__c whose current SBQQ__NetPrice__c is more than 5% off the original line&apos;s NetPrice.
+Why it matters: This is the upstream signature of Q-to-O variance on amendments (ORD-FOR-003). The amendment flow pulled current pricebook list price instead of preserving the originally negotiated price. Downstream effects: billing kickbacks, customer disputes, accounting rework, and credit memos. The original negotiation is lost on every amendment unless the price is manually corrected back.
+Suppress a finding: when the price delta represents a deliberate uplift, mid-term repricing, or contracted adjustment. Note the reason and dismiss.
+Disable the detector: only if your business intentionally re-prices on every amendment.</value></values>
+    <values><field>ActionHeadline__c</field><value xsi:type="xsd:string">Review {N} amendment lines with &gt;5% drift from original price</value></values>
+</CustomMetadata>

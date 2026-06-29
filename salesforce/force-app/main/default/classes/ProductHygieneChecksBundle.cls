@@ -9,6 +9,9 @@
  *   PB-002 — Active product without Description (warning)
  *   PB-003 — Active product without ProductCode (warning)
  *   PB-004 — Active product without Family (info)
+ *   PB-005 — Active product with &gt;5 BlockPrice tiers (proliferation signal)
+ *   PB-006 — Product name contains &quot;Renewal Only&quot; / &quot;Legacy&quot; / &quot;Deprecated&quot;
+ *           but IsActive=true (soft-retirement-by-naming pattern)
  *   UA-001 — Active product not on any QuoteLine in last 12 months (info)
  *
  * One Product2 query covers all 5 checks. PricebookEntry is queried
@@ -23,6 +26,8 @@ public with sharing class ProductHygieneChecksBundle implements IDetector {
     @TestVisible static List<Map<String, Object>> testStubPbeProducts;
     @TestVisible static List<Map<String, Object>> testStubUsedProducts;
     @TestVisible static Boolean testStubSbqqPresent;
+    /** Map<productId, blockPriceCount> for PB-005. */
+    @TestVisible static Map<Id, Integer> testStubBlockPriceCounts;
 
     public String getDetectorId() { return 'PRODUCT-HYGIENE-BUNDLE'; }
     public String getLabel() { return 'Product hygiene checks (PB-001..004, UA-001)'; }
@@ -96,7 +101,39 @@ public with sharing class ProductHygieneChecksBundle implements IDetector {
         if (sbqqPresent && DetectorCatalogController.isActive('UA-001')) {
             results.addAll(evaluateUA001(products, usedProductIds));
         }
+        if (DetectorCatalogController.isActive('PB-005')) {
+            Map<Id, Integer> blockCounts = (testStubBlockPriceCounts != null)
+                ? testStubBlockPriceCounts
+                : fetchBlockPriceCounts(ctx);
+            results.addAll(evaluatePB005(products, blockCounts));
+        }
+        if (DetectorCatalogController.isActive('PB-006')) {
+            results.addAll(evaluatePB006(products));
+        }
         return results;
+    }
+
+    /** Count SBQQ__BlockPrice__c records per product. Gated on SBQQ surface;
+     *  returns empty map on any failure (skips PB-005 cleanly). */
+    static Map<Id, Integer> fetchBlockPriceCounts(DetectorContext ctx) {
+        Map<Id, Integer> out = new Map<Id, Integer>();
+        Boolean present = ctx.isRemote() || SchemaUtil.hasObject('SBQQ__BlockPrice__c');
+        if (!present) return out;
+        try {
+            List<Map<String, Object>> rows = OrgQueryService.query(ctx,
+                'SELECT SBQQ__Product__c pid, COUNT(Id) cnt ' +
+                'FROM SBQQ__BlockPrice__c ' +
+                'WHERE SBQQ__Product__c != null ' +
+                'GROUP BY SBQQ__Product__c');
+            for (Map<String, Object> row : rows) {
+                Object pid = row.get('pid');
+                Object c = row.get('cnt');
+                if (pid != null && c != null) out.put((Id) pid, Integer.valueOf(c));
+            }
+        } catch (Exception e) {
+            System.debug(LoggingLevel.WARN, '[OrgPrism Skip] PB-005 blockCounts: ' + e.getMessage());
+        }
+        return out;
     }
 
     static SourceRecord ref(Map<String, Object> p) {
@@ -174,6 +211,75 @@ public with sharing class ProductHygieneChecksBundle implements IDetector {
         DetectorResult dr = buildAggregateResult('PB-004', 'Info', 1.0,
             'active product(s) missing Family',
             'Active products without a Family are harder to roll up in reports.',
+            bad);
+        return dr == null ? new List<DetectorResult>() : new List<DetectorResult>{ dr };
+    }
+
+    // PB-005: Active product with >5 SBQQ__BlockPrice__c tiers.
+    // PP-46 / PP-180 signature: each block-price tier becomes a separate
+    // record in NetSuite (regular + renewal duplication), so 5 tiers → 10
+    // NS items per product. Past ~5 tiers, the SF↔NS mapping surface
+    // becomes the dominant cause of sync errors.
+    @TestVisible
+    static List<DetectorResult> evaluatePB005(List<Map<String, Object>> products, Map<Id, Integer> blockCounts) {
+        if (blockCounts == null) blockCounts = new Map<Id, Integer>();
+        List<SourceRecord> bad = new List<SourceRecord>();
+        Integer maxCount = 0;
+        String maxName = null;
+        for (Map<String, Object> p : products) {
+            Id pid = (Id) p.get('Id');
+            Integer cnt = blockCounts.containsKey(pid) ? blockCounts.get(pid) : 0;
+            if (cnt <= 5) continue;
+            bad.add(ref(p));
+            if (cnt > maxCount) {
+                maxCount = cnt;
+                maxName = (String) p.get('Name');
+            }
+        }
+        if (bad.isEmpty()) return new List<DetectorResult>();
+        DetectorResult dr = new DetectorResult();
+        dr.detectorId = 'PB-005';
+        dr.severity = DetectorCatalogController.getSeverity(dr.detectorId, 'Warning');
+        dr.gapUsd = 0;
+        dr.recoverabilityScore = 0.6;
+        dr.title = bad.size() + ' product(s) with >5 block-price tiers';
+        dr.description = bad.size() + ' active Product2 records have more than 5 SBQQ__BlockPrice__c ' +
+            'tiers. Worst case: "' + maxName + '" carries ' + maxCount + ' tiers. Each tier ' +
+            'typically maps to a separate downstream item (e.g. NetSuite regular + renewal records), ' +
+            'so high tier counts explode the SF↔NS mapping surface and drive recurring sync errors. ' +
+            'Consider consolidating tiers or moving to formula-based pricing where possible.';
+        dr.primaryRecord = bad[0];
+        Integer cap = Math.min(25, bad.size());
+        for (Integer i = 1; i < cap; i++) dr.supportingRecords.add(bad[i]);
+        return new List<DetectorResult>{ dr };
+    }
+
+    // PB-006: Product name signals soft retirement ("Renewal Only", "Legacy",
+    // "Deprecated", "Do Not Sell") but Product2.IsActive is still true.
+    // PP-187 signature: Lexipol soft-retires by prefixing/suffixing the
+    // Name rather than flipping a status flag. New deals can still pick
+    // up these products via search; amendments on retired SKUs fail at
+    // pricebook lookup because the SKU isn't in the current year's book.
+    @TestVisible
+    static List<DetectorResult> evaluatePB006(List<Map<String, Object>> products) {
+        List<SourceRecord> bad = new List<SourceRecord>();
+        for (Map<String, Object> p : products) {
+            String name = (String) p.get('Name');
+            if (String.isBlank(name)) continue;
+            String lower = name.toLowerCase();
+            if (!(lower.contains('renewal only') || lower.contains('legacy')
+                    || lower.contains('deprecated') || lower.contains('do not sell')
+                    || lower.contains('retired') || lower.contains('obsolete'))) continue;
+            bad.add(ref(p));
+        }
+        DetectorResult dr = buildAggregateResult('PB-006', 'Warning', 0.85,
+            'product(s) named as retired but still IsActive=true',
+            'Products with names containing "Renewal Only", "Legacy", "Deprecated", ' +
+            '"Retired", "Obsolete", or "Do Not Sell" — but Product2.IsActive is still true. ' +
+            'Soft-retirement by naming convention lets these SKUs continue to surface in ' +
+            'product search and quote builder, causing new deals to attach to products that ' +
+            'should not be sold and amendments to fail at pricebook lookup. Flip IsActive=false ' +
+            'or formalize a retirement workflow.',
             bad);
         return dr == null ? new List<DetectorResult>() : new List<DetectorResult>{ dr };
     }

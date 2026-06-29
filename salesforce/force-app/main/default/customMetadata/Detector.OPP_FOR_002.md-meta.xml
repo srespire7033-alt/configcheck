@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomMetadata xmlns="http://soap.sforce.com/2006/04/metadata" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" fqn="Detector__mdt.OPP_FOR_002">
+    <label>OPP-FOR-002</label>
+    <protected>false</protected>
+    <values><field>DetectorId__c</field><value xsi:type="xsd:string">OPP-FOR-002</value></values>
+    <values><field>Label__c</field><value xsi:type="xsd:string">Closed-won opportunity at $0 (cancellation-by-zero)</value></values>
+    <values><field>Category__c</field><value xsi:type="xsd:string">governance</value></values>
+    <values><field>AppliesTo__c</field><value xsi:type="xsd:string">CPQ;CPQ+Billing;ARM</value></values>
+    <values><field>CriticalThresholdUsd__c</field><value xsi:type="xsd:double">0</value></values>
+    <values><field>WarningThresholdUsd__c</field><value xsi:type="xsd:double">0</value></values>
+    <values><field>RecoverabilityScore__c</field><value xsi:type="xsd:double">0.4</value></values>
+    <values><field>Effort__c</field><value xsi:type="xsd:string">low</value></values>
+    <values><field>IsActive__c</field><value xsi:type="xsd:boolean">true</value></values>
+    <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: Opportunity records with IsWon=true AND Amount=0 closed in the last 90 days.
+Why it matters: Closing a known cancel as won-at-zero (instead of close-lost) is a non-standard CPQ pattern that hides churn from whitespace, churn, and renewal reporting until the autoclose fires. Customers using this workaround typically have a blind spot of weeks-to-months on real-time retention numbers. Surfaces immediately as a data-shape signal.
+Suppress a finding: when the opportunity is a legitimate $0 deal (trial, internal, partner-funded, accommodation). Note the reason and dismiss.
+Disable the detector: only if your org intentionally uses close-won-at-zero as the cancel path. Most should leave this on so the pattern is at least visible.</value></values>
+    <values><field>ActionHeadline__c</field><value xsi:type="xsd:string">Review {N} closed-won opportunities at $0</value></values>
+</CustomMetadata>

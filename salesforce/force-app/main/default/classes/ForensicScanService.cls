@@ -52,7 +52,9 @@ public with sharing class ForensicScanService {
             // Phase 10 batch A — governance gaps
             new AMD001NoEffectiveDateDetector(),
             new OPP001ClosedWonNoQuoteDetector(),
+            new OPP002ClosedWonZeroDollarDetector(),
             new CON001NoActiveSubsDetector(),
+            new CON002OrphanContractDetector(),
             // Phase 10 batch B — renewal pipeline
             new REN003ExpiredQuoteNoRenewalDetector(),
             new REN004StuckDraftRenewalDetector(),

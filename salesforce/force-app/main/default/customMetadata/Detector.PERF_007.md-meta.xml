@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomMetadata xmlns="http://soap.sforce.com/2006/04/metadata" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" fqn="Detector__mdt.PERF_007">
+    <label>PERF-007</label>
+    <protected>false</protected>
+    <values><field>DetectorId__c</field><value xsi:type="xsd:string">PERF-007</value></values>
+    <values><field>Label__c</field><value xsi:type="xsd:string">Async Apex queue saturation / failure spike</value></values>
+    <values><field>Category__c</field><value xsi:type="xsd:string">governance</value></values>
+    <values><field>AppliesTo__c</field><value xsi:type="xsd:string">CPQ;CPQ+Billing;ARM</value></values>
+    <values><field>CriticalThresholdUsd__c</field><value xsi:type="xsd:double">0</value></values>
+    <values><field>WarningThresholdUsd__c</field><value xsi:type="xsd:double">0</value></values>
+    <values><field>RecoverabilityScore__c</field><value xsi:type="xsd:double">0.7</value></values>
+    <values><field>Effort__c</field><value xsi:type="xsd:string">medium</value></values>
+    <values><field>IsActive__c</field><value xsi:type="xsd:boolean">true</value></values>
+    <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
+    <values><field>Severity__c</field><value xsi:type="xsd:string">Warning</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: AsyncApexJob queue with more than 250 jobs currently Queued/Preparing/Processing, OR more than 100 jobs Failed in the last 24 hours. Critical at &gt;1000 queued or &gt;500 daily failures.
+Why it matters: Async Apex saturation cascades — payment-sync queueables back up behind unrelated traffic, retries that should have succeeded get lost when the org hits the daily async limit, and integrations end up partial. The Lexipol case (PP-57, PP-264) shows what happens at scale: payment records dropped because Apex async limits were hit org-wide for ~1 month. Investigate long-running queueables, missing retry-with-backoff logic, and recent volume spikes from anonymous executions.
+Suppress a finding: when the spike is known and being processed (e.g. one-off backfill that&apos;s scheduled to complete).
+Disable the detector: only if your org runs at high async volumes by design and you have separate monitoring.</value></values>
+    <values><field>ActionHeadline__c</field><value xsi:type="xsd:string">Investigate async Apex backlog / failure spike</value></values>
+</CustomMetadata>

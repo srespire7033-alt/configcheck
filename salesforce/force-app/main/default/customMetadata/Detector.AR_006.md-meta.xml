@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomMetadata xmlns="http://soap.sforce.com/2006/04/metadata" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" fqn="Detector__mdt.AR_006">
+    <label>AR-006</label>
+    <protected>false</protected>
+    <values><field>DetectorId__c</field><value xsi:type="xsd:string">AR-006</value></values>
+    <values><field>Label__c</field><value xsi:type="xsd:string">Active approval rule never invoked (deal-desk-dead)</value></values>
+    <values><field>Category__c</field><value xsi:type="xsd:string">governance</value></values>
+    <values><field>AppliesTo__c</field><value xsi:type="xsd:string">CPQ;CPQ+Billing</value></values>
+    <values><field>CriticalThresholdUsd__c</field><value xsi:type="xsd:double">0</value></values>
+    <values><field>WarningThresholdUsd__c</field><value xsi:type="xsd:double">0</value></values>
+    <values><field>RecoverabilityScore__c</field><value xsi:type="xsd:double">0.7</value></values>
+    <values><field>Effort__c</field><value xsi:type="xsd:string">low</value></values>
+    <values><field>IsActive__c</field><value xsi:type="xsd:boolean">true</value></values>
+    <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
+    <values><field>RequiredSurface__c</field><value xsi:type="xsd:string">sbaa__ApprovalRule__c</value></values>
+    <values><field>Severity__c</field><value xsi:type="xsd:string">Warning</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: Active approval rules (sbaa__ApprovalRule__c or SBQQ__ApprovalRule__c) that have existed for more than 90 days but have zero corresponding Approval records (sbaa__Approval__c / SBQQ__Approval__c) created in the last 90 days.
+Why it matters: A rule that looks healthy (active, has approver, has conditions) but never fires is the deal-desk-dead pattern — the gate is on paper but not in practice. Either the rule conditions never match real quotes, another rule earlier in evaluation order short-circuits it, or the approval matrix routes around it. Operators believe they have governance they don&apos;t.
+Suppress a finding: when the rule is intentionally dormant (legacy product line wound down, regulatory rule waiting on a hire).
+Disable the detector: only if your org runs approval rules outside the standard sbaa/SBQQ flow.</value></values>
+    <values><field>ActionHeadline__c</field><value xsi:type="xsd:string">Audit {N} approval rules that haven&apos;t fired in 90+ days</value></values>
+</CustomMetadata>

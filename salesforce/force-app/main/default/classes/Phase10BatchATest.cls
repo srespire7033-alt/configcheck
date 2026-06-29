@@ -155,6 +155,74 @@ private class Phase10BatchATest {
         System.assertEquals(1, r.size());
     }
 
+    // ─── OPP-FOR-002 ─────────────────────────────────────────────
+
+    private static Map<String, Object> opp002Row(Date closeDate) {
+        return new Map<String, Object>{
+            'oppId' => UserInfo.getUserId(),
+            'oppName' => 'OPP-002',
+            'accountId' => UserInfo.getOrganizationId(),
+            'accountName' => 'Acme Co',
+            'closeDate' => closeDate,
+            'currencyIsoCode' => 'USD'
+        };
+    }
+
+    @isTest static void opp002_recentZeroDollar_emitsCritical() {
+        DetectorResult r = OPP002ClosedWonZeroDollarDetector.evaluateRow(opp002Row(Date.today().addDays(-10)));
+        System.assertEquals('Critical', r.severity);
+        System.assertEquals('OPP-FOR-002', r.detectorId);
+        System.assertEquals(0, r.entitledUsd);
+    }
+
+    @isTest static void opp002_olderZeroDollar_emitsWarning() {
+        DetectorResult r = OPP002ClosedWonZeroDollarDetector.evaluateRow(opp002Row(Date.today().addDays(-60)));
+        System.assertEquals('Warning', r.severity, 'closed >30d ago → warning, not critical');
+    }
+
+    @isTest static void opp002_handlesNullCloseDate() {
+        Map<String, Object> row = opp002Row(null);
+        row.put('closeDate', null);
+        DetectorResult r = OPP002ClosedWonZeroDollarDetector.evaluateRow(row);
+        System.assertNotEquals(null, r);
+    }
+
+    @isTest static void opp002_handlesStringCloseDate() {
+        Map<String, Object> row = opp002Row(Date.today());
+        row.put('closeDate', '2025-01-15');
+        DetectorResult r = OPP002ClosedWonZeroDollarDetector.evaluateRow(row);
+        System.assertNotEquals(null, r, 'String date should parse');
+    }
+
+    @isTest static void opp002_handlesNullOppId() {
+        Map<String, Object> row = opp002Row(Date.today());
+        row.put('oppId', null);
+        System.assertEquals(null, OPP002ClosedWonZeroDollarDetector.evaluateRow(row));
+    }
+
+    @isTest static void opp002_unwrap_handlesEmptyAndNull() {
+        System.assertNotEquals(null, OPP002ClosedWonZeroDollarDetector.unwrap(null));
+        System.assertNotEquals(null, OPP002ClosedWonZeroDollarDetector.unwrap(new Map<String, Object>()));
+    }
+
+    @isTest static void opp002_runWithoutStub_drivesSoqlPath() {
+        OPP002ClosedWonZeroDollarDetector d = new OPP002ClosedWonZeroDollarDetector();
+        Test.startTest();
+        List<DetectorResult> r = d.run(new DetectorContext(null, 'USD', 'CPQ'));
+        Test.stopTest();
+        System.assert(r != null);
+    }
+
+    @isTest static void opp002_runWithStubRows() {
+        OPP002ClosedWonZeroDollarDetector.testStubRows = new List<Map<String, Object>>{
+            opp002Row(Date.today().addDays(-10))
+        };
+        OPP002ClosedWonZeroDollarDetector d = new OPP002ClosedWonZeroDollarDetector();
+        List<DetectorResult> r = d.run(new DetectorContext(null, 'USD', 'CPQ'));
+        OPP002ClosedWonZeroDollarDetector.testStubRows = null;
+        System.assertEquals(1, r.size());
+    }
+
     // ─── CON-FOR-001 ─────────────────────────────────────────────
 
     private static Map<String, Object> conRow(Integer subCount, Date maxSubEnd) {
@@ -274,5 +342,87 @@ private class Phase10BatchATest {
         List<DetectorResult> r = d.run(new DetectorContext(null, 'USD', 'CPQ'));
         Test.stopTest();
         System.assert(r != null);
+    }
+
+    // ─── CON-FOR-002 ─────────────────────────────────────────────
+
+    private static Map<String, Object> con002Row(Date childEnd, Date parentEnd) {
+        return new Map<String, Object>{
+            'contractId' => UserInfo.getUserId(),
+            'contractNumber' => 'C-CHILD',
+            'accountId' => UserInfo.getOrganizationId(),
+            'accountName' => 'Acme Co',
+            'endDate' => childEnd,
+            'parentContractId' => UserInfo.getOrganizationId(),
+            'parentContractNumber' => 'C-PARENT',
+            'parentEndDate' => parentEnd,
+            'currencyIsoCode' => 'USD'
+        };
+    }
+
+    @isTest static void con002_largeDateDelta_emitsCritical() {
+        DetectorResult r = CON002OrphanContractDetector.evaluateRow(
+            con002Row(Date.today().addDays(180), Date.today().addDays(45)));
+        System.assertNotEquals(null, r);
+        System.assertEquals('Critical', r.severity);
+        System.assertEquals('CON-FOR-002', r.detectorId);
+    }
+
+    @isTest static void con002_smallDateDelta_emitsWarning() {
+        DetectorResult r = CON002OrphanContractDetector.evaluateRow(
+            con002Row(Date.today().addDays(60), Date.today().addDays(45)));
+        System.assertEquals('Warning', r.severity);
+    }
+
+    @isTest static void con002_sameEndDates_returnsNull() {
+        DetectorResult r = CON002OrphanContractDetector.evaluateRow(
+            con002Row(Date.today().addDays(90), Date.today().addDays(90)));
+        System.assertEquals(null, r, 'matched end dates → co-termed → skip');
+    }
+
+    @isTest static void con002_nullDates_returnsNull() {
+        DetectorResult r = CON002OrphanContractDetector.evaluateRow(
+            con002Row(null, Date.today().addDays(90)));
+        System.assertEquals(null, r);
+        r = CON002OrphanContractDetector.evaluateRow(
+            con002Row(Date.today().addDays(90), null));
+        System.assertEquals(null, r);
+    }
+
+    @isTest static void con002_handlesStringDates() {
+        Map<String, Object> row = con002Row(Date.today(), Date.today());
+        row.put('endDate', '2025-01-15');
+        row.put('parentEndDate', '2024-12-15');
+        DetectorResult r = CON002OrphanContractDetector.evaluateRow(row);
+        System.assertNotEquals(null, r, 'string dates should parse');
+    }
+
+    @isTest static void con002_handlesNullContractId() {
+        Map<String, Object> row = con002Row(Date.today().addDays(60), Date.today().addDays(30));
+        row.put('contractId', null);
+        System.assertEquals(null, CON002OrphanContractDetector.evaluateRow(row));
+    }
+
+    @isTest static void con002_unwrap_handlesEmptyAndNull() {
+        System.assertNotEquals(null, CON002OrphanContractDetector.unwrap(null));
+        System.assertNotEquals(null, CON002OrphanContractDetector.unwrap(new Map<String, Object>()));
+    }
+
+    @isTest static void con002_runWithoutStub_drivesSoqlPath() {
+        CON002OrphanContractDetector d = new CON002OrphanContractDetector();
+        Test.startTest();
+        List<DetectorResult> r = d.run(new DetectorContext(null, 'USD', 'CPQ'));
+        Test.stopTest();
+        System.assert(r != null);
+    }
+
+    @isTest static void con002_runWithStubRows() {
+        CON002OrphanContractDetector.testStubRows = new List<Map<String, Object>>{
+            con002Row(Date.today().addDays(180), Date.today().addDays(45))
+        };
+        CON002OrphanContractDetector d = new CON002OrphanContractDetector();
+        List<DetectorResult> r = d.run(new DetectorContext(null, 'USD', 'CPQ'));
+        CON002OrphanContractDetector.testStubRows = null;
+        System.assertEquals(1, r.size());
     }
 }

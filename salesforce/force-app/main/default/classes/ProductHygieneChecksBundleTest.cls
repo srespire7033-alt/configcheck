@@ -108,5 +108,95 @@ private class ProductHygieneChecksBundleTest {
         System.assertEquals(0, ProductHygieneChecksBundle.evaluatePB003(e).size());
         System.assertEquals(0, ProductHygieneChecksBundle.evaluatePB004(e).size());
         System.assertEquals(0, ProductHygieneChecksBundle.evaluateUA001(e, new Set<Id>()).size());
+        System.assertEquals(0, ProductHygieneChecksBundle.evaluatePB005(e, new Map<Id, Integer>()).size());
+        System.assertEquals(0, ProductHygieneChecksBundle.evaluatePB006(e).size());
+    }
+
+    @isTest
+    static void pb005_flags_products_with_more_than_five_tiers() {
+        Map<String, Object> heavy = product('Heavy', 'H', 'd', 'F');
+        Map<String, Object> normal = product('Normal', 'N', 'd', 'F');
+        List<Map<String, Object>> ps = new List<Map<String, Object>>{ heavy, normal };
+        Map<Id, Integer> counts = new Map<Id, Integer>{
+            (Id) heavy.get('Id') => 12,
+            (Id) normal.get('Id') => 3
+        };
+        List<DetectorResult> rs = ProductHygieneChecksBundle.evaluatePB005(ps, counts);
+        System.assertEquals(1, rs.size());
+        DetectorResult dr = rs[0];
+        System.assertEquals('PB-005', dr.detectorId);
+        System.assert(dr.title.startsWith('1 '), 'Only heavy product (>5 tiers) should be flagged');
+    }
+
+    @isTest
+    static void pb005_no_proliferation_no_finding() {
+        Map<String, Object> p = product('OK', 'OK', 'd', 'F');
+        Map<Id, Integer> counts = new Map<Id, Integer>{ (Id) p.get('Id') => 5 };
+        System.assertEquals(0, ProductHygieneChecksBundle.evaluatePB005(
+            new List<Map<String, Object>>{ p }, counts).size(),
+            'Exactly 5 tiers is at the threshold — not flagged');
+    }
+
+    @isTest
+    static void pb006_flags_renewal_only_active_product() {
+        List<Map<String, Object>> ps = new List<Map<String, Object>>{
+            product('Widget (Renewal Only)', 'WID', 'd', 'F'),
+            product('Legacy Maintenance Plan', 'LMP', 'd', 'F'),
+            product('Premium Widget', 'PW', 'd', 'F')
+        };
+        List<DetectorResult> rs = ProductHygieneChecksBundle.evaluatePB006(ps);
+        System.assertEquals(1, rs.size());
+        System.assertEquals('PB-006', rs[0].detectorId);
+        System.assert(rs[0].title.startsWith('2 '), 'Two retirement-named products should be flagged');
+    }
+
+    @isTest
+    static void pb006_case_insensitive_match() {
+        List<Map<String, Object>> ps = new List<Map<String, Object>>{
+            product('DEPRECATED ITEM', 'D', 'd', 'F'),
+            product('Some Obsolete Thing', 'O', 'd', 'F'),
+            product('Do Not Sell SKU', 'NS', 'd', 'F')
+        };
+        List<DetectorResult> rs = ProductHygieneChecksBundle.evaluatePB006(ps);
+        System.assertEquals(1, rs.size());
+        System.assert(rs[0].title.startsWith('3 '));
+    }
+
+    @isTest
+    static void pb006_clean_names_no_findings() {
+        List<Map<String, Object>> ps = new List<Map<String, Object>>{
+            product('Premium Subscription', 'PS', 'd', 'F'),
+            product('Annual Plan', 'AP', 'd', 'F')
+        };
+        System.assertEquals(0, ProductHygieneChecksBundle.evaluatePB006(ps).size());
+    }
+
+    @isTest
+    static void pb006_blank_name_skipped() {
+        List<Map<String, Object>> ps = new List<Map<String, Object>>{
+            product(null, 'X', 'd', 'F')
+        };
+        System.assertEquals(0, ProductHygieneChecksBundle.evaluatePB006(ps).size());
+    }
+
+    @isTest
+    static void pb005_via_bundle_with_stub_counts() {
+        Map<String, Object> heavy = product('Heavy', 'OK', 'desc', 'F');
+        Id heavyId = (Id) heavy.get('Id');
+        ProductHygieneChecksBundle.testStubProducts = new List<Map<String, Object>>{ heavy };
+        ProductHygieneChecksBundle.testStubPbeProducts = new List<Map<String, Object>>{
+            new Map<String, Object>{ 'Product2Id' => heavyId }
+        };
+        ProductHygieneChecksBundle.testStubUsedProducts = new List<Map<String, Object>>{
+            new Map<String, Object>{ 'SBQQ__Product__c' => heavyId }
+        };
+        ProductHygieneChecksBundle.testStubSbqqPresent = true;
+        ProductHygieneChecksBundle.testStubBlockPriceCounts = new Map<Id, Integer>{ heavyId => 9 };
+
+        List<DetectorResult> rs = new ProductHygieneChecksBundle().run(ctx());
+        ProductHygieneChecksBundle.testStubBlockPriceCounts = null;
+        Boolean found = false;
+        for (DetectorResult r : rs) if (r.detectorId == 'PB-005') { found = true; break; }
+        System.assert(found, 'PB-005 should fire via bundle path');
     }
 }

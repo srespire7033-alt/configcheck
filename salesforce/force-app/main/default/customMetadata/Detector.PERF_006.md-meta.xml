@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomMetadata xmlns="http://soap.sforce.com/2006/04/metadata" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" fqn="Detector__mdt.PERF_006">
+    <label>PERF-006</label>
+    <protected>false</protected>
+    <values><field>DetectorId__c</field><value xsi:type="xsd:string">PERF-006</value></values>
+    <values><field>Label__c</field><value xsi:type="xsd:string">Duplicate active flows on same object</value></values>
+    <values><field>Category__c</field><value xsi:type="xsd:string">governance</value></values>
+    <values><field>AppliesTo__c</field><value xsi:type="xsd:string">CPQ;CPQ+Billing;ARM</value></values>
+    <values><field>CriticalThresholdUsd__c</field><value xsi:type="xsd:double">0</value></values>
+    <values><field>WarningThresholdUsd__c</field><value xsi:type="xsd:double">0</value></values>
+    <values><field>RecoverabilityScore__c</field><value xsi:type="xsd:double">0.7</value></values>
+    <values><field>Effort__c</field><value xsi:type="xsd:string">medium</value></values>
+    <values><field>IsActive__c</field><value xsi:type="xsd:boolean">true</value></values>
+    <values><field>Version__c</field><value xsi:type="xsd:double">1</value></values>
+    <values><field>Severity__c</field><value xsi:type="xsd:string">Warning</value></values>
+    <values><field>LongDescription__c</field><value xsi:type="xsd:string">Finds: SObjects with 3 or more active record-triggered flows (RecordAfterSave or RecordBeforeSave). Critical at 5+.
+Why it matters: Multiple flows on one object compound at every save — each runs serially, can re-trigger field updates, and combined runtime contributes to UI latency and spinning-wheel timeouts on edit pages. Order-of-execution interactions get hard to reason about past 3 flows; performance starts to bite past 5. Consolidate where logic overlaps, or document the precise execution order for the rest.
+Suppress a finding: when the multiple flows are intentionally separated and you&apos;ve already established a documented order of execution.
+Disable the detector: only if your org has policy that mandates one-flow-per-concern even when many flows accumulate.</value></values>
+    <values><field>ActionHeadline__c</field><value xsi:type="xsd:string">Consolidate flows on {N} object(s) with overlapping automation</value></values>
+</CustomMetadata>

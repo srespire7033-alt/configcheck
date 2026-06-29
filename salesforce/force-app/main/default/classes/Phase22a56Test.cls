@@ -62,6 +62,68 @@ private class Phase22a56Test {
         System.assertEquals(1, ApprovalRuleChecksBundle.evaluateAR005(
             new List<Map<String, Object>>{ r }).size());
     }
+    @IsTest static void ar006_old_active_zero_approvals_flags() {
+        Id rid = arId();
+        Map<String, Object> r = new Map<String, Object>{ 'Id' => rid, 'Name' => 'DeadGate',
+            'SBQQ__Active__c' => true,
+            'CreatedDate' => Datetime.now().addDays(-180) };
+        List<DetectorResult> out = ApprovalRuleChecksBundle.evaluateAR006(
+            new List<Map<String, Object>>{ r }, new Map<Id, Integer>());
+        System.assertEquals(1, out.size());
+        System.assertEquals('AR-006', out[0].detectorId);
+    }
+    @IsTest static void ar006_new_rule_skipped() {
+        Id rid = arId();
+        Map<String, Object> r = new Map<String, Object>{ 'Id' => rid, 'Name' => 'New',
+            'SBQQ__Active__c' => true,
+            'CreatedDate' => Datetime.now().addDays(-10) };
+        System.assertEquals(0, ApprovalRuleChecksBundle.evaluateAR006(
+            new List<Map<String, Object>>{ r }, new Map<Id, Integer>()).size(),
+            'Rule <90d old should be skipped');
+    }
+    @IsTest static void ar006_has_recent_approvals_skipped() {
+        Id rid = arId();
+        Map<String, Object> r = new Map<String, Object>{ 'Id' => rid, 'Name' => 'Live',
+            'SBQQ__Active__c' => true,
+            'CreatedDate' => Datetime.now().addDays(-180) };
+        Map<Id, Integer> counts = new Map<Id, Integer>{ rid => 5 };
+        System.assertEquals(0, ApprovalRuleChecksBundle.evaluateAR006(
+            new List<Map<String, Object>>{ r }, counts).size(),
+            'Rule with recent approvals should be skipped');
+    }
+    @IsTest static void ar006_inactive_skipped() {
+        Map<String, Object> r = new Map<String, Object>{ 'Id' => arId(), 'Name' => 'Dead',
+            'SBQQ__Active__c' => false,
+            'CreatedDate' => Datetime.now().addDays(-180) };
+        System.assertEquals(0, ApprovalRuleChecksBundle.evaluateAR006(
+            new List<Map<String, Object>>{ r }, new Map<Id, Integer>()).size(),
+            'Inactive rules covered by AR-005, not AR-006');
+    }
+    @IsTest static void ar006_handles_string_createddate() {
+        Id rid = arId();
+        Map<String, Object> r = new Map<String, Object>{ 'Id' => rid, 'Name' => 'StrDate',
+            'SBQQ__Active__c' => true,
+            'CreatedDate' => '2020-01-01T00:00:00.000Z' };
+        System.assertEquals(1, ApprovalRuleChecksBundle.evaluateAR006(
+            new List<Map<String, Object>>{ r }, new Map<Id, Integer>()).size(),
+            'String CreatedDate should parse');
+    }
+    @IsTest static void ar006_via_bundle_with_stub_counts() {
+        Id rid = arId();
+        ApprovalRuleChecksBundle.testStubRows = new List<Map<String, Object>>{
+            new Map<String, Object>{ 'Id' => rid, 'Name' => 'StubGate',
+                'SBQQ__Active__c' => true,
+                'CreatedDate' => Datetime.now().addDays(-180) }
+        };
+        ApprovalRuleChecksBundle.testStubApprovalCounts = new Map<Id, Integer>();
+        ApprovalRuleChecksBundle b = new ApprovalRuleChecksBundle();
+        List<DetectorResult> r = b.run(new DetectorContext(null, 'USD', 'CPQ'));
+        ApprovalRuleChecksBundle.testStubRows = null;
+        ApprovalRuleChecksBundle.testStubApprovalCounts = null;
+        Boolean found = false;
+        for (DetectorResult dr : r) if (dr.detectorId == 'AR-006') { found = true; break; }
+        System.assert(found, 'AR-006 should fire via bundle path with empty stub counts');
+    }
 
     // ── QCP ───────────────────────────────────────────────────────
 
@@ -195,6 +257,83 @@ private class Phase22a56Test {
             'SBQQ__ListPrice__c' => 100, 'SBQQ__NetPrice__c' => 30 };
         System.assertEquals(1, QuoteLineChecksBundle.evaluateQL004(new List<Map<String, Object>>{ q }).size());
     }
+    @IsTest static void ql005_subcent_precision_flagged() {
+        Map<String, Object> q = new Map<String, Object>{ 'Id' => qlId(), 'Name' => 'L',
+            'SBQQ__NetPrice__c' => 100.123456 };
+        List<DetectorResult> out = QuoteLineChecksBundle.evaluateQL005(new List<Map<String, Object>>{ q });
+        System.assertEquals(1, out.size());
+        System.assertEquals('QL-005', out[0].detectorId);
+    }
+    @IsTest static void ql005_two_decimals_ok() {
+        Map<String, Object> q = new Map<String, Object>{ 'Id' => qlId(), 'Name' => 'L',
+            'SBQQ__NetPrice__c' => 100.12 };
+        System.assertEquals(0, QuoteLineChecksBundle.evaluateQL005(new List<Map<String, Object>>{ q }).size());
+    }
+    @IsTest static void ql005_whole_dollar_ok() {
+        Map<String, Object> q = new Map<String, Object>{ 'Id' => qlId(), 'Name' => 'L',
+            'SBQQ__NetPrice__c' => 100 };
+        System.assertEquals(0, QuoteLineChecksBundle.evaluateQL005(new List<Map<String, Object>>{ q }).size());
+    }
+    @IsTest static void ql005_null_netprice_skipped() {
+        Map<String, Object> q = new Map<String, Object>{ 'Id' => qlId(), 'Name' => 'L',
+            'SBQQ__NetPrice__c' => null };
+        System.assertEquals(0, QuoteLineChecksBundle.evaluateQL005(new List<Map<String, Object>>{ q }).size());
+    }
+    @IsTest static void ql006_large_drift_flagged() {
+        Id origId = qlId();
+        Map<String, Object> q = new Map<String, Object>{
+            'Id' => qlId(), 'Name' => 'L', 'SBQQ__NetPrice__c' => 150,
+            'SBQQ__OriginalQuoteLine__c' => origId,
+            'SBQQ__OriginalQuoteLine__r' => new Map<String, Object>{
+                'Id' => origId, 'Name' => 'ORIG', 'SBQQ__NetPrice__c' => 100
+            }
+        };
+        List<DetectorResult> out = QuoteLineChecksBundle.evaluateQL006(new List<Map<String, Object>>{ q });
+        System.assertEquals(1, out.size());
+        System.assertEquals('QL-006', out[0].detectorId);
+    }
+    @IsTest static void ql006_small_drift_ok() {
+        Id origId = qlId();
+        Map<String, Object> q = new Map<String, Object>{
+            'Id' => qlId(), 'Name' => 'L', 'SBQQ__NetPrice__c' => 103,
+            'SBQQ__OriginalQuoteLine__c' => origId,
+            'SBQQ__OriginalQuoteLine__r' => new Map<String, Object>{
+                'Id' => origId, 'SBQQ__NetPrice__c' => 100
+            }
+        };
+        System.assertEquals(0, QuoteLineChecksBundle.evaluateQL006(new List<Map<String, Object>>{ q }).size(),
+            '3% uplift should not flag');
+    }
+    @IsTest static void ql006_no_original_skipped() {
+        Map<String, Object> q = new Map<String, Object>{ 'Id' => qlId(), 'Name' => 'L',
+            'SBQQ__NetPrice__c' => 999, 'SBQQ__OriginalQuoteLine__c' => null };
+        System.assertEquals(0, QuoteLineChecksBundle.evaluateQL006(new List<Map<String, Object>>{ q }).size(),
+            'New-business quote lines (no original) should not flag');
+    }
+    @IsTest static void ql006_zero_original_skipped() {
+        Id origId = qlId();
+        Map<String, Object> q = new Map<String, Object>{
+            'Id' => qlId(), 'Name' => 'L', 'SBQQ__NetPrice__c' => 100,
+            'SBQQ__OriginalQuoteLine__c' => origId,
+            'SBQQ__OriginalQuoteLine__r' => new Map<String, Object>{
+                'Id' => origId, 'SBQQ__NetPrice__c' => 0
+            }
+        };
+        System.assertEquals(0, QuoteLineChecksBundle.evaluateQL006(new List<Map<String, Object>>{ q }).size(),
+            'Zero original price guards against div-by-zero, not flagged');
+    }
+    @IsTest static void ql006_negative_drift_also_flagged() {
+        Id origId = qlId();
+        Map<String, Object> q = new Map<String, Object>{
+            'Id' => qlId(), 'Name' => 'L', 'SBQQ__NetPrice__c' => 50,
+            'SBQQ__OriginalQuoteLine__c' => origId,
+            'SBQQ__OriginalQuoteLine__r' => new Map<String, Object>{
+                'Id' => origId, 'Name' => 'ORIG', 'SBQQ__NetPrice__c' => 100
+            }
+        };
+        System.assertEquals(1, QuoteLineChecksBundle.evaluateQL006(new List<Map<String, Object>>{ q }).size(),
+            '-50% drift (price replaced lower) should also flag');
+    }
     @IsTest static void tf001_dual_discount() {
         Map<String, Object> q = new Map<String, Object>{ 'Id' => qlId(), 'Name' => 'L',
             'SBQQ__Discount__c' => 10, 'SBQQ__AdditionalDiscount__c' => 5 };
@@ -244,6 +383,60 @@ private class Phase22a56Test {
         };
         DetectorContext ctx = new DetectorContext(null, 'USD', 'CPQ');
         System.assertEquals(1, PerformanceChecksBundle.evaluatePERF003(ctx, 50).size());
+    }
+    @IsTest static void perf006_three_plus_flows_flagged() {
+        Map<String, Integer> m = new Map<String, Integer>{
+            'Opportunity' => 4, 'Account' => 2, 'Order' => 7
+        };
+        List<DetectorResult> out = PerformanceChecksBundle.evaluatePERF006(m);
+        // Opportunity (4) Warning + Order (7) Critical = 2 findings; Account (2) ignored
+        System.assertEquals(2, out.size());
+        Map<String, String> severityByTitle = new Map<String, String>();
+        for (DetectorResult r : out) severityByTitle.put(r.title, r.severity);
+        Boolean foundCritical = false;
+        for (String t : severityByTitle.keySet()) if (severityByTitle.get(t) == 'Critical') foundCritical = true;
+        System.assert(foundCritical, '7 flows should be Critical');
+    }
+    @IsTest static void perf006_under_threshold_no_finding() {
+        Map<String, Integer> m = new Map<String, Integer>{ 'Account' => 2 };
+        System.assertEquals(0, PerformanceChecksBundle.evaluatePERF006(m).size());
+    }
+    @IsTest static void perf006_null_safe() {
+        System.assertEquals(0, PerformanceChecksBundle.evaluatePERF006(null).size());
+    }
+    @IsTest static void perf007_queue_backlog_warns() {
+        Map<String, Integer> s = new Map<String, Integer>{ 'queuedNow' => 400, 'failed24h' => 5 };
+        List<DetectorResult> out = PerformanceChecksBundle.evaluatePERF007(s);
+        System.assertEquals(1, out.size());
+        System.assertEquals('Warning', out[0].severity);
+    }
+    @IsTest static void perf007_high_failures_critical() {
+        Map<String, Integer> s = new Map<String, Integer>{ 'queuedNow' => 10, 'failed24h' => 600 };
+        List<DetectorResult> out = PerformanceChecksBundle.evaluatePERF007(s);
+        System.assertEquals(1, out.size());
+        System.assertEquals('Critical', out[0].severity);
+    }
+    @IsTest static void perf007_healthy_no_finding() {
+        Map<String, Integer> s = new Map<String, Integer>{ 'queuedNow' => 30, 'failed24h' => 2 };
+        System.assertEquals(0, PerformanceChecksBundle.evaluatePERF007(s).size());
+    }
+    @IsTest static void perf007_null_safe() {
+        System.assertEquals(0, PerformanceChecksBundle.evaluatePERF007(null).size());
+    }
+    @IsTest static void perf_via_bundle_with_stubs_runs_67() {
+        PerformanceChecksBundle.testStubActivePR = 5;
+        PerformanceChecksBundle.testStubActivePRD = 5;
+        PerformanceChecksBundle.testStubActiveSV = 5;
+        PerformanceChecksBundle.testStubFlowCountsByObject = new Map<String, Integer>{ 'Opportunity' => 6 };
+        PerformanceChecksBundle.testStubAsyncApexStats = new Map<String, Integer>{ 'queuedNow' => 500, 'failed24h' => 1 };
+        DetectorContext ctx = new DetectorContext(null, 'USD', 'CPQ');
+        List<DetectorResult> rs = new PerformanceChecksBundle().run(ctx);
+        Set<String> ids = new Set<String>();
+        for (DetectorResult r : rs) ids.add(r.detectorId);
+        System.assert(ids.contains('PERF-006'), 'PERF-006 should fire via bundle');
+        System.assert(ids.contains('PERF-007'), 'PERF-007 should fire via bundle');
+        PerformanceChecksBundle.testStubFlowCountsByObject = null;
+        PerformanceChecksBundle.testStubAsyncApexStats = null;
     }
 
     // ── IA ────────────────────────────────────────────────────────
