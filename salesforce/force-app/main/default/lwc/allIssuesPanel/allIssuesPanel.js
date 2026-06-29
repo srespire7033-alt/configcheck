@@ -23,6 +23,11 @@ export default class AllIssuesPanel extends NavigationMixin(LightningElement) {
   @track showAll = false;
   /** Phase 22w — scope all-issues list to the active Connected Org. */
   @track connectedOrgId = null;
+
+  // Phase 25 — cached derived state. allRows was called by rows,
+  // isPaginated, and toggleLabel — three independent getter
+  // references, each forcing a full map of all issues per render.
+  @track _allRows = [];
   wiredResult;
 
   @wire(CurrentPageReference)
@@ -51,6 +56,7 @@ export default class AllIssuesPanel extends NavigationMixin(LightningElement) {
       const keep = new Set(this.issues.map((i) => i.id));
       this.selectedIds = new Set(Array.from(this.selectedIds).filter((id) => keep.has(id)));
       this.error = undefined;
+      this._recomputeRows();
     } else if (result.error) {
       this.error = result.error.body?.message || result.error.message;
     }
@@ -67,7 +73,26 @@ export default class AllIssuesPanel extends NavigationMixin(LightningElement) {
   }
 
   get allRows() {
-    return (this.issues || []).map((i) => {
+    return this._allRows;
+  }
+  /** Phase 22q — show first N rows; toggle expands to the full list. */
+  get rows() {
+    return this.showAll ? this._allRows : this._allRows.slice(0, INITIAL_VISIBLE);
+  }
+  get isPaginated() {
+    return this._allRows.length > INITIAL_VISIBLE;
+  }
+  get toggleLabel() {
+    return this.showAll ? 'Show less' : `View all ${this._allRows.length} issues`;
+  }
+  toggleShowAll() { this.showAll = !this.showAll; }
+
+  /** Recompute row data once per (issues, selectedIds) change. Replaces
+   *  the prior pattern where allRows ran 3-4x per render (called by
+   *  rows, isPaginated, toggleLabel each rendering pass). */
+  _recomputeRows() {
+    const selectedIds = this.selectedIds;
+    this._allRows = (this.issues || []).map((i) => {
       const sev = (i.severity || '').toLowerCase();
       const status = (i.status || 'Open').toLowerCase().replace(/\s+/g, '-');
       return {
@@ -75,21 +100,10 @@ export default class AllIssuesPanel extends NavigationMixin(LightningElement) {
         sevChipClass: `op-aip__sev op-aip__sev--${sev}`,
         statusChipClass: `op-aip__status op-aip__status--${status}`,
         statusLabel: (i.status || 'Open').toUpperCase(),
-        checked: this.selectedIds.has(i.id),
+        checked: selectedIds.has(i.id),
       };
     });
   }
-  /** Phase 22q — show first N rows; toggle expands to the full list. */
-  get rows() {
-    return this.showAll ? this.allRows : this.allRows.slice(0, INITIAL_VISIBLE);
-  }
-  get isPaginated() {
-    return this.allRows.length > INITIAL_VISIBLE;
-  }
-  get toggleLabel() {
-    return this.showAll ? 'Show less' : `View all ${this.allRows.length} issues`;
-  }
-  toggleShowAll() { this.showAll = !this.showAll; }
 
   // ── Toolbar ──
   severityOptions = SEVERITY_OPTIONS.map((s) => ({ label: s, value: s }));
@@ -134,6 +148,7 @@ export default class AllIssuesPanel extends NavigationMixin(LightningElement) {
     const next = new Set(this.selectedIds);
     next.has(id) ? next.delete(id) : next.add(id);
     this.selectedIds = next;
+    this._recomputeRows();
   }
   handleCheckAll() {
     if (this.selectedCount === (this.issues?.length || 0)) {
@@ -141,6 +156,7 @@ export default class AllIssuesPanel extends NavigationMixin(LightningElement) {
     } else {
       this.selectedIds = new Set((this.issues || []).map((i) => i.id));
     }
+    this._recomputeRows();
   }
   get allChecked() {
     return this.hasIssues && this.selectedCount === this.issues.length;
@@ -161,6 +177,7 @@ export default class AllIssuesPanel extends NavigationMixin(LightningElement) {
         variant: 'success',
       }));
       this.selectedIds = new Set();
+      this._recomputeRows();
       await refreshApex(this.wiredResult);
     } catch (e) {
       this.dispatchEvent(new ShowToastEvent({

@@ -72,6 +72,15 @@ export default class RiskCategoryCard extends NavigationMixin(LightningElement) 
   @track mdtMeta;  // Phase 20b — Category__mdt response
   @track catalogEntries = [];  // Phase 20d — Detector__mdt rows
 
+  // Phase 25 — cached derived state. Same anti-pattern as
+  // revenueLeakageView: filteredCountLabel → filteredFindings (walks),
+  // findingsRows → filteredFindings (walks again, then maps). With
+  // many findings these getters multiplied work per render and hung
+  // the tab.
+  @track _filteredFindings = [];
+  @track _findingsRows = [];
+  @track _detectorCards = [];
+
   @wire(getCategoryByKey, { categoryKey: '$category' })
   wireCategoryMeta({ data }) {
     if (data) this.mdtMeta = data;
@@ -79,7 +88,10 @@ export default class RiskCategoryCard extends NavigationMixin(LightningElement) 
 
   @wire(getCatalog)
   wireCatalog({ data }) {
-    if (data) this.catalogEntries = data;
+    if (data) {
+      this.catalogEntries = data;
+      this._recompute();
+    }
   }
 
   /**
@@ -120,6 +132,7 @@ export default class RiskCategoryCard extends NavigationMixin(LightningElement) 
     if (result.data) {
       this.data = result.data;
       this.error = undefined;
+      this._recompute();
     } else if (result.error) {
       this.error = result.error.body?.message || result.error.message;
     }
@@ -163,15 +176,7 @@ export default class RiskCategoryCard extends NavigationMixin(LightningElement) 
 
   // ── Detector summary grid ──
   get detectorCards() {
-    return (this.data?.byDetector || []).map((g) => ({
-      ...g,
-      title: this.detectorTitleMap[g.detectorId] || g.detectorId,
-      countLabel: `${g.count} finding${g.count === 1 ? '' : 's'}`,
-      gapLabel: (this.meta.summaryMode === 'arr' && g.totalUsd > 0)
-        ? this.formatMoney(g.totalUsd)
-        : null,
-      accentBorder: `op-rc__det op-rc__det--${this.meta.accent}`,
-    }));
+    return this._detectorCards;
   }
 
   // ── Toolbar ──
@@ -192,40 +197,72 @@ export default class RiskCategoryCard extends NavigationMixin(LightningElement) 
         : 'op-rc__pill',
     }));
   }
-  handleSearch(event) { this.searchTerm = event.target.value; }
+  handleSearch(event) {
+    this.searchTerm = event.target.value;
+    this._recompute();
+  }
   toggleSev(event) {
     const v = event.currentTarget.dataset.value;
     const n = new Set(this.severityFilters);
     n.has(v) ? n.delete(v) : n.add(v);
     this.severityFilters = Array.from(n);
+    this._recompute();
   }
   toggleEffort(event) {
     const v = event.currentTarget.dataset.value;
     const n = new Set(this.effortFilters);
     n.has(v) ? n.delete(v) : n.add(v);
     this.effortFilters = Array.from(n);
+    this._recompute();
   }
 
   // ── Findings (flat list, filtered) ──
   get filteredFindings() {
-    return (this.data?.findings || []).filter((f) => {
-      if (this.severityFilters.length && !this.severityFilters.includes(f.severity)) return false;
-      const effort = this.detectorEffortMap[f.detectorId] || 'medium';
-      if (this.effortFilters.length && !this.effortFilters.includes(effort)) return false;
-      if (this.searchTerm) {
-        const q = this.searchTerm.toLowerCase();
-        if (!(f.title || '').toLowerCase().includes(q) && !(f.detectorId || '').toLowerCase().includes(q)) return false;
-      }
-      return true;
-    });
+    return this._filteredFindings;
   }
   get filteredCountLabel() {
-    const n = this.filteredFindings.length;
+    const n = this._filteredFindings.length;
     return `${n} finding${n === 1 ? '' : 's'}`;
   }
   get findingsRows() {
-    return this.filteredFindings.map((f) => {
-      const effort = this.detectorEffortMap[f.detectorId] || 'medium';
+    return this._findingsRows;
+  }
+
+  /** Single-pass derived-state build. Runs when data lands, when the
+   *  catalog wire resolves, and when any filter/search input changes.
+   *  Replaces the prior 3-getter chain that re-walked findings on
+   *  every render. */
+  _recompute() {
+    const effortMap = this.detectorEffortMap;
+    const accentMode = this.meta.summaryMode;
+    const accentClass = `op-rc__det op-rc__det--${this.meta.accent}`;
+
+    // Detector summary cards
+    this._detectorCards = (this.data?.byDetector || []).map((g) => ({
+      ...g,
+      title: this.detectorTitleMap[g.detectorId] || g.detectorId,
+      countLabel: `${g.count} finding${g.count === 1 ? '' : 's'}`,
+      gapLabel: (accentMode === 'arr' && g.totalUsd > 0)
+        ? this.formatMoney(g.totalUsd)
+        : null,
+      accentBorder: accentClass,
+    }));
+
+    // Filtered findings (used by both filteredCountLabel and findingsRows)
+    const sevSet = this.severityFilters;
+    const effortSet = this.effortFilters;
+    const q = this.searchTerm ? this.searchTerm.toLowerCase() : '';
+    const filtered = (this.data?.findings || []).filter((f) => {
+      if (sevSet.length && !sevSet.includes(f.severity)) return false;
+      const effort = effortMap[f.detectorId] || 'medium';
+      if (effortSet.length && !effortSet.includes(effort)) return false;
+      if (q && !(f.title || '').toLowerCase().includes(q)
+            && !(f.detectorId || '').toLowerCase().includes(q)) return false;
+      return true;
+    });
+    this._filteredFindings = filtered;
+    this._findingsRows = filtered.map((f) => {
+      const effort = effortMap[f.detectorId] || 'medium';
       return {
         ...f,
         effortLabel: effort === 'low' ? 'LOW' : effort === 'medium' ? 'MED' : 'HIGH',
