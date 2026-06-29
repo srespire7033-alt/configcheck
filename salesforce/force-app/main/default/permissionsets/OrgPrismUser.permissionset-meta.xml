@@ -129,6 +129,10 @@
         <enabled>true</enabled>
     </classAccesses>
     <classAccesses>
+        <apexClass>OrgCapabilityProbeService</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <classAccesses>
         <apexClass>RemediationPlanController</apexClass>
         <enabled>true</enabled>
     </classAccesses>
@@ -456,6 +460,16 @@
     </fieldPermissions>
     <fieldPermissions>
         <field>ConnectedOrg__c.LastConnectedAt__c</field>
+        <readable>true</readable>
+        <editable>true</editable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <field>ConnectedOrg__c.CapabilityProfileJson__c</field>
+        <readable>true</readable>
+        <editable>true</editable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <field>ConnectedOrg__c.CapabilityProbedAt__c</field>
         <readable>true</readable>
         <editable>true</editable>
     </fieldPermissions>

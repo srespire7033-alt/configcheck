@@ -242,6 +242,23 @@ public with sharing class RemoteOrgService {
                     System.debug(LoggingLevel.WARN,
                         '[OrgPrism] ProductType auto-detect failed: ' + detEx.getMessage());
                 }
+                // Phase 25 — Org Capability Probe. Persists CapabilityProfileJson__c
+                // so the UI can grey-out structurally inapplicable detectors. Failure
+                // here is non-fatal — the connection still succeeds; profile just
+                // stays unpopulated until the next testConnection or manual probe.
+                try {
+                    Map<String, Object> capProfile =
+                        OrgCapabilityProbeService.buildProfile(row.NamedCredentialName__c);
+                    if (capProfile != null) {
+                        String profilePayload = JSON.serialize(capProfile);
+                        if (profilePayload.length() > 32000) profilePayload = profilePayload.substring(0, 32000);
+                        row.CapabilityProfileJson__c = profilePayload;
+                        row.CapabilityProbedAt__c = System.now();
+                    }
+                } catch (Exception capEx) {
+                    System.debug(LoggingLevel.WARN,
+                        '[OrgPrism] Capability probe failed: ' + capEx.getMessage());
+                }
                 saveRow(row);
                 result.ok = true;
                 result.remoteOrgId = remoteId;

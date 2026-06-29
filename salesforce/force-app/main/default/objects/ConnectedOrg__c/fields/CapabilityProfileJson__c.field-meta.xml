@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>CapabilityProfileJson__c</fullName>
+    <description>Phase 25 — Org Capability Probe. JSON snapshot of which managed packages, optional fields, and field-level details (e.g. scale of SBQQ__NetPrice__c) the target org has. Drives per-detector applicability surfacing in the UI so consultants know up-front which detectors will run vs which are structurally inapplicable. Populated by OrgCapabilityProbeService on testConnection.</description>
+    <label>Capability Profile JSON</label>
+    <length>32768</length>
+    <type>LongTextArea</type>
+    <visibleLines>10</visibleLines>
+</CustomField>
