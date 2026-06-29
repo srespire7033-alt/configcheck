@@ -167,7 +167,7 @@
                 <lightning-icon icon-name="utility:check" size="xx-small" class="op-co__cap-icon"></lightning-icon>
                 <span class="op-co__cap-label">{r.capabilityLabel}</span>
                 <template if:true={r.probedAtAgo}>
-                  <span class="op-co__cap-time"> · probed {r.probedAtAgo}</span>
+                  <span class="op-co__cap-time"> · checked {r.probedAtAgo}</span>
                 </template>
               </div>
             </template>
@@ -189,7 +189,7 @@
                 onclick={handleProbe}
                 disabled={r.isProbing}
                 if:true={r.canProbe}
-                title="Refresh schema capability profile so the catalog knows which detectors will fire on this org"
+                title="Re-check this org's schema so the catalog knows which detectors will fire"
               >
                 <lightning-icon icon-name="utility:scan" size="xx-small" class="op-co__link-icon"></lightning-icon>
                 {r.probeBtnLabel}

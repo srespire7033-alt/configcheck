@@ -162,17 +162,17 @@ export default class ConnectedOrgManager extends NavigationMixin(LightningElemen
         : (isConnected ? 'Run a full OrgPrism scan against this remote org'
                        : 'Test connection first');
 
-      // Phase 25-B — capability probe info per row
+      // Phase 25-B — schema-check info per row (terminology: probe → "Check schema")
       const cap = this.applicabilityById[r.id];
       const isProbing = this.probingId === r.id;
       let capabilityLabel = null;
       if (cap && cap.profiled) {
         capabilityLabel = `${cap.applicable} of ${cap.total} detectors apply`;
       } else if (r.capabilityProbedAt) {
-        // Probed but counts not loaded yet (lazy)
-        capabilityLabel = 'Capability profile available';
+        // Schema checked but counts not loaded yet (lazy)
+        capabilityLabel = 'Schema profile available';
       } else if (!isNotScannable && isConnected) {
-        capabilityLabel = 'Not yet probed — run Test Connection or Re-probe';
+        capabilityLabel = 'Schema not yet checked — run Test Connection or Check schema';
       }
       const probedAtAgo = r.capabilityProbedAt ? fmtAgo(r.capabilityProbedAt) : null;
 
@@ -208,7 +208,7 @@ export default class ConnectedOrgManager extends NavigationMixin(LightningElemen
         probedAtAgo,
         showCapability: Boolean(capabilityLabel) && !isNotScannable,
         isProbing,
-        probeBtnLabel: isProbing ? 'Probing…' : (r.capabilityProbedAt ? 'Re-probe' : 'Probe'),
+        probeBtnLabel: isProbing ? 'Checking…' : (r.capabilityProbedAt ? 'Re-check schema' : 'Check schema'),
         canProbe: isConnected && !isProbing && !isNotScannable,
       };
     });
@@ -263,7 +263,7 @@ export default class ConnectedOrgManager extends NavigationMixin(LightningElemen
       // Persist counts in the cache so viewRows can read them
       this.applicabilityById = { ...this.applicabilityById, [id]: summary };
       this.dispatchEvent(new ShowToastEvent({
-        title: 'Capability probe complete',
+        title: 'Schema check complete',
         message: `${summary.applicable} of ${summary.total} detectors apply on this org`,
         variant: 'success',
       }));
@@ -271,7 +271,7 @@ export default class ConnectedOrgManager extends NavigationMixin(LightningElemen
       await refreshApex(this.wiredResult);
     } catch (e) {
       this.dispatchEvent(new ShowToastEvent({
-        title: 'Probe failed',
+        title: 'Schema check failed',
         message: e.body?.message || e.message || 'Unknown error',
         variant: 'error',
       }));
