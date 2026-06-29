@@ -21,6 +21,13 @@ export default class RevenueLeakageView extends NavigationMixin(LightningElement
   @track connectedOrgId = null;
   wiredResult;
 
+  // Phase 25 — derived state cached imperatively. LWC getters re-run
+  // on every reactive update; with 100+ findings the viewThemes walk
+  // was running 3-5x per render (template, filteredCount getter,
+  // findingCountLabel getter) and hanging the tab on filter clicks.
+  @track _viewThemes = [];
+  @track _filteredCount = 0;
+
   @wire(CurrentPageReference)
   wirePageRef(pageRef) {
     if (!pageRef) return;
@@ -48,6 +55,7 @@ export default class RevenueLeakageView extends NavigationMixin(LightningElement
     if (result.data) {
       this.data = result.data;
       this.error = undefined;
+      this._recompute();
     } else if (result.error) {
       this.error = result.error.body?.message || result.error.message;
     }
@@ -101,15 +109,13 @@ export default class RevenueLeakageView extends NavigationMixin(LightningElement
     }));
   }
   get findingCountLabel() {
-    return `${this.filteredCount} findings`;
+    return `${this._filteredCount} findings`;
   }
   get headerFindingCount() {
     return `(${this.data?.findingCount || 0})`;
   }
   get filteredCount() {
-    let n = 0;
-    for (const t of this.viewThemes) n += t.filteredCount;
-    return n;
+    return this._filteredCount;
   }
 
   toggleSev(event) {
@@ -117,14 +123,19 @@ export default class RevenueLeakageView extends NavigationMixin(LightningElement
     const next = new Set(this.severityFilters);
     next.has(v) ? next.delete(v) : next.add(v);
     this.severityFilters = Array.from(next);
+    this._recompute();
   }
   toggleEffort(event) {
     const v = event.currentTarget.dataset.value;
     const next = new Set(this.effortFilters);
     next.has(v) ? next.delete(v) : next.add(v);
     this.effortFilters = Array.from(next);
+    this._recompute();
   }
-  handleSearch(event) { this.searchTerm = event.target.value; }
+  handleSearch(event) {
+    this.searchTerm = event.target.value;
+    this._recompute();
+  }
 
   // ── Theme grid ──
   passesFilters(row) {
@@ -140,10 +151,24 @@ export default class RevenueLeakageView extends NavigationMixin(LightningElement
   }
 
   get viewThemes() {
-    if (!this.data?.themes) return [];
-    return this.data.themes.map((t) => {
+    return this._viewThemes;
+  }
+
+  /** Recompute derived view state in one pass. Called when data lands,
+   *  or when any filter input (severity / effort / search) changes.
+   *  Replaces the prior pattern of three getters that all called
+   *  viewThemes — which re-walked all themes 3-5x per render. */
+  _recompute() {
+    if (!this.data?.themes) {
+      this._viewThemes = [];
+      this._filteredCount = 0;
+      return;
+    }
+    let totalFiltered = 0;
+    const next = this.data.themes.map((t) => {
       const filtered = (t.topThree || []).filter((r) => this.passesFilters(r))
         .map((r) => this.decorateRow(r));
+      totalFiltered += filtered.length;
       return {
         ...t,
         cardClass: `op-rl__theme op-rl__theme--${t.accent}`,
@@ -156,6 +181,8 @@ export default class RevenueLeakageView extends NavigationMixin(LightningElement
         moreLabel: `+ ${t.moreCount} more →`,
       };
     });
+    this._viewThemes = next;
+    this._filteredCount = totalFiltered;
   }
 
   decorateRow(r) {
