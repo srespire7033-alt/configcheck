@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, RefreshCw, Sparkles, Download, FileBarChart, CalendarClock, Cloud, ShieldCheck, FileSpreadsheet, ChevronDown, ChevronRight, AlertTriangle, AlertCircle, Info, X, TrendingDown } from 'lucide-react';
 import { getCategoryLabel, formatTimeAgo } from '@/lib/utils';
@@ -591,7 +591,10 @@ export default function OrgDetailPage() {
 
   // Use shared formatTimeAgo for consistency with org cards
 
-  async function handleIssueStatusChange(issueId: string, status: string) {
+  // Stable refs so memoized children (GroupedIssueList, IssueCard) can
+  // bail out on re-render via React.memo. Without useCallback these
+  // arrows are recreated on every render and defeat the bail-out.
+  const handleIssueStatusChange = useCallback(async (issueId: string, status: string) => {
     try {
       await fetch('/api/issues', {
         method: 'PUT',
@@ -602,7 +605,34 @@ export default function OrgDetailPage() {
     } catch (err) {
       console.error('Failed to update issue status:', err);
     }
-  }
+  }, []);
+
+  const handleIssueClick = useCallback((issue: DBIssue) => {
+    setSelectedIssue(issue);
+  }, []);
+
+  // Pre-bucket issues by (selectedCategory, severity) once per data change
+  // instead of running 4 filter() calls every render. The category-issues
+  // modal renders 3 GroupedIssueList instances; without this memo each click
+  // walks the issue list 4× and forces all 3 GroupedIssueList children to
+  // re-render with fresh array refs.
+  const categoryIssueBuckets = useMemo(() => {
+    if (!selectedCategory) {
+      return { all: [] as DBIssue[], critical: [] as DBIssue[], warning: [] as DBIssue[], info: [] as DBIssue[] };
+    }
+    const all: DBIssue[] = [];
+    const critical: DBIssue[] = [];
+    const warning: DBIssue[] = [];
+    const info: DBIssue[] = [];
+    for (const i of issues) {
+      if (i.category !== selectedCategory) continue;
+      all.push(i);
+      if (i.severity === 'critical') critical.push(i);
+      else if (i.severity === 'warning') warning.push(i);
+      else if (i.severity === 'info') info.push(i);
+    }
+    return { all, critical, warning, info };
+  }, [issues, selectedCategory]);
 
   async function handleGenerateRemediationPlan() {
     if (!scan || issues.length === 0) return;
@@ -1681,17 +1711,19 @@ export default function OrgDetailPage() {
               <IssuesBulkSection
                 issues={filteredIssues}
                 orgId={orgId}
-                onIssueClick={(issue) => setSelectedIssue(issue)}
+                onIssueClick={handleIssueClick}
               />
             </div>
           )}
 
           {/* ===== CATEGORY ISSUES MODAL ===== */}
           {selectedCategory && (() => {
-            const catIssues = issues.filter(i => i.category === selectedCategory);
-            const catCritical = catIssues.filter(i => i.severity === 'critical');
-            const catWarning = catIssues.filter(i => i.severity === 'warning');
-            const catInfo = catIssues.filter(i => i.severity === 'info');
+            // Pulled from useMemo above — recomputed once when issues or
+            // selectedCategory change, not on every render of this 2k-line page.
+            const catIssues = categoryIssueBuckets.all;
+            const catCritical = categoryIssueBuckets.critical;
+            const catWarning = categoryIssueBuckets.warning;
+            const catInfo = categoryIssueBuckets.info;
 
             return (
               <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -1733,7 +1765,7 @@ export default function OrgDetailPage() {
                             </div>
                             <GroupedIssueList
                               issues={catCritical}
-                              onIssueClick={(issue) => setSelectedIssue(issue)}
+                              onIssueClick={handleIssueClick}
                               onStatusChange={handleIssueStatusChange}
                               trustScores={trustScores}
                             />
@@ -1749,7 +1781,7 @@ export default function OrgDetailPage() {
                             </div>
                             <GroupedIssueList
                               issues={catWarning}
-                              onIssueClick={(issue) => setSelectedIssue(issue)}
+                              onIssueClick={handleIssueClick}
                               onStatusChange={handleIssueStatusChange}
                               trustScores={trustScores}
                             />
@@ -1765,7 +1797,7 @@ export default function OrgDetailPage() {
                             </div>
                             <GroupedIssueList
                               issues={catInfo}
-                              onIssueClick={(issue) => setSelectedIssue(issue)}
+                              onIssueClick={handleIssueClick}
                               onStatusChange={handleIssueStatusChange}
                               trustScores={trustScores}
                             />

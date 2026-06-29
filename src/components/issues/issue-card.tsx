@@ -1,5 +1,6 @@
 'use client';
 
+import { memo } from 'react';
 import { AlertCircle, AlertTriangle, Info, CheckCircle2, EyeOff, ThumbsDown, Shield } from 'lucide-react';
 import type { DBIssue } from '@/types';
 
@@ -55,7 +56,7 @@ const statusConfig: Record<string, { label: string; bg: string; text: string; ic
   not_relevant: { label: 'Not Relevant', bg: 'bg-gray-50', text: 'text-gray-500', icon: EyeOff },
 };
 
-export function IssueCard({ issue, onClick, onStatusChange, trustScore }: IssueCardProps) {
+function IssueCardImpl({ issue, onClick, onStatusChange, trustScore }: IssueCardProps) {
   const config = severityConfig[issue.severity] || severityConfig.info;
   const Icon = config.icon;
   const status = statusConfig[issue.status] || statusConfig.open;
@@ -141,3 +142,7 @@ export function IssueCard({ issue, onClick, onStatusChange, trustScore }: IssueC
     </div>
   );
 }
+
+// Memoized so the hundreds of card instances inside GroupedIssueList don't
+// re-render when the parent re-renders for unrelated reasons.
+export const IssueCard = memo(IssueCardImpl);

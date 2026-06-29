@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { memo, useState } from 'react';
 import { ChevronRight, ChevronDown, AlertCircle, AlertTriangle, Info } from 'lucide-react';
 import { IssueCard } from './issue-card';
 import type { DBIssue } from '@/types';
@@ -91,7 +91,7 @@ interface GroupedIssueListProps {
  * no conditions") fires on 5 different rules and produces 5 visually identical
  * cards. Now they collapse into one row by default.
  */
-export function GroupedIssueList({
+function GroupedIssueListImpl({
   issues,
   onIssueClick,
   onStatusChange,
@@ -274,3 +274,9 @@ export function GroupedIssueList({
     </>
   );
 }
+
+// React.memo + stable parent callbacks (useCallback) lets the dashboard
+// skip re-rendering this subtree on every parent state change. The
+// dashboard renders up to 3 of these side-by-side (Critical / Warning /
+// Info per category modal) so the savings compound.
+export const GroupedIssueList = memo(GroupedIssueListImpl);
