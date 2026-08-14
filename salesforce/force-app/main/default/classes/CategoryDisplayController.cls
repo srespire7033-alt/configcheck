@@ -85,6 +85,9 @@ public with sharing class CategoryDisplayController {
         seedFallback('pricing', 'Pricing Discipline',
             'Discounts and pricing controls.',
             'utility:money', 'violet', 'count', 4);
+        seedFallback('performance', 'Performance & Scalability',
+            'Governor-limit, flow, and async load risks — config that runs but strains at scale.',
+            'utility:speed', 'rose', 'count', 5);
     }
 
     private static void seedFallback(String key, String title, String subtitle,

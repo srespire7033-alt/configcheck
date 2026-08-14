@@ -25,6 +25,12 @@
       </template>
       <template if:true={showPricing}>
         <c-pricing-discipline-view></c-pricing-discipline-view>
+        <!-- Phase 25-D — also card the pricing-category detectors, which
+             previously only appeared in the Issues tab. -->
+        <c-risk-category-card category="pricing"></c-risk-category-card>
+      </template>
+      <template if:true={showPerformance}>
+        <c-risk-category-card category="performance"></c-risk-category-card>
       </template>
     </div>
   </div>

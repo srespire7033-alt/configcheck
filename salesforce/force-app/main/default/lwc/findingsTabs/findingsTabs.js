@@ -42,6 +42,7 @@ export default class FindingsTabs extends LightningElement {
       { id: 'leakage',    label: labelOf('revenue_leakage', 'Revenue Leakage') },
       { id: 'governance', label: 'Governance & Pipeline' /* spans 2 mdt cats; keep static */ },
       { id: 'pricing',    label: labelOf('pricing', 'Pricing Discipline') },
+      { id: 'performance', label: labelOf('performance', 'Performance & Scalability') },
     ].map((p) => ({
       ...p,
       cls: p.id === this.activeSub ? 'op-pill op-pill--active' : 'op-pill',
@@ -51,6 +52,7 @@ export default class FindingsTabs extends LightningElement {
   get showLeakage() { return this.activeSub === 'leakage'; }
   get showGovernance() { return this.activeSub === 'governance'; }
   get showPricing() { return this.activeSub === 'pricing'; }
+  get showPerformance() { return this.activeSub === 'performance'; }
 
   handlePillClick(event) {
     const id = event.currentTarget.dataset.id;

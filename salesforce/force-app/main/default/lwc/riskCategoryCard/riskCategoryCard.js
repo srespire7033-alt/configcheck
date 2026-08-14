@@ -26,6 +26,20 @@ const FALLBACK_META = {
     accent: 'sky',
     summaryMode: 'arr',
   },
+  pricing: {
+    title: 'Pricing Discipline',
+    subtitle: 'Discount, contracted-price, and pricing-method controls.',
+    iconName: 'utility:money',
+    accent: 'violet',
+    summaryMode: 'count',
+  },
+  performance: {
+    title: 'Performance & Scalability',
+    subtitle: 'Governor-limit, flow, and async load risks — config that runs but strains at scale.',
+    iconName: 'utility:speed',
+    accent: 'rose',
+    summaryMode: 'count',
+  },
 };
 
 /**

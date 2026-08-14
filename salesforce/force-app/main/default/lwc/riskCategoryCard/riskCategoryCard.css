@@ -69,6 +69,19 @@
 }
 .op-rc__det--amber { border-color: #fde68a; }
 .op-rc__det--sky   { border-color: #bfdbfe; }
+/* Phase 25-D — violet (Pricing Discipline) + rose (Performance & Scalability) accents */
+.op-rc__head-icon-wrap--violet { background: #ede9fe; }
+.op-rc__head-icon-wrap--rose   { background: #ffe4e6; }
+.op-rc__head-icon--violet { --sds-c-icon-color-foreground-default: #6d28d9; }
+.op-rc__head-icon--rose   { --sds-c-icon-color-foreground-default: #be123c; }
+.op-rc__summary--violet { background: #ede9fe; border-color: #ddd6fe; }
+.op-rc__summary--rose   { background: #ffe4e6; border-color: #fecdd3; }
+.op-rc__summary--violet .op-rc__summary-big { color: #6d28d9; }
+.op-rc__summary--rose   .op-rc__summary-big { color: #be123c; }
+.op-rc__summary--violet .op-rc__summary-small { color: #5b21b6; }
+.op-rc__summary--rose   .op-rc__summary-small { color: #9f1239; }
+.op-rc__det--violet { border-color: #ddd6fe; }
+.op-rc__det--rose   { border-color: #fecdd3; }
 .op-rc__det-code {
   font-family: 'SF Mono', 'Consolas', monospace;
   font-size: 11px;
