@@ -250,6 +250,12 @@ textarea:focus-visible,
   font-weight: 600;
 }
 .op-cim__row--child {
+  /* Child rows have no icon cell — override the parent's 3-column
+     template (40px 1fr 200px) or the title lands in the 40px icon
+     column (vertical one-word-per-line wrap) and the buttons stretch
+     across the 1fr column. */
+  grid-template-columns: 1fr 200px;
+  align-items: center;
   border: 1px solid #e5e7eb;
   border-top: none;
   border-radius: 0;
