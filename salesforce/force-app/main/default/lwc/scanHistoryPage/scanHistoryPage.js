@@ -18,6 +18,11 @@ export default class ScanHistoryPage extends NavigationMixin(LightningElement) {
   error;
   loading = true;
   @track connectedOrgId = null;
+  // Phase 25 — chart/table/bestPoint derive from points (static after load);
+  // cached so the getters don't re-sort + re-map on every render.
+  _bestPoint = null;
+  _chart = { polyline: '', dots: [], xLabels: [] };
+  _tableRows = [];
 
   @wire(CurrentPageReference)
   wirePageRef(pageRef) {
@@ -31,6 +36,7 @@ export default class ScanHistoryPage extends NavigationMixin(LightningElement) {
     if (result.data) {
       this.points = result.data;
       this.error = undefined;
+      this._recompute();
     } else if (result.error) {
       this.error = result.error.body?.message || result.error.message;
     }
@@ -48,7 +54,14 @@ export default class ScanHistoryPage extends NavigationMixin(LightningElement) {
   get latestPoint() { return this.points?.[this.points.length - 1]; }
   get latestScore() { return this.latestPoint?.healthScore ?? 0; }
 
-  get bestPoint() {
+  _recompute() {
+    this._bestPoint = this._computeBestPoint();
+    this._chart = this._computeChart();
+    this._tableRows = this._computeTableRows();
+  }
+
+  get bestPoint() { return this._bestPoint; }
+  _computeBestPoint() {
     if (!this.points?.length) return null;
     return [...this.points].sort((a, b) => b.healthScore - a.healthScore)[0];
   }
@@ -83,7 +96,8 @@ export default class ScanHistoryPage extends NavigationMixin(LightningElement) {
   }
 
   // ── Chart (reuse scoreTrendCard layout, larger) ──
-  get chart() {
+  get chart() { return this._chart; }
+  _computeChart() {
     if (!this.points || this.points.length < 2) return { polyline: '', dots: [], xLabels: [] };
     const width = 1200;
     const height = 300;
@@ -111,7 +125,8 @@ export default class ScanHistoryPage extends NavigationMixin(LightningElement) {
   }
 
   // ── Table rows (newest first) ──
-  get tableRows() {
+  get tableRows() { return this._tableRows; }
+  _computeTableRows() {
     if (!this.points) return [];
     // Display newest first, opposite of chart ordering.
     return [...this.points].reverse().map((p) => ({

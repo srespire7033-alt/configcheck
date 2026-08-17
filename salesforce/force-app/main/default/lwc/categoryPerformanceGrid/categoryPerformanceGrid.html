@@ -16,6 +16,10 @@
       <p class="op-cp__error">{error}</p>
     </template>
 
+    <template if:true={isEmpty}>
+      <p class="op-cp__empty">No categories to display</p>
+    </template>
+
     <template if:true={hasData}>
       <template for:each={viewSections} for:item="s">
         <section key={s.key} class="op-cp__section">

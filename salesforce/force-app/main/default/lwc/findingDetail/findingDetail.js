@@ -22,15 +22,33 @@ export default class FindingDetail extends NavigationMixin(LightningElement) {
   @track detail = null;
   @track noteDraft = '';
   @track busy = false;
+  @track loading = true;
+  @track error = null;
   wiredDetail;
 
   @wire(getFindingDetail, { findingId: '$recordId' })
   wireDetail(result) {
     this.wiredDetail = result;
+    this.loading = false;
     if (result.data) {
       this.detail = result.data;
       this.noteDraft = result.data.raw.ConsultantNote__c || '';
+      this.error = null;
+    } else if (result.error) {
+      this.error = result.error;
     }
+  }
+
+  get isLoading() {
+    return this.loading && !this.detail;
+  }
+
+  get hasError() {
+    return !this.loading && Boolean(this.error) && !this.detail;
+  }
+
+  get errorMessage() {
+    return this.errMessage(this.error);
   }
 
   get cardTitle() {

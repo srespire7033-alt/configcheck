@@ -89,7 +89,10 @@ export default class AiAnalysisCard extends LightningElement {
     event.preventDefault();
     this.openCategory = event.currentTarget.dataset.label;
   }
-  handleModalClose() { this.openCategory = null; }
+  handleModalClose() {
+    this.openCategory = null;
+    if (this.wiredResult) refreshApex(this.wiredResult);
+  }
 
   get isModalOpen() { return Boolean(this.openCategory); }
 }

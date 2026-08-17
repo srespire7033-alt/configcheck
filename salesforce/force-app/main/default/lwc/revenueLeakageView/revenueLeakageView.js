@@ -64,6 +64,8 @@ export default class RevenueLeakageView extends NavigationMixin(LightningElement
   get isLoading() { return this.loading; }
   get hasError() { return !this.loading && Boolean(this.error); }
   get hasData() { return !this.loading && !this.error && this.data; }
+  get isEmpty() { return this.hasData && (this.data.findingCount || 0) === 0; }
+  get hasContent() { return this.hasData && !this.isEmpty; }
 
   // ── Header ──
   get confidenceLabel() {
@@ -232,6 +234,7 @@ export default class RevenueLeakageView extends NavigationMixin(LightningElement
     }
   }
   handleIssueModalClose() { this.openIssueDetailId = null; }
+  handleStatusChanged() { if (this.wiredResult) refreshApex(this.wiredResult); }
   get isIssueModalOpen() { return Boolean(this.openIssueDetailId); }
 
   // ── Action banners ──

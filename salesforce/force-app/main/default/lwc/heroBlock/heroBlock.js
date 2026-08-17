@@ -367,6 +367,7 @@ export default class HeroBlock extends NavigationMixin(LightningElement) {
   handleCloseSeverityModal() {
     this.showSeverityModal = false;
     this.selectedSeverity = null;
+    if (this.wiredResult) refreshApex(this.wiredResult);
   }
 
   // ── Report dropdown ──

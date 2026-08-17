@@ -6,6 +6,18 @@
 }
 .op-rl__loading { padding: 30px; display: flex; justify-content: center; }
 .op-rl__error { font-size: 13px; color: #6b7280; padding: 8px 0; margin: 0; }
+.op-rl__empty {
+  background: white;
+  border: 1px solid #f3f4f6;
+  border-radius: 12px;
+  padding: 28px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+.op-rl__empty-icon { --sds-c-icon-color-foreground-default: #047857; }
+.op-rl__empty-msg { font-size: 14px; font-weight: 600; color: #374151; margin: 0; }
 
 /* Header */
 .op-rl__header {
@@ -140,7 +152,7 @@
 /* Theme grid */
 .op-rl__grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(360px, 100%), 1fr));
   gap: 12px;
 }
 .op-rl__theme {

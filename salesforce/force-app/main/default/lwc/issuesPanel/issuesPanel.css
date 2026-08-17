@@ -108,6 +108,11 @@
 .op-tip__row--warning  { border-left-color: #d97706; }
 .op-tip__row--info     { border-left-color: #2563eb; }
 
+/* Root cards render only 2 grid children (num + body) — drop the empty
+   140px affected column so the right edge isn't ragged. Normal rows keep
+   the 3-col template above; they don't carry .op-tip__row--root. */
+.op-tip__row--root { grid-template-columns: 32px 1fr; }
+
 .op-tip__row-num {
   font-size: 18px;
   font-weight: 800;

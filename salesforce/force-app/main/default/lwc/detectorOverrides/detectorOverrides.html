@@ -27,6 +27,10 @@
       <div class="op-do__loading"><lightning-spinner alternative-text="Loading"></lightning-spinner></div>
     </template>
 
+    <template lwc:elseif={hasError}>
+      <div class="op-do__error">{errorMessage}</div>
+    </template>
+
     <template lwc:elseif={isEmpty}>
       <div class="op-do__empty">No detectors in catalog. Deploy the Detector__mdt records first.</div>
     </template>

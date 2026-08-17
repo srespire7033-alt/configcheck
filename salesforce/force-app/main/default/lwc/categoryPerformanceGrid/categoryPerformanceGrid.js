@@ -76,6 +76,7 @@ export default class CategoryPerformanceGrid extends LightningElement {
   get isLoading() { return this.loading; }
   get hasError() { return !this.loading && Boolean(this.error); }
   get hasData() { return !this.loading && !this.error && this.sections; }
+  get isEmpty() { return this.hasData && (!this.sections || this.sections.length === 0); }
 
   // Apply localStorage ordering + compute view-model decorations
   get viewSections() {

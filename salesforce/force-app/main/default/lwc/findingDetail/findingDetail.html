@@ -1,4 +1,16 @@
 <template>
+  <template if:true={isLoading}>
+    <lightning-spinner alternative-text="Loading finding..." size="small"></lightning-spinner>
+  </template>
+
+  <template if:true={hasError}>
+    <lightning-card icon-name="utility:error" title="Finding">
+      <div class="slds-p-horizontal_medium slds-p-vertical_small">
+        <p class="slds-text-body_regular slds-text-color_error">{errorMessage}</p>
+      </div>
+    </lightning-card>
+  </template>
+
   <template if:true={detail}>
     <lightning-card icon-name="custom:custom17" title={cardTitle}>
       <div slot="actions">

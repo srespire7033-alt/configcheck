@@ -54,10 +54,16 @@ export default class TrustScoresCard extends NavigationMixin(LightningElement) {
   @track connectedOrgId = null;
   @track catalogEntries = [];
   @track showAll = false;
+  // Phase 25 — allRows cached. rows/isPaginated/toggleLabel each read it,
+  // so an uncached getter rebuilt the label map per row 3x/render.
+  @track _allRows = [];
 
   @wire(getCatalog)
   wireCatalog({ data }) {
-    if (data) this.catalogEntries = data;
+    if (data) {
+      this.catalogEntries = data;
+      this._allRows = this._computeAllRows();
+    }
   }
 
   get detectorLabelMap() {
@@ -83,6 +89,7 @@ export default class TrustScoresCard extends NavigationMixin(LightningElement) {
     if (result.data) {
       this.data = result.data;
       this.error = undefined;
+      this._allRows = this._computeAllRows();
     } else if (result.error) {
       this.error = result.error.body?.message || result.error.message;
     }
@@ -138,7 +145,7 @@ export default class TrustScoresCard extends NavigationMixin(LightningElement) {
   }
   toggleShowAll() { this.showAll = !this.showAll; }
 
-  get allRows() {
+  _computeAllRows() {
     if (!this.data) return [];
     return this.data.map((r) => {
       const score = r.Score__c;
@@ -166,6 +173,8 @@ export default class TrustScoresCard extends NavigationMixin(LightningElement) {
       };
     });
   }
+
+  get allRows() { return this._allRows; }
 
   scoreBadgeClass(score) {
     if (score == null) return 'op-ts__badge op-ts__badge--muted';

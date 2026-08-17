@@ -175,7 +175,7 @@ textarea:focus-visible,
 .op-tr__cat-wrap {
   margin: 12px 0 0;
   padding-top: 10px;
-  border-top: 1px solid var(--slds-g-color-border-base-1, #e5e5e5);
+  border-top: 1px solid var(--op-color-border-default, #e5e7eb);
 }
 .op-tr__cat-title {
   margin: 0 0 6px;
@@ -183,7 +183,7 @@ textarea:focus-visible,
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: var(--slds-g-color-neutral-base-50, #6b7280);
+  color: var(--op-color-text-muted, #6b7280);
 }
 .op-tr__cat-row {
   display: flex;

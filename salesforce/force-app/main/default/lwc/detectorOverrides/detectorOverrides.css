@@ -14,6 +14,7 @@
 .op-do__filter { flex: 1; }
 .op-do__loading { padding: 40px; display: flex; justify-content: center; }
 .op-do__empty { padding: 24px; color: #6b7280; font-size: 13px; }
+.op-do__error { padding: 24px; color: #b91c1c; font-size: 13px; }
 
 .op-do__table {
   width: 100%;

@@ -84,12 +84,19 @@ export default class ImpactEffortMatrix extends NavigationMixin(LightningElement
   wiredResult;
   @track connectedOrgId = null;
   @track catalogEntries = [];
+  // Phase 25 — matrix bucketing cached. get matrix() is read ~15x/render
+  // (hasData/isEmpty/cells×9/footerLabel/quickWins/modalData), so an
+  // uncached getter re-bucketed every finding on every render.
+  @track _matrix = { buckets: {}, totalFindings: 0, totalUsd: 0, totalHours: 0 };
   // Guards one-time focus-move into the drill-down dialog when it opens.
   _modalFocused = false;
 
   @wire(getCatalog)
   wireCatalog({ data }) {
-    if (data) this.catalogEntries = data;
+    if (data) {
+      this.catalogEntries = data;
+      this._matrix = this._computeMatrix();
+    }
   }
 
   /** Phase 20d — merge fallback + live Detector__mdt.Effort__c. */
@@ -137,13 +144,15 @@ export default class ImpactEffortMatrix extends NavigationMixin(LightningElement
     if (result.data) {
       this.findings = result.data;
       this.error = undefined;
+      this._matrix = this._computeMatrix();
     } else if (result.error) {
       this.error = result.error.body?.message || result.error.message;
     }
   }
 
-  // ── Bucket all findings into the 9 cells ──
-  get matrix() {
+  // ── Bucket findings into the 9 cells. Cached in _matrix, recomputed
+  //    only when findings/catalog change; get matrix() returns the cache. ──
+  _computeMatrix() {
     const buckets = {};
     let totalFindings = 0;
     let totalUsd = 0;
@@ -169,6 +178,8 @@ export default class ImpactEffortMatrix extends NavigationMixin(LightningElement
     }
     return { buckets, totalFindings, totalUsd, totalHours };
   }
+
+  get matrix() { return this._matrix; }
 
   get hasData() { return !this.loading && !this.error && this.matrix.totalFindings > 0; }
   get isEmpty() { return !this.loading && !this.error && this.matrix.totalFindings === 0; }

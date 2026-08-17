@@ -37,6 +37,9 @@
   border-radius: 6px;
   font-size: 12px;
 }
+.op-cdt__result {
+  overflow-x: auto;
+}
 .op-cdt__result-count {
   font-weight: 600;
   color: #111827;

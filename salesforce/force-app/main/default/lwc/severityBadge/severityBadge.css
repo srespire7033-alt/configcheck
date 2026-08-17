@@ -45,11 +45,11 @@
 /* Info */
 .op-sev--info {
   background: var(--op-color-sev-info-bg, #f3f4f6);
-  color: var(--op-color-sev-info-fg, #374151);
+  color: var(--op-color-sev-info-fg, #1d4ed8);
   border-color: var(--op-color-sev-info-bg, #f3f4f6);
 }
 .op-sev--info .op-sev__dot {
-  background: var(--op-color-sev-info-accent, #9ca3af);
+  background: var(--op-color-sev-info-accent, #2563eb);
 }
 
 /* Tile variant — large stacked block used in the hero row */

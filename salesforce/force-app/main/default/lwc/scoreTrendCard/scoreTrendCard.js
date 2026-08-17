@@ -19,6 +19,10 @@ export default class ScoreTrendCard extends NavigationMixin(LightningElement) {
   loading = true;
   wiredResult;
   @track connectedOrgId = null;
+  // Phase 25 — categoryPills/chart derive from points (static after load);
+  // cached so the getters don't re-sort / re-scan min-max on every render.
+  _categoryPills = [];
+  _chart = { polyline: '', dots: [], width: 800, height: 220 };
 
   connectedCallback() { window.addEventListener('op:scan-completed', this.handleScanCompleted); }
   disconnectedCallback() { window.removeEventListener('op:scan-completed', this.handleScanCompleted); }
@@ -37,6 +41,7 @@ export default class ScoreTrendCard extends NavigationMixin(LightningElement) {
     if (result.data) {
       this.points = result.data;
       this.error = undefined;
+      this._recompute();
     } else if (result.error) {
       this.error = result.error.body?.message || result.error.message;
     }
@@ -134,8 +139,14 @@ export default class ScoreTrendCard extends NavigationMixin(LightningElement) {
     return `Since last scan (${this.latestDate}): ${scoreText} → ${issueText}`;
   }
 
+  _recompute() {
+    this._categoryPills = this._computeCategoryPills();
+    this._chart = this._computeChart();
+  }
+
   // ── Phase 22g — Per-category breakdown for the latest scan ──
-  get categoryPills() {
+  get categoryPills() { return this._categoryPills; }
+  _computeCategoryPills() {
     const cs = this.latestPoint?.categoryScores;
     if (!cs) return [];
     const entries = Object.keys(cs).map((k) => ({
@@ -164,7 +175,8 @@ export default class ScoreTrendCard extends NavigationMixin(LightningElement) {
   }
 
   // ── Chart (SVG sparkline) ──
-  get chart() {
+  get chart() { return this._chart; }
+  _computeChart() {
     if (!this.hasEnoughData) return { polyline: '', dots: [], width: 800, height: 220 };
     const width = 800;
     const height = 220;

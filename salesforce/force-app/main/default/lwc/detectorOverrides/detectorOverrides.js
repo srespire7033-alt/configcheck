@@ -30,6 +30,7 @@ export default class DetectorOverrides extends LightningElement {
   @track loading = true;
   @track saving = false;
   @track dirtyKeys = new Set();
+  @track error;
   wiredResult;
 
   severityOptions = SEVERITY_OPTIONS;
@@ -41,6 +42,7 @@ export default class DetectorOverrides extends LightningElement {
     this.wiredResult = result;
     this.loading = false;
     if (result.data) {
+      this.error = undefined;
       this.rows = result.data.map(r => ({
         ...r,
         // Empty string in the combobox = no override.
@@ -48,6 +50,9 @@ export default class DetectorOverrides extends LightningElement {
         isActiveValue: r.isActive === false ? false : true,
       }));
       this.dirtyKeys = new Set();
+    } else if (result.error) {
+      this.error = result.error;
+      this.rows = [];
     }
   }
 
@@ -62,7 +67,9 @@ export default class DetectorOverrides extends LightningElement {
   }
 
   get hasRows() { return !this.loading && this.rows.length > 0; }
-  get isEmpty() { return !this.loading && this.rows.length === 0; }
+  get hasError() { return !this.loading && !!this.error; }
+  get isEmpty() { return !this.loading && !this.error && this.rows.length === 0; }
+  get errorMessage() { return this.error?.body?.message || this.error?.message || String(this.error); }
   get isDirty() { return this.dirtyKeys.size > 0; }
   get saveLabel() {
     return this.isDirty ? `Save ${this.dirtyKeys.size} change${this.dirtyKeys.size === 1 ? '' : 's'}` : 'Save';

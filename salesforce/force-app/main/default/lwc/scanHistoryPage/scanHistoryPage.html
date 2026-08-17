@@ -22,6 +22,12 @@
       </c-dashboard-card>
     </template>
 
+    <template if:true={hasError}>
+      <c-dashboard-card>
+        <p class="op-sh__empty">{error}</p>
+      </c-dashboard-card>
+    </template>
+
     <template if:true={hasData}>
       <!-- Score Trend chart card -->
       <c-dashboard-card title="Score Trend" subtitle={scanCountLabel}>

@@ -24,7 +24,14 @@
       <p class="op-rl__error">{error}</p>
     </template>
 
-    <template if:true={hasData}>
+    <template if:true={isEmpty}>
+      <div class="op-rl__empty">
+        <lightning-icon icon-name="utility:success" size="small" class="op-rl__empty-icon"></lightning-icon>
+        <p class="op-rl__empty-msg">No revenue leakage detected</p>
+      </div>
+    </template>
+
+    <template if:true={hasContent}>
       <!-- Totals -->
       <section class="op-rl__totals">
         <p class="op-rl__totals-label">TOTAL REVENUE LEAKAGE</p>
@@ -156,6 +163,7 @@
       <c-issue-detail-modal
         issue-id={openIssueDetailId}
         oncloseissuemodal={handleIssueModalClose}
+        onstatuschanged={handleStatusChanged}
       ></c-issue-detail-modal>
     </template>
   </article>
