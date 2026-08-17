@@ -219,15 +219,35 @@ export default class CategoryIssuesModal extends NavigationMixin(LightningElemen
     if (event.target === event.currentTarget) this.handleClose();
   }
 
-  // ── Accessibility ──
+  // ── Accessibility + scroll containment ──
   connectedCallback() {
     this._keydownHandler = (e) => {
       if (e.key === 'Escape') { e.preventDefault(); this.handleClose(); }
     };
     window.addEventListener('keydown', this._keydownHandler);
+    // Lock background page scroll while the modal is open — otherwise
+    // the wheel/trackpad scrolls the Lightning page behind the backdrop
+    // ("I can scroll this page"). The modal body has its own overflow-y.
+    // Restore the exact prior values on close so we never leave the page
+    // stuck. Locking both body and documentElement covers LEX, whose
+    // scroll container varies by context.
+    try {
+      this._prevBodyOverflow = document.body.style.overflow;
+      this._prevHtmlOverflow = document.documentElement.style.overflow;
+      document.body.style.overflow = 'hidden';
+      document.documentElement.style.overflow = 'hidden';
+    } catch (e) {
+      /* document access guarded — non-fatal if blocked */
+    }
   }
   disconnectedCallback() {
     if (this._keydownHandler) window.removeEventListener('keydown', this._keydownHandler);
+    try {
+      document.body.style.overflow = this._prevBodyOverflow || '';
+      document.documentElement.style.overflow = this._prevHtmlOverflow || '';
+    } catch (e) {
+      /* non-fatal */
+    }
   }
   renderedCallback() {
     if (this._focused) return;
