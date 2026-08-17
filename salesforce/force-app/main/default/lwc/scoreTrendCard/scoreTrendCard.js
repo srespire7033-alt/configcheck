@@ -214,6 +214,13 @@ export default class ScoreTrendCard extends NavigationMixin(LightningElement) {
     });
   }
 
+  handleDotClickKey(e) {
+    if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
+      e.preventDefault();
+      this.handleDotClick(e);
+    }
+  }
+
   handleViewHistory() {
     // Navigate to the OrgPrism Scan History FlexiPage. Lightning App
     // Page navigation uses pageName, not recordPage.

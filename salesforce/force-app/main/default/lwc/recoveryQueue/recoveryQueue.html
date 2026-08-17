@@ -79,7 +79,7 @@
                   data-id={a.findingId}
                   class="op-rq__action-row"
                 >
-                  <div class="op-rq__action" onclick={handleActionClick} data-id={a.findingId}>
+                  <div class="op-rq__action" onclick={handleActionClick} onkeydown={handleActionClickKey} role="button" tabindex="0" data-id={a.findingId}>
                     <template if:true={g.selectable}>
                       <input
                         type="checkbox"

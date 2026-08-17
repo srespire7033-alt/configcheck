@@ -273,4 +273,11 @@ export default class RecoveryQueue extends NavigationMixin(LightningElement) {
       attributes: { recordId: findingId, objectApiName: 'ForensicFinding__c', actionName: 'view' },
     });
   }
+
+  handleActionClickKey(e) {
+    if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
+      e.preventDefault();
+      this.handleActionClick(e);
+    }
+  }
 }

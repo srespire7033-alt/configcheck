@@ -55,6 +55,12 @@ export default class AttributionMapPage extends NavigationMixin(LightningElement
     const key = event.currentTarget.dataset.key;
     this.expandedKey = this.expandedKey === key ? null : key;
   }
+  handleToggleKey(event) {
+    if (event.key === 'Enter' || event.key === ' ' || event.key === 'Spacebar') {
+      event.preventDefault();
+      this.handleToggle(event);
+    }
+  }
   handleFindingClick(event) {
     event.stopPropagation();
     const id = event.currentTarget.dataset.id;
@@ -63,6 +69,12 @@ export default class AttributionMapPage extends NavigationMixin(LightningElement
       type: 'standard__recordPage',
       attributes: { recordId: id, objectApiName: 'ForensicFinding__c', actionName: 'view' },
     });
+  }
+  handleFindingClickKey(event) {
+    if (event.key === 'Enter' || event.key === ' ' || event.key === 'Spacebar') {
+      event.preventDefault();
+      this.handleFindingClick(event);
+    }
   }
 
   formatMoney(n) {

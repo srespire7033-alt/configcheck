@@ -195,4 +195,11 @@ export default class TrustScoresCard extends NavigationMixin(LightningElement) {
       state: { c__detectorId: detectorId },
     });
   }
+
+  handleRowClickKey(e) {
+    if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
+      e.preventDefault();
+      this.handleRowClick(e);
+    }
+  }
 }

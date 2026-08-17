@@ -59,6 +59,8 @@ export default class ScheduleManager extends LightningElement {
 
   // Bound handler so we can add/removeEventListener cleanly.
   _openListener = () => { this.handleOpen(); };
+  // Guards one-time focus-move into the modal when it opens.
+  _modalFocused = false;
 
   connectedCallback() {
     try {
@@ -245,6 +247,27 @@ export default class ScheduleManager extends LightningElement {
   handleClose() {
     if (this.busy) return;
     this.showModal = false;
+  }
+  handleModalKeydown(event) {
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      this.handleClose();
+    }
+  }
+
+  // Move focus into the dialog once when it first opens; reset when closed
+  // so it re-focuses on the next open. Guarded to avoid stealing focus
+  // on every render.
+  renderedCallback() {
+    if (this.showModal && !this._modalFocused) {
+      const dialog = this.template.querySelector('.op-sm__modal');
+      if (dialog) {
+        dialog.focus();
+        this._modalFocused = true;
+      }
+    } else if (!this.showModal && this._modalFocused) {
+      this._modalFocused = false;
+    }
   }
 
   handleFrequencyPick(event) {

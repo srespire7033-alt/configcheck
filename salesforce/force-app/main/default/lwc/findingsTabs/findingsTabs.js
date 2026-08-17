@@ -45,6 +45,7 @@ export default class FindingsTabs extends LightningElement {
       { id: 'performance', label: labelOf('performance', 'Performance & Scalability') },
     ].map((p) => ({
       ...p,
+      active: p.id === this.activeSub,
       cls: p.id === this.activeSub ? 'op-pill op-pill--active' : 'op-pill',
     }));
   }

@@ -1,7 +1,7 @@
 <template>
   <div class="op-tabs">
     <!-- Sub-pill switcher -->
-    <div class="op-tabs__pills">
+    <div class="op-tabs__pills" role="tablist">
       <template for:each={pills} for:item="p">
         <button
           key={p.id}
@@ -9,6 +9,8 @@
           class={p.cls}
           onclick={handlePillClick}
           type="button"
+          role="tab"
+          aria-selected={p.active}
         >
           {p.label}
         </button>
@@ -16,7 +18,7 @@
     </div>
 
     <!-- Active sub-view -->
-    <div class="op-tabs__body">
+    <div class="op-tabs__body" role="tabpanel">
       <template if:true={showLeakage}>
         <c-revenue-leakage-view></c-revenue-leakage-view>
       </template>

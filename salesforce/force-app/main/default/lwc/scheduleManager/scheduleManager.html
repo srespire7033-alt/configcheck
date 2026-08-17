@@ -81,7 +81,7 @@
     <!-- Modal -->
     <template if:true={showModal}>
       <div class="op-sm__overlay" onclick={handleClose}></div>
-      <section class="op-sm__modal" role="dialog" aria-labelledby="modal-heading">
+      <section class="op-sm__modal" role="dialog" aria-modal="true" aria-labelledby="modal-heading" tabindex="-1" onkeydown={handleModalKeydown}>
         <header class="op-sm__modal-header">
           <h2 id="modal-heading">Schedule a Scan</h2>
           <lightning-button-icon
@@ -97,7 +97,7 @@
           <!-- Frequency -->
           <div class="op-sm__field">
             <label class="op-sm__field-label">Frequency</label>
-            <div class="op-sm__freq-row">
+            <div class="op-sm__freq-row" role="group" aria-label="Frequency">
               <template for:each={frequencyOptions} for:item="o">
                 <button
                   key={o.id}
@@ -120,6 +120,7 @@
             <input
               type="time"
               class="op-sm__time-input"
+              aria-label="Scan time"
               value={newTime}
               onchange={handleTimeChange}
               disabled={busy}

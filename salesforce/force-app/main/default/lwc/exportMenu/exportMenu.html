@@ -10,15 +10,15 @@
     ></lightning-button>
 
     <template if:true={open}>
-      <div class="op-em__menu op-em__menu--open">
-        <button type="button" class="op-em__item" onclick={handleFindings}>
+      <div class="op-em__menu op-em__menu--open" role="menu">
+        <button type="button" role="menuitem" class="op-em__item" onclick={handleFindings}>
           <lightning-icon icon-name="utility:filter" size="x-small" class="op-em__item-icon"></lightning-icon>
           <span class="op-em__item-body">
             <span class="op-em__item-title">All findings (CSV)</span>
             <span class="op-em__item-sub">Latest scan · for Excel or Sheets</span>
           </span>
         </button>
-        <button type="button" class="op-em__item" onclick={handleRecovery}>
+        <button type="button" role="menuitem" class="op-em__item" onclick={handleRecovery}>
           <lightning-icon icon-name="utility:flow" size="x-small" class="op-em__item-icon"></lightning-icon>
           <span class="op-em__item-body">
             <span class="op-em__item-title">Recovery actions (CSV)</span>
@@ -26,7 +26,7 @@
           </span>
         </button>
         <div class="op-em__divider"></div>
-        <button type="button" class="op-em__item" onclick={handlePdf}>
+        <button type="button" role="menuitem" class="op-em__item" onclick={handlePdf}>
           <lightning-icon icon-name="utility:file" size="x-small" class="op-em__item-icon"></lightning-icon>
           <span class="op-em__item-body">
             <span class="op-em__item-title">Executive PDF report</span>

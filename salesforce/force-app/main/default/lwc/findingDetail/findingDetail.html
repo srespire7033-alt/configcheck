@@ -41,7 +41,7 @@
         <template if:true={hasAffectedRecord}>
           <div class="slds-m-bottom_medium">
             <p class="slds-text-heading_label slds-text-color_weak">Affected record</p>
-            <a onclick={openAffectedRecord} class="slds-text-link">
+            <a href="javascript:void(0)" onclick={openAffectedRecord} class="slds-text-link">
               {detail.finding.primaryRecordType} ({detail.finding.primaryRecordId})
               <lightning-icon icon-name="utility:new_window" size="xx-small"
                               class="slds-m-left_xx-small"></lightning-icon>

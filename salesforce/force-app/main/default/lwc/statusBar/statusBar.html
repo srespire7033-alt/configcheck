@@ -1,6 +1,6 @@
 <template>
   <template if:true={hasItems}>
-    <div class="op-sb">
+    <div class="op-sb" role="status" aria-live="polite" aria-atomic="true">
       <template for:each={computedItems} for:item="it">
         <div key={it.id} class={it.rootClass}>
           <lightning-icon icon-name={it.iconName} size="x-small" class="op-sb__icon"></lightning-icon>

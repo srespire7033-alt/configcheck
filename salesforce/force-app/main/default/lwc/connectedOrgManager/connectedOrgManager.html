@@ -95,7 +95,7 @@
                   <lightning-icon icon-name="utility:salesforce1" size="small" class="op-co__card-icon"></lightning-icon>
                 </div>
                 <div>
-                  <h3 class="op-co__card-name" data-id={r.id} onclick={handleOpenRecord}>{r.name}</h3>
+                  <h3 class="op-co__card-name" data-id={r.id} onclick={handleOpenRecord} onkeydown={handleOpenRecordKey} role="button" tabindex="0">{r.name}</h3>
                   <div class="op-co__card-chips">
                     <span class="op-co__chip op-co__chip--type">
                       <span class="op-co__chip-dot"></span>{r.orgType}

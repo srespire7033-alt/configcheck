@@ -84,6 +84,8 @@ export default class ImpactEffortMatrix extends NavigationMixin(LightningElement
   wiredResult;
   @track connectedOrgId = null;
   @track catalogEntries = [];
+  // Guards one-time focus-move into the drill-down dialog when it opens.
+  _modalFocused = false;
 
   @wire(getCatalog)
   wireCatalog({ data }) {
@@ -106,6 +108,21 @@ export default class ImpactEffortMatrix extends NavigationMixin(LightningElement
   connectedCallback() { window.addEventListener('op:scan-completed', this.handleScanCompleted); }
   disconnectedCallback() { window.removeEventListener('op:scan-completed', this.handleScanCompleted); }
   handleScanCompleted = () => { if (this.wiredResult) refreshApex(this.wiredResult); };
+
+  // Move focus into the drill-down dialog once when it first opens; reset
+  // when closed so it re-focuses on the next open. Guarded to avoid stealing
+  // focus on every render.
+  renderedCallback() {
+    if (this.openCellKey && !this._modalFocused) {
+      const backdrop = this.template.querySelector('.op-wtf__modal-backdrop');
+      if (backdrop) {
+        backdrop.focus();
+        this._modalFocused = true;
+      }
+    } else if (!this.openCellKey && this._modalFocused) {
+      this._modalFocused = false;
+    }
+  }
 
   @wire(CurrentPageReference)
   wirePageRef(pageRef) {

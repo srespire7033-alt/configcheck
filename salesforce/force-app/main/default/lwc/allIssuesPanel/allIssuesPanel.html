@@ -26,14 +26,14 @@
         <span class="op-aip__filter-label">Severity</span>
         <template for:each={sevPills} for:item="p">
           <button key={p.value} type="button" data-value={p.value}
-                  class={p.pillClass} onclick={toggleSev}>{p.label}</button>
+                  class={p.pillClass} aria-pressed={p.active} onclick={toggleSev}>{p.label}</button>
         </template>
       </div>
       <div class="op-aip__filter-group">
         <span class="op-aip__filter-label">Status</span>
         <template for:each={statusPills} for:item="p">
           <button key={p.value} type="button" data-value={p.value}
-                  class={p.pillClass} onclick={toggleStatus}>{p.label}</button>
+                  class={p.pillClass} aria-pressed={p.active} onclick={toggleStatus}>{p.label}</button>
         </template>
       </div>
       <span class="op-aip__count">{countLabel}</span>
@@ -87,7 +87,7 @@
             />
             <span class={r.sevChipClass}>{r.severity}</span>
             <span class={r.statusChipClass}>{r.statusLabel}</span>
-            <span class="op-aip__row-title" data-id={r.id} onclick={handleRowTitle}>{r.title}</span>
+            <span class="op-aip__row-title" data-id={r.id} onclick={handleRowTitle} role="button" tabindex="0" onkeydown={handleRowTitleKey}>{r.title}</span>
             <a href="javascript:void(0)" data-id={r.id} class="op-aip__view" onclick={handleView}>View →</a>
           </article>
         </template>

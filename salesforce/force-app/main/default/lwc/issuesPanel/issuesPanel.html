@@ -36,7 +36,10 @@
               data-key={r.rootKey}
               data-finding-id={r.firstFindingId}
               class={r.borderClass}
+              role="button"
+              tabindex="0"
               onclick={handleRootCardClick}
+              onkeydown={handleRootCardClickKey}
             >
               <div class="op-tip__row-num">★</div>
               <div class="op-tip__row-body">
@@ -75,7 +78,11 @@
             key={r.groupKey}
             data-key={r.groupKey}
             class={r.borderClass}
+            role="button"
+            tabindex="0"
+            aria-expanded={r.isExpanded}
             onclick={toggleExpand}
+            onkeydown={toggleExpandKey}
           >
             <div class="op-tip__row-num">{r.rowNumber}</div>
             <div class="op-tip__row-body">
@@ -90,7 +97,7 @@
                 </template>
                 <span class={r.trendClass}>{r.trendLabel}</span>
               </div>
-              <h3 class="op-tip__row-title" data-id={r.primaryFindingId} onclick={handleHeadlineClick}>
+              <h3 class="op-tip__row-title" data-id={r.primaryFindingId} role="button" tabindex="0" onclick={handleHeadlineClick} onkeydown={handleHeadlineClickKey}>
                 {r.headlineWithCount}
               </h3>
               <p class="op-tip__row-desc">{r.headlineDescription}</p>
@@ -117,7 +124,7 @@
               <template if:true={r.isExpanded}>
                 <div class="op-tip__members">
                   <template for:each={r.members} for:item="m">
-                    <div key={m.id} class="op-tip__member" data-id={m.id} onclick={handleMemberClick}>
+                    <div key={m.id} class="op-tip__member" data-id={m.id} role="button" tabindex="0" onclick={handleMemberClick} onkeydown={handleMemberClickKey}>
                       <div class="op-tip__member-body">
                         <p class="op-tip__member-title">{m.title}</p>
                         <p class="op-tip__member-desc">{m.description}</p>

@@ -111,4 +111,11 @@ export default class DollarTrendCard extends NavigationMixin(LightningElement) {
       attributes: { recordId: id, objectApiName: 'ForensicScan__c', actionName: 'view' },
     });
   }
+
+  handleDotClickKey(e) {
+    if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
+      e.preventDefault();
+      this.handleDotClick(e);
+    }
+  }
 }

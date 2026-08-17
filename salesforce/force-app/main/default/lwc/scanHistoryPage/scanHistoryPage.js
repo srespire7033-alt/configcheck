@@ -155,6 +155,13 @@ export default class ScanHistoryPage extends NavigationMixin(LightningElement) {
     });
   }
 
+  handleRowClickKey(e) {
+    if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
+      e.preventDefault();
+      this.handleRowClick(e);
+    }
+  }
+
   // ── Date helpers ──
   formatShortDate(iso) {
     if (!iso) return '';

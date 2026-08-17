@@ -33,10 +33,13 @@
                 data-detector-ids={c.detectorIdsStr}
                 class={c.cardClass}
                 draggable="true"
+                role="button"
+                tabindex="0"
                 ondragstart={handleDragStart}
                 ondragover={handleDragOver}
                 ondrop={handleDrop}
                 onclick={handleCardClick}
+                onkeydown={handleCardClickKey}
               >
                 <header class="op-cp__card-head">
                   <lightning-icon icon-name={c.iconName} size="x-small" class="op-cp__card-icon"></lightning-icon>

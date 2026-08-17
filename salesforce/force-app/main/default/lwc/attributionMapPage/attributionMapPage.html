@@ -33,7 +33,7 @@
     <template if:true={hasData}>
       <div class="op-am__list">
         <template for:each={rows} for:item="r">
-          <article key={r.key} data-key={r.key} class="op-am__row" onclick={handleToggle}>
+          <article key={r.key} data-key={r.key} class="op-am__row" role="button" tabindex="0" aria-expanded={r.isOpen} onclick={handleToggle} onkeydown={handleToggleKey}>
             <div class="op-am__row-head">
               <span class="op-am__type">{r.rootConfigType}</span>
               <div class="op-am__row-main">
@@ -47,7 +47,7 @@
             <template if:true={r.isOpen}>
               <ul class="op-am__findings">
                 <template for:each={r.findingsView} for:item="f">
-                  <li key={f.id} data-id={f.id} class="op-am__finding" onclick={handleFindingClick}>
+                  <li key={f.id} data-id={f.id} class="op-am__finding" role="button" tabindex="0" onclick={handleFindingClick} onkeydown={handleFindingClickKey}>
                     <span class={f.sevChipClass}>{f.severity}</span>
                     <span class="op-am__finding-det">{f.detectorId}</span>
                     <span class="op-am__finding-title">{f.title}</span>

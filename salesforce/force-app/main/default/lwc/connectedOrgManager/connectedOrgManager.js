@@ -439,6 +439,13 @@ export default class ConnectedOrgManager extends NavigationMixin(LightningElemen
     });
   }
 
+  handleOpenRecordKey(e) {
+    if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
+      e.preventDefault();
+      this.handleOpenRecord(e);
+    }
+  }
+
   handleAddNew() {
     this[NavigationMixin.Navigate]({
       type: 'standard__objectPage',

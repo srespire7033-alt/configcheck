@@ -180,6 +180,12 @@ export default class CategoryPerformanceGrid extends LightningElement {
     this.openCategoryLabel = event.currentTarget.dataset.label;
     this.openDetectorIds = event.currentTarget.dataset.detectorIds || '';
   }
+  handleCardClickKey(event) {
+    if (event.key === 'Enter' || event.key === ' ' || event.key === 'Spacebar') {
+      event.preventDefault();
+      this.handleCardClick(event);
+    }
+  }
   handleModalClose() {
     this.openCategoryLabel = null;
     this.openDetectorIds = null;

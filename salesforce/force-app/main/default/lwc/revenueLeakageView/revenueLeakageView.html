@@ -63,14 +63,14 @@
           <span class="op-rl__pill-label">Effort</span>
           <template for:each={effortPills} for:item="p">
             <button key={p.value} type="button" data-value={p.value}
-                    class={p.pillClass} onclick={toggleEffort}>{p.label}</button>
+                    class={p.pillClass} aria-pressed={p.active} onclick={toggleEffort}>{p.label}</button>
           </template>
         </div>
         <div class="op-rl__pill-group">
           <span class="op-rl__pill-label">Severity</span>
           <template for:each={severityPills} for:item="p">
             <button key={p.value} type="button" data-value={p.value}
-                    class={p.pillClass} onclick={toggleSev}>{p.label}</button>
+                    class={p.pillClass} aria-pressed={p.active} onclick={toggleSev}>{p.label}</button>
           </template>
         </div>
         <span class="op-rl__find-count">{findingCountLabel}</span>
@@ -88,8 +88,7 @@
             </header>
             <ul class="op-rl__theme-list">
               <template for:each={t.rows} for:item="r">
-                <li key={r.id} data-id={r.id} class="op-rl__row" onclick={handleRowClick}>
-                  <input type="checkbox" class="op-rl__row-cb" aria-label="Select"/>
+                <li key={r.id} data-id={r.id} class="op-rl__row" role="button" tabindex="0" onclick={handleRowClick} onkeydown={handleRowClickKey}>
                   <span class="op-rl__row-title">{r.truncatedTitle}</span>
                   <span class={r.effortChipClass}>{r.effortLabel}</span>
                   <span class="op-rl__row-gap">{r.gapLabel}</span>
@@ -139,7 +138,7 @@
         </header>
         <div class="op-rl__leaks-list">
           <template for:each={viewBiggestLeaks} for:item="r">
-            <article key={r.id} data-id={r.id} class="op-rl__leak" onclick={handleLeakToggle}>
+            <article key={r.id} data-id={r.id} class="op-rl__leak" role="button" tabindex="0" aria-expanded={r.isOpen} onclick={handleLeakToggle} onkeydown={handleLeakToggleKey}>
               <span class="op-rl__leak-code">{r.detectorId}</span>
               <span class="op-rl__leak-title">{r.title}</span>
               <span class="op-rl__leak-amount">{r.gapLabel}</span>

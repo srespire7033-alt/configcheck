@@ -94,6 +94,7 @@ export default class RevenueLeakageView extends NavigationMixin(LightningElement
   get severityPills() {
     return SEVERITY_OPTIONS.map((s) => ({
       label: s, value: s,
+      active: this.severityFilters.includes(s),
       pillClass: this.severityFilters.includes(s)
         ? `op-rl__pill op-rl__pill--active op-rl__pill--${s.toLowerCase()}`
         : 'op-rl__pill',
@@ -103,6 +104,7 @@ export default class RevenueLeakageView extends NavigationMixin(LightningElement
     return EFFORT_OPTIONS.map((s) => ({
       label: s === 'low' ? 'Low' : s === 'medium' ? 'Med' : 'High',
       value: s,
+      active: this.effortFilters.includes(s),
       pillClass: this.effortFilters.includes(s)
         ? 'op-rl__pill op-rl__pill--active op-rl__pill--effort'
         : 'op-rl__pill',
@@ -213,9 +215,21 @@ export default class RevenueLeakageView extends NavigationMixin(LightningElement
     const id = event.currentTarget.dataset.id;
     this.openLeakId = this.openLeakId === id ? null : id;
   }
+  handleLeakToggleKey(e) {
+    if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
+      e.preventDefault();
+      this.handleLeakToggle(e);
+    }
+  }
   handleRowClick(event) {
     const id = event.currentTarget.dataset.id;
     this.openIssueDetailId = id;
+  }
+  handleRowClickKey(e) {
+    if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
+      e.preventDefault();
+      this.handleRowClick(e);
+    }
   }
   handleIssueModalClose() { this.openIssueDetailId = null; }
   get isIssueModalOpen() { return Boolean(this.openIssueDetailId); }

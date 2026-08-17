@@ -54,6 +54,9 @@
                 class="op-sh__dot"
                 data-id={d.scanId}
                 onclick={handleRowClick}
+                role="button"
+                tabindex="0"
+                onkeydown={handleRowClickKey}
               >
                 <title>{d.title}</title>
               </circle>
@@ -130,7 +133,7 @@
             </thead>
             <tbody>
               <template for:each={tableRows} for:item="r">
-                <tr key={r.id} data-id={r.id} onclick={handleRowClick} class="op-sh__tr">
+                <tr key={r.id} data-id={r.id} onclick={handleRowClick} class="op-sh__tr" role="button" tabindex="0" onkeydown={handleRowClickKey}>
                   <td>
                     <div class="op-sh__date">{r.dateLabel}</div>
                     <div class="op-sh__time-ago">{r.timeAgo}</div>

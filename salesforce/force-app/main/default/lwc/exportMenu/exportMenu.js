@@ -45,6 +45,37 @@ export default class ExportMenu extends LightningElement {
   open = false;
   busy = false;
 
+  // A11y — dismiss the open menu on Escape or an outside click so the
+  // popup behaves like a proper menu for keyboard + pointer users.
+  _outsideClickHandler = null;
+  _escKeyHandler = null;
+  connectedCallback() {
+    this._outsideClickHandler = (e) => {
+      if (!this.open) return;
+      // On a document-level listener the event target retargets to this
+      // component's host element for any click inside the shadow tree,
+      // so a target that is NOT the host means the click landed outside.
+      if (e.target !== this.template.host) {
+        this.open = false;
+      }
+    };
+    this._escKeyHandler = (e) => {
+      if (e.key === 'Escape' && this.open) {
+        this.open = false;
+      }
+    };
+    document.addEventListener('click', this._outsideClickHandler);
+    document.addEventListener('keydown', this._escKeyHandler);
+  }
+  disconnectedCallback() {
+    if (this._outsideClickHandler) {
+      document.removeEventListener('click', this._outsideClickHandler);
+    }
+    if (this._escKeyHandler) {
+      document.removeEventListener('keydown', this._escKeyHandler);
+    }
+  }
+
   toggleMenu() {
     if (this.busy) return;
     this.open = !this.open;

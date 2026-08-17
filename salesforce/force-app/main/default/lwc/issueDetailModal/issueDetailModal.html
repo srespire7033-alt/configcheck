@@ -64,18 +64,18 @@
         </div>
 
         <!-- Tabs -->
-        <div class="op-im__tabs">
-          <button class={detailsTabClass} data-tab="details" onclick={handleTab}>
+        <div class="op-im__tabs" role="tablist">
+          <button class={detailsTabClass} data-tab="details" onclick={handleTab} role="tab" aria-selected={isDetailsActive}>
             <span>Issue Details</span>
           </button>
-          <button class={fixTabClass} data-tab="fix" onclick={handleTab}>
+          <button class={fixTabClass} data-tab="fix" onclick={handleTab} role="tab" aria-selected={isFixActive}>
             <lightning-icon icon-name="utility:einstein" size="xx-small" class="op-im__tab-icon"></lightning-icon>
             <span>Fix &amp; Remediation</span>
           </button>
         </div>
 
         <!-- Tab body -->
-        <div class="op-im__body">
+        <div class="op-im__body" role="tabpanel">
           <template if:true={isDetailsActive}>
             <section class="op-im__sec">
               <p class="op-im__sec-label">

@@ -113,6 +113,7 @@ export default class AllIssuesPanel extends NavigationMixin(LightningElement) {
     return SEVERITY_OPTIONS.map((s) => ({
       label: s,
       value: s,
+      active: this.severityFilters.includes(s),
       pillClass: this.severityFilters.includes(s)
         ? `op-aip__pill op-aip__pill--active op-aip__pill--${s.toLowerCase()}`
         : 'op-aip__pill',
@@ -122,6 +123,7 @@ export default class AllIssuesPanel extends NavigationMixin(LightningElement) {
     return STATUS_OPTIONS.map((s) => ({
       label: s,
       value: s,
+      active: this.statusFilters.includes(s),
       pillClass: this.statusFilters.includes(s)
         ? 'op-aip__pill op-aip__pill--active op-aip__pill--status'
         : 'op-aip__pill',
@@ -202,6 +204,12 @@ export default class AllIssuesPanel extends NavigationMixin(LightningElement) {
       type: 'standard__recordPage',
       attributes: { recordId: id, objectApiName: 'ForensicFinding__c', actionName: 'view' },
     });
+  }
+  handleRowTitleKey(event) {
+    if (event.key === 'Enter' || event.key === ' ' || event.key === 'Spacebar') {
+      event.preventDefault();
+      this.handleRowTitle(event);
+    }
   }
   handleView(event) {
     // "View →" link → MODAL

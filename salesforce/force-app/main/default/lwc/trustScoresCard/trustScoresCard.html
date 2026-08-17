@@ -41,6 +41,9 @@
             class={r.rowClass}
             data-detector={r.detectorId}
             onclick={handleRowClick}
+            onkeydown={handleRowClickKey}
+            role="button"
+            tabindex="0"
           >
             <span class={r.scoreBadgeClass}>{r.scoreLabel}</span>
             <div class="op-ts__row-body">

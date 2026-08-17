@@ -62,14 +62,14 @@
           <span class="op-rc__pill-label">Effort</span>
           <template for:each={effortPills} for:item="p">
             <button key={p.value} type="button" data-value={p.value}
-                    class={p.pillClass} onclick={toggleEffort}>{p.label}</button>
+                    class={p.pillClass} aria-pressed={p.active} onclick={toggleEffort}>{p.label}</button>
           </template>
         </div>
         <div class="op-rc__pill-group">
           <span class="op-rc__pill-label">Severity</span>
           <template for:each={severityPills} for:item="p">
             <button key={p.value} type="button" data-value={p.value}
-                    class={p.pillClass} onclick={toggleSev}>{p.label}</button>
+                    class={p.pillClass} aria-pressed={p.active} onclick={toggleSev}>{p.label}</button>
           </template>
         </div>
       </div>
@@ -77,8 +77,8 @@
 
       <div class="op-rc__list">
         <template for:each={findingsRows} for:item="r">
-          <article key={r.id} data-id={r.id} class="op-rc__row" onclick={handleRowClick}>
-            <input type="checkbox" class="op-rc__row-cb" aria-label="Select"/>
+          <article key={r.id} data-id={r.id} class="op-rc__row" onclick={handleRowClick}
+                   role="button" tabindex="0" onkeydown={handleRowClickKey}>
             <span class="op-rc__row-det">{r.detectorId}</span>
             <span class={r.effortChipClass}>{r.effortLabel}</span>
             <span class="op-rc__row-title">{r.truncatedTitle}</span>

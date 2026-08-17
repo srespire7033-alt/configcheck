@@ -98,6 +98,12 @@ export default class IssuesPanel extends LightningElement {
     const findingId = event.currentTarget.dataset.findingId;
     if (findingId) this.openDetailId = findingId;
   }
+  handleRootCardClickKey(e) {
+    if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
+      e.preventDefault();
+      this.handleRootCardClick(e);
+    }
+  }
   get hasRoots() { return (this.roots || []).length > 0; }
 
   get isLoading() { return this.loading; }
@@ -241,15 +247,33 @@ export default class IssuesPanel extends LightningElement {
     const key = event.currentTarget.dataset.key;
     this.expandedKey = (this.expandedKey === key) ? null : key;
   }
+  toggleExpandKey(e) {
+    if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
+      e.preventDefault();
+      this.toggleExpand(e);
+    }
+  }
   handleMemberClick(event) {
     event.stopPropagation();
     const id = event.currentTarget.dataset.id;
     this.openDetailId = id;
   }
+  handleMemberClickKey(e) {
+    if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
+      e.preventDefault();
+      this.handleMemberClick(e);
+    }
+  }
   handleHeadlineClick(event) {
     event.stopPropagation();
     const id = event.currentTarget.dataset.id;
     this.openDetailId = id;
+  }
+  handleHeadlineClickKey(e) {
+    if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
+      e.preventDefault();
+      this.handleHeadlineClick(e);
+    }
   }
   handleCloseModal() { this.openDetailId = null; }
   async handleStatusChanged() { await refreshApex(this.wiredResult); }

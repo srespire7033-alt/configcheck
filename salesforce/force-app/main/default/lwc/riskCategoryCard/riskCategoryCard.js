@@ -197,6 +197,7 @@ export default class RiskCategoryCard extends NavigationMixin(LightningElement) 
   get severityPills() {
     return SEVERITY_OPTIONS.map((s) => ({
       label: s, value: s,
+      active: this.severityFilters.includes(s),
       pillClass: this.severityFilters.includes(s)
         ? `op-rc__pill op-rc__pill--active op-rc__pill--${s.toLowerCase()}`
         : 'op-rc__pill',
@@ -206,6 +207,7 @@ export default class RiskCategoryCard extends NavigationMixin(LightningElement) 
     return EFFORT_OPTIONS.map((s) => ({
       label: s === 'low' ? 'Low' : s === 'medium' ? 'Med' : 'High',
       value: s,
+      active: this.effortFilters.includes(s),
       pillClass: this.effortFilters.includes(s)
         ? 'op-rc__pill op-rc__pill--active op-rc__pill--effort'
         : 'op-rc__pill',
@@ -294,6 +296,13 @@ export default class RiskCategoryCard extends NavigationMixin(LightningElement) 
       type: 'standard__recordPage',
       attributes: { recordId: id, objectApiName: 'ForensicFinding__c', actionName: 'view' },
     });
+  }
+
+  handleRowClickKey(event) {
+    if (event.key === 'Enter' || event.key === ' ' || event.key === 'Spacebar') {
+      event.preventDefault();
+      this.handleRowClick(event);
+    }
   }
 
   formatMoney(n) {
