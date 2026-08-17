@@ -136,10 +136,11 @@ export default class IssueDetailPage extends NavigationMixin(LightningElement) {
 
   // ── Back ──
   handleBack() {
-    // navigate back to the OrgPrism dashboard
+    // navigate back to the OrgPrism dashboard (the nav-item tab, matching
+    // forensicDiffPage/scoreTrendCard). 'standard-home' landed on org Home.
     this[NavigationMixin.Navigate]({
       type: 'standard__navItemPage',
-      attributes: { apiName: 'standard-home' },
+      attributes: { apiName: 'OrgPrism_Dashboard' },
     });
   }
 }

@@ -63,10 +63,10 @@ function bucketImpact(g) {
 
 function fmtMoney(n) {
   const v = Number(n) || 0;
-  if (v >= 1_000_000) return `USD ${(v / 1_000_000).toFixed(1)}M`;
-  if (v >= 1_000) return `USD ${(v / 1_000).toFixed(0)}K`;
+  if (v >= 1_000_000) return `$${(v / 1_000_000).toFixed(2)}M`;
+  if (v >= 1_000) return `$${(v / 1_000).toFixed(1)}K`;
   if (v < 1) return '—';
-  return `USD ${Math.round(v).toLocaleString()}`;
+  return `$${Math.round(v).toLocaleString()}`;
 }
 
 function fmtHours(h) {

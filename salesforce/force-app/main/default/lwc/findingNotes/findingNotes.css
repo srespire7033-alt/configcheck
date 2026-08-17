@@ -61,7 +61,7 @@
 .op-fn__count--warn { color: #d97706; }
 
 .op-fn__save {
-  background: var(--op-accent, #0b5cff);
+  background: #2563eb;
   color: #fff;
   border: 0;
   border-radius: 6px;

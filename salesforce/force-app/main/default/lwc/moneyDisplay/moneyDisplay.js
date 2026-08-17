@@ -36,7 +36,7 @@ export default class MoneyDisplay extends LightningElement {
     const sign = n < 0 ? '-' : '';
     const symbol = this.currency === 'USD' ? '$' : `${this.currency} `;
     if (abs >= 1_000_000) return `${sign}${symbol}${(abs / 1_000_000).toFixed(2)}M`;
-    if (abs >= 1_000) return `${sign}${symbol}${(abs / 1_000).toFixed(0)}K`;
+    if (abs >= 1_000) return `${sign}${symbol}${(abs / 1_000).toFixed(1)}K`;
     return `${sign}${symbol}${Math.round(abs).toLocaleString()}`;
   }
 

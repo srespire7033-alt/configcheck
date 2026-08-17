@@ -49,25 +49,24 @@
 .op-rq__group--expired   { border-left: 3px solid #ef4444; }
 
 .op-rq__group-header {
-  display: grid;
-  /* Phase 22v — 4 columns when a checkbox is rendered (selectable
-     group). 3-col grid wrapped the 4th item (group-total) onto a new
-     row, leaving the $0 floating alone below the header. The leading
-     `auto` makes the checkbox take its natural width and keeps the
-     remaining three items on the same row. */
-  grid-template-columns: auto 1fr auto auto;
+  /* Phase 25-E — flexbox so the header works for BOTH selectable groups
+     (leading checkbox present) and non-selectable ones, with no fragile
+     column-count override. The old grid hard-coded 4 columns and a
+     :not(pending):not(approved) override forced 3 — but Committed is ALSO
+     selectable (BULK_STATES = Pending/Approved/Committed), so its checkbox
+     made 4 cells land in the 3-track grid and the projected-$ total wrapped
+     below the header. With flex the checkbox/status/count/total lay out by
+     content and the status label flexes to fill, keeping count+total on the
+     same row regardless of whether the checkbox is present. */
+  display: flex;
   gap: 12px;
   align-items: center;
   padding: 10px 14px;
   background: var(--op-color-bg-page, #f9fafb);
   border-bottom: 1px solid var(--op-color-border-subtle, #f3f4f6);
 }
-/* Non-selectable groups (Committed/Expired/Rejected) have only 3
-   children — collapse the leading auto column so layout still aligns. */
-.op-rq__group:not(.op-rq__group--pending):not(.op-rq__group--approved) .op-rq__group-header {
-  grid-template-columns: 1fr auto auto;
-}
 .op-rq__group-status {
+  flex: 1 1 auto;
   font-weight: 700;
   font-size: 13px;
   color: var(--op-color-text-strong, #111827);
@@ -89,8 +88,13 @@
   padding: 0;
 }
 .op-rq__action {
-  display: grid;
-  grid-template-columns: 1fr auto auto;
+  /* Phase 25-E — flex, not grid. The checkbox (selectable groups) and the
+     verified badge are both conditionally rendered, so the child count
+     varies 2–4; the old 3-column grid put the checkbox in the flexible
+     column (shoving the title right) and wrapped the 4th cell on committed
+     rows. Flex + a flex:1 title keeps title elastic and the $ gap pinned
+     right for every combination. */
+  display: flex;
   gap: 12px;
   align-items: center;
   padding: 10px 14px;
@@ -105,6 +109,7 @@
   background: var(--op-color-bg-hover, rgba(0,0,0,0.04));
 }
 .op-rq__action-title {
+  flex: 1 1 auto;
   color: var(--op-color-text-body, #374151);
   min-width: 0;
   overflow: hidden;
@@ -141,7 +146,7 @@
   margin: 0 0 12px;
 }
 .op-rq__reverify-btn {
-  background: var(--op-accent, #0b5cff);
+  background: #2563eb;
   color: #fff;
   border: 0;
   border-radius: 6px;
@@ -161,7 +166,7 @@
   margin: 0 0 12px;
 }
 .op-rq__bulk-btn {
-  background: var(--op-accent, #0b5cff);
+  background: #2563eb;
   color: #fff;
   border: 0;
   border-radius: 6px;

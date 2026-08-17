@@ -298,9 +298,9 @@ export default class RiskCategoryCard extends NavigationMixin(LightningElement) 
 
   formatMoney(n) {
     const v = Number(n) || 0;
-    if (v >= 1_000_000) return `USD ${(v / 1_000_000).toFixed(2)}M`;
-    if (v >= 1_000) return `USD ${(v / 1_000).toFixed(1)}K`;
+    if (v >= 1_000_000) return `$${(v / 1_000_000).toFixed(2)}M`;
+    if (v >= 1_000) return `$${(v / 1_000).toFixed(1)}K`;
     if (v < 1) return 'USD 0';
-    return `USD ${Math.round(v).toLocaleString()}`;
+    return `$${Math.round(v).toLocaleString()}`;
   }
 }

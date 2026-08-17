@@ -113,7 +113,7 @@ export default class FindingsList extends NavigationMixin(LightningElement) {
   get formattedLeakage() {
     const n = this.scan?.TotalLeakageUsd__c || 0;
     if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(2)}M`;
-    if (n >= 1_000) return `$${(n / 1_000).toFixed(0)}K`;
+    if (n >= 1_000) return `$${(n / 1_000).toFixed(1)}K`;
     return `$${Math.round(n)}`;
   }
 

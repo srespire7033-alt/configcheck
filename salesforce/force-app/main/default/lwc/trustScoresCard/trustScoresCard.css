@@ -29,7 +29,7 @@
   color: var(--op-text-primary, #111827);
 }
 
-.op-ts__summary-value--accent { color: #0b5cff; }
+.op-ts__summary-value--accent { color: #2563eb; }
 
 .op-ts__summary-note {
   font-size: 0.78rem;

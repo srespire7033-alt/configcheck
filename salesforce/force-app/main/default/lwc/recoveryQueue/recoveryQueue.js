@@ -259,7 +259,7 @@ export default class RecoveryQueue extends NavigationMixin(LightningElement) {
   formatMoney(n) {
     const v = Number(n) || 0;
     if (v >= 1_000_000) return `$${(v / 1_000_000).toFixed(2)}M`;
-    if (v >= 1_000) return `$${(v / 1_000).toFixed(0)}K`;
+    if (v >= 1_000) return `$${(v / 1_000).toFixed(1)}K`;
     return `$${Math.round(v)}`;
   }
 

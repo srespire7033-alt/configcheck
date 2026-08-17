@@ -66,7 +66,7 @@ export default class ScanLauncher extends LightningElement {
     if (!this.totalLeakage) return '$0';
     const n = Number(this.totalLeakage);
     if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(2)}M`;
-    if (n >= 1_000) return `$${(n / 1_000).toFixed(0)}K`;
+    if (n >= 1_000) return `$${(n / 1_000).toFixed(1)}K`;
     return `$${Math.round(n)}`;
   }
 }
