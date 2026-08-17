@@ -9,7 +9,15 @@
   justify-content: center;
   padding: 24px;
 }
-.op-cim {
+/* Phase 25-E — selector was `.op-cim` but the element is `.op-cim__modal`
+   (BEM element, matching __backdrop/__header/__body). The mismatch meant the
+   container got NONE of its constraints: no max-width (rendered full-bleed),
+   no max-height:86vh (grew to full content height, forcing the whole Lightning
+   page to scroll), and no flex-column context — so .op-cim__body's
+   flex:1/min-height:0/overflow-y:auto never established a bounded scroll region
+   and the list itself refused to scroll. Aligning the selector restores all of
+   it: 920px centered card, viewport-bounded height, self-scrolling body. */
+.op-cim__modal {
   background: white;
   border-radius: 16px;
   width: 100%;
