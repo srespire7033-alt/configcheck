@@ -284,3 +284,24 @@ textarea:focus-visible,
   color: #1f2937;
 }
 
+
+/* Phase 28 — truncation notice. The list is capped at 200/500 rows; without
+   this the modal reads as the complete set and silently contradicts the
+   category card's real count. */
+.op-cim__truncated {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin: 0 0 12px;
+  padding: 8px 12px;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  font-size: 12px;
+  color: #1e3a8a;
+}
+.op-cim__truncated-icon {
+  flex-shrink: 0;
+  margin-top: 1px;
+  --sds-c-icon-color-foreground-default: #2563eb;
+}

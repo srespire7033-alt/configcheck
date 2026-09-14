@@ -93,7 +93,25 @@ export default class CategoryIssuesModal extends NavigationMixin(LightningElemen
     return this.categoryLabel ? `${this.categoryLabel} Issues` : 'Issues';
   }
   get totalCountLabel() {
-    return this.data ? `(${this.data.totalCount} total)` : '';
+    if (!this.data) return '';
+    const total = Number(this.data.totalCount) || 0;
+    const shown = this.data.shownCount == null ? total : Number(this.data.shownCount);
+    // Phase 28 — totalCount used to be the size of the TRUNCATED list, so this
+    // read "(200 total)" on a category the dashboard card showed as 1,783.
+    // Never imply completeness we don't have.
+    return this.data.truncated
+      ? `(showing ${shown.toLocaleString()} of ${total.toLocaleString()})`
+      : `(${total.toLocaleString()} total)`;
+  }
+  get isTruncated() {
+    return Boolean(this.data && this.data.truncated);
+  }
+  get truncatedNote() {
+    if (!this.isTruncated) return '';
+    const total = Number(this.data.totalCount) || 0;
+    const shown = Number(this.data.shownCount) || 0;
+    return `Showing the ${shown.toLocaleString()} highest-impact of ${total.toLocaleString()} findings.`
+      + ` Export the full list to see the rest.`;
   }
 
   get criticalCount() { return this.data?.critical?.length || 0; }

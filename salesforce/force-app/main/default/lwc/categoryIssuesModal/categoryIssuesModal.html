@@ -27,6 +27,13 @@
 
       <template if:true={hasData}>
         <div class="op-cim__body">
+          <!-- Phase 28 — the list is capped; say so instead of implying it is complete. -->
+          <template if:true={isTruncated}>
+            <div class="op-cim__truncated" role="status">
+              <lightning-icon icon-name="utility:info" size="xx-small" class="op-cim__truncated-icon"></lightning-icon>
+              <span>{truncatedNote}</span>
+            </div>
+          </template>
           <!-- Critical -->
           <template if:true={hasCritical}>
             <div class="op-cim__sec op-cim__sec--critical">

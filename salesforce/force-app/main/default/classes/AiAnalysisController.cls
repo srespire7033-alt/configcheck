@@ -229,13 +229,31 @@ public with sharing class AiAnalysisController {
             else if (f.Severity__c == 'Warning')  out.warning.add(r);
             else                                  out.info.add(r);
         }
-        out.totalCount = out.critical.size() + out.warning.size() + out.info.size();
+        // Phase 28 — the LIMIT above TRUNCATES, so size() is what we SHOWED, not
+        // what exists. Reporting it as "total" made the modal say "200 total" for
+        // a category the dashboard card correctly showed as 1,783 critical — the
+        // drill-down silently under-reported by 9x with no indication. Count for
+        // real and let the UI say "showing X of Y".
+        out.shownCount = out.critical.size() + out.warning.size() + out.info.size();
+        out.totalCount = [
+            SELECT COUNT() FROM ForensicFinding__c
+            WHERE ForensicScan__c = :scanId
+              AND DetectorId__c IN :matchingDetectors
+              AND HiddenAt__c = null
+            WITH SECURITY_ENFORCED
+        ];
+        out.truncated = out.shownCount < out.totalCount;
         return out;
     }
 
     public class CategoryIssuesDto {
         @AuraEnabled public String categoryLabel;
+        /** TRUE total matching the filter — NOT the number of rows returned. */
         @AuraEnabled public Integer totalCount;
+        /** How many rows this payload actually carries (capped by LIMIT). */
+        @AuraEnabled public Integer shownCount;
+        /** shownCount < totalCount — the UI must say so rather than imply completeness. */
+        @AuraEnabled public Boolean truncated;
         @AuraEnabled public List<IssueRow> critical;
         @AuraEnabled public List<IssueRow> warning;
         @AuraEnabled public List<IssueRow> info;
@@ -298,7 +316,16 @@ public with sharing class AiAnalysisController {
             else if (f.Severity__c == 'Warning')  out.warning.add(r);
             else                                  out.info.add(r);
         }
-        out.totalCount = out.critical.size() + out.warning.size() + out.info.size();
+        // Phase 28 — real count, not the truncated page size. See getCategoryIssues.
+        out.shownCount = out.critical.size() + out.warning.size() + out.info.size();
+        out.totalCount = [
+            SELECT COUNT() FROM ForensicFinding__c
+            WHERE ForensicScan__c = :scans[0].Id
+              AND DetectorId__c IN :detectorIds
+              AND HiddenAt__c = null
+            WITH SECURITY_ENFORCED
+        ];
+        out.truncated = out.shownCount < out.totalCount;
         return out;
     }
 
@@ -385,7 +412,16 @@ public with sharing class AiAnalysisController {
             else if (sevNorm == 'Warning') out.warning.add(r);
             else                           out.info.add(r);
         }
-        out.totalCount = out.critical.size() + out.warning.size() + out.info.size();
+        // Phase 28 — real count, not the truncated page size. See getCategoryIssues.
+        out.shownCount = out.critical.size() + out.warning.size() + out.info.size();
+        out.totalCount = [
+            SELECT COUNT() FROM ForensicFinding__c
+            WHERE ForensicScan__c = :scans[0].Id
+              AND Severity__c = :sevNorm
+              AND HiddenAt__c = null
+            WITH SECURITY_ENFORCED
+        ];
+        out.truncated = out.shownCount < out.totalCount;
         return out;
     }
 
