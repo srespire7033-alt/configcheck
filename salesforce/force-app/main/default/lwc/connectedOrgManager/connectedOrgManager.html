@@ -172,6 +172,15 @@
               </div>
             </template>
 
+            <!-- Phase 28 — empty-org guard: a clean scan here would be
+                 indistinguishable from a healthy org, so say so up front. -->
+            <template if:true={r.showNoData}>
+              <div class="op-co__card-nodata" role="status">
+                <lightning-icon icon-name="utility:warning" size="xx-small" class="op-co__nodata-icon"></lightning-icon>
+                <span class="op-co__nodata-label">{r.noDataNote}</span>
+              </div>
+            </template>
+
             <!-- secondary actions -->
             <div class="op-co__card-foot">
               <button

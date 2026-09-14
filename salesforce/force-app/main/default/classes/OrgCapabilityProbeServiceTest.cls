@@ -370,4 +370,49 @@ private class OrgCapabilityProbeServiceTest {
         for (Map<String, Object> f : fields) fieldList.add(f);
         return new Map<String, Object>{ 'fields' => fieldList };
     }
+
+    // ─── Phase 28 — empty-org guard ──────────────────────────────────
+    @isTest
+    static void summarizeAuditableData_trueWhenAnyObjectHasRows() {
+        System.assertEquals(true, OrgCapabilityProbeService.summarizeAuditableData(
+            new Map<String, Object>{ 'SBQQ__Quote__c' => false, 'Order' => true }),
+            'Any populated object means there IS something to audit');
+    }
+
+    @isTest
+    static void summarizeAuditableData_falseOnlyWhenEveryKnownProbeIsEmpty() {
+        System.assertEquals(false, OrgCapabilityProbeService.summarizeAuditableData(
+            new Map<String, Object>{ 'SBQQ__Quote__c' => false, 'Order' => false }),
+            'All known probes empty means nothing to audit');
+    }
+
+    @isTest
+    static void summarizeAuditableData_unknownNeverReadsAsEmpty() {
+        // The critical invariant: a perm-gated or failed probe is ABSENT from the
+        // map. An org we learned nothing about must stay null (UI quiet), never
+        // false (UI would brand a locked-down org "empty").
+        System.assertEquals(null, OrgCapabilityProbeService.summarizeAuditableData(null));
+        System.assertEquals(null, OrgCapabilityProbeService.summarizeAuditableData(
+            new Map<String, Object>()), 'No successful probe = unknown, not empty');
+        System.assertEquals(null, OrgCapabilityProbeService.summarizeAuditableData(
+            new Map<String, Object>{ 'ProductSellingModel' => 'threw' }),
+            'Non-Boolean entries are unknown, not empty');
+        System.assertEquals(true, OrgCapabilityProbeService.summarizeAuditableData(
+            new Map<String, Object>{ 'ProductSellingModel' => 'threw', 'Order' => true }),
+            'A known-populated object still wins over unknowns');
+    }
+
+    @isTest
+    static void probeDataBreadth_failedProbesAreAbsentNotFalse() {
+        // No packages installed -> only the universal Order probe is attempted.
+        // No HTTP mock is registered, so it throws and must land in "unknown"
+        // (absent from the map) rather than being recorded as false.
+        Test.startTest();
+        Map<String, Object> out = OrgCapabilityProbeService.probeDataBreadth(
+            'Stub_NoPkg',
+            new Map<String, Boolean>{ 'cpq' => false, 'arm' => false, 'blng' => false });
+        Test.stopTest();
+        System.assertEquals(0, out.size(), 'Failed probes must be absent, not false');
+        System.assertEquals(null, OrgCapabilityProbeService.summarizeAuditableData(out));
+    }
 }

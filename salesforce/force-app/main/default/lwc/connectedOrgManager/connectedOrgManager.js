@@ -176,6 +176,13 @@ export default class ConnectedOrgManager extends NavigationMixin(LightningElemen
       }
       const probedAtAgo = r.capabilityProbedAt ? fmtAgo(r.capabilityProbedAt) : null;
 
+      // Phase 28 — empty-org guard. An org with no transaction data scans to
+      // zero findings and a green health score, which reads as a clean bill of
+      // health when it actually means there was nothing to audit. Warn here,
+      // at the point of decision, BEFORE the scan. Strict === false so an
+      // UNKNOWN (perm-gated / never probed) stays silent rather than crying wolf.
+      const noData = Boolean(cap && cap.hasAuditableData === false);
+
       return {
         ...r,
         productChips: isNotScannable ? ['No Revenue Cloud'] : chips,
@@ -207,6 +214,8 @@ export default class ConnectedOrgManager extends NavigationMixin(LightningElemen
         capabilityLabel,
         probedAtAgo,
         showCapability: Boolean(capabilityLabel) && !isNotScannable,
+        showNoData: noData && !isNotScannable,
+        noDataNote: noData ? cap.dataNote : null,
         isProbing,
         probeBtnLabel: isProbing ? 'Checking…' : (r.capabilityProbedAt ? 'Re-check schema' : 'Check schema'),
         canProbe: isConnected && !isProbing && !isNotScannable,

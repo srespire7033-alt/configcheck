@@ -126,12 +126,84 @@ public with sharing class OrgCapabilityProbeService {
             }
         }
 
+        // 3. Phase 28 — data breadth. An EMPTY org and a HEALTHY org both scan
+        //    to zero findings and a green health score, which reads as a clean
+        //    bill of health when it actually means "there was nothing to audit".
+        //    This records whether the core transactional objects hold ANY rows
+        //    so the UI can say so. ANNOTATION ONLY — it must never gate a
+        //    detector, a scan, or the score.
+        Map<String, Object> dataBreadth = probeDataBreadth(namedCredentialName, packages);
+
         return new Map<String, Object>{
             'packages' => packages,
             'optionalFields' => optionalFields,
             'fieldScales' => fieldScales,
+            'dataBreadth' => dataBreadth,
+            'hasAuditableData' => summarizeAuditableData(dataBreadth),
             'probedAt' => String.valueOf(System.now())
         };
+    }
+
+    /**
+     * Phase 28 — per-object "does this hold any rows" probe, scoped to the
+     * stacks the org actually runs so we never spend a callout on an absent
+     * package. One cheap `SELECT Id ... LIMIT 1` each, at CONNECT time — never
+     * inside the scan, whose cumulative callout budget is already tight.
+     *
+     * TRI-STATE, and the distinction matters: true = has rows, false = queried
+     * successfully and found none, ABSENT = unknown. A thrown query (the object
+     * is permission-gated for the integration user, which is the normal state
+     * for RLM objects) MUST land in "unknown" and never in "false" — otherwise
+     * a locked-down org gets branded empty. Same lesson as detectInstalledProductType.
+     */
+    @TestVisible
+    static Map<String, Object> probeDataBreadth(String namedCredentialName, Map<String, Boolean> packages) {
+        List<String> targets = new List<String>();
+        if (packages.get('cpq') == true) {
+            targets.add('SBQQ__Quote__c');
+            targets.add('SBQQ__Subscription__c');
+        }
+        if (packages.get('arm') == true) {
+            targets.add('ProductSellingModel');
+            targets.add('Asset');
+        }
+        if (packages.get('blng') == true) {
+            targets.add('blng__Invoice__c');
+        }
+        targets.add('Order');   // meaningful for every stack
+
+        Map<String, Object> out = new Map<String, Object>();
+        for (String obj : targets) {
+            if (out.containsKey(obj)) continue;
+            try {
+                List<Map<String, Object>> rows = OrgQueryService.remoteQuery(
+                    namedCredentialName, 'SELECT Id FROM ' + obj + ' LIMIT 1');
+                out.put(obj, !rows.isEmpty());
+            } catch (Exception e) {
+                // Unknown — object missing, perm-gated, or transient failure.
+                // Deliberately NOT recorded as false.
+                System.debug(LoggingLevel.WARN,
+                    '[OrgPrism] Data-breadth probe ' + obj + ' unknown: ' + e.getMessage());
+            }
+        }
+        return out;
+    }
+
+    /**
+     * Phase 28 — true if ANY probed object holds rows; false only when at least
+     * one probe SUCCEEDED and every successful probe came back empty; null when
+     * we learned nothing at all (so the UI stays quiet rather than crying wolf).
+     */
+    @TestVisible
+    static Boolean summarizeAuditableData(Map<String, Object> dataBreadth) {
+        if (dataBreadth == null || dataBreadth.isEmpty()) return null;
+        Boolean anyKnown = false;
+        for (Object v : dataBreadth.values()) {
+            if (!(v instanceof Boolean)) continue;
+            anyKnown = true;
+            if ((Boolean) v) return true;
+        }
+        return anyKnown ? false : null;
     }
 
     /**
@@ -198,6 +270,11 @@ public with sharing class OrgCapabilityProbeService {
         @AuraEnabled public Boolean profiled;          // false when org has never been probed
         @AuraEnabled public Datetime probedAt;
         @AuraEnabled public Map<String, Applicability> decisions;
+        // Phase 28 — data breadth. null = unknown (UI stays quiet), false = the
+        // org holds no auditable transaction data, true = there is something to
+        // audit. Annotation only; never gates anything.
+        @AuraEnabled public Boolean hasAuditableData;
+        @AuraEnabled public String dataNote;
     }
 
     /**
@@ -334,6 +411,37 @@ public with sharing class OrgCapabilityProbeService {
             dto.total++;
             if (a.applicable) dto.applicable++;
             else dto.skipped++;
+        }
+
+        // Phase 28 — surface data breadth so an EMPTY org is distinguishable
+        // from a HEALTHY one. Both scan to zero findings and a green score;
+        // only this tells them apart.
+        if (String.isNotBlank(rows[0].CapabilityProfileJson__c)) {
+            try {
+                Map<String, Object> profile =
+                    (Map<String, Object>) JSON.deserializeUntyped(rows[0].CapabilityProfileJson__c);
+                Object had = profile.get('hasAuditableData');
+                if (had instanceof Boolean) {
+                    dto.hasAuditableData = (Boolean) had;
+                    if (!(Boolean) had) {
+                        List<String> empties = new List<String>();
+                        Object db = profile.get('dataBreadth');
+                        if (db instanceof Map<String, Object>) {
+                            for (String k : ((Map<String, Object>) db).keySet()) {
+                                Object v = ((Map<String, Object>) db).get(k);
+                                if (v instanceof Boolean && !(Boolean) v) empties.add(k);
+                            }
+                        }
+                        empties.sort();
+                        dto.dataNote = 'No transaction data found'
+                            + (empties.isEmpty() ? '' : ' (' + String.join(empties, ', ') + ' all empty)')
+                            + ' — a scan will have nothing to audit, so a clean result here does not mean a healthy org.';
+                    }
+                }
+            } catch (Exception e) {
+                System.debug(LoggingLevel.WARN,
+                    '[OrgPrism] dataBreadth read failed: ' + e.getMessage());
+            }
         }
         return dto;
     }
