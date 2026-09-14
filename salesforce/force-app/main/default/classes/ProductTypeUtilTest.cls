@@ -84,13 +84,61 @@ private class ProductTypeUtilTest {
 
     @isTest
     static void detect_dualStackReturnsTheUnion() {
-        System.assertEquals('CPQ;ARM',
-            detectWith(new Set<String>{ 'SBQQ__Quote__c', 'ProductSellingModel' }),
-            'The fix: acknowledge both stacks instead of arbitrating');
+        // Billing needs no usage probe — blng__BillingRule__c only exists if the
+        // managed package is installed, unlike the standard ProductSellingModel.
         System.assertEquals('CPQ;CPQ+Billing',
             detectWith(new Set<String>{ 'SBQQ__Quote__c', 'blng__BillingRule__c' }));
-        System.assertEquals('CPQ;CPQ+Billing;ARM',
-            detectWith(new Set<String>{ 'SBQQ__Quote__c', 'blng__BillingRule__c', 'ProductSellingModel' }));
+    }
+
+    /** Controls whether the ARM-usage probe sees any ProductSellingModel rows. */
+    private class PsmMock implements HttpCalloutMock {
+        private final String body;
+        private PsmMock(String b) { this.body = b; }
+        public HttpResponse respond(HttpRequest req) {
+            HttpResponse r = new HttpResponse();
+            r.setStatusCode(200);
+            r.setBody(this.body);
+            return r;
+        }
+    }
+
+    @isTest
+    static void detect_armProvisionedButEmpty_dropsArm() {
+        // The SmartSheet case: CPQ package installed, Revenue Cloud merely
+        // PROVISIONED, zero selling models. Before this, ARM-001 ("active
+        // products have no selling model") flagged 1,810 products critical in
+        // an org that simply does not use ARM.
+        Test.setMock(HttpCalloutMock.class, new PsmMock('{"records":[]}'));
+        System.assertEquals('CPQ',
+            detectWith(new Set<String>{ 'SBQQ__Quote__c', 'ProductSellingModel' }),
+            'Provisioned-but-unused ARM must not contribute the ARM token');
+    }
+
+    @isTest
+    static void detect_armInUse_keepsBothStacks() {
+        Test.setMock(HttpCalloutMock.class,
+            new PsmMock('{"records":[{"Id":"0Pm000000000001AAA"}]}'));
+        System.assertEquals('CPQ;ARM',
+            detectWith(new Set<String>{ 'SBQQ__Quote__c', 'ProductSellingModel' }),
+            'A genuinely dual-stack org keeps both families');
+    }
+
+    @isTest
+    static void detect_armProbeThrows_keepsArm() {
+        // No mock registered -> the callout throws -> UNKNOWN. This is the
+        // permission-gated ARM org (ProductSellingModel present but not
+        // SOQL-queryable); demoting it on a throw would be the real bug.
+        System.assertEquals('CPQ;ARM',
+            detectWith(new Set<String>{ 'SBQQ__Quote__c', 'ProductSellingModel' }),
+            'A throw is UNKNOWN, never "no rows" — ARM must survive');
+    }
+
+    @isTest
+    static void detect_armOnlyOrgNeverProbesOrDemotes() {
+        // hasCpq is false, so there is no ambiguity and no callout to make.
+        System.assertEquals('ARM',
+            detectWith(new Set<String>{ 'ProductSellingModel' }),
+            'An ARM-only org stays ARM even with an empty surface');
     }
 
     @isTest

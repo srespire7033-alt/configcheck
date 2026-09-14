@@ -175,6 +175,38 @@ public with sharing class OrgQueryService {
         // produced by weak or absent evidence of any other kind.
         if (!hasCpq && !hasBilling && !hasArm) return 'None';
 
+        // Phase 28 — ProductSellingModel is a STANDARD object that exists whenever
+        // Revenue Cloud is merely PROVISIONED, so its presence alone is not proof
+        // the customer runs ARM. A real CPQ customer (SmartSheet) was labelled ARM
+        // on that basis and ARM-001 ("active products have no selling model")
+        // flagged 1,810 products critical — every active product in an org that
+        // has no selling models because it does not use ARM.
+        //
+        // So when BOTH stacks look present, spend ONE callout to ask whether the
+        // ARM surface is actually populated, and demote ARM only on POSITIVE
+        // knowledge that it is empty. The asymmetry is deliberate and load-bearing:
+        //   0 rows (known)  -> provisioned but unused -> drop ARM
+        //   has rows        -> genuinely dual-stack   -> keep ARM
+        //   query THREW     -> UNKNOWN                -> keep ARM
+        // The throw case is why this calls remoteQuery DIRECTLY rather than
+        // query/queryWithFallback: isSchemaVarianceError collapses INVALID_TYPE
+        // into an empty list, which is indistinguishable from "zero rows" and
+        // would demote a permission-gated ARM org (our Ksolves org is exactly
+        // that: ProductSellingModel present but not SOQL-queryable).
+        // Only runs in the ambiguous case, so single-stack orgs cost nothing.
+        if (hasCpq && hasArm) {
+            try {
+                if (remoteQuery(namedCredentialName,
+                        'SELECT Id FROM ProductSellingModel LIMIT 1').isEmpty()) {
+                    hasArm = false;
+                }
+            } catch (Exception e) {
+                // UNKNOWN — perm-gated or transient. Keep ARM; never demote on a throw.
+                System.debug(LoggingLevel.WARN,
+                    '[OrgPrism] ARM usage probe unknown, keeping ARM: ' + e.getMessage());
+            }
+        }
+
         // Phase 27 — return the honest SET, not an arbitrated winner. An org can
         // genuinely run CPQ and ARM together (a CPQ customer mid-migration to
         // Revenue Cloud is the normal case, not an edge case). The old code

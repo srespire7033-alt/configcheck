@@ -294,4 +294,54 @@ private class AiAnalysisControllerTest {
         System.assertEquals(1, b.critical.size());
         System.assertEquals('B-001', b.critical[0].detectorId);
     }
+
+    /**
+     * Phase 28 — paging. The drill-down capped at 200 rows and reported that cap
+     * as the total, so a detector with 905 findings showed "200 total" and the
+     * rest were unreachable.
+     */
+    @isTest
+    static void loadIssuesPage_pagesThroughAndReportsTrueTotals() {
+        ForensicScan__c scan = new ForensicScan__c(
+            Status__c='Completed', CompletedAt__c=System.now(),
+            TotalLeakageUsd__c=0, FindingCount__c=5);
+        insert scan;
+        List<ForensicFinding__c> fs = new List<ForensicFinding__c>();
+        for (Integer i = 0; i < 5; i++) {
+            fs.add(new ForensicFinding__c(
+                ForensicScan__c=scan.Id, DetectorId__c='ORD-FOR-001',
+                PrimaryRecordId__c='r' + i, Title__c='F' + i, Severity__c='Critical',
+                GapUsd__c=1000 - i, EntitledUsd__c=1000, RealizedUsd__c=0,
+                Status__c='Open', DetectedAt__c=System.now()));
+        }
+        insert fs;
+
+        Test.startTest();
+        AiAnalysisController.CategoryIssuesDto p1 =
+            AiAnalysisController.loadIssuesPage('detectors', 'ORD-FOR-001', null, 0, 2);
+        AiAnalysisController.CategoryIssuesDto p2 =
+            AiAnalysisController.loadIssuesPage('detectors', 'ORD-FOR-001', null, 2, 2);
+        AiAnalysisController.CategoryIssuesDto capped =
+            AiAnalysisController.loadIssuesPage('detectors', 'ORD-FOR-001', null, 2500, 200);
+        AiAnalysisController.CategoryIssuesDto sev =
+            AiAnalysisController.loadIssuesPage('severity', 'critical', null, 0, 200);
+        Test.stopTest();
+
+        System.assertEquals(2, p1.critical.size(), 'Page size honoured');
+        System.assertEquals(5, p1.totalCount, 'Total is the REAL count, not the page size');
+        System.assertEquals(true, p1.truncated, 'More rows remain after page 1');
+        System.assertEquals(5, p1.detectorCounts.get('ORD-FOR-001'),
+            'Group badge must show the true per-detector count');
+
+        System.assertEquals(2, p2.critical.size());
+        System.assertEquals(2, p2.offsetUsed, 'Offset echoed back as the paging cursor');
+        // Page 2 must not repeat page 1 (deterministic ORDER BY ... , Id).
+        System.assertNotEquals(p1.critical[0].id, p2.critical[0].id, 'Pages must not overlap');
+
+        System.assertEquals(true, capped.offsetCapped,
+            'Past SOQL OFFSET 2000 we stop and say so rather than silently returning nothing');
+        System.assertEquals(0, capped.shownCount);
+
+        System.assertEquals(5, sev.critical.size(), 'Severity mode pages too');
+    }
 }

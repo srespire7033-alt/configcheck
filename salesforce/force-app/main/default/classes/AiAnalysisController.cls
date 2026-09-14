@@ -243,6 +243,8 @@ public with sharing class AiAnalysisController {
             WITH SECURITY_ENFORCED
         ];
         out.truncated = out.shownCount < out.totalCount;
+        out.detectorCounts = countsFor(scanId, matchingDetectors, null);
+        out.offsetUsed = 0;
         return out;
     }
 
@@ -254,6 +256,12 @@ public with sharing class AiAnalysisController {
         @AuraEnabled public Integer shownCount;
         /** shownCount < totalCount — the UI must say so rather than imply completeness. */
         @AuraEnabled public Boolean truncated;
+        /** TRUE per-detector totals — group badges must not show the page size. */
+        @AuraEnabled public Map<String, Integer> detectorCounts;
+        /** Offset this page started at; the LWC's paging cursor. */
+        @AuraEnabled public Integer offsetUsed;
+        /** Hit SOQL's 2000-row OFFSET ceiling — direct the user to the CSV export. */
+        @AuraEnabled public Boolean offsetCapped;
         @AuraEnabled public List<IssueRow> critical;
         @AuraEnabled public List<IssueRow> warning;
         @AuraEnabled public List<IssueRow> info;
@@ -326,6 +334,8 @@ public with sharing class AiAnalysisController {
             WITH SECURITY_ENFORCED
         ];
         out.truncated = out.shownCount < out.totalCount;
+        out.detectorCounts = countsFor(scans[0].Id, new Set<String>(detectorIds), null);
+        out.offsetUsed = 0;
         return out;
     }
 
@@ -422,6 +432,131 @@ public with sharing class AiAnalysisController {
             WITH SECURITY_ENFORCED
         ];
         out.truncated = out.shownCount < out.totalCount;
+        out.detectorCounts = countsFor(scans[0].Id, null, sevNorm);
+        out.offsetUsed = 0;
+        return out;
+    }
+
+    /**
+     * Phase 28 — TRUE per-detector counts. The row queries above are capped, so
+     * the modal's group badges and "N records affected" were reporting the PAGE
+     * SIZE (200) rather than the real total (905 for ARM-001). One aggregate,
+     * no row cap, so the badges stop lying.
+     */
+    private static Map<String, Integer> countsFor(Id scanId, Set<String> detectorFilter, String sevFilter) {
+        Map<String, Integer> out = new Map<String, Integer>();
+        String soql = 'SELECT DetectorId__c did, COUNT(Id) c FROM ForensicFinding__c'
+                    + ' WHERE ForensicScan__c = :scanId AND HiddenAt__c = null';
+        if (detectorFilter != null && !detectorFilter.isEmpty()) soql += ' AND DetectorId__c IN :detectorFilter';
+        if (String.isNotBlank(sevFilter))                        soql += ' AND Severity__c = :sevFilter';
+        soql += ' WITH SECURITY_ENFORCED GROUP BY DetectorId__c';
+        for (AggregateResult ar : Database.query(soql)) {
+            Object did = ar.get('did');
+            if (did != null) out.put(String.valueOf(did), (Integer) ar.get('c'));
+        }
+        return out;
+    }
+
+    /** Shared row mapper so the paging query matches the first-page shape exactly. */
+    private static IssueRow mapRow(ForensicFinding__c f) {
+        IssueRow r = new IssueRow();
+        r.id = f.Id;
+        r.detectorId = f.DetectorId__c;
+        r.title = f.Title__c;
+        r.description = f.Description__c;
+        r.severity = f.Severity__c;
+        r.status = f.Status__c;
+        r.gapUsd = f.GapUsd__c == null ? 0 : f.GapUsd__c;
+        r.primaryRecordId = f.PrimaryRecordId__c;
+        r.primaryRecordType = f.PrimaryRecordType__c;
+        return r;
+    }
+
+    /** Latest Completed/Partial scan, optionally scoped to a Connected Org. */
+    private static Id latestScanId(Id connectedOrgId) {
+        List<ForensicScan__c> scans = connectedOrgId != null
+            ? [SELECT Id FROM ForensicScan__c
+               WHERE Status__c IN ('Completed','Partial') AND ConnectedOrg__c = :connectedOrgId
+               WITH SECURITY_ENFORCED ORDER BY CompletedAt__c DESC NULLS LAST LIMIT 1]
+            : [SELECT Id FROM ForensicScan__c
+               WHERE Status__c IN ('Completed','Partial')
+               WITH SECURITY_ENFORCED ORDER BY CompletedAt__c DESC NULLS LAST LIMIT 1];
+        return scans.isEmpty() ? null : scans[0].Id;
+    }
+
+    /**
+     * Phase 28 — next page of drill-down rows. The modal capped at 200 and could
+     * not show the rest, and because the cap is applied after ORDER BY GapUsd DESC,
+     * a single high-volume detector (ARM-001, 905 rows) swallowed the whole page
+     * and hid every other detector in the category outright.
+     *
+     * mode: 'category' (key = category label) | 'detectors' (key = comma-separated
+     * detector ids) | 'severity' (key = critical|warning|info).
+     *
+     * NOTE: SOQL OFFSET is hard-capped at 2000 by the platform. Past that we stop
+     * and tell the caller to use the CSV export rather than silently returning
+     * nothing — the same "never imply completeness" rule as the header count.
+     */
+    @AuraEnabled
+    public static CategoryIssuesDto loadIssuesPage(String mode, String key, Id connectedOrgId,
+                                                   Integer offsetRows, Integer pageSize) {
+        CategoryIssuesDto out = new CategoryIssuesDto();
+        out.critical = new List<IssueRow>();
+        out.warning  = new List<IssueRow>();
+        out.info     = new List<IssueRow>();
+        out.totalCount = 0;
+        out.shownCount = 0;
+        out.truncated = false;
+
+        Integer lim = (pageSize == null || pageSize <= 0) ? 200 : Math.min(pageSize, 200);
+        Integer off = (offsetRows == null || offsetRows < 0) ? 0 : offsetRows;
+        out.offsetUsed = off;
+        if (off >= 2000) {                     // platform ceiling
+            out.offsetCapped = true;
+            return out;
+        }
+        if (off + lim > 2000) lim = 2000 - off;
+
+        Id scanId = latestScanId(connectedOrgId);
+        if (scanId == null) return out;
+
+        Set<String> detectorFilter = new Set<String>();
+        String sevFilter = null;
+        if (mode == 'detectors' && String.isNotBlank(key)) {
+            for (String d : key.split(',')) if (String.isNotBlank(d.trim())) detectorFilter.add(d.trim());
+        } else if (mode == 'category' && String.isNotBlank(key)) {
+            for (String det : DETECTOR_LABEL.keySet()) {
+                if (DETECTOR_LABEL.get(det) == key) detectorFilter.add(det);
+            }
+        } else if (mode == 'severity' && String.isNotBlank(key)) {
+            String k = key.toLowerCase();
+            if (k == 'critical') sevFilter = 'Critical';
+            else if (k == 'warning') sevFilter = 'Warning';
+            else sevFilter = 'Info';
+        }
+        if (mode != 'severity' && detectorFilter.isEmpty()) return out;
+
+        String soql = 'SELECT Id, Name, Title__c, Description__c, DetectorId__c, Severity__c, Status__c,'
+                    + ' GapUsd__c, EntitledUsd__c, RealizedUsd__c, PrimaryRecordId__c,'
+                    + ' PrimaryRecordType__c, RecoverabilityScore__c FROM ForensicFinding__c'
+                    + ' WHERE ForensicScan__c = :scanId AND HiddenAt__c = null';
+        if (!detectorFilter.isEmpty())    soql += ' AND DetectorId__c IN :detectorFilter';
+        if (String.isNotBlank(sevFilter)) soql += ' AND Severity__c = :sevFilter';
+        soql += ' WITH SECURITY_ENFORCED ORDER BY GapUsd__c DESC NULLS LAST, Id'
+              + ' LIMIT :lim OFFSET :off';
+
+        for (ForensicFinding__c f : Database.query(soql)) {
+            IssueRow r = mapRow(f);
+            if (f.Severity__c == 'Critical')     out.critical.add(r);
+            else if (f.Severity__c == 'Warning') out.warning.add(r);
+            else                                 out.info.add(r);
+        }
+        out.shownCount = out.critical.size() + out.warning.size() + out.info.size();
+        out.detectorCounts = countsFor(scanId, detectorFilter, sevFilter);
+        Integer total = 0;
+        for (Integer c : out.detectorCounts.values()) total += c;
+        out.totalCount = total;
+        out.truncated = (off + out.shownCount) < total;
         return out;
     }
 
