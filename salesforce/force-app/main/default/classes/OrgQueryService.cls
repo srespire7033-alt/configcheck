@@ -25,16 +25,20 @@
 public with sharing class OrgQueryService {
 
     @TestVisible static String API_VERSION = 'v60.0';
-    private static final Integer CALLOUT_TIMEOUT_MS = 120000;
+    // Phase 26 — 20s per callout. At 120s a single slow callout could burn the
+    // entire 120s CUMULATIVE per-transaction callout budget, starving every
+    // detector query that follows it.
+    private static final Integer CALLOUT_TIMEOUT_MS = 20000;
 
     public class OrgQueryException extends Exception {}
 
     /**
      * Phase 24z — Remote schema probe cache.
      *
-     * Keyed by Named Credential name → Set of SObject API names present
-     * on that remote org. Loaded lazily with a single GET to
-     * /services/data/v60.0/sobjects/ and pinned for the rest of the
+     * Keyed by Named Credential name → Set of SObject API names present on
+     * that remote org, RESTRICTED to surfacesOfInterest() (Phase 26 — it used
+     * to be every SObject in the org, which blew the heap). Loaded lazily with
+     * a single targeted EntityDefinition /query and pinned for the rest of the
      * transaction so 200+ detector gating checks share one callout.
      *
      * A null value (vs an empty Set) is the "probe failed" sentinel —
@@ -46,47 +50,85 @@ public with sharing class OrgQueryService {
     @TestVisible private static Map<String, Set<String>> remoteSObjectCache = new Map<String, Set<String>>();
 
     /**
-     * Phase 24z — Returns the Set of SObject API names exposed by the
-     * remote org behind the given Named Credential, or null if the
-     * probe failed. Cached per-transaction. Caller should treat null as
-     * "fail open" (don't gate detectors out).
+     * Phase 26 — the exact set of names we ASKED EntityDefinition about,
+     * per Named Credential. getRemoteSObjectNames no longer returns every
+     * SObject in the remote org (that payload blew the Apex heap — see
+     * below), so "absent from the returned Set" is only meaningful for
+     * names we actually queried. remoteSObjectExists uses this to fail
+     * open for anything outside the asked-for union.
+     */
+    @TestVisible private static Map<String, Set<String>> requestedNameCache = new Map<String, Set<String>>();
+
+    /**
+     * Phase 26 — every SObject API name OrgPrism needs to gate on, built at
+     * runtime (never hardcoded — RequiredSurface__c is customer-editable
+     * metadata). Union of: product-type marker objects, approval-package
+     * markers, OrgCapabilityProbeService's FIELDS_OF_INTEREST keys, and
+     * every token in Detector__mdt.RequiredSurface__c.
+     */
+    @TestVisible
+    static Set<String> surfacesOfInterest() {
+        Set<String> want = new Set<String>{
+            'SBQQ__Quote__c', 'blng__BillingRule__c', 'ProductSellingModel',
+            'sbaa__ApprovalRule__c', 'SBQQ__ApprovalRule__c'
+        };
+        want.addAll(OrgCapabilityProbeService.probeSObjects());
+        for (Detector__mdt d : [SELECT RequiredSurface__c FROM Detector__mdt WHERE RequiredSurface__c != null]) {
+            for (String t : d.RequiredSurface__c.split(';')) {
+                if (String.isNotBlank(t.trim())) want.add(t.trim());
+            }
+        }
+        return want;
+    }
+
+    /**
+     * Phase 26 — Returns the Set of SObject API names, FROM OUR
+     * SURFACES-OF-INTEREST LIST, that exist on the remote org behind the
+     * given Named Credential; null if the probe failed. Cached per-tx.
+     * Caller should treat null as "fail open" (don't gate detectors out).
+     *
+     * Phase 26 rewrite (heap fix): this used to GET /services/data/vXX/sobjects/
+     * — the remote org's ENTIRE sObject catalog — and JSON.deserializeUntyped
+     * the whole body, holding the raw String and the parsed object graph live
+     * at once. Measured bodies: 1.5 MB on a dev-ed org, 4.6 MB on a large
+     * production org. Apex Strings are UTF-16, so on a big org that String
+     * alone exceeded the 6 MB synchronous heap before parsing even began.
+     * The resulting "Apex heap size too large" is a System.LimitException,
+     * which is UNCATCHABLE — it killed the entire connect transaction before
+     * ConnectedOrg__c was ever saved, so an org that authenticated perfectly
+     * still showed as failed. Replaced with one targeted EntityDefinition
+     * query: ~2 KB, flat, independent of remote org size.
      */
     public static Set<String> getRemoteSObjectNames(String namedCredentialName) {
         if (String.isBlank(namedCredentialName)) return null;
         if (remoteSObjectCache.containsKey(namedCredentialName)) {
             return remoteSObjectCache.get(namedCredentialName);
         }
+        Set<String> want = surfacesOfInterest();
         Set<String> names = null;
         try {
-            HttpRequest req = new HttpRequest();
-            req.setEndpoint('callout:' + namedCredentialName + '/services/data/' + API_VERSION + '/sobjects/');
-            req.setMethod('GET');
-            req.setHeader('Accept', 'application/json');
-            req.setTimeout(CALLOUT_TIMEOUT_MS);
-            HttpResponse res = new Http().send(req);
-            if (res.getStatusCode() == 200) {
-                names = new Set<String>();
-                Map<String, Object> body = (Map<String, Object>) JSON.deserializeUntyped(res.getBody());
-                Object sobjs = body.get('sobjects');
-                if (sobjs instanceof List<Object>) {
-                    for (Object o : (List<Object>) sobjs) {
-                        if (o instanceof Map<String, Object>) {
-                            Object n = ((Map<String, Object>) o).get('name');
-                            if (n instanceof String && String.isNotBlank((String) n)) {
-                                names.add((String) n);
-                            }
-                        }
-                    }
+            List<String> quoted = new List<String>();
+            for (String s : want) quoted.add('\'' + String.escapeSingleQuotes(s) + '\'');
+            // EntityDefinition does not support queryMore() — always LIMIT.
+            String soql = 'SELECT QualifiedApiName FROM EntityDefinition WHERE QualifiedApiName IN ('
+                        + String.join(quoted, ',') + ') LIMIT 2000';
+            names = new Set<String>();
+            for (Map<String, Object> r : remoteQuery(namedCredentialName, soql)) {
+                Object n = r.get('QualifiedApiName');
+                if (n instanceof String && String.isNotBlank((String) n)) {
+                    names.add((String) n);
                 }
-            } else {
-                System.debug(LoggingLevel.WARN,
-                    '[OrgPrism] Schema probe HTTP ' + res.getStatusCode() + ' on ' + namedCredentialName);
             }
         } catch (Exception e) {
+            // remoteQuery THROWS on non-200 where the old inline callout returned
+            // null. Restore the null "probe failed" sentinel so callers still fail
+            // open instead of gating every detector off on a transient error.
+            names = null;
             System.debug(LoggingLevel.WARN,
                 '[OrgPrism] Schema probe failed for ' + namedCredentialName + ': ' + e.getMessage());
         }
         remoteSObjectCache.put(namedCredentialName, names);
+        requestedNameCache.put(namedCredentialName, (names == null) ? null : want);
         return names;
     }
 
@@ -112,11 +154,11 @@ public with sharing class OrgQueryService {
      *                      NOT overwrite the existing ProductType__c since
      *                      we genuinely don't know what's on the target.
      *
-     * Why marker SObjects instead of the Installed Packages list: the probe
-     * we already make is /sobjects/, which lists *every* SObject the user
-     * can see — including those that come with managed packages. One
-     * marker per tier is enough; we don't need the full installed-packages
-     * REST call.
+     * Why marker SObjects instead of the Installed Packages list: the probe we
+     * already make asks EntityDefinition whether specific package objects
+     * exist. One marker per tier is enough; we don't need the full
+     * installed-packages REST call. (Phase 26: the markers below are included
+     * in surfacesOfInterest(), so they are always among the names queried.)
      */
     public static String detectInstalledProductType(String namedCredentialName) {
         Set<String> names = getRemoteSObjectNames(namedCredentialName);
@@ -136,6 +178,11 @@ public with sharing class OrgQueryService {
         if (String.isBlank(namedCredentialName)) return true;
         Set<String> names = getRemoteSObjectNames(namedCredentialName);
         if (names == null) return true; // probe failed → fail open
+        // Phase 26 — the probe now only asks EntityDefinition about
+        // surfacesOfInterest(), so a name we never queried is "unknown", not
+        // "absent". Fail open rather than silently gating a detector off.
+        Set<String> asked = requestedNameCache.get(namedCredentialName);
+        if (asked == null || !asked.contains(objName)) return true;
         return names.contains(objName);
     }
 
@@ -243,8 +290,9 @@ public with sharing class OrgQueryService {
         return out;
     }
 
-    @TestVisible
-    private static List<Map<String, Object>> remoteQuery(String namedCredentialName, String soql) {
+    // Phase 26 — public so OrgCapabilityProbeService can run its targeted
+    // EntityParticle field probe through the same transport.
+    public static List<Map<String, Object>> remoteQuery(String namedCredentialName, String soql) {
         String encoded = EncodingUtil.urlEncode(soql, 'UTF-8');
         HttpRequest req = new HttpRequest();
         req.setEndpoint('callout:' + namedCredentialName + '/services/data/' + API_VERSION + '/query/?q=' + encoded);

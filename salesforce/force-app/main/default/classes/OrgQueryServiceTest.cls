@@ -41,16 +41,19 @@ private class OrgQueryServiceTest {
 
     @isTest
     static void remoteSObjectExists_probeSucceeds_returnsTrueForKnownFalseForUnknown() {
-        // Mock /sobjects/ response listing Account + Product2 only.
-        String body = '{"sobjects":[{"name":"Account"},{"name":"Product2"},{"name":"Pricebook2"}]}';
+        // Phase 26 — the probe is now a targeted EntityDefinition /query, so the
+        // mock returns the /query records shape. Contract is in surfacesOfInterest()
+        // (a FIELDS_OF_INTEREST key); ProductSellingModel is a product-type marker.
+        // Both are therefore "asked for", so absence is meaningful for both.
+        String body = '{"records":[{"QualifiedApiName":"Contract"},{"QualifiedApiName":"Product2"}]}';
         Test.setMock(HttpCalloutMock.class, new SObjectsMock(200, body));
         Test.startTest();
-        Boolean accountExists = OrgQueryService.remoteSObjectExists('TestCred24z', 'Account');
+        Boolean contractExists = OrgQueryService.remoteSObjectExists('TestCred24z', 'Contract');
         Boolean armExists = OrgQueryService.remoteSObjectExists('TestCred24z', 'ProductSellingModel');
         Test.stopTest();
-        System.assertEquals(true, accountExists, 'Account is in the probe response');
+        System.assertEquals(true, contractExists, 'Contract is in the probe response');
         System.assertEquals(false, armExists,
-            'ProductSellingModel absent → detector should be gated out');
+            'ProductSellingModel was queried and is absent → detector should be gated out');
     }
 
     @isTest
@@ -66,13 +69,13 @@ private class OrgQueryServiceTest {
 
     @isTest
     static void getRemoteSObjectNames_cachedAcrossCalls() {
-        String body = '{"sobjects":[{"name":"Account"}]}';
+        String body = '{"records":[{"QualifiedApiName":"Contract"}]}';
         Test.setMock(HttpCalloutMock.class, new SObjectsMock(200, body));
         Test.startTest();
         Set<String> first = OrgQueryService.getRemoteSObjectNames('CacheCred24z');
         Set<String> second = OrgQueryService.getRemoteSObjectNames('CacheCred24z');
         Test.stopTest();
-        System.assert(first != null && first.contains('Account'));
+        System.assert(first != null && first.contains('Contract'));
         // Second call returned from cache — same Set instance, no second callout.
         System.assertEquals(first, second);
     }

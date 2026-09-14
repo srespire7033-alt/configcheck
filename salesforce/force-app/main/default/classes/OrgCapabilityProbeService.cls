@@ -49,9 +49,10 @@ public with sharing class OrgCapabilityProbeService {
         'Contract' => new Set<String>{ 'SBQQ__MasterContract__c' }
     };
 
-    /** SObjects we send a describe callout for (derived from the map above). */
-    @TestVisible
-    static List<String> probeSObjects() {
+    /** SObjects we probe fields on (derived from the map above).
+     *  Phase 26 — public so OrgQueryService.surfacesOfInterest() can fold
+     *  these into its single EntityDefinition existence query. */
+    public static List<String> probeSObjects() {
         return new List<String>(FIELDS_OF_INTEREST.keySet());
     }
 
@@ -134,32 +135,49 @@ public with sharing class OrgCapabilityProbeService {
     }
 
     /**
-     * Fetch the /sobjects/{name}/describe payload for a single SObject
-     * on the remote org. Cached per-tx via testStubDescribes seam (tests)
-     * or fresh callout (production).
+     * Fetch the allowlisted fields (name + scale) for a single SObject on the
+     * remote org, shaped as {'fields' => [{'name','scale'}]} — the same shape
+     * the old /sobjects/{name}/describe payload was reduced to. Served from the
+     * testStubDescribes seam in tests, or a targeted EntityParticle query in
+     * production (Phase 26 — see the note in the body).
      */
     @TestVisible
     static Map<String, Object> fetchDescribe(String namedCredentialName, String sobj) {
         if (testStubDescribes != null) {
             return testStubDescribes.get(sobj);
         }
+        // Phase 26 (heap fix) — this was GET /sobjects/{name}/describe: the FULL
+        // describe payload (measured 310 KB for SBQQ__QuoteLine__c on a stock dev
+        // org, far more on a customised one) downloaded and deserialized whole
+        // just to read ~6 field names and their scale. Replaced with a targeted
+        // EntityParticle query. EntityParticle.Scale was verified byte-identical
+        // to describe's `scale` on the exact fields QL-005 gates, and the
+        // EntityParticle field set matched describe 148/148 on QuoteLine.
+        // The return shape is deliberately unchanged ({'fields' => [{'name','scale'}]})
+        // so buildProfile's extraction loop and the testStubDescribes tests are untouched.
+        // Kept per-object (not one flattened query) so buildProfile's
+        // wantedFields.contains(name) filter stays correct — a combined query
+        // returns Id for every entity and would pollute optionalFields.
+        Set<String> wanted = FIELDS_OF_INTEREST.get(sobj);
+        if (wanted == null || wanted.isEmpty()) return null;
         try {
-            HttpRequest req = new HttpRequest();
-            req.setEndpoint('callout:' + namedCredentialName + '/services/data/' +
-                API_VERSION + '/sobjects/' + sobj + '/describe');
-            req.setMethod('GET');
-            req.setHeader('Accept', 'application/json');
-            req.setTimeout(CALLOUT_TIMEOUT_MS);
-            HttpResponse res = new Http().send(req);
-            if (res.getStatusCode() != 200) {
-                System.debug(LoggingLevel.WARN,
-                    '[OrgPrism] Describe ' + sobj + ' HTTP ' + res.getStatusCode());
-                return null;
+            List<String> quoted = new List<String>();
+            for (String f : wanted) quoted.add('\'' + String.escapeSingleQuotes(f) + '\'');
+            String soql =
+                'SELECT QualifiedApiName, Scale FROM EntityParticle'
+              + ' WHERE EntityDefinition.QualifiedApiName = \'' + String.escapeSingleQuotes(sobj) + '\''
+              + ' AND QualifiedApiName IN (' + String.join(quoted, ',') + ')';
+            List<Object> fields = new List<Object>();
+            for (Map<String, Object> r : OrgQueryService.remoteQuery(namedCredentialName, soql)) {
+                fields.add(new Map<String, Object>{
+                    'name'  => r.get('QualifiedApiName'),
+                    'scale' => r.get('Scale')
+                });
             }
-            return (Map<String, Object>) JSON.deserializeUntyped(res.getBody());
+            return new Map<String, Object>{ 'fields' => fields };
         } catch (Exception e) {
             System.debug(LoggingLevel.WARN,
-                '[OrgPrism] Describe ' + sobj + ' failed: ' + e.getMessage());
+                '[OrgPrism] Field probe ' + sobj + ' failed: ' + e.getMessage());
             return null;
         }
     }

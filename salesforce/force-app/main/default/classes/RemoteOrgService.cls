@@ -246,9 +246,15 @@ public with sharing class RemoteOrgService {
                         '[OrgPrism] ProductType auto-detect failed: ' + detEx.getMessage());
                 }
                 // Phase 25 — Org Capability Probe. Persists CapabilityProfileJson__c
-                // so the UI can grey-out structurally inapplicable detectors. Failure
-                // here is non-fatal — the connection still succeeds; profile just
-                // stays unpopulated until the next testConnection or manual probe.
+                // so the UI can grey-out structurally inapplicable detectors.
+                // NOTE (Phase 26): an ordinary Exception here IS non-fatal — the catch
+                // below swallows it and the connection still saves. A GOVERNOR
+                // LimitException (e.g. heap) is NOT: System.LimitException is
+                // uncatchable, so it terminates this transaction before saveRow()
+                // below ever runs and the connection is lost even though auth
+                // succeeded. That is exactly what large-org connects used to hit.
+                // The probe must therefore stay SMALL rather than lean on this
+                // try/catch — see OrgQueryService.getRemoteSObjectNames.
                 try {
                     Map<String, Object> capProfile =
                         OrgCapabilityProbeService.buildProfile(row.NamedCredentialName__c);
