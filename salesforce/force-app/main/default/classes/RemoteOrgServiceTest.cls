@@ -94,6 +94,30 @@ private class RemoteOrgServiceTest {
         }
     }
 
+    /** Phase 26 — remote org reports itself as a sandbox. */
+    private class SandboxMock implements HttpCalloutMock {
+        public HttpResponse respond(HttpRequest req) {
+            HttpResponse res = new HttpResponse();
+            res.setStatusCode(200);
+            res.setHeader('Content-Type', 'application/json');
+            res.setBody('{"totalSize":1,"done":true,"records":[{"attributes":{"type":"Organization"},' +
+                '"Id":"00DHp000004AalgMAC","Name":"Acme Co","IsSandbox":true,"OrganizationType":"Enterprise Edition"}]}');
+            return res;
+        }
+    }
+
+    /** Phase 26 — remote org is a non-sandbox Developer Edition. */
+    private class DevEdMock implements HttpCalloutMock {
+        public HttpResponse respond(HttpRequest req) {
+            HttpResponse res = new HttpResponse();
+            res.setStatusCode(200);
+            res.setHeader('Content-Type', 'application/json');
+            res.setBody('{"totalSize":1,"done":true,"records":[{"attributes":{"type":"Organization"},' +
+                '"Id":"00DHp000004AalgMAC","Name":"Acme Co","IsSandbox":false,"OrganizationType":"Developer Edition"}]}');
+            return res;
+        }
+    }
+
     /** Mock that returns 401 Unauthorized. */
     private class AuthFailMock implements HttpCalloutMock {
         public HttpResponse respond(HttpRequest req) {
@@ -157,6 +181,79 @@ private class RemoteOrgServiceTest {
         System.assertEquals('00DHp000004AalgMAC', reloaded.RemoteOrgId__c);
         System.assertNotEquals(null, reloaded.LastConnectedAt__c);
         System.assertEquals(null, reloaded.LastError__c);
+    }
+
+    /**
+     * Phase 26 — OrgType__c defaults to 'Production' on the picklist and was
+     * never written by any code, so a hand-created record mislabelled every
+     * sandbox. testConnection now stamps it from the remote Organization.
+     */
+    @isTest
+    static void testConnectionStampsSandboxOrgType() {
+        ConnectedOrg__c row = new ConnectedOrg__c(
+            Name = 'Acme Sandbox',
+            InstanceUrl__c = 'https://acme--dev.sandbox.my.salesforce.com',
+            NamedCredentialName__c = 'Acme_Sandbox',
+            OrgType__c = 'Production',   // the wrong default we expect to be corrected
+            Status__c = 'Not Tested'
+        );
+        insert row;
+
+        Test.setMock(HttpCalloutMock.class, new SandboxMock());
+        Test.startTest();
+        RemoteOrgService.testConnection(row.Id);
+        Test.stopTest();
+
+        ConnectedOrg__c reloaded = [SELECT OrgType__c, Status__c FROM ConnectedOrg__c WHERE Id = :row.Id];
+        System.assertEquals('Connected', reloaded.Status__c);
+        System.assertEquals('Sandbox', reloaded.OrgType__c,
+            'IsSandbox=true should correct the defaulted Production label');
+    }
+
+    @isTest
+    static void testConnectionStampsDeveloperOrgType() {
+        ConnectedOrg__c row = new ConnectedOrg__c(
+            Name = 'Acme DevEd',
+            InstanceUrl__c = 'https://acme-dev-ed.develop.my.salesforce.com',
+            NamedCredentialName__c = 'Acme_DevEd',
+            OrgType__c = 'Production',
+            Status__c = 'Not Tested'
+        );
+        insert row;
+
+        Test.setMock(HttpCalloutMock.class, new DevEdMock());
+        Test.startTest();
+        RemoteOrgService.testConnection(row.Id);
+        Test.stopTest();
+
+        ConnectedOrg__c reloaded = [SELECT OrgType__c FROM ConnectedOrg__c WHERE Id = :row.Id];
+        System.assertEquals('Developer', reloaded.OrgType__c,
+            'Non-sandbox Developer Edition should map to Developer, not Production');
+    }
+
+    /**
+     * Phase 26 — when the response omits IsSandbox (older API / FLS), leave a
+     * deliberate manual value alone rather than clobbering it with a guess.
+     */
+    @isTest
+    static void testConnectionLeavesOrgTypeWhenIsSandboxAbsent() {
+        ConnectedOrg__c row = new ConnectedOrg__c(
+            Name = 'Acme Legacy',
+            InstanceUrl__c = 'https://acme.my.salesforce.com',
+            NamedCredentialName__c = 'Acme_Legacy',
+            OrgType__c = 'Sandbox',      // manually set; must survive
+            Status__c = 'Not Tested'
+        );
+        insert row;
+
+        Test.setMock(HttpCalloutMock.class, new OkMock());  // body has no IsSandbox
+        Test.startTest();
+        RemoteOrgService.testConnection(row.Id);
+        Test.stopTest();
+
+        ConnectedOrg__c reloaded = [SELECT OrgType__c FROM ConnectedOrg__c WHERE Id = :row.Id];
+        System.assertEquals('Sandbox', reloaded.OrgType__c,
+            'Absent IsSandbox must not overwrite an existing manual value');
     }
 
     @isTest

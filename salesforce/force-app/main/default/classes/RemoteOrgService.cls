@@ -193,14 +193,17 @@ public with sharing class RemoteOrgService {
             return result;
         }
 
-        // Callout to the remote org's Organization endpoint — small,
-        // cheap, returns the org Id + Name so we can confirm identity.
+        // Callout to the remote org's Organization endpoint — small, cheap,
+        // returns the org Id + Name so we can confirm identity, plus
+        // IsSandbox + OrganizationType so we can stamp OrgType__c from the
+        // org itself rather than trusting the hand-picked picklist (Phase 26).
         // URL form: callout:Acme_Production/services/data/v60.0/query/?q=...
         HttpRequest req = new HttpRequest();
         req.setEndpoint(
             'callout:' + row.NamedCredentialName__c
             + '/services/data/' + API_VERSION
-            + '/query/?q=' + EncodingUtil.urlEncode('SELECT Id, Name FROM Organization LIMIT 1', 'UTF-8')
+            + '/query/?q=' + EncodingUtil.urlEncode(
+                'SELECT Id, Name, IsSandbox, OrganizationType FROM Organization LIMIT 1', 'UTF-8')
         );
         req.setMethod('GET');
         req.setHeader('Accept', 'application/json');
@@ -232,6 +235,26 @@ public with sharing class RemoteOrgService {
                 row.RemoteOrgName__c = remoteName;
                 row.LastConnectedAt__c = System.now();
                 row.LastError__c = null;
+                // Phase 26 — stamp OrgType__c from the remote org itself.
+                // OrgType__c is a restricted picklist that DEFAULTS to
+                // 'Production' and was never written by any code, so every
+                // hand-created record mislabelled sandboxes and dev orgs as
+                // Production until a human noticed. We already query
+                // Organization here, so IsSandbox + OrganizationType are free.
+                // Left alone when IsSandbox is absent (older API / FLS), so a
+                // deliberate manual value is never clobbered by a blank.
+                Object isSbx = first.get('IsSandbox');
+                if (isSbx instanceof Boolean) {
+                    Object edObj = first.get('OrganizationType');
+                    String edition = (edObj == null) ? '' : String.valueOf(edObj);
+                    if ((Boolean) isSbx) {
+                        row.OrgType__c = 'Sandbox';
+                    } else if (edition.containsIgnoreCase('Developer')) {
+                        row.OrgType__c = 'Developer';
+                    } else {
+                        row.OrgType__c = 'Production';
+                    }
+                }
                 // Phase 24z-E — auto-detect installed Revenue Cloud package
                 // at connect time so we know upfront whether this org is
                 // scannable (CPQ / CPQ+Billing / Billing / ARM) or has
