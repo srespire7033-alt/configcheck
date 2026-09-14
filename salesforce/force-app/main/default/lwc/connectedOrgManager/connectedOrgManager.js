@@ -181,7 +181,12 @@ export default class ConnectedOrgManager extends NavigationMixin(LightningElemen
       // health when it actually means there was nothing to audit. Warn here,
       // at the point of decision, BEFORE the scan. Strict === false so an
       // UNKNOWN (perm-gated / never probed) stays silent rather than crying wolf.
-      const noData = Boolean(cap && cap.hasAuditableData === false);
+      // Phase 29 — prefer the flag carried on the LIST payload. It is always
+      // present; `cap` comes from the lazily-fetched applicability summary and
+      // is undefined on first render, which is why this warning never actually
+      // appeared on page load. Strict === false keeps UNKNOWN (null) quiet.
+      const noData = r.hasAuditableData === false
+        || Boolean(cap && cap.hasAuditableData === false);
 
       return {
         ...r,
@@ -215,7 +220,10 @@ export default class ConnectedOrgManager extends NavigationMixin(LightningElemen
         probedAtAgo,
         showCapability: Boolean(capabilityLabel) && !isNotScannable,
         showNoData: noData && !isNotScannable,
-        noDataNote: noData ? cap.dataNote : null,
+        noDataNote: noData
+          ? ((cap && cap.dataNote)
+             || 'No transaction data found — a scan will have nothing to audit, so a clean result here does not mean a healthy org.')
+          : null,
         isProbing,
         probeBtnLabel: isProbing ? 'Checking…' : (r.capabilityProbedAt ? 'Re-check schema' : 'Check schema'),
         canProbe: isConnected && !isProbing && !isNotScannable,

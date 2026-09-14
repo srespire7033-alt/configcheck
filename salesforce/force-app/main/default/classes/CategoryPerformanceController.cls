@@ -71,6 +71,23 @@ public with sharing class CategoryPerformanceController {
                 productType = cos[0].ProductType__c;
             }
         }
+        // Phase 29 — no org in context (the nav tab opens the dashboard with no
+        // c__connectedOrgId) used to mean productType=null => "show EVERY
+        // section". So a CPQ-only org rendered all the ARM and Billing category
+        // cards while the hero directly above it correctly read "CPQ" — the page
+        // contradicted itself and padded in a dozen irrelevant 100% cards.
+        // Fall back to the ProductType of the very scan the counts come from
+        // (loadCountsByDetector(null) reads that same latest scan), so the grid
+        // and the hero always agree.
+        if (String.isBlank(productType)) {
+            List<ForensicScan__c> latest = [
+                SELECT ProductType__c FROM ForensicScan__c
+                WHERE Status__c IN ('Completed','Partial') AND ProductType__c != null
+                WITH SECURITY_ENFORCED ORDER BY CompletedAt__c DESC NULLS LAST LIMIT 1
+            ];
+            if (!latest.isEmpty()) productType = latest[0].ProductType__c;
+        }
+
         // Phase 28 — connectedOrgId used to pick only the ProductType filter; the
         // COUNTS still came from the globally-latest scan. With several connected
         // orgs that means viewing org A while a more recent scan of org B supplies

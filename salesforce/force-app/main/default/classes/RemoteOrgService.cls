@@ -40,6 +40,10 @@ public with sharing class RemoteOrgService {
         @AuraEnabled public String lastError;
         // Phase 25-B — capability probe timestamp. Null = never probed.
         @AuraEnabled public Datetime capabilityProbedAt;
+        // Phase 29 — carried on the LIST payload, not left to the card's lazy
+        // per-org applicability fetch. The empty-org warning was invisible on
+        // page load because that fetch only runs on demand. null = unknown.
+        @AuraEnabled public Boolean hasAuditableData;
 
         // Enriched scan stats (populated by listConnectedOrgsWithScanStats only).
         @AuraEnabled public Id latestScanId;
@@ -52,12 +56,30 @@ public with sharing class RemoteOrgService {
 
     private static final String API_VERSION = 'v60.0';
 
+    /**
+     * Phase 29 — pull hasAuditableData straight off the stored capability
+     * profile. Tri-state is preserved: true = has rows, false = probed and
+     * empty, null = unknown (never probed, perm-gated, or unparseable) so the
+     * UI stays quiet rather than branding an org empty on no evidence.
+     */
+    private static Boolean readAuditableFlag(String profileJson) {
+        if (String.isBlank(profileJson)) return null;
+        try {
+            Map<String, Object> p = (Map<String, Object>) JSON.deserializeUntyped(profileJson);
+            Object v = p.get('hasAuditableData');
+            return (v instanceof Boolean) ? (Boolean) v : null;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
     @AuraEnabled(cacheable=true)
     public static List<ConnectedOrgDto> listConnectedOrgs() {
         List<ConnectedOrgDto> out = new List<ConnectedOrgDto>();
         for (ConnectedOrg__c c : [
             SELECT Id, Name, RemoteOrgName__c, InstanceUrl__c, NamedCredentialName__c, OrgType__c, ProductType__c,
-                   Status__c, RemoteOrgId__c, LastConnectedAt__c, LastError__c, CapabilityProbedAt__c
+                   Status__c, RemoteOrgId__c, LastConnectedAt__c, LastError__c, CapabilityProbedAt__c,
+                   CapabilityProfileJson__c
             FROM ConnectedOrg__c
             WITH SECURITY_ENFORCED
             ORDER BY Name ASC
@@ -79,6 +101,7 @@ public with sharing class RemoteOrgService {
             d.lastConnectedAt = c.LastConnectedAt__c;
             d.lastError = c.LastError__c;
             d.capabilityProbedAt = c.CapabilityProbedAt__c;
+            d.hasAuditableData = readAuditableFlag(c.CapabilityProfileJson__c);
             out.add(d);
         }
         return out;
