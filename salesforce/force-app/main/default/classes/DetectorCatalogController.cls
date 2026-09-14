@@ -95,10 +95,11 @@ public with sharing class DetectorCatalogController {
         if (String.isBlank(productType)) return true;
         Detector__mdt m = getRecord(detectorId);
         if (m == null || String.isBlank(m.AppliesTo__c)) return true;
-        for (String pt : m.AppliesTo__c.split(';')) {
-            if (pt.trim() == productType) return true;
-        }
-        return false;
+        // Phase 27 — productType is a multiselect SET ('CPQ;ARM'), so compare by
+        // intersection. The old `pt.trim() == productType` compared each declared
+        // token against the WHOLE field value, so a dual-stack org matched nothing
+        // and ran zero detectors. Single-token input behaves identically.
+        return ProductTypeUtil.intersects(m.AppliesTo__c, productType);
     }
 
     public static Boolean isActive(String detectorId) {

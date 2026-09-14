@@ -149,10 +149,8 @@ public with sharing class FlowDetectorService {
     private static Boolean matchesProductType(FlowDetector__mdt def, String productType) {
         if (String.isBlank(productType)) return true;
         if (String.isBlank(def.AppliesTo__c)) return true;
-        for (String pt : def.AppliesTo__c.split(';')) {
-            if (pt.trim() == productType) return true;
-        }
-        return false;
+        // Phase 27 — set intersection; see ProductTypeUtil.
+        return ProductTypeUtil.intersects(def.AppliesTo__c, productType);
     }
 
     public class FlowDetectorException extends Exception {}

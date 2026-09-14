@@ -36,7 +36,14 @@ public with sharing class ArmPriceBookChecksBundle implements IDetector {
                 System.debug(LoggingLevel.WARN, '[OrgPrism Skip] ARM-PBOOK-BUNDLE: ' + e.getMessage());
                 return results;
             }
-            rcPresent = SchemaUtil.hasObject('PriceAdjustmentSchedule') || SchemaUtil.hasObject('RateCard');
+            // Phase 27 — SchemaUtil inspects the HOST org's schema. This bundle
+            // declares {ARM, CPQ, CPQ+Billing}, so under set-intersection gating
+            // it now runs on dual-stack remote orgs, where the host's schema says
+            // nothing about the target. Ask the remote org on remote scans.
+            rcPresent = ctx.isRemote()
+                ? (OrgQueryService.remoteSObjectExists(ctx.namedCredentialName, 'PriceAdjustmentSchedule')
+                   || OrgQueryService.remoteSObjectExists(ctx.namedCredentialName, 'RateCard'))
+                : (SchemaUtil.hasObject('PriceAdjustmentSchedule') || SchemaUtil.hasObject('RateCard'));
         }
 
         if (DetectorCatalogController.isActive('ARM-007') && rcPresent) results.addAll(evaluateARM007(books));

@@ -130,7 +130,16 @@ export default class HeroBlock extends NavigationMixin(LightningElement) {
   // product types are configured (the product pills only render on
   // multi-type orgs).
   get productType() {
-    return this.data?.latestScan?.ProductType__c || this.selectedProductType || 'CPQ';
+    // Phase 27 — ProductType__c is a multiselect ('CPQ;ARM'). The badge label
+    // and colour map are keyed on a single token, so take the headline one;
+    // rendering the raw value would show the literal string "CPQ;ARM".
+    const raw = this.data?.latestScan?.ProductType__c || this.selectedProductType || 'CPQ';
+    return String(raw).split(';')[0];
+  }
+  /** Full token list — for a future multi-chip render. */
+  get productTypeTokens() {
+    const raw = this.data?.latestScan?.ProductType__c || this.selectedProductType || 'CPQ';
+    return String(raw).split(';').map((t) => t.trim()).filter(Boolean);
   }
   get productBadgeLabel() {
     return PRODUCT_LABELS[this.productType] || this.productType;

@@ -166,8 +166,11 @@ public with sharing class ForensicScanService {
                 // the detector unconditionally in that case. Without this,
                 // bundle-style detectors (id like 'XXX-BUNDLE' that has no
                 // mdt record) silently skip when callers pass null.
+                // Phase 27 — intersect the coded Set against the org's token set
+                // rather than Set.contains(wholeFieldValue), which missed on any
+                // multi-stack org ('CPQ;ARM') and dropped all 43 bundles.
                 if (String.isBlank(productType)
-                    || d.getAppliesTo().contains(productType)) {
+                    || ProductTypeUtil.intersects(d.getAppliesTo(), productType)) {
                     applicable.add(d);
                 }
             }

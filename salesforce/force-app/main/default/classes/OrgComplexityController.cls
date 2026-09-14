@@ -53,8 +53,12 @@ public with sharing class OrgComplexityController {
             null, 'USD', cos[0].ProductType__c,
             connectedOrgId, cos[0].NamedCredentialName__c
         );
-        List<Factor> factors = (cos[0].ProductType__c == 'ARM')
-            ? armFactors(ctx) : cpqFactors(ctx);
+        // Phase 27 — ARM factors only for an ARM-ONLY org. On a dual-stack org
+        // the SBQQ objects are present, so the CPQ factors are the meaningful ones.
+        Set<String> ptTokens = ProductTypeUtil.tokens(cos[0].ProductType__c);
+        Boolean armOnly = ptTokens.contains('ARM')
+            && !ptTokens.contains('CPQ') && !ptTokens.contains('CPQ+Billing');
+        List<Factor> factors = armOnly ? armFactors(ctx) : cpqFactors(ctx);
         return finalizeDto(factors);
     }
 
@@ -82,8 +86,7 @@ public with sharing class OrgComplexityController {
             buildFactor('Product Options (Bundles)',  safeCount(g, 'SBQQ__ProductOption__c',
                 'SELECT COUNT() FROM SBQQ__ProductOption__c'),
                 1.5, 100, 30),
-            buildFactor('Approval Rules',             safeCount(g, 'SBQQ__ApprovalRule__c',
-                'SELECT COUNT() FROM SBQQ__ApprovalRule__c WHERE SBQQ__Active__c = true'),
+            buildFactor('Approval Rules',             approvalRuleCount(g),
                 2, 10, 3),
             buildFactor('Quote Templates',            safeCount(g, 'SBQQ__QuoteTemplate__c',
                 'SELECT COUNT() FROM SBQQ__QuoteTemplate__c'),
@@ -109,7 +112,7 @@ public with sharing class OrgComplexityController {
             buildFactor('Product Options (Bundles)',
                 remoteCount(ctx, 'SBQQ__ProductOption__c', null),                         1.5, 100, 30),
             buildFactor('Approval Rules',
-                remoteCount(ctx, 'SBQQ__ApprovalRule__c', 'SBQQ__Active__c = true'),      2,   10, 3),
+                remoteApprovalRuleCount(ctx),                                            2,   10, 3),
             buildFactor('Quote Templates',
                 remoteCount(ctx, 'SBQQ__QuoteTemplate__c', null),                         1,    5, 3),
             buildFactor('Contracted Prices',
@@ -184,6 +187,30 @@ public with sharing class OrgComplexityController {
         if (ratio > 2) ratio = 2;
         f.contribution = Integer.valueOf((ratio * weight * 10).setScale(0, System.RoundingMode.HALF_UP));
         return f;
+    }
+
+    /** Count active approval rules — prefer Advanced Approvals (sbaa) over legacy SBQQ. */
+    private static Integer approvalRuleCount(Map<String, Schema.SObjectType> g) {
+        if (g.containsKey('sbaa__approvalrule__c')) {
+            try { return Database.countQuery('SELECT COUNT() FROM sbaa__ApprovalRule__c WHERE sbaa__Active__c = true'); }
+            catch (Exception e) { return 0; }
+        }
+        if (g.containsKey('sbqq__approvalrule__c')) {
+            try { return Database.countQuery('SELECT COUNT() FROM SBQQ__ApprovalRule__c WHERE SBQQ__Active__c = true'); }
+            catch (Exception e) { return 0; }
+        }
+        return 0;
+    }
+
+    /** Remote variant — probe sbaa first, then SBQQ. */
+    private static Integer remoteApprovalRuleCount(DetectorContext ctx) {
+        if (OrgQueryService.remoteSObjectExists(ctx.namedCredentialName, 'sbaa__ApprovalRule__c')) {
+            return remoteCount(ctx, 'sbaa__ApprovalRule__c', 'sbaa__Active__c = true');
+        }
+        if (OrgQueryService.remoteSObjectExists(ctx.namedCredentialName, 'SBQQ__ApprovalRule__c')) {
+            return remoteCount(ctx, 'SBQQ__ApprovalRule__c', 'SBQQ__Active__c = true');
+        }
+        return 0;
     }
 
     /** Returns 0 if the object isn't present in the org (e.g. CPQ not installed). */

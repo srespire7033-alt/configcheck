@@ -162,15 +162,49 @@ public with sharing class OrgQueryService {
      */
     public static String detectInstalledProductType(String namedCredentialName) {
         Set<String> names = getRemoteSObjectNames(namedCredentialName);
-        if (names == null) return null; // probe failed → leave caller's existing value alone
+        // PROBE FAILED (auth / network / 403 / heap) — MUST stay the first statement.
+        // null tells every caller to leave the existing ProductType__c alone.
+        if (names == null) return null;
+
         Boolean hasCpq     = names.contains('SBQQ__Quote__c');
         Boolean hasBilling = names.contains('blng__BillingRule__c');
         Boolean hasArm     = names.contains('ProductSellingModel');
-        if (hasArm) return 'ARM';
-        if (hasCpq && hasBilling) return 'CPQ+Billing';
-        if (hasCpq) return 'CPQ';
-        if (hasBilling) return 'Billing';
-        return 'None'; // probe succeeded; org has no Revenue Cloud package
+
+        // 'None' is reachable from EXACTLY this condition and nowhere else. It
+        // blocks scanning entirely (ForensicScanService), so it must never be
+        // produced by weak or absent evidence of any other kind.
+        if (!hasCpq && !hasBilling && !hasArm) return 'None';
+
+        // Phase 27 — return the honest SET, not an arbitrated winner. An org can
+        // genuinely run CPQ and ARM together (a CPQ customer mid-migration to
+        // Revenue Cloud is the normal case, not an edge case). The old code
+        // short-circuited on ARM and silently skipped all 91 CPQ-only detectors
+        // on such an org; picking CPQ instead would have skipped 112 ARM ones.
+        // Neither is right: gate on the union and let RequiredSurface__c prune.
+        //
+        // Presence is decided ONLY by the cached EntityDefinition probe, which
+        // still lists permission-gated objects. Do NOT "improve" this by probing
+        // for data: RLM objects are perm-gated for a scanning integration user,
+        // so a real ARM org's 'SELECT Id FROM ProductSellingModel' throws — and
+        // queryWithFallback/isSchemaVarianceError collapses that into an EMPTY
+        // LIST, indistinguishable from zero rows. That would silently demote a
+        // genuine ARM org to CPQ. If a data signal is ever added it must call
+        // remoteQuery directly, catch (Exception) — INVALID_TYPE arrives wrapped
+        // as OrgQueryException, not CalloutException — and map every throw to
+        // UNKNOWN, never to NO_DATA.
+        List<String> t = new List<String>();
+        if (hasCpq) t.add('CPQ');
+        // 'CPQ+Billing' gates the billing suite (BR/INV/FB/GL/LE/RR/TR). Emit it
+        // ONLY when the Billing package marker is actually present, never as a
+        // default: ORD-FOR-001 has no RequiredSurface__c and flags EVERY
+        // activated order on a Billing-less org (see ORD001OrderNoBillingDetector).
+        if (hasBilling) t.add('CPQ+Billing');
+        if (hasArm) t.add('ARM');
+        // 'Billing' is deliberately never emitted: it matched 0 of 229 detectors
+        // and was absent from ForensicScan__c's restricted value set, so a
+        // Billing-only org threw INVALID_OR_NULL_FOR_RESTRICTED_PICKLIST on the
+        // scan insert. A Billing package always implies CPQ tooling in practice.
+        return String.join(t, ';');
     }
 
     public static Boolean remoteSObjectExists(String namedCredentialName, String objName) {

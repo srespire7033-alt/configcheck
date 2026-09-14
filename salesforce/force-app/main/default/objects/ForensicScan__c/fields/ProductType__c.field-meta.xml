@@ -2,7 +2,9 @@
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
     <fullName>ProductType__c</fullName>
     <label>Product Type</label>
-    <type>Picklist</type>
+    <description>Which Salesforce Revenue Cloud products the scanned org runs. Phase 27 — converted from single Picklist to MultiselectPicklist to mirror ConnectedOrg__c.ProductType__c: an org can run CPQ + Billing + ARM at once, and the scan must record the same token set it gated on. Previously a Billing-only org produced 'Billing', which was absent from this value set and threw INVALID_OR_NULL_FOR_RESTRICTED_PICKLIST on insert.</description>
+    <type>MultiselectPicklist</type>
+    <visibleLines>3</visibleLines>
     <valueSet>
         <restricted>true</restricted>
         <valueSetDefinition>
@@ -15,12 +17,22 @@
             <value>
                 <fullName>CPQ+Billing</fullName>
                 <default>false</default>
-                <label>CPQ+Billing</label>
+                <label>CPQ + Billing</label>
             </value>
             <value>
                 <fullName>ARM</fullName>
                 <default>false</default>
                 <label>ARM</label>
+            </value>
+            <value>
+                <fullName>Billing</fullName>
+                <default>false</default>
+                <label>Billing</label>
+            </value>
+            <value>
+                <fullName>None</fullName>
+                <default>false</default>
+                <label>None (no Revenue Cloud installed)</label>
             </value>
         </valueSetDefinition>
     </valueSet>

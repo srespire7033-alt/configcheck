@@ -80,10 +80,18 @@ public with sharing class CategoryPerformanceController {
      * means "no filter — show every section".
      */
     private static Set<String> sectionsForProductType(String productType) {
-        if (productType == 'CPQ')         return new Set<String>{ 'cpq' };
-        if (productType == 'CPQ+Billing') return new Set<String>{ 'cpq', 'billing' };
-        if (productType == 'ARM')         return new Set<String>{ 'arm' };
-        return null;
+        // Phase 27 — union the sections across every stack the org runs. This
+        // gate failed OPEN (null = show all) while the scan gate failed CLOSED,
+        // and that asymmetry is what produced a fully-green dashboard over a
+        // scan that had actually run nothing.
+        Set<String> t = ProductTypeUtil.tokens(productType);
+        if (t.isEmpty()) return null;                        // legacy "show all"
+        Set<String> out = new Set<String>();
+        if (t.contains('CPQ'))         out.add('cpq');
+        if (t.contains('CPQ+Billing')) { out.add('cpq'); out.add('billing'); }
+        if (t.contains('Billing'))     out.add('billing');
+        if (t.contains('ARM'))         out.add('arm');
+        return out.isEmpty() ? null : out;                   // unrecognised token → show all, as before
     }
 
     private static List<CategorySection> getCategoryScoresInternal(String productType) {

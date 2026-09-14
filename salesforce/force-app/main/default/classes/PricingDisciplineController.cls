@@ -111,7 +111,14 @@ public with sharing class PricingDisciplineController {
         // ARM orgs don't have SBQQ__QuoteLine__c — pricing discipline is a
         // CPQ-only signal. Return the "no CPQ" state so the LWC renders
         // the empty-state copy instead of a misleading 0%/0% grade A.
-        if (cos[0].ProductType__c == 'ARM') return dto;
+        // Phase 27 — only bail when the org is ARM and NOT also CPQ. A dual-stack
+        // org ('CPQ;ARM') genuinely has SBQQ__QuoteLine__c, so the old equality
+        // check hid its pricing card behind a "no CPQ" empty state.
+        Set<String> ptTokens = ProductTypeUtil.tokens(cos[0].ProductType__c);
+        if (ptTokens.contains('ARM')
+            && !ptTokens.contains('CPQ') && !ptTokens.contains('CPQ+Billing')) {
+            return dto;
+        }
 
         DetectorContext ctx = new DetectorContext(
             null, 'USD', cos[0].ProductType__c,
