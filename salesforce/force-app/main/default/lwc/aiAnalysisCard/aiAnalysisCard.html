@@ -57,6 +57,7 @@
     <template if:true={isModalOpen}>
       <c-category-issues-modal
         category-label={openCategory}
+        connected-org-id={connectedOrgId}
         oncloseissuesmodal={handleModalClose}
       ></c-category-issues-modal>
     </template>

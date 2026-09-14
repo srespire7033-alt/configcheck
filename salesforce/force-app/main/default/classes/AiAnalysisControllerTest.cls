@@ -101,11 +101,11 @@ private class AiAnalysisControllerTest {
 
         Test.startTest();
         AiAnalysisController.CategoryIssuesDto out =
-            AiAnalysisController.getCategoryIssues('Quote Lines');
+            AiAnalysisController.getCategoryIssues('Quote Lines', null);
         AiAnalysisController.CategoryIssuesDto empty =
-            AiAnalysisController.getCategoryIssues('Nonexistent Label');
+            AiAnalysisController.getCategoryIssues('Nonexistent Label', null);
         AiAnalysisController.CategoryIssuesDto blank =
-            AiAnalysisController.getCategoryIssues(null);
+            AiAnalysisController.getCategoryIssues(null, null);
         Test.stopTest();
 
         System.assertEquals(3, out.totalCount);
@@ -140,11 +140,11 @@ private class AiAnalysisControllerTest {
         Test.startTest();
         AiAnalysisController.CategoryIssuesDto byIds =
             AiAnalysisController.getIssuesByDetectorIds(
-                new List<String>{ 'ORD-FOR-001' }, 'Billing Config');
+                new List<String>{ 'ORD-FOR-001' }, 'Billing Config', null);
         AiAnalysisController.CategoryIssuesDto empty =
-            AiAnalysisController.getIssuesByDetectorIds(new List<String>(), 'x');
+            AiAnalysisController.getIssuesByDetectorIds(new List<String>(), 'x', null);
         AiAnalysisController.CategoryIssuesDto nul =
-            AiAnalysisController.getIssuesByDetectorIds(null, 'x');
+            AiAnalysisController.getIssuesByDetectorIds(null, 'x', null);
         Test.stopTest();
 
         System.assertEquals(3, byIds.totalCount);

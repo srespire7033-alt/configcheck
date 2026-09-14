@@ -47,7 +47,7 @@ export default class CategoryIssuesModal extends NavigationMixin(LightningElemen
     return this.usesDetectorIds ? this.detectorIds.split(',').map((s) => s.trim()).filter(Boolean) : [];
   }
 
-  @wire(getCategoryIssues, { categoryLabel: '$categoryLabel' })
+  @wire(getCategoryIssues, { categoryLabel: '$categoryLabel', connectedOrgId: '$connectedOrgId' })
   wireByLabel(result) {
     if (this.usesDetectorIds || this.usesSeverity) return; // other modes take over
     this.wiredResult = result;
@@ -60,7 +60,7 @@ export default class CategoryIssuesModal extends NavigationMixin(LightningElemen
     }
   }
 
-  @wire(getIssuesByDetectorIds, { detectorIds: '$detectorIdsList', headerLabel: '$categoryLabel' })
+  @wire(getIssuesByDetectorIds, { detectorIds: '$detectorIdsList', headerLabel: '$categoryLabel', connectedOrgId: '$connectedOrgId' })
   wireByDetectors(result) {
     if (!this.usesDetectorIds || this.usesSeverity) return;
     this.wiredResult = result;

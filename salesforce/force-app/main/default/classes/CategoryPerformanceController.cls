@@ -71,7 +71,11 @@ public with sharing class CategoryPerformanceController {
                 productType = cos[0].ProductType__c;
             }
         }
-        return getCategoryScoresInternal(productType);
+        // Phase 28 — connectedOrgId used to pick only the ProductType filter; the
+        // COUNTS still came from the globally-latest scan. With several connected
+        // orgs that means viewing org A while a more recent scan of org B supplies
+        // the numbers. Scope the data to the org too.
+        return getCategoryScoresInternal(productType, connectedOrgId);
     }
 
     /**
@@ -95,11 +99,15 @@ public with sharing class CategoryPerformanceController {
     }
 
     private static List<CategorySection> getCategoryScoresInternal(String productType) {
-        Map<String, Map<String, Integer>> countsByDetector = loadCountsByDetector();
+        return getCategoryScoresInternal(productType, null);
+    }
+
+    private static List<CategorySection> getCategoryScoresInternal(String productType, Id connectedOrgId) {
+        Map<String, Map<String, Integer>> countsByDetector = loadCountsByDetector(connectedOrgId);
         // Phase 24z-B — surface-gated detector set from the latest scan,
         // so cards whose detectors were all skipped render "Not installed"
         // instead of a deceptively green 100%.
-        Set<String> gated = loadSurfaceGatedDetectors();
+        Set<String> gated = loadSurfaceGatedDetectors(connectedOrgId);
         List<CategoryPerformanceCard__mdt> defs;
         try {
             defs = [
@@ -212,6 +220,11 @@ public with sharing class CategoryPerformanceController {
      */
     @TestVisible
     private static Set<String> loadSurfaceGatedDetectors() {
+        return loadSurfaceGatedDetectors(null);
+    }
+
+    @TestVisible
+    private static Set<String> loadSurfaceGatedDetectors(Id connectedOrgId) {
         Set<String> out = new Set<String>();
         // SECURITY_ENFORCED dropped intentionally — this is a read-only
         // dashboard query of a non-PII status field on a system-owned
@@ -222,11 +235,16 @@ public with sharing class CategoryPerformanceController {
         // degrade gracefully (no "not installed" marking) on orgs where
         // the field truly isn't readable.
         try {
-            List<ForensicScan__c> scans = [
-                SELECT SurfaceGatedDetectors__c FROM ForensicScan__c
-                WHERE Status__c IN ('Completed','Partial')
-                ORDER BY CompletedAt__c DESC NULLS LAST LIMIT 1
-            ];
+            // Phase 28 — scope to the org being viewed; otherwise a more recent
+            // scan of a DIFFERENT org supplies this org's gating.
+            List<ForensicScan__c> scans = connectedOrgId != null
+                ? [SELECT SurfaceGatedDetectors__c FROM ForensicScan__c
+                   WHERE Status__c IN ('Completed','Partial')
+                     AND ConnectedOrg__c = :connectedOrgId
+                   ORDER BY CompletedAt__c DESC NULLS LAST LIMIT 1]
+                : [SELECT SurfaceGatedDetectors__c FROM ForensicScan__c
+                   WHERE Status__c IN ('Completed','Partial')
+                   ORDER BY CompletedAt__c DESC NULLS LAST LIMIT 1];
             if (scans.isEmpty() || String.isBlank(scans[0].SurfaceGatedDetectors__c)) return out;
             List<Object> raw = (List<Object>) JSON.deserializeUntyped(scans[0].SurfaceGatedDetectors__c);
             for (Object o : raw) if (o instanceof String) out.add((String) o);
@@ -238,12 +256,20 @@ public with sharing class CategoryPerformanceController {
     }
 
     private static Map<String, Map<String, Integer>> loadCountsByDetector() {
+        return loadCountsByDetector(null);
+    }
+
+    private static Map<String, Map<String, Integer>> loadCountsByDetector(Id connectedOrgId) {
         Map<String, Map<String, Integer>> out = new Map<String, Map<String, Integer>>();
-        List<ForensicScan__c> scans = [
-            SELECT Id FROM ForensicScan__c
-            WHERE Status__c IN ('Completed','Partial')
-            WITH SECURITY_ENFORCED ORDER BY CompletedAt__c DESC NULLS LAST LIMIT 1
-        ];
+        // Phase 28 — scope to the org being viewed. Without this the category grid
+        // showed whichever org was scanned most recently, regardless of selection.
+        List<ForensicScan__c> scans = connectedOrgId != null
+            ? [SELECT Id FROM ForensicScan__c
+               WHERE Status__c IN ('Completed','Partial') AND ConnectedOrg__c = :connectedOrgId
+               WITH SECURITY_ENFORCED ORDER BY CompletedAt__c DESC NULLS LAST LIMIT 1]
+            : [SELECT Id FROM ForensicScan__c
+               WHERE Status__c IN ('Completed','Partial')
+               WITH SECURITY_ENFORCED ORDER BY CompletedAt__c DESC NULLS LAST LIMIT 1];
         if (scans.isEmpty()) return out;
         for (AggregateResult ar : [
             SELECT DetectorId__c det, Severity__c sev, COUNT(Id) cnt

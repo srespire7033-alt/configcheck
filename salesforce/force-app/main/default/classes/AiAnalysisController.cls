@@ -179,7 +179,7 @@ public with sharing class AiAnalysisController {
      * modal needs to render (title, detector, description, gap, impact).
      */
     @AuraEnabled(cacheable=true)
-    public static CategoryIssuesDto getCategoryIssues(String categoryLabel) {
+    public static CategoryIssuesDto getCategoryIssues(String categoryLabel, Id connectedOrgId) {
         CategoryIssuesDto out = new CategoryIssuesDto();
         out.categoryLabel = categoryLabel;
         out.totalCount = 0;
@@ -189,13 +189,11 @@ public with sharing class AiAnalysisController {
 
         if (String.isBlank(categoryLabel)) return out;
 
-        List<ForensicScan__c> scans = [
-            SELECT Id FROM ForensicScan__c
-            WHERE Status__c IN ('Completed','Partial')
-            WITH SECURITY_ENFORCED ORDER BY CompletedAt__c DESC NULLS LAST LIMIT 1
-        ];
-        if (scans.isEmpty()) return out;
-        Id scanId = scans[0].Id;
+        // Phase 28 — scope to the org being viewed. This used to take the
+        // globally-latest scan, so with several connected orgs the drill-down
+        // could show a DIFFERENT org's findings than the card you clicked.
+        Id scanId = latestScanId(connectedOrgId);
+        if (scanId == null) return out;
 
         // Detectors that map to this label
         Set<String> matchingDetectors = new Set<String>();
@@ -288,7 +286,8 @@ public with sharing class AiAnalysisController {
      *  Category Performance grid → modal flow (passes detector IDs straight through
      *  so label drift between controllers can't desync). */
     @AuraEnabled(cacheable=true)
-    public static CategoryIssuesDto getIssuesByDetectorIds(List<String> detectorIds, String headerLabel) {
+    public static CategoryIssuesDto getIssuesByDetectorIds(List<String> detectorIds, String headerLabel,
+                                                           Id connectedOrgId) {
         CategoryIssuesDto out = new CategoryIssuesDto();
         out.categoryLabel = headerLabel;
         out.totalCount = 0;
@@ -297,19 +296,16 @@ public with sharing class AiAnalysisController {
         out.info = new List<IssueRow>();
 
         if (detectorIds == null || detectorIds.isEmpty()) return out;
-        List<ForensicScan__c> scans = [
-            SELECT Id FROM ForensicScan__c
-            WHERE Status__c IN ('Completed','Partial')
-            WITH SECURITY_ENFORCED ORDER BY CompletedAt__c DESC NULLS LAST LIMIT 1
-        ];
-        if (scans.isEmpty()) return out;
+        // Phase 28 — scope to the org being viewed (see getCategoryIssues).
+        Id scanId = latestScanId(connectedOrgId);
+        if (scanId == null) return out;
 
         for (ForensicFinding__c f : [
             SELECT Id, Name, Title__c, Description__c, DetectorId__c, Severity__c, Status__c,
                    GapUsd__c, EntitledUsd__c, RealizedUsd__c, PrimaryRecordId__c,
                    PrimaryRecordType__c, RecoverabilityScore__c
             FROM ForensicFinding__c
-            WHERE ForensicScan__c = :scans[0].Id
+            WHERE ForensicScan__c = :scanId
               AND DetectorId__c IN :detectorIds
               AND HiddenAt__c = null
             WITH SECURITY_ENFORCED ORDER BY GapUsd__c DESC NULLS LAST
@@ -333,13 +329,13 @@ public with sharing class AiAnalysisController {
         out.shownCount = out.critical.size() + out.warning.size() + out.info.size();
         out.totalCount = [
             SELECT COUNT() FROM ForensicFinding__c
-            WHERE ForensicScan__c = :scans[0].Id
+            WHERE ForensicScan__c = :scanId
               AND DetectorId__c IN :detectorIds
               AND HiddenAt__c = null
             WITH SECURITY_ENFORCED
         ];
         out.truncated = out.shownCount < out.totalCount;
-        out.detectorSummaries = summariesFor(scans[0].Id, new Set<String>(detectorIds), null);
+        out.detectorSummaries = summariesFor(scanId, new Set<String>(detectorIds), null);
         out.detectorCounts = countsFrom(out.detectorSummaries);
         out.offsetUsed = 0;
         return out;
