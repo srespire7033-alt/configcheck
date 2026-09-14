@@ -34,6 +34,9 @@
               <span>{truncatedNote}</span>
             </div>
           </template>
+          <template if:true={loadMoreError}>
+            <div class="op-cim__loadmore-error" role="alert">{loadMoreError}</div>
+          </template>
           <!-- Critical -->
           <template if:true={hasCritical}>
             <div class="op-cim__sec op-cim__sec--critical">
@@ -76,6 +79,20 @@
                         <button type="button" data-id={r.id} class="op-cim__btn op-cim__btn--details" onclick={handleDetails}>Details</button>
                       </div>
                     </article>
+                  </template>
+                  <!-- Phase 28 — this group's detector may have more rows than the
+                       capped first page returned (or none at all, if it was pushed
+                       off it entirely). Fetch the rest on demand. -->
+                  <template if:true={g.hasMore}>
+                    <div class="op-cim__group-more">
+                      <button
+                        type="button"
+                        class="op-cim__btn op-cim__btn--details"
+                        data-detector-id={g.detectorId}
+                        onclick={handleLoadMoreGroup}
+                        disabled={g.isFetching}
+                      >{g.moreLabel}</button>
+                    </div>
                   </template>
                 </template>
               </div>
@@ -125,6 +142,20 @@
                       </div>
                     </article>
                   </template>
+                  <!-- Phase 28 — this group's detector may have more rows than the
+                       capped first page returned (or none at all, if it was pushed
+                       off it entirely). Fetch the rest on demand. -->
+                  <template if:true={g.hasMore}>
+                    <div class="op-cim__group-more">
+                      <button
+                        type="button"
+                        class="op-cim__btn op-cim__btn--details"
+                        data-detector-id={g.detectorId}
+                        onclick={handleLoadMoreGroup}
+                        disabled={g.isFetching}
+                      >{g.moreLabel}</button>
+                    </div>
+                  </template>
                 </template>
               </div>
             </template>
@@ -172,6 +203,20 @@
                         <button type="button" data-id={r.id} class="op-cim__btn op-cim__btn--details" onclick={handleDetails}>Details</button>
                       </div>
                     </article>
+                  </template>
+                  <!-- Phase 28 — this group's detector may have more rows than the
+                       capped first page returned (or none at all, if it was pushed
+                       off it entirely). Fetch the rest on demand. -->
+                  <template if:true={g.hasMore}>
+                    <div class="op-cim__group-more">
+                      <button
+                        type="button"
+                        class="op-cim__btn op-cim__btn--details"
+                        data-detector-id={g.detectorId}
+                        onclick={handleLoadMoreGroup}
+                        disabled={g.isFetching}
+                      >{g.moreLabel}</button>
+                    </div>
                   </template>
                 </template>
               </div>

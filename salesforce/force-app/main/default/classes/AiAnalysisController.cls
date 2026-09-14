@@ -243,7 +243,8 @@ public with sharing class AiAnalysisController {
             WITH SECURITY_ENFORCED
         ];
         out.truncated = out.shownCount < out.totalCount;
-        out.detectorCounts = countsFor(scanId, matchingDetectors, null);
+        out.detectorSummaries = summariesFor(scanId, matchingDetectors, null);
+        out.detectorCounts = countsFrom(out.detectorSummaries);
         out.offsetUsed = 0;
         return out;
     }
@@ -258,6 +259,10 @@ public with sharing class AiAnalysisController {
         @AuraEnabled public Boolean truncated;
         /** TRUE per-detector totals — group badges must not show the page size. */
         @AuraEnabled public Map<String, Integer> detectorCounts;
+        /** EVERY detector present on this scan for the filter, with true counts and
+         *  metadata. The modal builds its group list from THIS, not from the
+         *  returned rows, so a detector can never be silently invisible. */
+        @AuraEnabled public List<DetectorSummary> detectorSummaries;
         /** Offset this page started at; the LWC's paging cursor. */
         @AuraEnabled public Integer offsetUsed;
         /** Hit SOQL's 2000-row OFFSET ceiling — direct the user to the CSV export. */
@@ -334,7 +339,8 @@ public with sharing class AiAnalysisController {
             WITH SECURITY_ENFORCED
         ];
         out.truncated = out.shownCount < out.totalCount;
-        out.detectorCounts = countsFor(scans[0].Id, new Set<String>(detectorIds), null);
+        out.detectorSummaries = summariesFor(scans[0].Id, new Set<String>(detectorIds), null);
+        out.detectorCounts = countsFrom(out.detectorSummaries);
         out.offsetUsed = 0;
         return out;
     }
@@ -432,7 +438,8 @@ public with sharing class AiAnalysisController {
             WITH SECURITY_ENFORCED
         ];
         out.truncated = out.shownCount < out.totalCount;
-        out.detectorCounts = countsFor(scans[0].Id, null, sevNorm);
+        out.detectorSummaries = summariesFor(scans[0].Id, null, sevNorm);
+        out.detectorCounts = countsFrom(out.detectorSummaries);
         out.offsetUsed = 0;
         return out;
     }
@@ -443,18 +450,82 @@ public with sharing class AiAnalysisController {
      * SIZE (200) rather than the real total (905 for ARM-001). One aggregate,
      * no row cap, so the badges stop lying.
      */
-    private static Map<String, Integer> countsFor(Id scanId, Set<String> detectorFilter, String sevFilter) {
+    private static Map<String, Integer> countsFrom(List<DetectorSummary> summaries) {
         Map<String, Integer> out = new Map<String, Integer>();
-        String soql = 'SELECT DetectorId__c did, COUNT(Id) c FROM ForensicFinding__c'
+        for (DetectorSummary s : summaries) out.put(s.detectorId, s.count);
+        return out;
+    }
+
+    /**
+     * Phase 28 — EVERY detector present on the scan for this filter, with its
+     * TRUE count and enough metadata to render a header. This is what the modal
+     * builds its group list from.
+     *
+     * Why it matters: the row query is ORDER BY GapUsd DESC LIMIT 200, so a
+     * high-volume detector fills the page and detectors below it never appear at
+     * all. Measured on FS-0129: PB-002 had 223 rows and consumed the page, so
+     * PB-004 (37 findings) and PB-006 (1) were not truncated — they were
+     * COMPLETELY INVISIBLE. Driving the group list off this aggregate instead of
+     * off the returned rows makes silent absence impossible.
+     *
+     * Label/description come from Detector__mdt so a group with zero LOADED rows
+     * still renders a real header and can lazily fetch its own rows on expand.
+     */
+    private static List<DetectorSummary> summariesFor(Id scanId, Set<String> detectorFilter, String sevFilter) {
+        String soql = 'SELECT DetectorId__c did, Severity__c sev, COUNT(Id) c FROM ForensicFinding__c'
                     + ' WHERE ForensicScan__c = :scanId AND HiddenAt__c = null';
         if (detectorFilter != null && !detectorFilter.isEmpty()) soql += ' AND DetectorId__c IN :detectorFilter';
         if (String.isNotBlank(sevFilter))                        soql += ' AND Severity__c = :sevFilter';
-        soql += ' WITH SECURITY_ENFORCED GROUP BY DetectorId__c';
+        soql += ' WITH SECURITY_ENFORCED GROUP BY DetectorId__c, Severity__c';
+
+        Map<String, DetectorSummary> byId = new Map<String, DetectorSummary>();
         for (AggregateResult ar : Database.query(soql)) {
-            Object did = ar.get('did');
-            if (did != null) out.put(String.valueOf(did), (Integer) ar.get('c'));
+            Object didObj = ar.get('did');
+            if (didObj == null) continue;
+            String did = String.valueOf(didObj);
+            DetectorSummary s = byId.get(did);
+            if (s == null) {
+                s = new DetectorSummary();
+                s.detectorId = did;
+                s.count = 0;
+                byId.put(did, s);
+            }
+            s.count += (Integer) ar.get('c');
+            // A detector should be single-severity, but if it ever spans, keep
+            // the most severe so the group lands in the right section.
+            String sev = String.valueOf(ar.get('sev'));
+            if (s.severity == null || sevRank(sev) < sevRank(s.severity)) s.severity = sev;
         }
-        return out;
+        if (!byId.isEmpty()) {
+            Set<String> ids = byId.keySet();
+            for (Detector__mdt m : [
+                SELECT DetectorId__c, Label__c, LongDescription__c
+                FROM Detector__mdt WHERE DetectorId__c IN :ids
+            ]) {
+                DetectorSummary s = byId.get(m.DetectorId__c);
+                if (s != null) {
+                    s.label = m.Label__c;
+                    s.description = m.LongDescription__c;
+                }
+            }
+        }
+        return byId.values();
+    }
+
+    /** Critical < Warning < Info, for picking a group's section. */
+    private static Integer sevRank(String sev) {
+        if (sev == 'Critical') return 0;
+        if (sev == 'Warning') return 1;
+        return 2;
+    }
+
+    /** One detector present on the scan, with its TRUE total (not the page size). */
+    public class DetectorSummary {
+        @AuraEnabled public String detectorId;
+        @AuraEnabled public Integer count;
+        @AuraEnabled public String severity;
+        @AuraEnabled public String label;
+        @AuraEnabled public String description;
     }
 
     /** Shared row mapper so the paging query matches the first-page shape exactly. */
@@ -552,7 +623,8 @@ public with sharing class AiAnalysisController {
             else                                 out.info.add(r);
         }
         out.shownCount = out.critical.size() + out.warning.size() + out.info.size();
-        out.detectorCounts = countsFor(scanId, detectorFilter, sevFilter);
+        out.detectorSummaries = summariesFor(scanId, detectorFilter, sevFilter);
+        out.detectorCounts = countsFrom(out.detectorSummaries);
         Integer total = 0;
         for (Integer c : out.detectorCounts.values()) total += c;
         out.totalCount = total;

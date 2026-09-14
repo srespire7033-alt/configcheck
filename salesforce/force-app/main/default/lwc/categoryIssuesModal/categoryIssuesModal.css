@@ -305,3 +305,23 @@ textarea:focus-visible,
   margin-top: 1px;
   --sds-c-icon-color-foreground-default: #2563eb;
 }
+
+/* Phase 28 — per-group "load more". A detector's rows may be partly or wholly
+   absent from the capped first page, so each group can fetch its own. */
+.op-cim__group-more {
+  display: flex;
+  justify-content: center;
+  padding: 10px 12px 14px;
+  border: 1px solid #e5e7eb;
+  border-top: none;
+  background: #fafafa;
+}
+.op-cim__loadmore-error {
+  margin: 0 0 12px;
+  padding: 8px 12px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  font-size: 12px;
+  color: #b91c1c;
+}
